@@ -122,7 +122,7 @@
   "t": "unit",
   "slug": "languages",
   "title": "Formal languages, and the tools built on them",
-  "text": "A lexer is a finite automaton and a regex engine is a choice between two walks. One of them takes 251 million steps.",
+  "text": "A lexer is a finite automaton and a regex engine is a choice between two walks. One of them takes 235 million steps to match 24 characters.",
   "part": "Theory"
  },
  {
@@ -5131,6 +5131,262 @@
   "n": 15,
   "title": "What is the practical upshot of universality?",
   "text": " The answer has been yes since 1936. What matters is how long it takes, how much memory it needs, whether it beats the deadline, and whether anybody can read it afterwards. ",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "languages",
+  "anchor": "no-memory-at-all",
+  "title": "No memory at all",
+  "text": "A finite automaton is a set of states, a start state, a set of accepting states, and a table saying which state each input character moves you to. It has no counter, no stack, and no storage other than which state it is currently in. Running one is a loop with a table lookup. One pass over the input, one array access per character, no allocation and no backtracking. It is about as fast as reading the input at all, which is the point. The languages a finite automaton can recognise are called regular, and the question of which those are has a clean answer: exactly the ones expressible by the original regular expression operators, which are alternation, concatenation and repetition. Kleene proved that equivalence in 1951, and the whole industry of pattern matching rests on it. Your lexer is one of these. Identifiers, numbers, strings and operators are all regular, so the phase of a compiler that turns characters into tokens can be a single pass with no memory, and it is.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "languages",
+  "anchor": "what-no-memory-costs",
+  "title": "What no memory costs",
+  "text": "A finite automaton cannot count without bound, because counting to an arbitrary number needs an arbitrary number of states and it has a fixed number. That is the whole reason it cannot match nested brackets. To know that a closing bracket is the right one you have to remember how many are open, and there is no limit on how many that could be. You built the counter for this in the last unit; a finite automaton has nowhere to put it. The formal argument is the pumping lemma, and its shape is simple. If a machine with states accepts a string longer than , it must have visited some state twice, so there is a loop in the middle of that string. Anything in a loop can be repeated, so the machine also accepts the string with that section repeated. For balanced brackets that repetition unbalances them, and the machine accepts something it should not. This is where \"you cannot parse HTML with a regular expression\" comes from. It is not a matter of taste or difficulty. Nested tags need a count, regular languages have no count, and no amount of cleverness inside the class escapes the class. Each rung is a machine and a class of language at once. Your lexer lives on the first, your parser on th",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "languages",
+  "anchor": "one-stack-and-most-languages-become-possible",
+  "title": "One stack, and most languages become possible",
+  "text": "Add a stack and you have a pushdown automaton, and the languages it recognises are the context-free ones. Balanced brackets are the standard example, and so is almost every programming language's grammar. The stack is doing the obvious thing: it remembers what you are inside. Push on the way into a construct, pop on the way out, and the discipline of a stack matches the discipline of nesting exactly. Which is why a compiler has two front-end phases rather than one. The lexer is regular and fast and turns characters into tokens. The parser is context-free and turns tokens into a tree. Splitting them is not tidiness: it means the expensive machine only ever sees the small stream, and the cheap machine handles the large one.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "languages",
+  "anchor": "two-ways-to-run-a-regular-expression",
+  "title": "Two ways to run a regular expression",
+  "text": "Now the part with the outage in it. There are two ways to match a regular expression, and the industry mostly picked the worse one. The first is to build an automaton and run it. Thompson's construction turns the expression into a machine with several possible current states, and you advance all of them one character at a time. The work per character is bounded by the size of the expression, so matching takes time proportional to the length of the input times the size of the pattern. It never backtracks because it never guessed. The second is to walk the pattern recursively, trying each alternative and undoing the choice when it fails. This is easy to write, easy to extend, and it is a search rather than an automaton. On most inputs it is fast. On some it is catastrophic.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "languages",
+  "anchor": "where-the-235-million-steps-come-from",
+  "title": "Where the 235 million steps come from",
+  "text": "The pattern is repeated times, followed by repeated times, matched against a string of letter a's. It matches. Every can take its character or leave it, and the number of ways to distribute the characters among the optional parts is exponential in , so a backtracking matcher explores them all before finding one that works. Here is the measurement, from the matcher this unit's fifth exercise has you write. The step count is the number of recursive calls. Recursive calls to match n characters, measured. The curve is a straight line on a log axis, which is what exponential looks like. Twenty-four characters costs 234881023 steps. Twenty-eight costs 4294967295. The automaton matching the same pattern does work proportional to squared, which at 30 characters is 900. This is not a hypothetical. On 2 July 2019 Cloudflare deployed a rule to its firewall containing a regular expression that could backtrack this way, and it took their global network down for about half an hour. The regular expression was correct. It matched what it was supposed to match. It just did so, on some inputs, by taking a number of steps with no useful upper bound. The failure has a name, catastrophic backtracking, ",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "languages",
+  "anchor": "what-the-backtracking-engines-bought",
+  "title": "What the backtracking engines bought",
+  "text": "They did not choose badly for no reason. Backtracking gives you things an automaton cannot express. Backreferences are the main one. A pattern that matches a repeated substring, so that whatever the first group captured must appear again, is not a regular language at all, and no finite automaton recognises it. Lookahead, lookbehind and lazy repetition are in the same category: convenient, widely used, and outside the class that has the linear-time guarantee. So the practical position is a trade rather than a mistake. Engines built on automata, of which RE2 is the well known one, promise linear time and refuse to implement backreferences. Engines built on backtracking implement everything and promise nothing. Choosing between them means deciding whether your patterns come from you or from somebody else. The rule that follows is short. A pattern you wrote, matched against input you control, may use whatever you like. A pattern from a user, or any pattern matched against hostile input, belongs on an engine that cannot be made to take exponential time.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "languages",
+  "anchor": "determinising-and-why-it-is-not-always-done",
+  "title": "Determinising, and why it is not always done",
+  "text": "One more piece, because it explains a decision every regex library has made. Thompson's machine can be in several states at once, which is what a nondeterministic automaton means. You can convert it to a deterministic one where each state of the new machine is a set of states of the old, and then matching is one table lookup per character with no set to track. That is the subset construction, and it is why a lexer generator emits a table rather than a search. The catch is that the number of subsets can be exponential in the number of original states. For a lexer's patterns it never is, and the table is built once when the tool runs. For a pattern supplied at run time it might be, so libraries build the deterministic states lazily, caching each one the first time it is reached and discarding the cache when it grows too large. A pattern that would have blown up simply runs a little slower. That is the shape of the whole subject in one design. The theory says the worst case is bad, the ordinary case is nothing like the worst case, and the engineering is arranged so that meeting the worst case costs you speed rather than availability.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "languages",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Restricting a machine is a design tool. The lexer is fast because it was denied memory, and the parser is possible because it was given exactly one stack and no more. The hierarchy also tells you what to expect when a format grows. A configuration language that acquires references becomes context free, and one that acquires conditionals and loops becomes universal, at which point nobody can decide whether a given input terminates. That last claim is the next unit.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "languages",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These build automata and matchers in C. names the string your machine got wrong, and the strings are chosen so that a plausible wrong answer fails on one of them rather than on all of them. appears in this unit for a real reason rather than as an accident. A matcher that backtracks can take longer than the service allows on an input of two dozen characters, which is the entire point of the exercise it appears in.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "languages",
+  "n": 1,
+  "title": "A machine with no memory",
+  "text": "A finite automaton is a loop and a table lookup, which is why lexing costs about as much as reading the input. Write , which walks a transition table one character at a time and reports whether it ends in an accepting state. The table is flat: the next state for is at . A symbol is the character minus . A negative entry means there is no transition and the string is rejected.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "languages",
+  "n": 2,
+  "title": "Counting is what it cannot do",
+  "text": "Recognising equal counts needs unbounded storage, so this language is outside the regular class no matter how many states you are given. Write , which accepts exactly the strings of letter a's followed by letter b's, for any including zero. You will use a counter. The point of the exercise is the last two checks, which are the strings a finite automaton with a fixed number of states gets wrong.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "languages",
+  "n": 3,
+  "title": "One stack, and nesting becomes possible",
+  "text": "A stack's discipline is exactly nesting's discipline, which is why a parser needs one and a lexer does not. Write , which checks that three kinds of bracket are correctly nested. A closing bracket must match the most recently opened one. A counter is not enough here, because the kinds must match as well as the counts. That is what the stack is for.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "languages",
+  "n": 4,
+  "title": "Several states at once",
+  "text": "Advancing every possibility at once costs work proportional to the machine's size per character and never backtracks, because nothing was guessed. An automaton that can be in more than one state at a time is how Thompson's construction matches without guessing. Write , which tracks a set of current states as a bitmask. Each entry of the table is itself a bitmask of the states reachable from . Accept if any current state is accepting after the last character.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "languages",
+  "n": 5,
+  "title": "The matcher that explodes",
+  "text": "Backtracking is a search rather than an automaton, and on a pattern with many ways to succeed it explores an exponential number of them. Write , a backtracking matcher for a pattern of two item kinds: a literal , and an optional . It counts its own recursive calls into . Then read the last check, which is the measurement this unit is named after.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "languages",
+  "n": 6,
+  "title": "Determinising",
+  "text": "A deterministic state is a set of nondeterministic ones, which is why the construction can produce exponentially many of them. Write , one step of the subset construction: given a set of states as a bitmask, produce the set reachable on one symbol. This is the operation that turns a machine which can be in several states at once into one that is always in exactly one, at the cost of having as many states as there are subsets.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "languages",
+  "n": 7,
+  "title": "The feature that leaves the class",
+  "text": "A pattern that refers back to what it already matched is outside the regular languages, which is what the linear-time engines give up. Write , which matches a string of the form , meaning some non-empty string followed by an exact copy of itself. No finite automaton recognises this language, and no regular expression in the original sense describes it. It needs the thing a backtracking engine calls a backreference.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "languages",
+  "n": 8,
+  "title": "Longest match wins",
+  "text": "The maximal munch rule is a property of the driver rather than of the automaton, and it is why keyword and identifier patterns can overlap. A lexer does not stop at the first accepting state. It keeps going and remembers the last position where it was accepting, so that lexes as one token rather than as followed by . Write , which runs a table from the start of the string and returns the length of the longest accepted prefix, or 0 if there is none.",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "languages",
+  "n": 1,
+  "title": "What storage does a finite automaton have?",
+  "text": " No counter, no stack, nothing else. Running one is a loop with a table lookup, which is why it costs about as much as reading the input at all. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "languages",
+  "n": 2,
+  "title": "What did Kleene prove in 1951?",
+  "text": " The whole industry of pattern matching rests on that equivalence: a pattern written with alternation, concatenation and repetition is a machine, and the machine is fast. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "languages",
+  "n": 3,
+  "title": "Why can a finite automaton not match nested brackets?",
+  "text": " No amount of cleverness inside the class escapes the class. This is where \"you cannot parse HTML with a regular expression\" comes from, and it is a fact rather than a matter of taste. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "languages",
+  "n": 4,
+  "title": "What is the shape of the pumping lemma's argument?",
+  "text": " Anything in a loop can be repeated, so the machine also accepts the pumped string. For balanced brackets that repetition unbalances them, and the machine accepts something it should not. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "languages",
+  "n": 5,
+  "title": "What does adding one stack buy you?",
+  "text": " The stack remembers what you are inside. Push on the way in, pop on the way out, and the discipline of a stack matches the discipline of nesting exactly. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "languages",
+  "n": 6,
+  "title": "Why does a compiler split lexing from parsing?",
+  "text": " The lexer is regular and fast, the parser is context-free. Splitting them is not tidiness, it is an allocation of work to the cheapest machine that can do it. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "languages",
+  "n": 7,
+  "title": "How does Thompson's construction match without backtracking?",
+  "text": " It never backtracks because it never guessed. Work per character is bounded by the size of the expression, so matching is linear in the input. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "languages",
+  "n": 8,
+  "title": "What is catastrophic backtracking?",
+  "text": " Every optional element can take its character or leave it. The number of ways to distribute characters among them is exponential, and the matcher tries them all. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "languages",
+  "n": 9,
+  "title": "Matching 24 characters against the pathological pattern took how many steps?",
+  "text": " Measured, not estimated. At 28 characters it is 4294967295. The automaton doing the same job at 30 characters does about 900 units of work. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "languages",
+  "n": 10,
+  "title": "What happened to Cloudflare on 2 July 2019?",
+  "text": " The regular expression was correct and matched what it was supposed to match. It just did so, on some inputs, in a number of steps with no useful upper bound. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "languages",
+  "n": 11,
+  "title": "Why did the popular engines choose backtracking?",
+  "text": " Backreferences, lookahead, lookbehind and lazy repetition are convenient, widely used, and outside the class that has the linear-time guarantee. It is a trade rather than a mistake. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "languages",
+  "n": 12,
+  "title": "What does RE2 refuse to implement, and what does it promise in return?",
+  "text": " A pattern that requires a captured group to appear again is not a regular language at all, so an engine built on automata cannot offer it. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "languages",
+  "n": 13,
+  "title": "When must you use a non-backtracking engine?",
+  "text": " A pattern you wrote, matched against input you control, may use whatever you like. Anything hostile belongs on an engine that cannot be made to take exponential time. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "languages",
+  "n": 14,
+  "title": "What is a state of a deterministic machine, after the subset construction?",
+  "text": " That is also why the number of them can be exponential in the size of the original machine, which is the catch the construction is famous for. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "languages",
+  "n": 15,
+  "title": "How do libraries handle the risk of exponential determinisation?",
+  "text": " A pattern that would have blown up runs a little slower instead. The engineering is arranged so that meeting the worst case costs speed rather than availability. ",
   "part": "Theory"
  },
  {

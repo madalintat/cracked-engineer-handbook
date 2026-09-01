@@ -232,7 +232,8 @@ TRACK = [
      "and you built one two parts ago without being told.", "godbolt"),
     ("languages", "theory", "Formal languages, and the tools built on them",
      "A lexer is a finite automaton and a regex engine is a choice between two "
-     "walks. One of them takes 251 million steps.", "godbolt"),
+     "walks. One of them takes 235 million steps to match 24 characters.",
+     "godbolt"),
     ("computability", "theory", "What cannot be decided",
      "Rice's theorem, and why a perfect optimiser, a perfect analyser and a "
      "perfect virus scanner are all impossible.", "godbolt"),

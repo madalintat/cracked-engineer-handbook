@@ -709,6 +709,7 @@
     "timing"
    ],
    "neededBy": [
+    "languages",
     "registers"
    ],
    "minutes": 50
@@ -717,19 +718,22 @@
    "slug": "languages",
    "num": 17,
    "title": "Formal languages, and the tools built on them",
-   "blurb": "A lexer is a finite automaton and a regex engine is a choice between two walks. One of them takes 251 million steps.",
+   "blurb": "A lexer is a finite automaton and a regex engine is a choice between two walks. One of them takes 235 million steps to match 24 characters.",
    "part": "theory",
    "partRoman": "IV",
    "partTitle": "Theory",
    "phase": "understand",
    "accent": "copper",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1605,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "universal"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "computability",
@@ -2634,9 +2638,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 20,
-  "words": 30508,
-  "exercises": 160,
-  "drills": 300
+  "ready": 21,
+  "words": 32113,
+  "exercises": 168,
+  "drills": 315
  }
 }
