@@ -1,4 +1,4 @@
-# The Hardware Handbook — design
+# The Hardware Handbook: design
 
 A learn-by-fighting-the-tool handbook for how computers actually work, from a
 transistor to a distributed training run. Same shape as the Rust Handbook:
@@ -84,12 +84,12 @@ runner/app.py    the Modal runner a learner deploys themselves
   ALU, CPU      compile-only
 ```
 
-**sim** — a NAND-and-wires simulator, a few hundred lines of JS. Part 0's
+**sim**: a NAND-and-wires simulator, a few hundred lines of JS. Part 0's
 exercises are truth tables, clock traces and static invariants over a control
 table. No network, no account, no server. Standing up an HDL service to check
 that someone wired an XOR would be building a server to do arithmetic.
 
-**godbolt** — Compiler Explorer's public API. Verified working: structured
+**godbolt**: Compiler Explorer's public API. Verified working: structured
 diagnostics with line/column/severity, C and C++ **compiled and executed**,
 x86-64 assembled and run, cross-compilation to AArch64/ARM/RISC-V, 23 avr-gcc
 versions with avr-libc headers resolving under `-mmcu=atmega328p`, 8
@@ -99,13 +99,13 @@ loopback TCP, epoll, io_uring, `/proc/self/maps`, `fork`, `SIGKILL`,
 `O_DIRECT`. `/tmp` is tmpfs; `/app` is real ext4. Hard 16 MiB `RLIMIT_FSIZE`,
 100 fds, ~2 vCPUs, no outbound network, no PMU counters.
 
-**yosys** — `yowasp-yosys`, real Yosys 0.68 compiled to WASM, run in the
+**yosys**: `yowasp-yosys`, real Yosys 0.68 compiled to WASM, run in the
 learner's browser. Verified: exact latch-inference warnings, cell counts that
 distinguish `<=` from `=` in one character, and formal SAT equivalence proofs
 that emit a concrete counterexample when the design is wrong. The runtime is a
 67 MB fetch, cached once. This is the fourth backend and it costs nothing.
 
-**modal** — the learner deploys a ~60-line runner to their own Modal account
+**modal**: the learner deploys a ~60-line runner to their own Modal account
 (free tier is **$30/month**, verified) and pastes the URL into settings. Their
 credit pays. Used only where a GPU is genuinely required.
 
@@ -120,7 +120,7 @@ by reading docs, and both are recorded in
   preflight returns `HTTP 401` with zero CORS headers. Preflights are anonymous
   by spec, so the browser never sends the real request. Not fixable from the page.
 - `restrict_modal_access=True` **breaks `.spawn()`.** The container runs, then
-  fails to report its result with `AuthError: Received :status = '401'` — the
+  fails to report its result with `AuthError: Received :status = '401'`, the
   flag blocks the API the container needs to deliver the answer.
 - `block_network=True` is **fine** with `.spawn()` (8 s vs 15 s cold). The
   containment that actually matters is free.
@@ -157,7 +157,7 @@ showing all of it. Exercises declare a minimum (`@gpu sm_100a`), and anything
 below it is greyed out **with the reason shown**.
 
 This is not cosmetic. `RTX-PRO-6000` is listed under Blackwell at $3.03/hr,
-cheaper than B200's $6.25 — and it is **compute capability 12.0, not 10.0**.
+cheaper than B200's $6.25, and it is **compute capability 12.0, not 10.0**.
 It has FP4 tensor cores but no `tcgen05` and no `sm_100a` ISA. `sm_120` and
 `sm_121` appear in no `tcgen05` target notes. A learner economising on the FP4
 unit picks it and gets a PTX error, and Modal documents this nowhere.
@@ -168,7 +168,7 @@ picker should show remaining-credit arithmetic.
 ### 2.4 The diagnose map, and why the validator is load-bearing
 
 Rust keys on `E0382` and that code is a permanent promise. GCC, Clang and nvcc
-make no such promise — nvcc has no error codes at all; warnings are numbered
+make no such promise. nvcc has no error codes at all; warnings are numbered
 (`#549-D`) and errors are bare prose. So `@expect` is a regex over a normalised
 message signature:
 
@@ -195,7 +195,7 @@ three nonce'd runs.
 
 So, two rules, not one:
 
-- the workbench MUST send a unique nonce with every submission — **in
+- the workbench MUST send a unique nonce with every submission, **in
   `options.userArguments` as `-DHH_NONCE=<uuid>`, never in the source.** The
   options are part of Compiler Explorer's cache key, so this defeats the cache,
   and unlike a comment it shifts no line numbers. A nonce in the source would
@@ -204,7 +204,7 @@ So, two rules, not one:
 - exercises MUST assert on **values, buffers and hashes**, not on time. Where a
   ratio genuinely is the lesson, set the threshold far below the true value
   (e.g. assert `> 3` for a ratio that measures ~6) and make the learner explain
-  the spread — the spread is itself the measurement lesson.
+  the spread. The spread is itself the measurement lesson.
 
 The graphics capstone shows the pattern that works: an FNV-1a hash of the
 framebuffer, **bit-identical across GCC 15.2 -O2, Clang 20.1.0 -O2 and GCC -O0**,
@@ -214,7 +214,7 @@ bit-portable and one ulp changes a pixel.
 Two harness gotchas to bake into every generated program: `assert` is live
 (`NDEBUG` unset; failure surfaces as exit code 139), and `abort()` does not
 flush stdio, so every exercise opens with
-`setvbuf(stdout, nullptr, _IONBF, 0)`. There is also a ~10 s wall-clock limit —
+`setvbuf(stdout, nullptr, _IONBF, 0)`. There is also a ~10 s wall-clock limit, 
 n=1024 GEMM sweeps were SIGKILLed, so exercises are sized to n=512.
 
 **Measure on more than one machine before asserting a constant.** AoS-vs-SoA
@@ -238,94 +238,94 @@ graphics capstone uses 2^-20).
 Seventeen parts. Each depends only on what precedes it. Parenthesised names are
 the research reports backing each part.
 
-**I — Physics** (transistors-cmos-fabrication)
+**I. Physics** (transistors-cmos-fabrication)
 the switch · the gate is two switch networks · every switch costs energy ·
 making the thing is the hard part
 
-**II — Logic** (nand2tetris-eater-scott)
+**II. Logic** (nand2tetris-eater-scott)
 NAND and functional completeness · selection and addressing · arithmetic and
 why subtraction is free · feedback and the bit that stays · the clock and the
 shared bus · addressable storage and the counter · instruction encoding ·
 control and the fetch-execute loop
 
-**III — Silicon** (digital-design-hdl-fpga)
+**III. Silicon** (digital-design-hdl-fpga)
 structure not sequence · the clock edge · proving it works · timing and the
 chip it runs on
 
-**IV — Theory** (theory-of-computation)
+**IV. Theory** (theory-of-computation)
 models of computation and the universal machine · formal languages and the
 tools built on them · computability and why your linter has false positives ·
 complexity as advice
 
-**V — The machine** (x86-64-assembly, cpu-architectures)
+**V. The machine** (x86-64-assembly, cpu-architectures)
 registers and the stack · addressing and flags · syscalls · ELF and loading ·
 the memory hierarchy · pipelines, prediction, SIMD · atomics and ordering
 
-**VI — Numbers and text** (numbers-text-numerics)
+**VI. Numbers and text** (numbers-text-numerics)
 integers and overflow · endianness · IEEE-754 · stability, and the bridge to
 low precision · Unicode and UTF-8
 
-**VII — Systems** (cpp-linux-systems, os-and-platforms)
+**VII. Systems** (cpp-linux-systems, os-and-platforms)
 the C++ object model · RAII and moves · compile time · syscalls and processes ·
 virtual memory · threads and scheduling · the ABI · linking and interposition
 
-**VIII — Storage** (storage-filesystems-engines)
+**VIII. Storage** (storage-filesystems-engines)
 the device decides everything · getting to the device · the kernel's memory of
 the disk · naming bytes · data structures dictated by physics
 
-**IX — Tools** (compilers-interpreters-terminals-unix, build-systems-toolchains,
+**IX. Tools** (compilers-interpreters-terminals-unix, build-systems-toolchains,
 debugging-and-measurement, testing-fuzzing-verification)
 the terminal is a kernel object · the shell forks and the tradition follows ·
 source text to syntax tree · SSA and the middle end · the back end and the
 linker · interpreters and JITs · the build graph · the debugger and the
 sanitizer · measurement methodology · property testing and fuzzing
 
-**X — Algorithms** (algorithms-on-real-hardware, numerical-linear-algebra)
+**X. Algorithms** (algorithms-on-real-hardware, numerical-linear-algebra)
 Big-O and the machine it assumes · layout is the algorithm · control flow is
 the algorithm · work, depth and the scan · the BLAS levels and why only GEMM
 reaches peak · decompositions and conditioning · sparse and iterative
 
-**XI — Concurrency** (concurrency-theory-coroutines)
+**XI. Concurrency** (concurrency-theory-coroutines)
 memory models · lock-free and the reclamation problem · parallel algorithm
 theory · coroutines as frames that outlive their call
 
-**XII — Networks** (networking-and-internet)
+**XII. Networks** (networking-and-internet)
 frames and the link layer · addressing and routing · TCP as a control loop ·
 the socket API and how servers scale · DNS, HTTP, TLS · collectives and how
 512 GPUs talk
 
-**XIII — Signals** (signals-and-dsp)
+**XIII. Signals** (signals-and-dsp)
 the analog boundary · time and frequency · filters
 
-**XIV — Information** (information-theory-coding, cryptography)
+**XIV. Information** (information-theory-coding, cryptography)
 information has a measure and it is a floor · removing redundancy · adding
 redundancy back · symmetric and asymmetric primitives · crypto and the hardware
 
-**XV — Security** (hardware-security)
+**XV. Security** (hardware-security)
 the cache is real and you can see it · speculation leaks what it touches ·
 every mitigation is a fossil of an attack · constant-time as a discipline
 
-**XVI — Graphics and GPU** (graphics-pipeline, modal-gpu-glossary,
+**XVI. Graphics and GPU** (graphics-pipeline, modal-gpu-glossary,
 cuda-programming-tuning, nvidia-architectures, amd-and-other-accelerators)
 why a screen is an arithmetic problem · how a triangle becomes pixels · why the
 SM is shaped like that · the throughput machine · the execution model · the
 memory hierarchy · coalescing · shared memory and banks · the resource budget ·
 latency hiding · roofline and the three limiters
 
-**XVII — Kernels and AI** (fp4-fp8-blackwell, numpy-pytorch-internals,
+**XVII. Kernels and AI** (fp4-fp8-blackwell, numpy-pytorch-internals,
 ai-systems-distributed-training)
 strides and the dispatcher · autograd · naive to tiled GEMM · CuTe layouts ·
 the number formats · block scaling · stochastic rounding and Hadamard ·
 transformer arithmetic · online softmax and FlashAttention · inference is two
 machines · the parallelism taxonomy
 
-**XVIII — Embodied** (embedded-and-sbc, robotics-control-embodied-ai)
+**XVIII. Embodied** (embedded-and-sbc, robotics-control-embodied-ai)
 the chip with no operating system · the abstraction has a cost · time,
 interrupts and volatile · wider machines · where determinism goes to die ·
 actuators and FOC · control loops · estimation · planning · physical
 intelligence
 
-**XIX — Limits** (limits-of-computation)
+**XIX. Limits** (limits-of-computation)
 the thermodynamic floor · the walls we are hitting · alternative models
 
 ### 3.1 The through-line
@@ -340,7 +340,7 @@ if you already know the previous one.
 
 ## 4. Exercises the research already proved
 
-Not aspirations — these were compiled and run during research.
+Not aspirations, these were compiled and run during research.
 
 | Part | Exercise | The check |
 |---|---|---|
@@ -350,12 +350,12 @@ Not aspirations — these were compiled and run during research.
 | V | signed overflow UB | `-O0` prints 0, `-O2` prints 1, `-fno-strict-aliasing` prints 0 |
 | VII | `/proc/self/maps` | five ELF segments, `[heap]`, `libc.so.6`, deterministic |
 | VIII | B-tree vs LSM write amplification | 251.8x vs 1.0x, changing only key order |
-| VIII | fsync on tmpfs vs ext4 | 0.00 ms vs 413 ms — what a lying device looks like |
+| VIII | fsync on tmpfs vs ext4 | 0.00 ms vs 413 ms, what a lying device looks like |
 | IX | Python specialisation | `RESUME`->`RESUME_CHECK` after 1 call, `BINARY_OP`->`BINARY_OP_ADD_INT` after 2 |
 | X | linked list vs vector | 637x at n=2^23, with pool-order as the control |
 | X | Blelloch vs Hillis-Steele | exactly 3(n-1) vs n·log2(n) operations |
 | X | Gram-Schmidt | classical vs modified orthogonality loss, deterministic |
-| XII | Nagle + delayed ACK | 40636.6 us vs 43.2 us — the 40 ms timer, measured |
+| XII | Nagle + delayed ACK | 40636.6 us vs 43.2 us, the 40 ms timer, measured |
 | XIV | arithmetic coding | 0.47315 bits/symbol on a 0.47315-entropy source |
 | XIV | CRC-32 folklore | it does NOT detect all odd-weight errors; one popcount proves it |
 | XV | Flush+Reload | bimodal timing histogram, one process, no external target |
@@ -368,7 +368,7 @@ Not aspirations — these were compiled and run during research.
 ## 5. The hardware atlas
 
 The breadth material becomes a browsable, data-driven reference rather than
-thirty more units — same role as the Rust Handbook's glossary and errors pages.
+thirty more units, same role as the Rust Handbook's glossary and errors pages.
 Units teach depth; the atlas holds the map.
 
 Contents: every NVIDIA generation Tesla 2006 -> Rubin with the complete `sm_XX`
@@ -378,8 +378,8 @@ Cerebras, Groq; CPU families and ISAs; microcontrollers and SBCs; the operating
 systems compared; Modal's GPU catalogue with live pricing.
 
 The atlas earns its place by teaching something the units cannot. Example:
-**Ada Lovelace added nothing to the programming model** — same per-SM resources
-as `sm_86`, no clusters, no TMA, no `wgmma` — yet carries the same "4th-gen
+**Ada Lovelace added nothing to the programming model**: same per-SM resources
+as `sm_86`, no clusters, no TMA, no `wgmma`, yet carries the same "4th-gen
 tensor core" label as Hopper. A reader who understands why an RTX 4090 and an
 H100 share a marketing generation but not a programming model has understood
 that architecture names are a sales artifact and `sm_XX` is the thing that is
@@ -403,7 +403,7 @@ media query, one accent variable set per part on a container.
 **`--ok` must move off green.** In the Rust Handbook the accent is orange, so a
 green "passed" stamp reads instantly as a different semantic class. With a green
 accent, a passing exercise becomes indistinguishable from any ordinary accented
-element — the most important state in the interface loses its signal. `--ok`
+element, the most important state in the interface loses its signal. `--ok`
 goes cyan/teal; `--warn` and `--bad` are unaffected.
 
 **Bugs inherited from the reference implementation, to fix rather than copy**
@@ -415,7 +415,7 @@ goes cyan/teal; `--warn` and `--bad` are unaffected.
 - Five literal colours sit outside the `:root` blocks, despite the guide saying
   none do. The worst is `.btn:hover { background: #ff7a35 }`, unthemed, so the
   dark-mode button hovers to a light colour. Tokenise all five.
-- There are three `:root` blocks, not two — motion tokens are separate. Keep the
+- There are three `:root` blocks, not two, motion tokens are separate. Keep the
   split if it helps, but document it.
 - Prose line-height is 1.68 in the stylesheet and 1.75 in the docs.
 
@@ -436,15 +436,15 @@ point.
 
 Four units first, deliberately one per backend, before any mass writing.
 
-1. **Shell, palette, `build.py`, and the whole track in the manifest** — the
+1. **Shell, palette, `build.py`, and the whole track in the manifest**: the
    spine visible and honest from day one.
-2. **Part II unit 1, the NAND gate** — complete: note, 8 exercises, 15 drills.
+2. **Part II unit 1, the NAND gate**: complete: note, 8 exercises, 15 drills.
    Proves the in-page simulator.
-3. **Part V unit 1, registers and the stack** — complete. Proves the Compiler
+3. **Part V unit 1, registers and the stack**: complete. Proves the Compiler
    Explorer client, the regex diagnose map, and the caching nonce.
-4. **Part III unit 2, the clock edge** — complete. Proves the WASM Yosys
+4. **Part III unit 2, the clock edge**: complete. Proves the WASM Yosys
    backend.
-5. **Part XVI unit 4, the CUDA execution model** — complete. Proves the Modal
+5. **Part XVI unit 4, the CUDA execution model**: complete. Proves the Modal
    runner, the GPU picker, and the compile-only fallback.
 6. **Then everything else**, which is writing, which is where the years go.
 
@@ -472,14 +472,14 @@ reproducing them. Sources: `RUSTBOOK-app-architecture.md`,
 - **Persist drill results.** Score, attempts and per-question history, surfaced
   in the progress view. Today answering a drill stores nothing at all.
 - **Make the contents rail mean something.** Keep the cheap scroll-ratio spine,
-  but make the per-section dots reflect *read state* — furthest-reached, latched,
-  persisted — instead of un-filling when the reader scrolls back up.
+  but make the per-section dots reflect *read state*, furthest-reached, latched,
+  persisted, instead of un-filling when the reader scrolls back up.
 - **Separate the 404 from the error.** `notFound()` currently catches both, so a
   failed fetch is indistinguishable from a bug in a view. Give errors their own
   state with a retry.
 - **Scroll restoration** on back-navigation.
 
-**Accessibility** — all currently absent
+**Accessibility**: all currently absent
 
 - `aria-live` on the diagnostics region, so a compile result is announced.
 - A focus trap, focus-on-open and focus-restore for the mobile sheet, which
@@ -494,7 +494,7 @@ reproducing them. Sources: `RUSTBOOK-app-architecture.md`,
   after, so a failed build cannot leave stale `data/` on disk.
 - Give the directive parser an `else`: an unrecognised `@foo` must be an error,
   not silently swallowed.
-- Per-backend thread pools, not one shared pool of 4 — otherwise 200 local
+- Per-backend thread pools, not one shared pool of 4, otherwise 200 local
   simulator checks queue behind 3 Compiler Explorer round-trips.
 - Progress keys must NOT include the backend, or one exercise solved twice
   counts twice.
@@ -502,7 +502,7 @@ reproducing them. Sources: `RUSTBOOK-app-architecture.md`,
 ## 8. What is deliberately not built
 
 No accounts, no database, no backend of ours, no login, no npm, no framework,
-no cookie banner. Progress in `localStorage`. Hints and no answers — solutions
+no cookie banner. Progress in `localStorage`. Hints and no answers, solutions
 live in `content/` and the build compiles them, but the reader is never offered
 one.
 
@@ -520,3 +520,80 @@ one.
    it sits at step one. Worth verifying before the onboarding copy is written.
 4. **Domain.** The Rust Handbook is `the-rust-handbook.com`. Is there a name
    for this one?
+
+---
+
+## 10. What building it taught, and where the design was wrong
+
+Written after the pipeline, all four backends and five units were finished and
+validated. Everything here is a correction to the sections above, not a
+restatement of them.
+
+### The design was right about
+
+**One registry.** `track.py` as the sole place a unit exists has held through
+122 entries and five written units. Adding a unit is one tuple, and forgetting
+its files gets you a stub rather than a silent gap.
+
+**Structured verdicts over regex.** The `verdict` judge carried every exercise
+that was written; `match` was needed only where a diagnostic's wording is the
+lesson. The prediction that regex would be the fallback rather than the default
+was correct.
+
+**Validating with the browser's own client.** Every backend validator imports
+the code the page runs. Four of the bugs found this way were in the client
+rather than the content, which a validator with its own model of the toolchain
+would have missed entirely.
+
+### The design was wrong about
+
+**Accent as a per-part property.** Section 6 assigned a colour to each of the
+19 parts from a rotation of seven. At 19 parts a rotation stops meaning
+anything: the reader sees amber three times in unrelated places. The parts are
+grouped into seven phases now and the phase owns the colour, so a part cannot
+write its own. The track validates that the phases list the parts in track
+order, which makes a two-level index and the flat spine unable to disagree.
+
+**The track as a grid of cards.** Section 3 pictured the same card grid the
+reference implementation uses. That is a wall at 122. Three levels now, with
+units as rows.
+
+**"The palette is done."** Section 6 specified colours by name and by feel and
+nothing measured them. Two of the four inks could not legally carry body text,
+the accent measured 2.9:1 as 12px type, and five of the eight light syntax
+colours failed on the panel they sit on rather than on the page they were
+chosen against. There are two accent tokens now, one for decoration and one for
+text, and `contrast.py` fails the build on a palette that drops below 4.5:1.
+
+The general lesson is the same one the exercises teach: a claim nothing measures
+is a claim, and the ones that felt most settled were the ones that were wrong.
+
+### Things only the real tools could have told us
+
+- Compiler Explorer caches results including timings, so a nonce is required in
+  `options.userArguments` and never in the source.
+- `llvm-mc` rejects `-D` outright, so the nonce flag has to be per language.
+  This broke the entire assembly backend and nothing noticed until the first
+  assembly exercise existed.
+- Compiler Explorer reports SIGSEGV for an assertion failure while its own
+  stderr says the assertion failed. Key on the text.
+- A link failure arrives with `buildResult.code` 0 and no executable, which
+  looks like neither a compile error nor a crash.
+- Modal's proxy auth breaks browser CORS, and `restrict_modal_access` breaks
+  `.spawn()`, so the runner uses a shared secret and submit-and-poll.
+- Yosys prints a message containing "latch inferred" when it did *not* infer
+  one, and `-q` suppresses `stat`, which would silently zero every cell count.
+- An out-of-bounds CUDA write inside its own managed allocation produces no
+  fault, no sanitizer report and no wrong output. An exercise about it needs a
+  sentinel, or its starter passes.
+
+### Open question 3 is still open
+
+Whether a Modal Starter account can run anything without a card on file was
+never resolved, because the account used for validation already had one. It
+remains the highest-impact unknown in the onboarding, and it sits at step one.
+
+### What is still not built
+
+The mascot, which needs the asset. Vim mode, which is listed and is not on the
+path to anything. And 117 units.

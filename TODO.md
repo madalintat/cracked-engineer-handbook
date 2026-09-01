@@ -19,7 +19,9 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] Rust Handbook: design system, app architecture, workbench, content pipeline
 - [x] Python handbook: structured verdicts, the `silent` case, solution leak
 - [x] Family analysis: only 3 designs, not 4 (Voice is a fork of Rust, no content)
-- [ ] Fold the findings into the design doc
+- [x] Fold the findings into the design doc: section 10 records what the
+      design got right, the three things it got wrong, and what only the real
+      tools could have said. Every doc is under the prose lint now
 
 ## 2. The unit view
 

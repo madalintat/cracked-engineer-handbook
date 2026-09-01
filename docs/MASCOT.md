@@ -5,20 +5,20 @@ appears rarely, saying one line.
 
 ## Candidates, best first
 
-**Nand** — the NAND gate. D-shaped body, the inversion bubble as its nose, two
+**Nand**: the NAND gate. D-shaped body, the inversion bubble as its nose, two
 eyes on the flat left edge where the inputs go. Part II is "one primitive, all
 of logic", and Part I proves NAND is four transistors where AND is six. The
 bubble-as-nose is a real pun, not decoration.
 
-**Dip** — a DIP-package chip with legs, walking. The package notch becomes a
+**Dip**: a DIP-package chip with legs, walking. The package notch becomes a
 fringe. At 26px it is a dark rounded rectangle with pin-legs, which is enough.
 Structurally the closest analogue to how Ferris works.
 
-**Smoke** — the magic smoke that hardware runs on until it escapes. Most
+**Smoke**: the magic smoke that hardware runs on until it escapes. Most
 personality, least legible small, and reads as a failure mascot when the
 companion appears on a pass.
 
-**Flip** — a D flip-flop, the bit that stays. Clock triangle on the left edge as
+**Flip**: a D flip-flop, the bit that stays. Clock triangle on the left edge as
 a mouth. Cleanest geometry, least character.
 
 ## Generation brief

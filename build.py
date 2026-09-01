@@ -1020,6 +1020,7 @@ def build_errors():
                     f"errors.md: {backend} can report {v!r} and it is not "
                     f"documented, so a reader would get the bare slug")
     problems += unreachable_verdicts()
+    problems += lint_docs()
     fail(problems)
     order = list(VERDICTS)
     entries.sort(key=lambda e: (order.index(e["backend"]), e["verdict"]))
@@ -1029,6 +1030,24 @@ def build_errors():
 # The client files that decide a verdict. A verdict no client names is one no
 # reader can ever see.
 CLIENT_FILES = ("assets/workbench.js", "assets/sim.js", "assets/yosys-check.js")
+
+
+# Markdown outside content/ that is still prose someone reads. The design doc
+# carried 48 em dashes because nothing looked at it.
+DOC_GLOBS = ("docs/*.md", "docs/superpowers/specs/*.md")
+
+
+def lint_docs():
+    root = Path(__file__).parent
+    out = []
+    for pattern in DOC_GLOBS:
+        for f in sorted(root.glob(pattern)):
+            text = f.read_text()
+            text = re.sub(r"```.*?```", " ", text, flags=re.S)   # fenced code
+            text = re.sub(r"^    .*$", " ", text, flags=re.M)    # indented code
+            text = re.sub(r"`[^`]*`", " ", text)                 # inline code
+            out += prose.lint(text, str(f.relative_to(root)))
+    return out
 
 
 def unreachable_verdicts():
