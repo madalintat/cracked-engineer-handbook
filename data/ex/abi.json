@@ -1,0 +1,310 @@
+{
+ "slug": "abi",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "The sixth argument",
+   "brief": "<p>Write <code>arg6</code>, returning its sixth argument.</p>\n<p>The first six integer arguments arrive in <code>rdi</code>, <code>rsi</code>, <code>rdx</code>, <code>rcx</code>, <code>r8</code>, <code>r9</code>, in that order. Nothing in the function's text says so.</p>",
+   "kind": "output",
+   "concept": "The argument registers are an agreement two compiled things keep without either seeing the other's source.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Count along the list. The sixth is the last one that arrives in a register."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The wrong register was returned. The order is <code>rdi</code>, <code>rsi</code>, <code>rdx</code>, <code>rcx</code>, <code>r8</code>, <code>r9</code>, so the sixth argument is in <code>r9</code> and the fifth is in <code>r8</code>. Nothing in the code names them, which is precisely what makes this the kind of mistake a compiler cannot catch.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>A seventh argument would have arrived on the stack, above the return address. Six was somebody's estimate of where the benefit of a register stops paying for the cost of preserving it, and the estimate has outlived everything else about the machine it was made for.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global arg6\narg6:\n    mov rax, r8\n    ret",
+   "tests": ".global _start\n_start:\n    mov rdi, 1\n    mov rsi, 2\n    mov rdx, 3\n    mov rcx, 4\n    mov r8, 5\n    mov r9, 6\n    call arg6\n    cmp rax, 6\n    jne fail\n    mov rdi, 10\n    mov rsi, 20\n    mov rdx, 30\n    mov rcx, 40\n    mov r8, 50\n    mov r9, 60\n    call arg6\n    cmp rax, 60\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 2,
+   "title": "The registers you must give back",
+   "brief": "<p>Write <code>uses_rbx</code>, which needs a scratch register and picks one the caller expects to survive.</p>\n<p><code>rbx</code>, <code>rbp</code> and <code>r12</code> through <code>r15</code> must be preserved. Everything else may be destroyed.</p>",
+   "kind": "output",
+   "concept": "Half the contract is which registers a called function may overwrite, and breaking it corrupts the caller in a way nothing reports.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Either save and restore it, or use a register the caller does not expect back."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The caller's value in <code>rbx</code> came back changed. It is one of the six the callee must preserve, so a function using it has to push it on entry and pop it before returning, or use one of the volatile registers instead.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>Nothing checks this. The caller kept a value in a register the agreement said was safe, the callee used it anyway, and the corruption appears somewhere else entirely. Six preserved out of sixteen is a negotiation: more and every function pays to save them, fewer and every caller pays to reload.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global uses_rbx\nuses_rbx:\n    mov rbx, rdi\n    add rbx, 100\n    mov rax, rbx\n    ret",
+   "tests": ".global _start\n_start:\n    mov rbx, 12345\n    mov rdi, 7\n    call uses_rbx\n    cmp rax, 107\n    jne fail\n    /* The caller's rbx must have survived the call. */\n    cmp rbx, 12345\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 3,
+   "title": "Sixteen at the call",
+   "brief": "<p>The stack must be sixteen-byte aligned when a <code>call</code> executes. <code>call</code> itself pushes eight bytes, so on entry to a function it is eight out.</p>\n<p>Write <code>aligned_at_call</code>, returning 1 when the stack it is about to make a call on would be correctly aligned, given the stack pointer's low bits on entry and how many eight-byte pushes have happened since.</p>",
+   "kind": "output",
+   "concept": "The rule is enforced by nothing, so a routine that gets it wrong works until the callee uses an aligned instruction.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "On entry the pointer is eight past a boundary. An odd number of pushes brings it back."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. On entry the stack is misaligned by eight, because <code>call</code> pushed the return address, so an odd number of further pushes realigns it and an even number does not. Assuming entry is aligned inverts every answer.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is the bug in every hand-written assembly routine that crashes only when it calls something else. Its own code never needed the alignment; the library function it called used one aligned load and died, several frames away from the mistake.</p>",
+   "starter": "int aligned_at_call(int pushes) {\n    return pushes % 2 == 0;\n}",
+   "tests": "#include <assert.h>\nint aligned_at_call(int);\nint main(void) {\n    /* No pushes: still eight out from the call that got here. */\n    assert(aligned_at_call(0) == 0);\n    /* One push realigns. */\n    assert(aligned_at_call(1) == 1);\n    assert(aligned_at_call(2) == 0);\n    assert(aligned_at_call(3) == 1);\n    assert(aligned_at_call(4) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "In registers, or in memory",
+   "brief": "<p>Write <code>passed_in_registers</code>, reporting whether a structure of the given size and triviality travels in registers.</p>\n<p>Up to sixteen bytes and trivially copyable goes in registers, chunk by chunk. Anything else is passed in memory with the caller supplying the storage.</p>",
+   "kind": "output",
+   "concept": "The rule is an algorithm over eight-byte chunks rather than a table, which is why a structure of an integer and a double occupies one register of each kind.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Two conditions, and both must hold."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Size alone is not enough: a sixteen-byte type holding something with a destructor is passed in memory however small it is, because the caller has to own storage the callee can destroy. Both conditions have to be checked.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Two integers go in one register. An integer and a double go in one integer register and one vector register, because the classification is per eight-byte chunk and each chunk goes where its contents belong. Twenty-four bytes goes in memory whatever it contains, which is a real reason to keep a hot value type at or under sixteen.</p>",
+   "starter": "int passed_in_registers(int size_bytes, int trivially_copyable) {\n    (void)trivially_copyable;\n    return size_bytes <= 16;\n}",
+   "tests": "#include <assert.h>\nint passed_in_registers(int, int);\nint main(void) {\n    /* Two ints: one register. */\n    assert(passed_in_registers(8, 1) == 1);\n    /* Two longs: two registers, still the limit. */\n    assert(passed_in_registers(16, 1) == 1);\n    /* Three longs: memory. */\n    assert(passed_in_registers(24, 1) == 0);\n    /* Small and non-trivial: memory anyway. */\n    assert(passed_in_registers(8, 0) == 0);\n    assert(passed_in_registers(16, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "The argument you did not write",
+   "brief": "<p>A large return value is written through a hidden pointer the caller passes as an extra first argument, so every declared argument shifts by one.</p>\n<p>Write <code>register_for_arg</code>, returning which register a declared argument arrives in, given whether the return value needs that hidden pointer.</p>\n<p>Registers are numbered 0 for <code>rdi</code> through 5 for <code>r9</code>, and -1 for the stack.</p>",
+   "kind": "output",
+   "concept": "A function returning a large structure takes one more argument than it appears to, and that is visible the moment you read a disassembly.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The hidden pointer takes the first register, so everything else moves along one."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. With a hidden return pointer, the first declared argument arrives in <code>rsi</code> rather than <code>rdi</code>, and the sixth is pushed to the stack because only five registers are left. Ignoring the shift puts every argument one place early.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Which is why a function that looks like it takes three arguments and returns a container actually takes four and returns nothing, and why the argument registers in its disassembly do not line up with its declaration. The caller allocated the storage, passed its address, and the callee filled it in.</p>",
+   "starter": "int register_for_arg(int index, int hidden_return_pointer) {\n    (void)hidden_return_pointer;\n    return index < 6 ? index : -1;\n}",
+   "tests": "#include <assert.h>\nint register_for_arg(int, int);\nint main(void) {\n    /* An ordinary function: argument 0 is in rdi. */\n    assert(register_for_arg(0, 0) == 0);\n    assert(register_for_arg(5, 0) == 5);\n    assert(register_for_arg(6, 0) == -1);\n    /* With a hidden return pointer everything shifts by one. */\n    assert(register_for_arg(0, 1) == 1);\n    assert(register_for_arg(4, 1) == 5);\n    /* And the sixth declared argument no longer fits. */\n    assert(register_for_arg(5, 1) == -1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Changes that break silently",
+   "brief": "<p>Write <code>breaks_abi</code>, reporting whether a change to a library breaks binary compatibility with programs already compiled against it.</p>\n<p>The kinds are: 0 adding a non-virtual member function, 1 adding a data member, 2 adding a virtual function, 3 reordering data members, 4 changing the body of an inline function, 5 renaming a parameter.</p>",
+   "kind": "output",
+   "concept": "Almost none of the changes that break binary compatibility look like breaking changes in the header, which is why evolving a library is stricter than writing one.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Anything that changes a size, an offset, a table layout, or code already copied into a caller."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Adding a non-virtual member function is safe, because it adds a symbol and changes no layout. Adding a data member is not, because every caller that allocated one of these is now allocating the wrong amount, and the header change looks identical in kind.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Changing an inline function is the one people miss. Its body was copied into every caller at their build time, so the new version applies only to code recompiled since, and a program can end up running two versions of the same function. That is why a library meaning to be stable puts its members behind a pointer and keeps its inline functions trivial.</p>",
+   "starter": "int breaks_abi(int change_kind) {\n    return change_kind == 1 || change_kind == 3;\n}",
+   "tests": "#include <assert.h>\nint breaks_abi(int);\nint main(void) {\n    /* A new non-virtual member function adds a symbol and changes no layout. */\n    assert(breaks_abi(0) == 0);\n    /* A new data member changes the size. */\n    assert(breaks_abi(1) == 1);\n    /* A new virtual function changes the table layout. */\n    assert(breaks_abi(2) == 1);\n    /* Reordering changes every offset. */\n    assert(breaks_abi(3) == 1);\n    /* An inline body was already copied into every caller. */\n    assert(breaks_abi(4) == 1);\n    /* A parameter name appears in no compiled artefact. */\n    assert(breaks_abi(5) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "The interface everything speaks",
+   "brief": "<p>Write <code>c_abi_expressible</code>, reporting whether a construct can cross a C interface.</p>\n<p>The kinds are: 0 a pointer, 1 an integer, 2 a struct of plain data, 3 a C++ template, 4 an exception propagating out, 5 a function with a destructor running on return.</p>",
+   "kind": "output",
+   "concept": "The C ABI is the universal interface because it is small enough for every language to implement, and what it excludes is exactly what makes the C++ one enormous.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Anything that needs the compiler to generate code at the boundary does not cross it."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A struct of plain data crosses fine, because its layout is decided by the machine rather than by a language. A template does not, because there is nothing to call until it is instantiated and no name for it that another language could produce.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>No mangling, no exceptions, no destructors, no templates. That is the whole of it, and it is why <code>extern \"C\"</code> exists, why every foreign function interface targets it, and why a library meant to be used from more than one language exposes a C surface whatever it is written in.</p>",
+   "starter": "int c_abi_expressible(int kind) {\n    return kind < 4;\n}",
+   "tests": "#include <assert.h>\nint c_abi_expressible(int);\nint main(void) {\n    assert(c_abi_expressible(0) == 1);\n    assert(c_abi_expressible(1) == 1);\n    assert(c_abi_expressible(2) == 1);\n    /* A template has nothing to call until it is instantiated. */\n    assert(c_abi_expressible(3) == 0);\n    /* Unwinding across the boundary has no defined behaviour. */\n    assert(c_abi_expressible(4) == 0);\n    /* Nothing runs code on the way out of a C function. */\n    assert(c_abi_expressible(5) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Two versions of one type",
+   "brief": "<p>When <code>std::string</code> had to change layout, GCC shipped both, distinguished in the mangled names, so mixing them gives an undefined symbol rather than corruption.</p>\n<p>Write <code>link_outcome</code>, returning 0 when two objects link, 1 when they produce an undefined symbol, and 2 when they would link and be silently wrong.</p>",
+   "kind": "output",
+   "concept": "An incompatible change made loud at link time is better than one that runs, which is why the mangled name carries the version.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The version is in the name, so a mismatch cannot resolve."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Two objects built against different versions of the type have different mangled names for every function taking it, so the linker finds nothing and says so. Silent corruption is the outcome the naming scheme exists to prevent, and it happens only when the layout changed and the name did not.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The undefined symbol is the feature. Given a choice between an error at link time and a program that runs and is wrong, the break was made loud on purpose, and the resulting message has confused a decade of people who were being protected by it.</p>",
+   "starter": "int link_outcome(int version_a, int version_b, int name_encodes_version) {\n    (void)name_encodes_version;\n    return version_a == version_b ? 0 : 2;\n}",
+   "tests": "#include <assert.h>\nint link_outcome(int, int, int);\nint main(void) {\n    /* Same version: links and works. */\n    assert(link_outcome(1, 1, 1) == 0);\n    assert(link_outcome(2, 2, 1) == 0);\n    /* Different versions, encoded in the name: an undefined symbol. */\n    assert(link_outcome(1, 2, 1) == 1);\n    /* Different versions and the name does not say: links, and is wrong. */\n    assert(link_outcome(1, 2, 0) == 2);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

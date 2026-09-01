@@ -1,0 +1,83 @@
+{
+ "slug": "abi",
+ "num": 37,
+ "title": "The ABI",
+ "blurb": "The C calling convention is not one thing. Two compilers, one diff, every time.",
+ "part": "systems",
+ "partRoman": "VII",
+ "partTitle": "Systems",
+ "phase": "system",
+ "accent": "clay",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "addressing",
+   "object-model"
+  ],
+  "minutes": 55,
+  "one_idea": "The ABI is the agreement two compiled things keep without either seeing the other's source, and it constrains far more of a library's design than its API does.",
+  "sources": [
+   "x86-64-assembly",
+   "cpu-architectures"
+  ]
+ },
+ "html": "<p>An API is what a programmer writes against. An ABI is what two already-compiled things agree on: which register holds an argument, how a struct is returned, what a symbol is called, what the bytes of an object look like.</p>\n<p>Get the first wrong and the compiler tells you. Get the second wrong and nothing tells you, because both halves compiled and the disagreement is only visible at run time as nonsense.</p>\n<h2 id=\"the-registers-and-the-half-nobody-quotes\">The registers, and the half nobody quotes</h2>\n<p>On this platform the first six integer arguments go in <code>rdi</code>, <code>rsi</code>, <code>rdx</code>, <code>rcx</code>, <code>r8</code>, <code>r9</code>, floating point arguments go in the vector registers, and anything past that goes on the stack. The return value comes back in <code>rax</code>.</p>\n<p>Unit 022 already noted the one difference in the syscall convention. What is worth adding here is the other half of the contract: which registers a called function may destroy.</p>\n<p><code>rbx</code>, <code>rbp</code> and <code>r12</code> through <code>r15</code> must be preserved. Everything else may be overwritten. That split is a negotiation rather than a fact about the hardware: too many preserved registers and every function pays to save them, too few and every caller pays to reload. Six of sixteen was somebody's estimate, and it has outlived the machine the estimate was made for.</p>\n<p>Nothing checks it. A routine that uses <code>rbx</code> without saving it corrupts a value its caller was entitled to keep, and the damage appears somewhere else entirely.</p>\n<h2 id=\"the-alignment-nobody-mentions-until-it-breaks\">The alignment nobody mentions until it breaks</h2>\n<p>The stack must be sixteen-byte aligned at the point a <code>call</code> executes.</p>\n<p>This exists because the vector instructions want aligned operands, and it is enforced by nothing: get it wrong and most functions work, and then one of them uses an aligned load and the program dies inside a library you did not write.</p>\n<p>The arithmetic catches people. <code>call</code> pushes eight bytes, so on entry to a function the stack is eight past a boundary. A function that pushes one more register is aligned again; a function that pushes two is not. Every hand-written assembly routine that crashes only when it calls something else has this bug, and its own code never needed the alignment at all.</p>\n<h2 id=\"the-hundred-and-twenty-eight-bytes-below-the-stack\">The hundred and twenty eight bytes below the stack</h2>\n<p>There is a region just below the stack pointer that a leaf function may use without adjusting anything. It is the red zone, it is 128 bytes, and signal handlers are required not to touch it.</p>\n<p>The point is to make small leaf functions free: no prologue, no epilogue, just use the space. It is also why kernel code is compiled with it disabled, since an interrupt arriving in kernel mode would land on exactly that memory.</p>\n<figure class=\"fig\" data-kind=\"bits\"><svg viewBox=\"-14 -14 668.0 76.0\" class=\"fig-svg\" style=\"max-width:969px\" role=\"img\" aria-label=\"A stack layout showing the return address pushed by call, the saved frame pointer, local variables, and the red zone below the stack pointer.\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"0\" y=\"20\" width=\"640.0\" height=\"28\" rx=\"3\" class=\"fig-panel\"/><rect x=\"480.0\" y=\"20\" width=\"160.0\" height=\"28\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--slate-ink, var(--accent));stroke:var(--slate-ink, var(--accent))\"/><text x=\"560.0\" y=\"38.3\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"600\">red zone</text><rect x=\"320.0\" y=\"20\" width=\"160.0\" height=\"28\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"400.0\" y=\"38.3\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"600\">locals</text><rect x=\"160.0\" y=\"20\" width=\"160.0\" height=\"28\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--copper-ink, var(--accent));stroke:var(--copper-ink, var(--accent))\"/><text x=\"240.0\" y=\"38.3\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"600\">saved rbp</text><rect x=\"0.0\" y=\"20\" width=\"160.0\" height=\"28\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--gold-ink, var(--accent));stroke:var(--gold-ink, var(--accent))\"/><text x=\"80.0\" y=\"38.3\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"600\">return address</text><text x=\"10.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">31</text><text x=\"150.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">24</text><text x=\"170.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">23</text><text x=\"310.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">16</text><text x=\"330.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">15</text><text x=\"470.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">8</text><text x=\"490.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">7</text><text x=\"630.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">0</text></svg><figcaption>What a call leaves behind and what sits below it. The red zone is usable without adjusting the stack pointer, which is what makes a small leaf function free.</figcaption></figure>\n<h2 id=\"how-a-struct-travels\">How a struct travels</h2>\n<p>This is where the ABI stops being a table and becomes an algorithm.</p>\n<p>A small structure is passed in registers, field by field, as though its members had been separate arguments. A structure of two integers goes in one register. A structure of an integer and a double goes in one integer register and one vector register, because the classification is per eight-byte chunk and each chunk goes where its contents belong.</p>\n<p>Above sixteen bytes, or containing anything the caller must be able to destroy, the structure is passed in memory and the caller supplies the storage. Which is a real argument for keeping a hot value type at or under sixteen bytes: twenty-four is a different mechanism, not a slightly larger one.</p>\n<p>Returning follows the same rule with one addition. A large return value is written through a hidden pointer the caller passes as an extra first argument, so a function that appears to take three arguments and return a big structure actually takes four and returns nothing. That hidden parameter shifts every declared argument along one register, and it is visible the moment you read the disassembly of anything returning a container.</p>\n<h2 id=\"what-breaks-without-telling-you\">What breaks without telling you</h2>\n<p>A library keeps binary compatibility when a program compiled against the old version still runs against the new. The list of changes that break it is longer than people expect and almost none of them look like breaking changes.</p>\n<p>Adding a member to a struct changes its size, so every caller that allocated one is now allocating the wrong amount. Adding a virtual function changes the table's layout, so every existing call through it dispatches to the wrong entry. Reordering members changes offsets. Changing an enum's underlying type changes its size.</p>\n<p>Changing an inline function is the one people miss. Its body was copied into every caller at their build time, so the new version applies only to code recompiled since, and a program can end up running two versions of the same function.</p>\n<p>None of those is a source change anybody would call breaking, which is why the rules for evolving a library are stricter than the rules for writing one, and why a library that adds a private member in a patch release has shipped a fault that appears as memory corruption in somebody else's process.</p>\n<h2 id=\"designing-so-that-it-does-not\">Designing so that it does not</h2>\n<p>Two techniques, and both are the same idea.</p>\n<p>Put the members behind a pointer to an incomplete type, so the header stops describing a layout at all and the size never changes. That is the pimpl idiom from unit 033, applied for stability rather than for build time, and it is the same edit.</p>\n<p>Version the symbols. A library that must change a function's behaviour can keep both, with the version encoded in the name, so old programs resolve to the old one and new programs to the new. That is what a symbol version map does, and it is the mechanism behind a system library staying compatible across a decade of changes.</p>\n<p>The common thread is that anything a caller compiled into itself is frozen, so the design question is how little to let them compile in.</p>\n<h2 id=\"the-one-everybody-speaks\">The one everybody speaks</h2>\n<p>The C ABI is the interface every language implements, and the reason is that it is small enough to.</p>\n<p>No name mangling, no exceptions crossing the boundary, no destructors, no templates, no layout rules beyond the ones the machine already imposes. A function taking pointers and integers can be called from anything, which is why <code>extern \"C\"</code> exists, why every foreign function interface targets it, and why libraries meant to be used from more than one language expose a C surface however they are implemented.</p>\n<p>The C++ ABI, by contrast, is enormous, and it was never standardised: the implementations converged on one document by agreement. That is why two compilers can link the same objects today and why the arrangement is a treaty rather than a specification.</p>\n<h2 id=\"when-the-treaty-changed\">When the treaty changed</h2>\n<p>C++11 tightened the requirements on <code>std::string</code> in a way the existing implementation could not satisfy, and the standard library had to change its layout.</p>\n<p>That is a binary-incompatible change to a type appearing in interfaces everywhere. GCC's answer was to ship both: two versions of the type, distinguished in the mangled names, selected by a macro, coexisting in one library. Code compiled against either continues to link, and a program mixing the two gets an undefined symbol rather than silent corruption.</p>\n<p>The undefined symbol is the point. Given a choice between an error at link time and a program that runs and is wrong, the break was made loud on purpose, and the resulting error message has confused a decade of people who were being protected by it.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>The ABI is the part of an interface a compiler cannot check. Arguments in registers, sixteen-byte alignment at every call, six registers the callee must preserve, and a classification algorithm deciding whether a struct travels in registers or in memory.</p>\n<p>Adding a member, adding a virtual function, or changing an inline function all break binary compatibility while looking like additions, which is why a library that means to be stable puts its members behind a pointer and its functions behind a version.</p>\n<p>And the C ABI is the universal interface because it is the smallest one worth agreeing on.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These are raw x86-64 again, so the convention is not abstract: a function returns in <code>rax</code> because the agreement says so, and a routine that clobbers a preserved register breaks its caller in a way nothing reports.</p>\n<p><code>nonzero-exit</code> means a check disagreed. <code>signal</code> usually means the stack alignment was wrong at a call, which is the failure that appears only when the callee happens to use an aligned instruction.</p>",
+ "headings": [
+  {
+   "id": "the-registers-and-the-half-nobody-quotes",
+   "text": "The registers, and the half nobody quotes",
+   "level": 2
+  },
+  {
+   "id": "the-alignment-nobody-mentions-until-it-breaks",
+   "text": "The alignment nobody mentions until it breaks",
+   "level": 2
+  },
+  {
+   "id": "the-hundred-and-twenty-eight-bytes-below-the-stack",
+   "text": "The hundred and twenty eight bytes below the stack",
+   "level": 2
+  },
+  {
+   "id": "how-a-struct-travels",
+   "text": "How a struct travels",
+   "level": 2
+  },
+  {
+   "id": "what-breaks-without-telling-you",
+   "text": "What breaks without telling you",
+   "level": 2
+  },
+  {
+   "id": "designing-so-that-it-does-not",
+   "text": "Designing so that it does not",
+   "level": 2
+  },
+  {
+   "id": "the-one-everybody-speaks",
+   "text": "The one everybody speaks",
+   "level": 2
+  },
+  {
+   "id": "when-the-treaty-changed",
+   "text": "When the treaty changed",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1462,
+ "needs": [
+  "addressing",
+  "object-model"
+ ],
+ "neededBy": []
+}

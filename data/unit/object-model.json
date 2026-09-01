@@ -80,6 +80,7 @@
   "text"
  ],
  "neededBy": [
-  "raii"
+  "raii",
+  "abi"
  ]
 }

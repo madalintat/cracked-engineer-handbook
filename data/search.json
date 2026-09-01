@@ -10407,6 +10407,270 @@
  },
  {
   "t": "section",
+  "slug": "abi",
+  "anchor": "the-registers-and-the-half-nobody-quotes",
+  "title": "The registers, and the half nobody quotes",
+  "text": "On this platform the first six integer arguments go in , , , , , , floating point arguments go in the vector registers, and anything past that goes on the stack. The return value comes back in . Unit 022 already noted the one difference in the syscall convention. What is worth adding here is the other half of the contract: which registers a called function may destroy. , and through must be preserved. Everything else may be overwritten. That split is a negotiation rather than a fact about the hardware: too many preserved registers and every function pays to save them, too few and every caller pays to reload. Six of sixteen was somebody's estimate, and it has outlived the machine the estimate was made for. Nothing checks it. A routine that uses without saving it corrupts a value its caller was entitled to keep, and the damage appears somewhere else entirely.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "abi",
+  "anchor": "the-alignment-nobody-mentions-until-it-breaks",
+  "title": "The alignment nobody mentions until it breaks",
+  "text": "The stack must be sixteen-byte aligned at the point a executes. This exists because the vector instructions want aligned operands, and it is enforced by nothing: get it wrong and most functions work, and then one of them uses an aligned load and the program dies inside a library you did not write. The arithmetic catches people. pushes eight bytes, so on entry to a function the stack is eight past a boundary. A function that pushes one more register is aligned again; a function that pushes two is not. Every hand-written assembly routine that crashes only when it calls something else has this bug, and its own code never needed the alignment at all.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "abi",
+  "anchor": "the-hundred-and-twenty-eight-bytes-below-the-stack",
+  "title": "The hundred and twenty eight bytes below the stack",
+  "text": "There is a region just below the stack pointer that a leaf function may use without adjusting anything. It is the red zone, it is 128 bytes, and signal handlers are required not to touch it. The point is to make small leaf functions free: no prologue, no epilogue, just use the space. It is also why kernel code is compiled with it disabled, since an interrupt arriving in kernel mode would land on exactly that memory. What a call leaves behind and what sits below it. The red zone is usable without adjusting the stack pointer, which is what makes a small leaf function free.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "abi",
+  "anchor": "how-a-struct-travels",
+  "title": "How a struct travels",
+  "text": "This is where the ABI stops being a table and becomes an algorithm. A small structure is passed in registers, field by field, as though its members had been separate arguments. A structure of two integers goes in one register. A structure of an integer and a double goes in one integer register and one vector register, because the classification is per eight-byte chunk and each chunk goes where its contents belong. Above sixteen bytes, or containing anything the caller must be able to destroy, the structure is passed in memory and the caller supplies the storage. Which is a real argument for keeping a hot value type at or under sixteen bytes: twenty-four is a different mechanism, not a slightly larger one. Returning follows the same rule with one addition. A large return value is written through a hidden pointer the caller passes as an extra first argument, so a function that appears to take three arguments and return a big structure actually takes four and returns nothing. That hidden parameter shifts every declared argument along one register, and it is visible the moment you read the disassembly of anything returning a container.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "abi",
+  "anchor": "what-breaks-without-telling-you",
+  "title": "What breaks without telling you",
+  "text": "A library keeps binary compatibility when a program compiled against the old version still runs against the new. The list of changes that break it is longer than people expect and almost none of them look like breaking changes. Adding a member to a struct changes its size, so every caller that allocated one is now allocating the wrong amount. Adding a virtual function changes the table's layout, so every existing call through it dispatches to the wrong entry. Reordering members changes offsets. Changing an enum's underlying type changes its size. Changing an inline function is the one people miss. Its body was copied into every caller at their build time, so the new version applies only to code recompiled since, and a program can end up running two versions of the same function. None of those is a source change anybody would call breaking, which is why the rules for evolving a library are stricter than the rules for writing one, and why a library that adds a private member in a patch release has shipped a fault that appears as memory corruption in somebody else's process.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "abi",
+  "anchor": "designing-so-that-it-does-not",
+  "title": "Designing so that it does not",
+  "text": "Two techniques, and both are the same idea. Put the members behind a pointer to an incomplete type, so the header stops describing a layout at all and the size never changes. That is the pimpl idiom from unit 033, applied for stability rather than for build time, and it is the same edit. Version the symbols. A library that must change a function's behaviour can keep both, with the version encoded in the name, so old programs resolve to the old one and new programs to the new. That is what a symbol version map does, and it is the mechanism behind a system library staying compatible across a decade of changes. The common thread is that anything a caller compiled into itself is frozen, so the design question is how little to let them compile in.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "abi",
+  "anchor": "the-one-everybody-speaks",
+  "title": "The one everybody speaks",
+  "text": "The C ABI is the interface every language implements, and the reason is that it is small enough to. No name mangling, no exceptions crossing the boundary, no destructors, no templates, no layout rules beyond the ones the machine already imposes. A function taking pointers and integers can be called from anything, which is why exists, why every foreign function interface targets it, and why libraries meant to be used from more than one language expose a C surface however they are implemented. The C++ ABI, by contrast, is enormous, and it was never standardised: the implementations converged on one document by agreement. That is why two compilers can link the same objects today and why the arrangement is a treaty rather than a specification.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "abi",
+  "anchor": "when-the-treaty-changed",
+  "title": "When the treaty changed",
+  "text": "C++11 tightened the requirements on in a way the existing implementation could not satisfy, and the standard library had to change its layout. That is a binary-incompatible change to a type appearing in interfaces everywhere. GCC's answer was to ship both: two versions of the type, distinguished in the mangled names, selected by a macro, coexisting in one library. Code compiled against either continues to link, and a program mixing the two gets an undefined symbol rather than silent corruption. The undefined symbol is the point. Given a choice between an error at link time and a program that runs and is wrong, the break was made loud on purpose, and the resulting error message has confused a decade of people who were being protected by it.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "abi",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "The ABI is the part of an interface a compiler cannot check. Arguments in registers, sixteen-byte alignment at every call, six registers the callee must preserve, and a classification algorithm deciding whether a struct travels in registers or in memory. Adding a member, adding a virtual function, or changing an inline function all break binary compatibility while looking like additions, which is why a library that means to be stable puts its members behind a pointer and its functions behind a version. And the C ABI is the universal interface because it is the smallest one worth agreeing on.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "abi",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These are raw x86-64 again, so the convention is not abstract: a function returns in because the agreement says so, and a routine that clobbers a preserved register breaks its caller in a way nothing reports. means a check disagreed. usually means the stack alignment was wrong at a call, which is the failure that appears only when the callee happens to use an aligned instruction.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "abi",
+  "n": 1,
+  "title": "The sixth argument",
+  "text": "The argument registers are an agreement two compiled things keep without either seeing the other's source. Write , returning its sixth argument. The first six integer arguments arrive in , , , , , , in that order. Nothing in the function's text says so.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "abi",
+  "n": 2,
+  "title": "The registers you must give back",
+  "text": "Half the contract is which registers a called function may overwrite, and breaking it corrupts the caller in a way nothing reports. Write , which needs a scratch register and picks one the caller expects to survive. , and through must be preserved. Everything else may be destroyed.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "abi",
+  "n": 3,
+  "title": "Sixteen at the call",
+  "text": "The rule is enforced by nothing, so a routine that gets it wrong works until the callee uses an aligned instruction. The stack must be sixteen-byte aligned when a executes. itself pushes eight bytes, so on entry to a function it is eight out. Write , returning 1 when the stack it is about to make a call on would be correctly aligned, given the stack pointer's low bits on entry and how many eight-byte pushes have happened since.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "abi",
+  "n": 4,
+  "title": "In registers, or in memory",
+  "text": "The rule is an algorithm over eight-byte chunks rather than a table, which is why a structure of an integer and a double occupies one register of each kind. Write , reporting whether a structure of the given size and triviality travels in registers. Up to sixteen bytes and trivially copyable goes in registers, chunk by chunk. Anything else is passed in memory with the caller supplying the storage.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "abi",
+  "n": 5,
+  "title": "The argument you did not write",
+  "text": "A function returning a large structure takes one more argument than it appears to, and that is visible the moment you read a disassembly. A large return value is written through a hidden pointer the caller passes as an extra first argument, so every declared argument shifts by one. Write , returning which register a declared argument arrives in, given whether the return value needs that hidden pointer. Registers are numbered 0 for through 5 for , and -1 for the stack.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "abi",
+  "n": 6,
+  "title": "Changes that break silently",
+  "text": "Almost none of the changes that break binary compatibility look like breaking changes in the header, which is why evolving a library is stricter than writing one. Write , reporting whether a change to a library breaks binary compatibility with programs already compiled against it. The kinds are: 0 adding a non-virtual member function, 1 adding a data member, 2 adding a virtual function, 3 reordering data members, 4 changing the body of an inline function, 5 renaming a parameter.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "abi",
+  "n": 7,
+  "title": "The interface everything speaks",
+  "text": "The C ABI is the universal interface because it is small enough for every language to implement, and what it excludes is exactly what makes the C++ one enormous. Write , reporting whether a construct can cross a C interface. The kinds are: 0 a pointer, 1 an integer, 2 a struct of plain data, 3 a C++ template, 4 an exception propagating out, 5 a function with a destructor running on return.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "abi",
+  "n": 8,
+  "title": "Two versions of one type",
+  "text": "An incompatible change made loud at link time is better than one that runs, which is why the mangled name carries the version. When had to change layout, GCC shipped both, distinguished in the mangled names, so mixing them gives an undefined symbol rather than corruption. Write , returning 0 when two objects link, 1 when they produce an undefined symbol, and 2 when they would link and be silently wrong.",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "abi",
+  "n": 1,
+  "title": "What is the difference between an API and an ABI?",
+  "text": " Get the first wrong and the compiler tells you. Get the second wrong and nothing tells you, because both halves compiled and the disagreement appears at run time as nonsense. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "abi",
+  "n": 2,
+  "title": "Which registers must a called function preserve on x86-64?",
+  "text": " Six of sixteen was somebody's estimate of where the benefit stops paying for the cost, and nothing checks it: a routine that uses  rbx  without saving it corrupts a value its caller was entitled to keep. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "abi",
+  "n": 3,
+  "title": "What must be true of the stack when a <code>call</code> executes?",
+  "text": " It exists because the vector instructions want aligned operands, and it is enforced by nothing until a callee happens to use an aligned load. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "abi",
+  "n": 4,
+  "title": "On entry to a function, how is the stack aligned?",
+  "text": " Which is why an odd number of further pushes realigns it and an even number does not, and why hand-written assembly crashes only once it calls something else. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "abi",
+  "n": 5,
+  "title": "What is the red zone?",
+  "text": " It makes small leaf functions free, and it is why kernel code is compiled with it disabled: an interrupt in kernel mode would land on exactly that memory. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "abi",
+  "n": 6,
+  "title": "How is a structure of two integers passed?",
+  "text": " The classification is per eight-byte chunk and each chunk goes where its contents belong, so a structure of an integer and a double takes one integer register and one vector register. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "abi",
+  "n": 7,
+  "title": "Above what size does a structure travel in memory?",
+  "text": " Which is a real argument for keeping a hot value type at or under sixteen: twenty-four is a different mechanism rather than a slightly larger one. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "abi",
+  "n": 8,
+  "title": "How is a large return value returned?",
+  "text": " Which shifts every declared argument along one register, and is visible the moment you read the disassembly of anything returning a container. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "abi",
+  "n": 9,
+  "title": "Which of these breaks binary compatibility?",
+  "text": " Every caller that allocated one is now allocating the wrong amount, and the header change looks exactly like the safe one. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "abi",
+  "n": 10,
+  "title": "Why does changing an inline function break binary compatibility?",
+  "text": " A program can end up running two versions of the same function, one in code recompiled since and one in code that was not. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "abi",
+  "n": 11,
+  "title": "How does the pimpl idiom help with binary compatibility?",
+  "text": " It is the same edit as the build-time technique from unit 033, applied for stability instead, and the common thread is letting callers compile in as little as possible. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "abi",
+  "n": 12,
+  "title": "What do versioned symbols allow?",
+  "text": " It is the mechanism behind a system library staying compatible across a decade of changes. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "abi",
+  "n": 13,
+  "title": "Why is the C ABI the universal interface?",
+  "text": " No mangling, no exceptions, no destructors, no templates, and no layout rules beyond the ones the machine already imposes. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "abi",
+  "n": 14,
+  "title": "Was the C++ ABI standardised?",
+  "text": " That is why two compilers can link the same objects today and why the arrangement is a treaty rather than a specification. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "abi",
+  "n": 15,
+  "title": "When <code>std::string</code> had to change layout, what did GCC do?",
+  "text": " The undefined symbol is the feature. Given a choice between a link error and a program that runs and is wrong, the break was made loud on purpose. ",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

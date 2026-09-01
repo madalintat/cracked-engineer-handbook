@@ -832,7 +832,8 @@
    ],
    "neededBy": [
     "syscalls",
-    "cache"
+    "cache",
+    "abi"
    ],
    "minutes": 50
   },
@@ -1067,7 +1068,8 @@
     "text"
    ],
    "neededBy": [
-    "raii"
+    "raii",
+    "abi"
    ],
    "minutes": 55
   },
@@ -1195,12 +1197,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1462,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "addressing",
+    "object-model"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "linking",
@@ -2737,9 +2743,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 38,
-  "words": 57757,
-  "exercises": 304,
-  "drills": 570
+  "ready": 39,
+  "words": 59219,
+  "exercises": 312,
+  "drills": 585
  }
 }

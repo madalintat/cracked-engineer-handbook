@@ -81,6 +81,7 @@
  ],
  "neededBy": [
   "syscalls",
-  "cache"
+  "cache",
+  "abi"
  ]
 }

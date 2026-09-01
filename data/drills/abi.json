@@ -1,0 +1,185 @@
+{
+ "slug": "abi",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What is the difference between an API and an ABI?",
+   "options": [
+    "One is what a programmer writes against; the other is what two compiled things agree on",
+    "One is for libraries and the other for executables",
+    "One is standardised and the other is not",
+    "They are the same thing at different layers"
+   ],
+   "correct": 0,
+   "why": "<p>Get the first wrong and the compiler tells you. Get the second wrong and nothing tells you, because both halves compiled and the disagreement appears at run time as nonsense.</p>"
+  },
+  {
+   "n": 2,
+   "q": "Which registers must a called function preserve on x86-64?",
+   "options": [
+    "<code>rbx</code>, <code>rbp</code> and <code>r12</code> through <code>r15</code>",
+    "The six argument registers",
+    "All of them except <code>rax</code>",
+    "None; the caller saves everything it needs"
+   ],
+   "correct": 0,
+   "why": "<p>Six of sixteen was somebody's estimate of where the benefit stops paying for the cost, and nothing checks it: a routine that uses <code>rbx</code> without saving it corrupts a value its caller was entitled to keep.</p>"
+  },
+  {
+   "n": 3,
+   "q": "What must be true of the stack when a <code>call</code> executes?",
+   "options": [
+    "It is sixteen-byte aligned",
+    "It is eight-byte aligned",
+    "It has at least 128 bytes free",
+    "The frame pointer has been pushed"
+   ],
+   "correct": 0,
+   "why": "<p>It exists because the vector instructions want aligned operands, and it is enforced by nothing until a callee happens to use an aligned load.</p>"
+  },
+  {
+   "n": 4,
+   "q": "On entry to a function, how is the stack aligned?",
+   "options": [
+    "Eight past a boundary, because <code>call</code> pushed the return address",
+    "On a sixteen-byte boundary",
+    "Unspecified",
+    "On a boundary determined by the number of arguments"
+   ],
+   "correct": 0,
+   "why": "<p>Which is why an odd number of further pushes realigns it and an even number does not, and why hand-written assembly crashes only once it calls something else.</p>"
+  },
+  {
+   "n": 5,
+   "q": "What is the red zone?",
+   "options": [
+    "128 bytes below the stack pointer a leaf function may use without adjusting anything",
+    "Memory reserved for signal handlers",
+    "The guard page at the end of the stack",
+    "Space for spilled vector registers"
+   ],
+   "correct": 0,
+   "why": "<p>It makes small leaf functions free, and it is why kernel code is compiled with it disabled: an interrupt in kernel mode would land on exactly that memory.</p>"
+  },
+  {
+   "n": 6,
+   "q": "How is a structure of two integers passed?",
+   "options": [
+    "In one register, as though the members were separate arguments",
+    "In memory, with the caller supplying storage",
+    "In two registers, one per member",
+    "By pointer, always"
+   ],
+   "correct": 0,
+   "why": "<p>The classification is per eight-byte chunk and each chunk goes where its contents belong, so a structure of an integer and a double takes one integer register and one vector register.</p>"
+  },
+  {
+   "n": 7,
+   "q": "Above what size does a structure travel in memory?",
+   "options": [
+    "Sixteen bytes",
+    "Eight bytes",
+    "Thirty-two bytes",
+    "It depends on the number of members"
+   ],
+   "correct": 0,
+   "why": "<p>Which is a real argument for keeping a hot value type at or under sixteen: twenty-four is a different mechanism rather than a slightly larger one.</p>"
+  },
+  {
+   "n": 8,
+   "q": "How is a large return value returned?",
+   "options": [
+    "Through a hidden pointer the caller passes as an extra first argument",
+    "In <code>rax</code> and <code>rdx</code> together",
+    "In a static buffer the callee owns",
+    "On the stack, above the return address"
+   ],
+   "correct": 0,
+   "why": "<p>Which shifts every declared argument along one register, and is visible the moment you read the disassembly of anything returning a container.</p>"
+  },
+  {
+   "n": 9,
+   "q": "Which of these breaks binary compatibility?",
+   "options": [
+    "Adding a data member to a struct",
+    "Adding a non-virtual member function",
+    "Renaming a parameter",
+    "Adding a comment"
+   ],
+   "correct": 0,
+   "why": "<p>Every caller that allocated one is now allocating the wrong amount, and the header change looks exactly like the safe one.</p>"
+  },
+  {
+   "n": 10,
+   "q": "Why does changing an inline function break binary compatibility?",
+   "options": [
+    "Its body was copied into every caller at their build time",
+    "Inline functions have no symbol to link against",
+    "The compiler may or may not inline it",
+    "It does not; inline functions are exempt"
+   ],
+   "correct": 0,
+   "why": "<p>A program can end up running two versions of the same function, one in code recompiled since and one in code that was not.</p>"
+  },
+  {
+   "n": 11,
+   "q": "How does the pimpl idiom help with binary compatibility?",
+   "options": [
+    "The header stops describing a layout, so the size never changes",
+    "It removes the need for virtual functions",
+    "It moves the type into the library's namespace",
+    "It forces callers to recompile"
+   ],
+   "correct": 0,
+   "why": "<p>It is the same edit as the build-time technique from unit 033, applied for stability instead, and the common thread is letting callers compile in as little as possible.</p>"
+  },
+  {
+   "n": 12,
+   "q": "What do versioned symbols allow?",
+   "options": [
+    "Keeping both the old and new behaviour, with old programs resolving to the old one",
+    "Refusing to load an outdated program",
+    "Choosing an implementation at run time by configuration",
+    "Compressing the symbol table"
+   ],
+   "correct": 0,
+   "why": "<p>It is the mechanism behind a system library staying compatible across a decade of changes.</p>"
+  },
+  {
+   "n": 13,
+   "q": "Why is the C ABI the universal interface?",
+   "options": [
+    "It is small enough for every language to implement",
+    "It is the oldest",
+    "It is standardised by ISO",
+    "It is the fastest"
+   ],
+   "correct": 0,
+   "why": "<p>No mangling, no exceptions, no destructors, no templates, and no layout rules beyond the ones the machine already imposes.</p>"
+  },
+  {
+   "n": 14,
+   "q": "Was the C++ ABI standardised?",
+   "options": [
+    "No; the implementations converged on one document by agreement",
+    "Yes, in C++11",
+    "Yes, as part of the ELF specification",
+    "Only for the Itanium architecture, which is unused"
+   ],
+   "correct": 0,
+   "why": "<p>That is why two compilers can link the same objects today and why the arrangement is a treaty rather than a specification.</p>"
+  },
+  {
+   "n": 15,
+   "q": "When <code>std::string</code> had to change layout, what did GCC do?",
+   "options": [
+    "Shipped both versions, distinguished in the mangled names, so mixing them gives an undefined symbol",
+    "Broke compatibility and required a recompile",
+    "Kept the old layout and added a wrapper",
+    "Made the change only in a new major version of the compiler"
+   ],
+   "correct": 0,
+   "why": "<p>The undefined symbol is the feature. Given a choice between a link error and a program that runs and is wrong, the break was made loud on purpose.</p>"
+  }
+ ]
+}
