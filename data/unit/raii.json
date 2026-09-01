@@ -82,5 +82,7 @@
  "needs": [
   "object-model"
  ],
- "neededBy": []
+ "neededBy": [
+  "compile-time"
+ ]
 }

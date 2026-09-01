@@ -1,0 +1,86 @@
+{
+ "slug": "compile-time",
+ "num": 33,
+ "title": "Compile time",
+ "blurb": "Templates, instantiation, and why your build is slow.",
+ "part": "systems",
+ "partRoman": "VII",
+ "partTitle": "Systems",
+ "phase": "system",
+ "accent": "clay",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "raii"
+  ],
+  "minutes": 55,
+  "one_idea": "A header is textual inclusion and a template is not code until it is instantiated, so the work your build does is roughly the number of translation units times what each one drags in.",
+  "sources": [
+   "numbers-text-numerics",
+   "compilers-interpreters-terminals-unix"
+  ]
+ },
+ "html": "<p>Builds in this language are slow, and the reason is not that the compiler is bad. It is that the compilation model asks for an enormous amount of repeated work, and almost every technique for making a build faster is a way of asking for less of it.</p>\n<h2 id=\"what-a-translation-unit-is\">What a translation unit is</h2>\n<p>The compiler sees one file at a time. Preprocessing pastes every included header into it textually, and the result, a translation unit, is compiled from scratch with no knowledge of any other.</p>\n<p>Measured, on a real compiler:</p>\n<p>A two-line program with no includes preprocesses to 9 lines and compiles in about 20 milliseconds. The same program with <code>#include &lt;vector&gt;</code> preprocesses to 65766 lines and compiles in about 250 milliseconds. Adding four more common headers takes it to 74864 lines and about 320 milliseconds.</p>\n<p>One include, two lines of your own code, and the compiler now reads sixty five thousand lines. Multiply by the number of files in a project and the arithmetic stops being surprising.</p>\n<figure class=\"fig\" data-kind=\"plot\"><svg viewBox=\"-14 -14 506 262\" class=\"fig-svg\" style=\"max-width:734px\" role=\"img\" aria-label=\"Compile time against preprocessed line count for three small programs, rising from twenty milliseconds at nine lines to over three hundred at seventy five thousand.\" preserveAspectRatio=\"xMidYMid meet\"><g transform=\"translate(58.0,0)\"><line x1=\"0\" y1=\"180.1\" x2=\"420.0\" y2=\"180.1\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"184.1\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">50</text><line x1=\"0\" y1=\"147.0\" x2=\"420.0\" y2=\"147.0\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"151.0\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">100</text><line x1=\"0\" y1=\"113.9\" x2=\"420.0\" y2=\"113.9\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"117.9\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">150</text><line x1=\"0\" y1=\"80.8\" x2=\"420.0\" y2=\"80.8\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"84.8\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">200</text><line x1=\"0\" y1=\"47.7\" x2=\"420.0\" y2=\"47.7\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"51.7\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">250</text><line x1=\"0\" y1=\"14.6\" x2=\"420.0\" y2=\"14.6\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"18.6\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">300</text><line x1=\"56.1\" y1=\"0\" x2=\"56.1\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"56.1\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">10k</text><line x1=\"112.2\" y1=\"0\" x2=\"112.2\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"112.2\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">20k</text><line x1=\"168.3\" y1=\"0\" x2=\"168.3\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"168.3\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">30k</text><line x1=\"224.4\" y1=\"0\" x2=\"224.4\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"224.4\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">40k</text><line x1=\"280.5\" y1=\"0\" x2=\"280.5\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"280.5\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">50k</text><line x1=\"336.6\" y1=\"0\" x2=\"336.6\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"336.6\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">60k</text><line x1=\"392.7\" y1=\"0\" x2=\"392.7\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"392.7\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">70k</text><path d=\"M0.0 200.0 L369.0 47.7 L420.0 0.0\" class=\"fig-line\" style=\"stroke:var(--bad)\"/><text x=\"416.0\" y=\"-7.0\" font-size=\"10\" text-anchor=\"end\" class=\"fig-accent\" font-weight=\"600\">one translation unit</text><line x1=\"0\" y1=\"200.0\" x2=\"420.0\" y2=\"200.0\" class=\"fig-axis\"/><line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"200.0\" class=\"fig-axis\"/></g></svg><figcaption>Measured. The source is two lines in every case. What changes is how much of the standard library the preprocessor pasted in front of it.</figcaption></figure>\n<h2 id=\"a-template-is-a-recipe\">A template is a recipe</h2>\n<p>A function template is not a function. It is instructions for producing one, and nothing is produced until somebody uses it with particular types.</p>\n<p>Which is why templates live in headers. The compiler needs the body at the point of use, because that is where it finds out which types to substitute. A template defined in one source file and used in another does not link, and the error says undefined reference to something that looks defined.</p>\n<p>The consequence is the repeated work. Every translation unit that uses <code>vector&lt;int&gt;</code> instantiates it, compiles it, and emits it. The linker then throws away all but one copy. Five hundred files using the same three containers means fifteen hundred instantiations compiled and fourteen hundred and ninety seven discarded.</p>\n<h2 id=\"where-the-time-actually-goes\">Where the time actually goes</h2>\n<p>Four costs, in roughly the order they bite.</p>\n<p>Parsing what the preprocessor pasted in. This is the 65766 lines above, and it happens once per translation unit, every build.</p>\n<p>Instantiating templates, which means substituting types and compiling the result. A deeply nested type does this many times, and the error messages people complain about are a symptom of the same thing: the compiler is reporting a stack of substitutions because that stack is what it actually did.</p>\n<p>Optimising, which is superlinear in function size and is why heavy inlining is not free at build time.</p>\n<p>And linking, which has to deduplicate everything the first two steps produced in triplicate.</p>\n<h2 id=\"what-to-do-about-it\">What to do about it</h2>\n<p>The techniques all reduce one of those four, and it is worth knowing which.</p>\n<p>Include less. A forward declaration is enough when you only need a pointer or a reference, and replacing an include with one removes that header from this translation unit's cost entirely. Tools exist that compute this for you and their output is usually startling.</p>\n<p>Move definitions out of headers where the type set is known. An explicit instantiation in one source file compiles the template once, and the header declares that it exists, so nothing else instantiates it.</p>\n<p>Break the dependency. The pimpl idiom puts a class's members behind a pointer to an incomplete type, so the header stops mentioning their headers, and changing a private member stops rebuilding everything downstream. It costs an indirection and an allocation.</p>\n<p>Measure rather than guess. Compilers report where their time went, at the level of individual template instantiations, and the answer is routinely one header nobody suspected.</p>\n<h2 id=\"computing-during-the-build\">Computing during the build</h2>\n<p>The other half of compile time is the part you use deliberately.</p>\n<p><code>constexpr</code> marks a function that may run at compile time when its arguments are known, and at run time otherwise. <code>consteval</code> marks one that must run at compile time, which turns a missed opportunity into an error rather than a silent fallback.</p>\n<p>What is permitted has grown steadily. Loops, local variables, allocation that does not escape, most of the standard containers. It is close enough to ordinary code that the interesting question is no longer what can be done but what should be, since every value computed during the build is build time spent.</p>\n<p><code>if constexpr</code> is the related tool and it does something a runtime <code>if</code> cannot: the branch not taken is discarded rather than compiled. That is what lets one function body handle types for which the other branch would not even be valid, and it replaced a large amount of machinery that existed only to express the same idea.</p>\n<h2 id=\"two-phases-and-the-keyword-nobody-expects\">Two phases, and the keyword nobody expects</h2>\n<p>One rule of the language exists purely because of when things are looked up, and it produces an error people find baffling.</p>\n<p>A template is checked twice. Names that do not depend on the template parameters are resolved when the template is defined, and names that do are resolved when it is instantiated. That is two-phase lookup, and it is what lets a compiler diagnose a typo in a template nobody ever used.</p>\n<p>The awkwardness is that the compiler must parse the template before knowing the types, so it has to decide what a dependent name means without being able to look it up. Its default assumption is that a dependent name is a value, not a type, which is why writing a nested type of a template parameter requires the <code>typename</code> keyword to say otherwise, and why calling a member template requires the <code>template</code> keyword in the same position.</p>\n<p>Neither adds information a human needed. They exist so the parse can proceed, and they are a good illustration of the general shape of this subject: most of what feels arbitrary is a consequence of the compiler seeing one file at a time, in order, with no way to look ahead.</p>\n<h2 id=\"the-error-messages-and-the-fix\">The error messages, and the fix</h2>\n<p>Before concepts, constraining a template meant arranging for the wrong types to produce a substitution failure, which removed the candidate from consideration without an error. It worked and it produced the diagnostics the language is famous for, because the compiler could report only that nothing matched and then recite everything it tried.</p>\n<p>Concepts state the requirement directly. The constraint is named, checked at the call, and the error says which requirement was not satisfied. Same expressive power, an error message a person can act on, and the reason to adopt them is entirely about the second thing.</p>\n<h2 id=\"the-fix-nobody-has-finished-adopting\">The fix nobody has finished adopting</h2>\n<p>Modules replace textual inclusion with a compiled artefact. The exporting file is compiled once, its interface is stored, and importing it costs reading that rather than reparsing the source.</p>\n<p>The saving is exactly the number above: the 65766 lines are read once for the project rather than once per file. Reported build time reductions are large and consistent.</p>\n<p>Adoption is slow because a module is a build system problem before it is a language one. The order files compile in now depends on their imports, which means the build system has to scan sources to discover dependencies before it can schedule anything, and the tooling for that arrived years after the language feature.</p>\n<h2 id=\"the-cost-that-is-not-the-compilers\">The cost that is not the compiler's</h2>\n<p>One more contributor, because it is usually larger than any of the above and is nobody's fault in the code.</p>\n<p>A build rebuilds what changed and everything downstream of it. Touch a header that five hundred files include and the build is five hundred translation units regardless of how small the change was, which is why a one-character edit can cost as much as a clean build.</p>\n<p>So the shape of your include graph decides your incremental build time, and the lever is the same one as before: fewer edges. A header that includes only what its own declarations need has fewer files downstream of it, and a change to a private implementation detail behind a pointer has none at all.</p>\n<p>The related lever is caching. A compiler cache keyed on the preprocessed input turns a rebuild of unchanged translation units into a file copy, which is why it helps enormously on a branch switch and not at all on the edit you just made.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>Compilation is per translation unit, headers are pasted in textually, and templates instantiate everywhere they are used and deduplicate at link time. Those three facts predict the cost.</p>\n<p>One <code>#include &lt;vector&gt;</code> costs sixty five thousand lines and a quarter of a second, measured, before your own code is considered.</p>\n<p>And the compile-time computation features are a budget rather than a free lunch: every value computed during the build is time somebody waits for, once per build, on every machine.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These are C++ and several assert things at compile time, using <code>static_assert</code>, which means a wrong answer is a compile error rather than a failed check.</p>\n<p><code>compile-error</code> is therefore the interesting verdict in this unit rather than a sign that something is broken. When an exercise expects it, the failure it describes was caught before the program existed, which is the entire point of the technique being demonstrated.</p>",
+ "headings": [
+  {
+   "id": "what-a-translation-unit-is",
+   "text": "What a translation unit is",
+   "level": 2
+  },
+  {
+   "id": "a-template-is-a-recipe",
+   "text": "A template is a recipe",
+   "level": 2
+  },
+  {
+   "id": "where-the-time-actually-goes",
+   "text": "Where the time actually goes",
+   "level": 2
+  },
+  {
+   "id": "what-to-do-about-it",
+   "text": "What to do about it",
+   "level": 2
+  },
+  {
+   "id": "computing-during-the-build",
+   "text": "Computing during the build",
+   "level": 2
+  },
+  {
+   "id": "two-phases-and-the-keyword-nobody-expects",
+   "text": "Two phases, and the keyword nobody expects",
+   "level": 2
+  },
+  {
+   "id": "the-error-messages-and-the-fix",
+   "text": "The error messages, and the fix",
+   "level": 2
+  },
+  {
+   "id": "the-fix-nobody-has-finished-adopting",
+   "text": "The fix nobody has finished adopting",
+   "level": 2
+  },
+  {
+   "id": "the-cost-that-is-not-the-compilers",
+   "text": "The cost that is not the compiler's",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1530,
+ "needs": [
+  "raii"
+ ],
+ "neededBy": []
+}

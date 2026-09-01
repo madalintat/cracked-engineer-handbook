@@ -1,0 +1,310 @@
+{
+ "slug": "compile-time",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Computed before the program exists",
+   "brief": "<p>Write <code>factorial</code> as a <code>constexpr</code> function, so that a <code>static_assert</code> can check its value without running anything.</p>\n<p>A <code>static_assert</code> that fails is a compile error, which is the whole point: the answer was wrong before the program existed.</p>",
+   "kind": "compile-error",
+   "concept": "A <code>constexpr</code> function may run during the build when its arguments are known, which turns a class of test into a compile error.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "compile-error"
+    }
+   ],
+   "hints": [
+    "The keyword goes before the return type."
+   ],
+   "diagnose": [
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>The compiler says the expression is not a constant. A plain function cannot be called in a <code>static_assert</code>, however simple its body: the permission has to be stated, and <code>constexpr</code> is how you state it.</p>"
+    },
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>It compiles now and a value is wrong. Factorial of 0 is 1.</p>"
+    }
+   ],
+   "after": "<p>Nothing ran. The value was computed while the compiler was reading the file, and a wrong answer would have been a compile error rather than a test failure. That is the appeal, and the cost is that every such value is build time somebody waits for, once per build, on every machine.</p>",
+   "starter": "int factorial(int n) {\n    return n <= 1 ? 1 : n * factorial(n - 1);\n}",
+   "tests": "#include <cassert>\nconstexpr int factorial(int);\nstatic_assert(factorial(0) == 1);\nstatic_assert(factorial(1) == 1);\nstatic_assert(factorial(5) == 120);\nstatic_assert(factorial(10) == 3628800);\nint main() {\n    /* And it still works at run time, with an argument the compiler cannot see. */\n    volatile int n = 6;\n    assert(factorial(n) == 720);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 2,
+   "title": "Must, rather than may",
+   "brief": "<p><code>constexpr</code> says a function is allowed to run at compile time. <code>consteval</code> says it has to.</p>\n<p>Make <code>checked_id</code> refuse to be called with a value the compiler cannot see, so that a missed opportunity is an error rather than a silent fallback.</p>",
+   "kind": "compile-error",
+   "concept": "<code>consteval</code> turns a quiet fallback to run time into a diagnostic, which matters when the whole reason for the function was to move the work.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "compile-error"
+    }
+   ],
+   "hints": [
+    "One keyword, in place of the other."
+   ],
+   "diagnose": [
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>The compiler rejects a call whose argument is not a constant expression, which is exactly the behaviour being asked for. If it rejects the definition instead, check that the body contains nothing that can only happen at run time.</p>"
+    },
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>It compiles and a value is wrong.</p>"
+    }
+   ],
+   "after": "<p>A <code>constexpr</code> function called with a run-time argument quietly becomes an ordinary call, which is usually fine and is occasionally the opposite of what you wanted. <code>consteval</code> removes the ambiguity, and the cost is that the function can no longer be used in the run-time case at all.</p>",
+   "starter": "constexpr int checked_id(int n) {\n    return n;\n}",
+   "tests": "#include <cassert>\nconsteval int checked_id(int);\nstatic_assert(checked_id(7) == 7);\nstatic_assert(checked_id(0) == 0);\nint main() {\n    constexpr int k = checked_id(42);\n    assert(k == 42);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 3,
+   "title": "The branch that is not compiled",
+   "brief": "<p>Write <code>describe</code>, returning 1 for integral types and 2 for everything else, using <code>if constexpr</code> so that the branch not taken is discarded rather than compiled.</p>\n<p>A runtime <code>if</code> compiles both branches, which fails when one of them is not valid for the type.</p>",
+   "kind": "output",
+   "concept": "<code>if constexpr</code> discards the untaken branch, which lets one body handle types for which the other branch would not even compile.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "compile-error"
+    }
+   ],
+   "hints": [
+    "The condition has to be a constant expression, and the keyword goes after the <code>if</code>."
+   ],
+   "diagnose": [
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>The compiler is compiling the branch that does not apply. With a plain <code>if</code>, both branches must be valid for every type the template is instantiated with, and the integral-only operation is not valid for a pointer. <code>if constexpr</code> discards the untaken one entirely.</p>"
+    },
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>It compiles and a value is wrong. Integral types report 1.</p>"
+    }
+   ],
+   "after": "<p>This replaced a large amount of machinery that existed only to express the same idea: tag dispatch, overloads on enable_if, and specialisations written for no reason but to keep an invalid expression out of a body. One keyword, and the compiler stops looking at code that does not apply.</p>",
+   "starter": "#include <type_traits>\ntemplate <class T>\nint describe(T v) {\n    if (std::is_integral_v<T>) {\n        return v % 2 == 0 ? 1 : 1;\n    } else {\n        return 2;\n    }\n}",
+   "tests": "#include <cassert>\ntemplate <class T> int describe(T);\nint main() {\n    assert(describe(3) == 1);\n    assert(describe(4L) == 1);\n    assert(describe('a') == 1);\n    /* A pointer has no remainder operator, so the other branch must not be\n       compiled for it. */\n    int x = 0;\n    assert(describe(&x) == 2);\n    assert(describe(1.5) == 2);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 4,
+   "title": "Counting the instantiations",
+   "brief": "<p>A template is a recipe, and a separate function is produced for every distinct set of type arguments.</p>\n<p>Write <code>Tag</code>, whose static member is instantiated once per type, and confirm that three types give three independent counters.</p>",
+   "kind": "output",
+   "concept": "Each instantiation is a separate entity with its own statics, which is why using a template with many types costs many compilations.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The counter has to be a static member of the template, not a single shared variable."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A namespace-scope variable is one object shared by every instantiation, so incrementing through three types gives one counter at three. A static member of the template gives each instantiation its own.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Three types, three functions, three counters, and every translation unit that uses them compiles all three again. The linker discards the duplicates, which is why a large project's link step is slower than its size suggests and why explicit instantiation in one file is worth doing for the templates everybody uses.</p>",
+   "starter": "inline int shared_count = 0;\ntemplate <class T>\nstruct Tag {\n    static int &count() { return shared_count; }\n};",
+   "tests": "#include <cassert>\ntemplate <class T> struct Tag;\nint main() {\n    Tag<int>::count() += 1;\n    Tag<int>::count() += 1;\n    Tag<double>::count() += 1;\n    Tag<char>::count() += 1;\n    assert(Tag<int>::count() == 2);\n    assert(Tag<double>::count() == 1);\n    assert(Tag<char>::count() == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 5,
+   "title": "Saying what you require",
+   "brief": "<p>Constrain <code>sum_all</code> so it accepts only types that support addition, and rejects anything else with a message naming the requirement.</p>\n<p>Before concepts this meant arranging for a substitution failure, and the diagnostics were the ones this language is famous for.</p>",
+   "kind": "compile-error",
+   "concept": "A named constraint is checked at the call and reported by name, which is the same expressive power as a substitution failure with an error a person can act on.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "compile-error"
+    }
+   ],
+   "hints": [
+    "<code>requires</code> on an expression, or a concept declared with one."
+   ],
+   "diagnose": [
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>The compiler reports the constraint that was not satisfied, which is the exercise succeeding rather than failing if the type really cannot be added. If the constraint rejects a type that can be added, check that the requires expression names the operation rather than the type.</p>"
+    },
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>It compiles and a sum is wrong.</p>"
+    }
+   ],
+   "after": "<p>The old technique worked and produced pages of output whose useful content was one line. The constraint is not more powerful, it is nameable, and being able to say which requirement failed is the entire improvement.</p>",
+   "starter": "#include <cstddef>\ntemplate <class T>\nT sum_all(const T *a, size_t n) {\n    T acc{};\n    for (size_t i = 0; i < n; i++) acc = acc + a[i];\n    return acc;\n}",
+   "tests": "#include <cassert>\n#include <cstddef>\n\nstruct NoPlus { int x; };\n\n/* Asks whether the call itself is well formed, which is true for an\n   unconstrained template and false for a properly constrained one. */\ntemplate <class T>\nconcept CanSum = requires(const T *p, size_t n) { sum_all(p, n); };\n\nstatic_assert(CanSum<int>, \"an addable type must still be accepted\");\nstatic_assert(!CanSum<NoPlus>, \"a type with no addition must be rejected\");\n\nint main() {\n    int v[3] = {1, 2, 3};\n    assert(sum_all(v, 3) == 6);\n    double d[2] = {0.5, 0.25};\n    assert(sum_all(d, 2) == 0.75);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 6,
+   "title": "A string measured during the build",
+   "brief": "<p>Write <code>length_of</code>, a <code>constexpr</code> function returning the length of a string literal, so the answer is a constant the compiler already knows.</p>",
+   "kind": "compile-error",
+   "concept": "Work done during the build is work not done at run time, and a string literal's length is known to the compiler whether or not you ask for it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "compile-error"
+    }
+   ],
+   "hints": [
+    "Walk to the terminating zero, in a function the compiler is allowed to evaluate."
+   ],
+   "diagnose": [
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>The compiler says the call is not a constant expression. <code>strlen</code> is not usable in one, because it is an ordinary library function; writing the loop yourself in a <code>constexpr</code> function is.</p>"
+    },
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>It compiles and a length is wrong. The terminator is not counted.</p>"
+    }
+   ],
+   "after": "<p>The compiler already knew this. Every string literal has a known size at the point it appears, and the only reason <code>strlen</code> costs anything is that the information was thrown away when the pointer was formed. This is the smallest example of a general pattern: run-time work that exists because a type lost something the compiler had.</p>",
+   "starter": "#include <cstring>\nsize_t length_of(const char *s) {\n    return std::strlen(s);\n}",
+   "tests": "#include <cassert>\n#include <cstddef>\nconstexpr size_t length_of(const char *);\nstatic_assert(length_of(\"\") == 0);\nstatic_assert(length_of(\"a\") == 1);\nstatic_assert(length_of(\"hello\") == 5);\nstatic_assert(length_of(\"a longer string here\") == 20);\nint main() { return 0; }",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 7,
+   "title": "Fold, rather than recurse",
+   "brief": "<p>Write <code>sum_args</code>, adding a variadic pack of values, using a fold expression rather than recursion.</p>\n<p>A recursive variadic template instantiates one function per argument. A fold is one expression.</p>",
+   "kind": "output",
+   "concept": "Every instantiation is a compilation, so a technique that produces one of them instead of one per element is a build-time decision as much as a style one.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "compile-error"
+    }
+   ],
+   "hints": [
+    "The syntax puts the pack, the operator and the ellipsis inside parentheses."
+   ],
+   "diagnose": [
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>The compiler cannot expand the pack. A fold is written with the pack name, the operator and an ellipsis inside parentheses, and the empty case needs an initial value on one side or the pack must be non-empty.</p>"
+    },
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>It compiles and a sum is wrong. Check the initial value.</p>"
+    }
+   ],
+   "after": "<p>The recursive form instantiates a function per argument and one more for the base case, so ten arguments is eleven compilations of eleven distinct functions. The fold is one. On a codebase where variadic helpers are common this is a measurable share of the build, and the source is shorter as well.</p>",
+   "starter": "template <class... Ts>\nint sum_args(Ts... vs) {\n    return (vs);\n}",
+   "tests": "#include <cassert>\ntemplate <class... Ts> int sum_args(Ts...);\nint main() {\n    assert(sum_args() == 0);\n    assert(sum_args(1) == 1);\n    assert(sum_args(1, 2, 3) == 6);\n    assert(sum_args(1, 2, 3, 4, 5, 6, 7, 8, 9, 10) == 55);\n    assert(sum_args(-1, 1) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 8,
+   "title": "The keyword that only helps the parser",
+   "brief": "<p><code>Wrapper&lt;T&gt;::type</code> could be a type or a value, and the compiler cannot tell which before it knows what <code>T</code> is. It assumes value.</p>\n<p>Fix <code>first_element</code> so it compiles, by telling the parser what kind of name it is looking at.</p>",
+   "kind": "compile-error",
+   "concept": "Two-phase lookup means a dependent name is parsed before it can be resolved, so the parse needs a keyword where a human needed nothing.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "compile-error"
+    }
+   ],
+   "hints": [
+    "One keyword, before the dependent name."
+   ],
+   "diagnose": [
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>The compiler is parsing <code>C::value_type</code> as a value and then finding a declaration where it expected an expression. <code>typename</code> in front of it says the name is a type, which is information the parser needs and a reader did not.</p>"
+    },
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>It compiles and the value is wrong.</p>"
+    }
+   ],
+   "after": "<p>The keyword adds nothing a human needed. It exists because the compiler reads one file at a time, in order, with no way to look ahead, and most of what feels arbitrary in this subject is a consequence of that.</p>",
+   "starter": "#include <cstddef>\ntemplate <class C>\nauto first_element(const C &c) {\n    C::value_type v = c[0];\n    return v;\n}",
+   "tests": "#include <cassert>\n#include <vector>\n#include <string>\ntemplate <class C> auto first_element(const C &);\nint main() {\n    std::vector<int> v{7, 8, 9};\n    assert(first_element(v) == 7);\n    std::vector<double> d{1.5, 2.5};\n    assert(first_element(d) == 1.5);\n    std::string s = \"abc\";\n    assert(first_element(s) == 'a');\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  }
+ ]
+}

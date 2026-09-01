@@ -1083,7 +1083,9 @@
    "needs": [
     "object-model"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "compile-time"
+   ],
    "minutes": 55
   },
   {
@@ -1097,12 +1099,15 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1530,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "raii"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "processes",
@@ -2711,9 +2716,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 34,
-  "words": 51723,
-  "exercises": 272,
-  "drills": 510
+  "ready": 35,
+  "words": 53253,
+  "exercises": 280,
+  "drills": 525
  }
 }

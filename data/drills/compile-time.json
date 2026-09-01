@@ -1,0 +1,185 @@
+{
+ "slug": "compile-time",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What does the compiler see at a time?",
+   "options": [
+    "One translation unit: your file with every header pasted in textually",
+    "The whole project, after a dependency scan",
+    "One function at a time",
+    "One header at a time, cached between files"
+   ],
+   "correct": 0,
+   "why": "<p>Each is compiled from scratch with no knowledge of any other, which is the fact that predicts almost all of the cost.</p>"
+  },
+  {
+   "n": 2,
+   "q": "A two-line program with <code>#include &lt;vector&gt;</code> preprocesses to how many lines?",
+   "options": [
+    "About 65766",
+    "About 500",
+    "About 5000",
+    "The same nine lines; headers are cached"
+   ],
+   "correct": 0,
+   "why": "<p>Measured. It also takes about 250 milliseconds against 20 for the version with no includes, before any of your own code is considered.</p>"
+  },
+  {
+   "n": 3,
+   "q": "Why do templates have to live in headers?",
+   "options": [
+    "The compiler needs the body at the point of use, to know which types to substitute",
+    "Headers are compiled first",
+    "The linker cannot resolve template symbols",
+    "They do not; it is a convention"
+   ],
+   "correct": 0,
+   "why": "<p>A template defined in one source file and used in another does not link, and the error says undefined reference to something that looks defined.</p>"
+  },
+  {
+   "n": 4,
+   "q": "Five hundred files use <code>vector&lt;int&gt;</code>. How many times is it instantiated?",
+   "options": [
+    "Five hundred, and the linker discards all but one",
+    "Once, in the first file compiled",
+    "Once per distinct member function used",
+    "Once per library, at link time"
+   ],
+   "correct": 0,
+   "why": "<p>That repeated work is the reason explicit instantiation in one file is worth doing for the templates everybody uses.</p>"
+  },
+  {
+   "n": 5,
+   "q": "Which of these reduces parsing cost rather than instantiation cost?",
+   "options": [
+    "Replacing an include with a forward declaration",
+    "Explicit instantiation in one source file",
+    "Using <code>if constexpr</code> instead of tag dispatch",
+    "Constraining a template with a concept"
+   ],
+   "correct": 0,
+   "why": "<p>It removes the header from this translation unit entirely. Knowing which of the four costs a technique attacks is what makes the technique worth applying.</p>"
+  },
+  {
+   "n": 6,
+   "q": "What does the pimpl idiom buy?",
+   "options": [
+    "The header stops naming the members' headers, so changing a private member stops rebuilding downstream",
+    "Faster member access",
+    "Smaller objects",
+    "Automatic thread safety"
+   ],
+   "correct": 0,
+   "why": "<p>It costs an indirection and an allocation, and it converts a recompile of everything downstream into a recompile of one file.</p>"
+  },
+  {
+   "n": 7,
+   "q": "What is the difference between <code>constexpr</code> and <code>consteval</code>?",
+   "options": [
+    "<code>constexpr</code> may run at compile time; <code>consteval</code> must",
+    "<code>consteval</code> allows loops and <code>constexpr</code> does not",
+    "<code>constexpr</code> is for functions and <code>consteval</code> for variables",
+    "They are synonyms in C++20"
+   ],
+   "correct": 0,
+   "why": "<p>A <code>constexpr</code> function called with a run-time argument quietly becomes an ordinary call, which is usually fine and occasionally the opposite of what you wanted.</p>"
+  },
+  {
+   "n": 8,
+   "q": "What does <code>if constexpr</code> do that a runtime <code>if</code> cannot?",
+   "options": [
+    "Discards the untaken branch rather than compiling it",
+    "Evaluates the condition faster",
+    "Guarantees the branch is predicted correctly",
+    "Allows the condition to be non-boolean"
+   ],
+   "correct": 0,
+   "why": "<p>That is what lets one body handle types for which the other branch would not even be valid, and it replaced tag dispatch and a pile of enable_if overloads that existed only to express the same idea.</p>"
+  },
+  {
+   "n": 9,
+   "q": "Why are pre-concepts template error messages so long?",
+   "options": [
+    "The compiler can only report that nothing matched, then recite everything it tried",
+    "The standard requires full instantiation backtraces",
+    "Templates are compiled twice",
+    "The messages include the preprocessed source"
+   ],
+   "correct": 0,
+   "why": "<p>Constraining a template meant arranging for a substitution failure, which removed a candidate silently. Concepts name the requirement, so the error can say which one was not satisfied.</p>"
+  },
+  {
+   "n": 10,
+   "q": "What do concepts add over substitution failure?",
+   "options": [
+    "A nameable requirement, so the error says which one failed",
+    "More expressive constraints",
+    "Faster compilation",
+    "Run-time type checking"
+   ],
+   "correct": 0,
+   "why": "<p>Same expressive power. The reason to adopt them is entirely the error message.</p>"
+  },
+  {
+   "n": 11,
+   "q": "What is two-phase lookup?",
+   "options": [
+    "Non-dependent names resolve at definition and dependent ones at instantiation",
+    "Headers are parsed twice, once for declarations",
+    "Templates are compiled once per phase of the build",
+    "Overload resolution runs before and after instantiation"
+   ],
+   "correct": 0,
+   "why": "<p>It is what lets a compiler diagnose a typo in a template nobody ever used.</p>"
+  },
+  {
+   "n": 12,
+   "q": "Why is the <code>typename</code> keyword needed before a dependent nested name?",
+   "options": [
+    "The parser must decide what the name means before it can look it up, and assumes value",
+    "To disambiguate between two overloads",
+    "To force instantiation at that point",
+    "To make the name visible outside the template"
+   ],
+   "correct": 0,
+   "why": "<p>It adds nothing a human needed. It exists so the parse can proceed, which is the general shape of this subject.</p>"
+  },
+  {
+   "n": 13,
+   "q": "What do modules replace?",
+   "options": [
+    "Textual inclusion with a compiled interface read once per project",
+    "The linker's deduplication step",
+    "Templates with a compiled generic form",
+    "The preprocessor entirely"
+   ],
+   "correct": 0,
+   "why": "<p>The saving is exactly the measured number: the sixty five thousand lines are read once rather than once per file.</p>"
+  },
+  {
+   "n": 14,
+   "q": "Why has module adoption been slow?",
+   "options": [
+    "Compile order now depends on imports, so the build system must scan sources first",
+    "Compilers have not implemented them",
+    "They break existing headers",
+    "They increase binary size"
+   ],
+   "correct": 0,
+   "why": "<p>It is a build system problem before it is a language one, and the tooling arrived years after the language feature.</p>"
+  },
+  {
+   "n": 15,
+   "q": "Why can one character's edit cost as much as a clean build?",
+   "options": [
+    "Everything downstream of the changed header is rebuilt, however small the change",
+    "The compiler cannot detect small changes",
+    "Optimisation is rerun across the whole program",
+    "Link-time deduplication is global"
+   ],
+   "correct": 0,
+   "why": "<p>The shape of the include graph decides incremental build time, and fewer edges is the same lever as everything else in this unit.</p>"
+  }
+ ]
+}
