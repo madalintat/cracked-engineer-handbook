@@ -1,0 +1,185 @@
+{
+ "slug": "computability",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What does the halting proof actually construct?",
+   "options": [
+    "A program that asks the decider about itself and then does the opposite",
+    "A program whose running time exceeds any bound",
+    "An input on which every decider is slow",
+    "A machine with infinitely many states"
+   ],
+   "correct": 0,
+   "why": "<p>If the decider says it halts, it loops forever; if it says it loops, it returns at once. There is no third option, so the decider does not exist.</p>"
+  },
+  {
+   "n": 2,
+   "q": "What do Cantor's diagonal, Gödel's theorem, Russell's paradox and the halting problem share?",
+   "options": [
+    "Something that can talk about all of its kind is made to talk about itself",
+    "They all rely on the axiom of choice",
+    "They were all published in the same decade",
+    "They all concern infinite sets of real numbers"
+   ],
+   "correct": 0,
+   "why": "<p>Self-reference plus negation is a contradiction. Any system rich enough to describe its own descriptions has this hole, and that richness is what made it universal.</p>"
+  },
+  {
+   "n": 3,
+   "q": "What does Rice's theorem say?",
+   "options": [
+    "Every non-trivial property of a program's behaviour is undecidable",
+    "Halting is the only undecidable property",
+    "Undecidable properties are those with no finite description",
+    "Properties of behaviour are decidable given enough memory"
+   ],
+   "correct": 0,
+   "why": "<p>Not the hard ones. All of them. If some programs have the property and some do not, no program decides which.</p>"
+  },
+  {
+   "n": 4,
+   "q": "Which of these questions is decidable?",
+   "options": [
+    "Does the source contain the word <code>goto</code>",
+    "Does the program ever execute a <code>goto</code>",
+    "Does the program ever dereference a null pointer",
+    "Is this allocation ever freed"
+   ],
+   "correct": 0,
+   "why": "<p>The condition in Rice's theorem is a property of behaviour rather than of text, and that distinction is doing all the work.</p>"
+  },
+  {
+   "n": 5,
+   "q": "Does undecidable mean your compiler cannot prove your loop terminates?",
+   "options": [
+    "No, it means no single method works for every program",
+    "Yes, termination proofs are impossible in practice",
+    "Only for loops whose bound is not a constant",
+    "Only in languages with unrestricted recursion"
+   ],
+   "correct": 0,
+   "why": "<p>Your compiler proves termination all day. It just cannot promise to, and the difference between doing and promising is the whole of static analysis.</p>"
+  },
+  {
+   "n": 6,
+   "q": "A sound analysis is one that...",
+   "options": [
+    "Answers yes only when it can prove it, and rejects things it cannot prove safe",
+    "Never rejects a correct program",
+    "Finds every bug in the program",
+    "Terminates on every input"
+   ],
+   "correct": 0,
+   "why": "<p>It never lets a bad program through and it is incomplete as a consequence. This is why every user of a strict type checker has written a correct program the compiler refused.</p>"
+  },
+  {
+   "n": 7,
+   "q": "Where do most linters and bug finders sit?",
+   "options": [
+    "Unsound on purpose: usually right, and able to miss things",
+    "Sound and complete, for the subset of the language they analyse",
+    "Sound but slow",
+    "They avoid the problem by only reading syntax"
+   ],
+   "correct": 0,
+   "why": "<p>A tool that only reported certainties would report almost nothing, which is why accepting false negatives is the useful choice rather than a compromise.</p>"
+  },
+  {
+   "n": 8,
+   "q": "Why does the kernel's eBPF verifier reject backward jumps?",
+   "options": [
+    "A program with no backward jump cannot loop, so termination is decidable in one pass",
+    "Backward jumps break the instruction cache",
+    "They make the bytecode ambiguous to decode",
+    "They are not expressible in the eBPF instruction set"
+   ],
+   "correct": 0,
+   "why": "<p>eBPF programs run in the kernel with no timeout and no way to be killed, so the verifier cannot afford to be wrong. It pays for that with every loop it refuses.</p>"
+  },
+  {
+   "n": 9,
+   "q": "What is a timeout, in the terms of this unit?",
+   "options": [
+    "Turning an undecidable question into a decidable question about something else",
+    "An approximation that becomes exact as the limit grows",
+    "A sound analysis with a configurable precision",
+    "A way of detecting infinite loops"
+   ],
+   "correct": 0,
+   "why": "<p>Running for a million steps decides \"did it halt within a million steps\", which is a different and answerable question. Fuzzers, sanitizers and test suites are the same exit wearing different clothes.</p>"
+  },
+  {
+   "n": 10,
+   "q": "What did Fred Cohen prove in 1987?",
+   "options": [
+    "Deciding whether a program is a virus is undecidable",
+    "That signature scanning has exponential worst-case cost",
+    "That self-modifying code cannot be disassembled",
+    "That every antivirus can be evaded by encryption"
+   ],
+   "correct": 0,
+   "why": "<p>By the same construction: a program that reads the detector's verdict about itself and does the opposite. So scanners match text and sandbox samples for a while, and both are approximations.</p>"
+  },
+  {
+   "n": 11,
+   "q": "Why do scanners have false negatives by construction?",
+   "options": [
+    "They answer a decidable question about text, which is not the question anybody wanted",
+    "Their signature databases are always out of date",
+    "Sandboxes are too slow to run every sample",
+    "Heuristics are tuned to avoid false positives"
+   ],
+   "correct": 0,
+   "why": "<p>The arms race between packers and scanners is a fight over how much text has to stay recognisable, and it is a consequence of the theorem rather than of engineering effort.</p>"
+  },
+  {
+   "n": 12,
+   "q": "Halting is semi-decidable. What does that buy you?",
+   "options": [
+    "You can always confirm a program that halts, and never confirm one that does not",
+    "You can decide it for programs below a known size",
+    "You can decide it with a bounded probability of error",
+    "Nothing practical, it is a technical refinement"
+   ],
+   "correct": 0,
+   "why": "<p>Run it and wait. If it halts you find out. At no point during the waiting do you learn that waiting is futile.</p>"
+  },
+  {
+   "n": 13,
+   "q": "A model checker reports no bug found. What do you know?",
+   "options": [
+    "Nothing yet",
+    "The program is correct with respect to the properties checked",
+    "The program is correct up to the depth explored, which is a proof",
+    "The properties were too weak to catch anything"
+   ],
+   "correct": 0,
+   "why": "<p>Knowing which side of an answer is trustworthy is most of knowing how to use a verification tool. Finding a bug is a proof; not finding one is an absence.</p>"
+  },
+  {
+   "n": 14,
+   "q": "What is the busy beaver function, and why does it matter here?",
+   "options": [
+    "The longest running time among halting programs of a given size, and it is not computable",
+    "The fastest terminating program for a given task",
+    "The number of states needed to simulate any machine of size n",
+    "A benchmark for comparing instruction sets"
+   ],
+   "correct": 0,
+   "why": "<p>If you could compute it you could decide halting: wait that long and give up. It grows faster than any function you can write down, which is why no timeout has a principled value.</p>"
+  },
+  {
+   "n": 15,
+   "q": "For how many states is the busy beaver value now known?",
+   "options": [
+    "Five, settled in 2024 at 47176870 steps",
+    "Six, settled in 2024",
+    "Four, and five is believed impossible",
+    "Ten, using a distributed search"
+   ],
+   "correct": 0,
+   "why": "<p>Six is unknown and its best lower bound is too large to write in ordinary notation. Decades of work went into the five-state answer.</p>"
+  }
+ ]
+}

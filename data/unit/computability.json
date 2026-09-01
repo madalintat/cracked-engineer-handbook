@@ -1,0 +1,83 @@
+{
+ "slug": "computability",
+ "num": 18,
+ "title": "What cannot be decided",
+ "blurb": "Rice's theorem, and why a perfect optimiser, a perfect analyser and a perfect virus scanner are all impossible.",
+ "part": "theory",
+ "partRoman": "IV",
+ "partTitle": "Theory",
+ "phase": "understand",
+ "accent": "copper",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "universal",
+   "languages"
+  ],
+  "minutes": 55,
+  "one_idea": "Every interesting question about what a program does is undecidable, so every tool that asks one has already chosen which way to be wrong.",
+  "sources": [
+   "compilers-interpreters-terminals-unix",
+   "nand2tetris-eater-scott"
+  ]
+ },
+ "html": "<p>Unit 017 ended with a warning. Once a machine can be handed a description of a machine, it can be handed a description of itself, and the questions you can ask by doing that are where computability runs out.</p>\n<p>This is that unit. It is the one with a negative result in it, and the negative result is more useful than it sounds, because it explains the shape of almost every static analysis tool you have ever used.</p>\n<h2 id=\"the-question\">The question</h2>\n<p>Given a program and its input, does it stop?</p>\n<p>That is a perfectly ordinary question. For most programs you can answer it by looking. The claim is that no program can answer it for every program, and the proof takes four lines.</p>\n<p>Suppose <code>halts(p, x)</code> exists and always returns the right answer. Then write:</p>\n<pre class=\"cb\" data-lang=\"c\"><code>void trouble(char *p) {\n    if (halts(p, p)) for (;;) { }\n    else return;\n}</code></pre>\n<p>Now ask what <code>halts(trouble, trouble)</code> returns. If it says yes, <code>trouble</code> loops forever, so the answer was wrong. If it says no, <code>trouble</code> returns immediately, so the answer was wrong. There is no third option, so <code>halts</code> does not exist.</p>\n<h2 id=\"why-that-is-not-a-trick\">Why that is not a trick</h2>\n<p>The construction looks like a word game and it is not. It is the same argument as three other famous results, and recognising the shape is worth more than the result itself.</p>\n<p>Cantor showed the real numbers are uncountable by assuming a list of them and building a number that differs from the first in the first digit, the second in the second, and so on. Gödel showed that any consistent system strong enough for arithmetic contains a true statement it cannot prove, by writing down a sentence that says of itself that it is unprovable. Russell asked whether the set of all sets that do not contain themselves contains itself.</p>\n<p>All four are the same move: something that can talk about all of its kind can be made to talk about itself, and self-reference plus negation is a contradiction. Any system rich enough to describe its own descriptions has this hole, and the richness is exactly what made it universal in the first place.</p>\n<h2 id=\"the-generalisation-that-hurts\">The generalisation that hurts</h2>\n<p>Halting is one question. Rice's theorem says every question of this kind is undecidable, and the statement is broader than people expect.</p>\n<p>Take any property of a program's behaviour rather than its text. If some programs have it and some do not, then no program can decide which. Not the ones that are hard. All of them.</p>\n<p>So each of these is impossible, in full generality:</p>\n<p>Does this program ever print anything. Does it always return the same answer as that one. Does it ever dereference a null pointer. Does it terminate on every input. Does it compute the identity function. Is this code dead. Is this allocation ever freed. Is this a virus.</p>\n<p>The condition, a property of behaviour rather than of text, is doing real work. \"Does the source contain the word <code>goto</code>\" is perfectly decidable. \"Does it ever execute a <code>goto</code>\" is not.</p>\n<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 644 184\" class=\"fig-svg\" style=\"max-width:934px\" role=\"img\" aria-label=\"One box for decidable questions about a program&#x27;s text, and a larger box for undecidable questions about its behaviour, with examples in each.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><rect x=\"0.0\" y=\"44.0\" width=\"246.4\" height=\"105.6\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"123.2\" y=\"95.8\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">about the text</text><text x=\"123.2\" y=\"111.8\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">decidable: length, syntax, which names appear</text><rect x=\"325.6\" y=\"44.0\" width=\"290.4\" height=\"105.6\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--bad);stroke:var(--bad)\"/><text x=\"470.8\" y=\"95.8\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">about the behaviour</text><text x=\"470.8\" y=\"111.8\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">undecidable: halting, output, null, dead code</text></svg><figcaption>The line is not difficulty, it is text against behaviour. Everything on the right is impossible in general and approximated in practice.</figcaption></figure>\n<h2 id=\"what-this-does-not-mean\">What this does not mean</h2>\n<p>It does not mean the questions are unanswerable for the program in front of you. Almost every program you meet is easy: the loop is a <code>for</code> with a constant bound and it obviously terminates.</p>\n<p>Undecidable is a statement about all programs at once. It says no single method works for every input, which leaves plenty of room for methods that work for most of them. The compiler on your machine proves termination of loops all day. It just cannot promise to, and the difference between doing and promising is the whole of static analysis.</p>\n<p>So the correct reading is not give up. It is: you cannot have a tool that is always right, so decide in advance which way it will be wrong.</p>\n<h2 id=\"the-four-escapes\">The four escapes</h2>\n<p>Every real tool takes one of four exits, and knowing which one a tool took tells you how to use it.</p>\n<p>The first is to be conservative. Answer yes only when you can prove it, and say no or unknown otherwise. This is sound: it never lets a bad program through. It is also incomplete: it rejects safe programs it cannot prove safe. Type checkers work this way, and so does Rust's borrow checker, which is why every user of it has at some point written a correct program the compiler refused.</p>\n<p>The second is to be unsound on purpose. Answer with a heuristic that is usually right and can miss things. Most linters and most bug finders live here, and they are useful precisely because a tool that only reported certainties would report almost nothing.</p>\n<p>The third is to restrict the language until the question becomes decidable. If there are no loops and no recursion, everything terminates. That is why the kernel's eBPF verifier rejects backward jumps, why some template and configuration languages are deliberately not universal, and why total functional languages exist. You give up expressiveness and you get a guarantee.</p>\n<p>The fourth is to bound the resources. Run it for a million steps and report halted, or not yet. This turns an undecidable question into a decidable one about a different thing, and it is what a timeout is.</p>\n<p>Fuzzers, sanitizers and test suites are all the fourth exit wearing different clothes. They cannot tell you a program is correct. They can tell you it did not fail in the time you gave it.</p>\n<h2 id=\"why-the-virus-scanner-works-the-way-it-does\">Why the virus scanner works the way it does</h2>\n<p>Fred Cohen proved in 1987 that detecting whether a program is a virus is undecidable, by the same construction: a program that reads the detector's verdict about itself and does the opposite.</p>\n<p>So no scanner detects viruses. Scanners match signatures, which is a decidable question about text, and they run samples in a sandbox for a while, which is the fourth exit. Both are approximations, both have false negatives by construction, and the arms race between packers and scanners is a fight over how much text has to stay recognisable.</p>\n<p>The same reasoning explains why your optimiser leaves code you know is dead, why your leak detector reports things that are not leaks, and why no linter finds every bug. None of these are engineering failures. They are the shape the problem has.</p>\n<h2 id=\"the-bound-nobody-can-compute\">The bound nobody can compute</h2>\n<p>One more consequence, and it is the one that makes the fourth exit harder than it looks.</p>\n<p>If you are going to run a program for a while and give up, how long should you wait? For a program of a given size there is some longest running time among the ones that do eventually halt. Wait that long and you have decided halting for every program of that size.</p>\n<p>So that number cannot be computable, and it is not. It is the busy beaver function, and it grows faster than any function you can write down. For Turing machines with five states the answer was settled in 2024 after decades of work: 47176870 steps. For six states nobody knows, and the best known lower bound is a number too large to write in ordinary notation.</p>\n<p>The practical form of this is mundane and constant. Every timeout you have ever set is a guess, there is no principled value for it, and the reason there is no principled value is a theorem rather than a gap in the literature. A step limit that is generous for one input is nowhere near enough for the next, and no amount of profiling turns that into a rule.</p>\n<h2 id=\"semi-decidable-which-is-not-nothing\">Semi-decidable, which is not nothing</h2>\n<p>One refinement, because it is the difference between hopeless and merely one-sided.</p>\n<p>Halting is semi-decidable. You can write a procedure that says yes for every program that halts: run it and wait. If it halts you find out. What you cannot do is say no, because at no point during the waiting do you learn that waiting is futile.</p>\n<p>This asymmetry is everywhere. A proof search finds a proof if one exists and otherwise runs forever. A model checker that finds a bug has found a bug, and one that has not found a bug has told you nothing yet. Knowing which side of an answer is trustworthy is most of knowing how to use a verification tool.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>The boundary drawn here is absolute and it is about capability. The next unit draws a different one, about cost, and that one is where practical work actually lives: the questions that are perfectly decidable and take longer than the universe has.</p>\n<p>Both boundaries have the same practical lesson, which is why they sit together. Neither says stop. Both say pick your compromise deliberately, because the alternative is a tool that pretends it has none.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These exercises build the approximations rather than the impossible thing. Three outcomes rather than two is the recurring shape: yes, no, and not known, where the third is an honest answer and not a failure.</p>\n<p><code>assert-failed</code> names the case you got wrong, and in several of these the case is deliberately the one where the honest answer is unknown. <code>timeout</code> means your analysis did the thing this unit says no analysis may do, which is wait forever for an answer that is not coming.</p>",
+ "headings": [
+  {
+   "id": "the-question",
+   "text": "The question",
+   "level": 2
+  },
+  {
+   "id": "why-that-is-not-a-trick",
+   "text": "Why that is not a trick",
+   "level": 2
+  },
+  {
+   "id": "the-generalisation-that-hurts",
+   "text": "The generalisation that hurts",
+   "level": 2
+  },
+  {
+   "id": "what-this-does-not-mean",
+   "text": "What this does not mean",
+   "level": 2
+  },
+  {
+   "id": "the-four-escapes",
+   "text": "The four escapes",
+   "level": 2
+  },
+  {
+   "id": "why-the-virus-scanner-works-the-way-it-does",
+   "text": "Why the virus scanner works the way it does",
+   "level": 2
+  },
+  {
+   "id": "the-bound-nobody-can-compute",
+   "text": "The bound nobody can compute",
+   "level": 2
+  },
+  {
+   "id": "semi-decidable-which-is-not-nothing",
+   "text": "Semi-decidable, which is not nothing",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1578,
+ "needs": [
+  "universal",
+  "languages"
+ ],
+ "neededBy": []
+}

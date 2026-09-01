@@ -710,6 +710,7 @@
    ],
    "neededBy": [
     "languages",
+    "computability",
     "registers"
    ],
    "minutes": 50
@@ -732,7 +733,9 @@
    "needs": [
     "universal"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "computability"
+   ],
    "minutes": 55
   },
   {
@@ -746,12 +749,16 @@
    "phase": "understand",
    "accent": "copper",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1578,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "universal",
+    "languages"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "complexity",
@@ -2638,9 +2645,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 21,
-  "words": 32113,
-  "exercises": 168,
-  "drills": 315
+  "ready": 22,
+  "words": 33691,
+  "exercises": 176,
+  "drills": 330
  }
 }

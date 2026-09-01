@@ -1,0 +1,322 @@
+{
+ "slug": "computability",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Three answers, not two",
+   "brief": "<p>The fourth escape, and the one every timeout is. Write <code>halts_within</code>, which runs a program for at most <code>budget</code> steps and reports 1 if it halted, 0 if it did not halt within the budget, and never runs longer than that.</p>\n<p>The machine is the subleq from unit 017. It halts when the program counter goes negative or past the end of memory.</p>",
+   "kind": "output",
+   "concept": "Bounding the resources turns an undecidable question into a decidable question about something else, and the something else is what you actually get to know.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "timeout"
+    }
+   ],
+   "hints": [
+    "The loop condition has two parts: steps remaining, and a program counter still inside memory."
+   ],
+   "diagnose": [
+    {
+     "id": "timeout",
+     "judge": "verdict",
+     "key": "timeout",
+     "prose": "<p>Your analysis did the one thing this unit says no analysis may do. The second check hands you a program that never halts, and the budget is not advisory: the loop has to stop counting down whether or not the program is finished.</p>"
+    },
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>The budget is respected now and a boundary is off by one. A program that is still running when the budget expires reports 0, and a program that halts on its last permitted step reports 1.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The answer 0 does not mean it never halts. It means it had not halted yet, and no amount of further waiting turns that into knowledge, because the next unit's busy beaver argument says there is no budget that would have been enough for every program.</p>",
+   "starter": "int halts_within(int *mem, int n, int budget) {\n    int pc = 0;\n    (void)budget;\n    while (pc >= 0 && pc + 2 < n) {\n        int a = mem[pc], b = mem[pc + 1], c = mem[pc + 2];\n        mem[b] -= mem[a];\n        pc = mem[b] <= 0 ? c : pc + 3;\n    }\n    return 1;\n}",
+   "tests": "#include <assert.h>\nint halts_within(int *, int, int);\nint main(void) {\n    /* Halts at once: mem[5] -= mem[4] gives -2, so jump to -1. */\n    int m1[] = {4, 5, -1, 0, 3, 1};\n    assert(halts_within(m1, 6, 100) == 1);\n    /* Loops forever: subtracts zero from zero and jumps back to itself. */\n    int m2[] = {3, 3, 0, 0};\n    assert(halts_within(m2, 4, 1000) == 0);\n    assert(halts_within(m2, 4, 1) == 0);\n    /* A budget of zero decides nothing about a program that would halt. */\n    int m3[] = {4, 5, -1, 0, 3, 1};\n    assert(halts_within(m3, 6, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "Sound, and therefore annoying",
+   "brief": "<p>The first escape. Write <code>never_divides_by_zero</code>, a conservative analysis over a tiny instruction list: 0 sets a register to a constant, 1 divides register 0 by register 1, 2 sets register 1 from an unknown source.</p>\n<p>Return 1 only when you can prove no division by zero happens. Once a register's value is unknown, it stays unknown, and a division by an unknown divisor cannot be proved safe.</p>",
+   "kind": "output",
+   "concept": "A sound analysis rejects programs it cannot prove safe, which is a different thing from programs that are unsafe.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Track two things per register: whether the value is known, and what it is."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The last one is the point: a program that reads an unknown value and then divides is rejected even though the divisor might never be zero at run time. That is the false rejection a sound analysis is required to make.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is a type checker in miniature, and it is why every user of a strict one has written a correct program the compiler refused. The rejection is not a bug in the analysis. Accepting it would require deciding something Rice's theorem says cannot be decided.</p>",
+   "starter": "int never_divides_by_zero(const int *ops, const int *args, int n) {\n    int r1 = 0;\n    for (int i = 0; i < n; i++) {\n        if (ops[i] == 0) r1 = args[i];\n        else if (ops[i] == 1 && r1 == 0) return 0;\n    }\n    return 1;\n}",
+   "tests": "#include <assert.h>\nint never_divides_by_zero(const int *, const int *, int);\nint main(void) {\n    /* set r1 = 3, divide. Provably safe. */\n    int o1[] = {0, 1}, a1[] = {3, 0};\n    assert(never_divides_by_zero(o1, a1, 2) == 1);\n    /* set r1 = 0, divide. Provably unsafe. */\n    int o2[] = {0, 1}, a2[] = {0, 0};\n    assert(never_divides_by_zero(o2, a2, 2) == 0);\n    /* No division at all. */\n    int o3[] = {0, 0}, a3[] = {0, 5};\n    assert(never_divides_by_zero(o3, a3, 2) == 1);\n    /* r1 becomes unknown, then a division. Might be fine. Rejected anyway. */\n    int o4[] = {0, 2, 1}, a4[] = {7, 0, 0};\n    assert(never_divides_by_zero(o4, a4, 3) == 0);\n    /* Unknown, then overwritten with a safe constant, then divide. */\n    int o5[] = {2, 0, 1}, a5[] = {0, 4, 0};\n    assert(never_divides_by_zero(o5, a5, 3) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Restrict the language until the question is easy",
+   "brief": "<p>The third escape, and the one the kernel takes. Write <code>verifier_accepts</code>, which accepts a program only if every jump goes forward.</p>\n<p>A program with no backward jump cannot loop, so it terminates, and proving that took one pass rather than a theorem.</p>",
+   "kind": "output",
+   "concept": "Removing the ability to loop makes termination decidable, which is a trade of expressiveness for a guarantee rather than a clever analysis.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A jump target that is less than or equal to the current index is a backward jump."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A jump to the instruction itself is a backward jump and the tightest possible loop, so the comparison has to reject equality as well as anything smaller.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>eBPF programs run in the kernel with no timeout and no way to be killed, so the verifier cannot afford to be wrong. It refuses backward jumps, which rejects every program with a loop in it, including many that would have been perfectly safe. That is the price, and the kernel pays it deliberately.</p>",
+   "starter": "int verifier_accepts(const int *jump, int n) {\n    for (int i = 0; i < n; i++) {\n        if (jump[i] >= 0 && jump[i] < i) return 0;\n    }\n    return 1;\n}",
+   "tests": "#include <assert.h>\nint verifier_accepts(const int *, int);\nint main(void) {\n    /* -1 means no jump. */\n    int p1[] = {-1, -1, -1};\n    assert(verifier_accepts(p1, 3) == 1);\n    int p2[] = {2, -1, -1};\n    assert(verifier_accepts(p2, 3) == 1);\n    int p3[] = {-1, -1, 0};\n    assert(verifier_accepts(p3, 3) == 0);\n    /* A jump to itself is the tightest loop there is. */\n    int p4[] = {-1, 1, -1};\n    assert(verifier_accepts(p4, 3) == 0);\n    int p5[] = {1, 2, -1};\n    assert(verifier_accepts(p5, 3) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "The diagonal, in a table you can see",
+   "brief": "<p>The proof of undecidability is a diagonal argument, and the argument works just as well on something finite and concrete.</p>\n<p><code>diagonal_row</code> is given an <code>n</code> by <code>n</code> table of zeroes and ones. Produce a row of <code>n</code> entries that differs from every row of the table. It differs from row <code>i</code> in column <code>i</code>, so it cannot be any of them.</p>",
+   "kind": "output",
+   "concept": "Something that can describe all of its kind can be made to describe one that is not among them, which is the whole mechanism behind the halting proof.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Take the diagonal and flip every bit of it."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Position <code>i</code> of your row has to be the opposite of <code>table[i][i]</code>, so that it differs from row <code>i</code> at exactly that column. Copying the diagonal produces the one row that might match; flipping it produces one that cannot.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is Cantor's argument, Gödel's sentence and the halting proof in one loop. The table is the list of all machines, the diagonal is what each machine says about itself, and flipping it produces a behaviour no machine on the list has.</p>",
+   "starter": "void diagonal_row(const unsigned char *table, int n, unsigned char *out) {\n    for (int i = 0; i < n; i++) out[i] = table[i * n + i];\n}",
+   "tests": "#include <assert.h>\nvoid diagonal_row(const unsigned char *, int, unsigned char *);\nint main(void) {\n    unsigned char t[9] = { 0, 1, 1,\n                           1, 1, 0,\n                           0, 0, 1 };\n    unsigned char out[3];\n    diagonal_row(t, 3, out);\n    assert(out[0] == 1 && out[1] == 0 && out[2] == 0);\n    /* It really does differ from every row. */\n    for (int r = 0; r < 3; r++) {\n        int same = 1;\n        for (int c = 0; c < 3; c++) if (t[r * 3 + c] != out[c]) same = 0;\n        assert(!same);\n    }\n    unsigned char z[4] = { 0, 0, 0, 0 };\n    unsigned char o2[2];\n    diagonal_row(z, 2, o2);\n    assert(o2[0] == 1 && o2[1] == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Yes is trustworthy, no is not",
+   "brief": "<p>Halting is semi-decidable: a procedure can say yes for every program that halts, and can never say no.</p>\n<p>Write <code>search_halting</code>, which runs a growing budget until the program halts, and returns the number of steps it took. Return -1 if it exceeds <code>max_budget</code>, which is the concession to running on a real machine.</p>",
+   "kind": "output",
+   "concept": "One side of a semi-decidable answer is knowledge and the other is absence of knowledge, and telling them apart is most of using a verification tool.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "timeout"
+    }
+   ],
+   "hints": [
+    "Step the machine one instruction at a time and count. Stop when the counter leaves memory, or when the count reaches the ceiling."
+   ],
+   "diagnose": [
+    {
+     "id": "timeout",
+     "judge": "verdict",
+     "key": "timeout",
+     "prose": "<p>The looping program has no end, so nothing except your own ceiling will stop this. That is the asymmetry the exercise is about: waiting never turns into knowledge on its own.</p>"
+    },
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>The ceiling works and a count is off. The answer is the number of instructions executed before the machine came to rest, so a program that halts on its first instruction has executed one.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A positive answer here is a proof: the program halted, and here is the witness. A negative answer is not a proof of anything, and no version of this procedure makes it one. A model checker that finds a bug has found a bug; one that has not has told you nothing yet.</p>",
+   "starter": "int search_halting(int *mem, int n, int max_budget) {\n    int pc = 0, steps = 0;\n    (void)max_budget;\n    while (pc >= 0 && pc + 2 < n) {\n        int a = mem[pc], b = mem[pc + 1], c = mem[pc + 2];\n        mem[b] -= mem[a];\n        pc = mem[b] <= 0 ? c : pc + 3;\n        steps++;\n    }\n    return steps;\n}",
+   "tests": "#include <assert.h>\nint search_halting(int *, int, int);\nint main(void) {\n    int m1[] = {4, 5, -1, 0, 3, 1};\n    assert(search_halting(m1, 6, 1000) == 1);\n    /* Falls through twice, then off the end. */\n    int m2[] = {6, 7, -1, 6, 7, -1, 0, 5};\n    assert(search_halting(m2, 8, 1000) == 2);\n    /* Never halts. The ceiling is the only thing that stops it. */\n    int m3[] = {3, 3, 0, 0};\n    assert(search_halting(m3, 4, 500) == -1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Text is decidable, behaviour is not",
+   "brief": "<p>Write two functions. <code>mentions_exec</code> reports whether a program's text contains a given instruction opcode, which is a question about text and perfectly decidable. <code>reaches_exec</code> reports whether the instruction is on a path reachable from the start, which is the beginning of a question about behaviour.</p>\n<p>Implement <code>reaches_exec</code> as a reachability walk over the jump graph. It is sound in one direction only, and the last check shows which.</p>",
+   "kind": "output",
+   "concept": "The undecidable line is not difficulty, it is text against behaviour, and a reachability analysis is an approximation of the second built from the first.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Mark the start, then repeatedly mark whatever a marked instruction can reach: the next one, and its jump target if it has one."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. An instruction with a jump can reach both its target and the instruction after it, because whether the branch is taken depends on values this analysis does not track. Following only one of the two edges under-approximates and misses reachable code.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p><code>mentions_exec</code> answers exactly. <code>reaches_exec</code> answers a weaker question and answers it conservatively: it says reachable for branches that can never be taken, because deciding which branches are taken is deciding the behaviour. That gap is why your optimiser leaves code you know is dead.</p>",
+   "starter": "int mentions_exec(const int *ops, int n, int target) {\n    for (int i = 0; i < n; i++) if (ops[i] == target) return 1;\n    return 0;\n}\n\nint reaches_exec(const int *ops, const int *jump, int n, int target) {\n    for (int i = 0; i < n; i++) {\n        if (ops[i] == target) return 1;\n        if (jump[i] >= 0) i = jump[i] - 1;\n    }\n    return 0;\n}",
+   "tests": "#include <assert.h>\nint mentions_exec(const int *, int, int);\nint reaches_exec(const int *, const int *, int, int);\nint main(void) {\n    /* op 9 is the interesting instruction. -1 in jump means no branch. */\n    int o1[] = {1, 9, 1}, j1[] = {-1, -1, -1};\n    assert(mentions_exec(o1, 3, 9) == 1);\n    assert(reaches_exec(o1, j1, 3, 9) == 1);\n    /* Not present at all. */\n    int o3[] = {1, 2, 3}, j3[] = {-1, -1, -1};\n    assert(mentions_exec(o3, 3, 9) == 0);\n    assert(reaches_exec(o3, j3, 3, 9) == 0);\n    /* Reachable only through a branch. Both edges must be followed. */\n    int o4[] = {1, 1, 9}, j4[] = {2, -1, -1};\n    assert(reaches_exec(o4, j4, 3, 9) == 1);\n    /* Reachable only by falling through past a branch. */\n    int o5[] = {1, 9, 1}, j5[] = {2, -1, -1};\n    assert(reaches_exec(o5, j5, 3, 9) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "The scanner that matches text",
+   "brief": "<p>Fred Cohen proved that deciding whether a program is a virus is undecidable, so scanners do the decidable thing instead and match signatures.</p>\n<p>Write <code>scan</code>, which reports whether any signature appears as a contiguous run inside the program.</p>",
+   "kind": "output",
+   "concept": "A signature match is a question about text, which is why it can be answered at all, and why it fails the moment the text changes.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Try each signature at each starting position."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A signature has to match a run of consecutive bytes starting somewhere in the program, and a signature longer than what remains from that position cannot match at all. Checking only position zero finds the first signature and misses the rest.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The last check is a program that does the same thing with its bytes reordered, and your scanner does not find it. It is not a weak scanner: no scanner decides this, so every one of them draws its line on text, and the arms race between packers and scanners is a fight over how much text has to stay recognisable.</p>",
+   "starter": "int scan(const unsigned char *prog, int n,\n         const unsigned char *sigs, const int *siglen, int nsig) {\n    for (int s = 0, off = 0; s < nsig; off += siglen[s], s++) {\n        int L = siglen[s];\n        if (L > n) continue;\n        int ok = 1;\n        for (int k = 0; k < L; k++) if (prog[k] != sigs[off + k]) ok = 0;\n        if (ok) return 1;\n    }\n    return 0;\n}",
+   "tests": "#include <assert.h>\nint scan(const unsigned char *, int, const unsigned char *, const int *, int);\nint main(void) {\n    unsigned char sigs[] = { 0xDE, 0xAD,        /* signature 0, length 2 */\n                             0xBE, 0xEF, 0x01 };/* signature 1, length 3 */\n    int len[] = { 2, 3 };\n    unsigned char p1[] = { 0xDE, 0xAD, 0x00 };\n    assert(scan(p1, 3, sigs, len, 2) == 1);\n    /* Not at position zero. */\n    unsigned char p2[] = { 0x00, 0x00, 0xDE, 0xAD };\n    assert(scan(p2, 4, sigs, len, 2) == 1);\n    /* The second signature, also not at zero. */\n    unsigned char p3[] = { 0x11, 0xBE, 0xEF, 0x01 };\n    assert(scan(p3, 4, sigs, len, 2) == 1);\n    unsigned char p4[] = { 0x11, 0x22, 0x33 };\n    assert(scan(p4, 3, sigs, len, 2) == 0);\n    /* Same bytes, reordered. Same behaviour, and invisible to a scanner. */\n    unsigned char p5[] = { 0xAD, 0xDE, 0x01, 0xEF, 0xBE };\n    assert(scan(p5, 5, sigs, len, 2) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Unsound on purpose",
+   "brief": "<p>The second escape. A heuristic that is usually right and can miss things, which is where most linters live.</p>\n<p>Write <code>looks_infinite</code>, which reports 1 when an instruction jumps to itself with nothing that could change the condition. It must never report 1 for a program that terminates, and it is allowed to report 0 for programs that do not.</p>",
+   "kind": "output",
+   "concept": "A tool that only reported certainties would report almost nothing, so useful bug finders accept false negatives and refuse false positives.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A jump to the same index, where the instruction does not modify anything, is a loop with no way out."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The safe direction matters more than the complete one: a program that terminates must never be reported as infinite, so the pattern has to be narrow enough that everything it matches really does loop.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The last two checks are programs that never terminate and are not detected. That is the deal: every real one of these misses things, and the alternative is not a better heuristic, it is either rejecting working code or deciding something nobody can decide.</p>",
+   "starter": "int looks_infinite(const int *ops, const int *jump, int n) {\n    for (int i = 0; i < n; i++) {\n        if (jump[i] <= i && jump[i] >= 0) return 1;\n    }\n    return 0;\n}",
+   "tests": "#include <assert.h>\nint looks_infinite(const int *, const int *, int);\nint main(void) {\n    /* op 0 does nothing. op 1 modifies state. */\n    int o1[] = {0, 0, 0}, j1[] = {-1, 1, -1};\n    assert(looks_infinite(o1, j1, 3) == 1);\n    int o2[] = {0, 0, 0}, j2[] = {-1, -1, -1};\n    assert(looks_infinite(o2, j2, 3) == 0);\n    /* A backward jump over an instruction that changes state. Terminates for\n       all this analysis knows, so it must not be reported. */\n    int o3[] = {1, 0, 0}, j3[] = {-1, 0, -1};\n    assert(looks_infinite(o3, j3, 3) == 0);\n    /* A self-jump on an instruction that does modify state. Not reported. */\n    int o4[] = {1, 0, 0}, j4[] = {0, -1, -1};\n    assert(looks_infinite(o4, j4, 3) == 0);\n    /* Two instructions jumping to each other. Infinite, and missed. */\n    int o5[] = {0, 0}, j5[] = {1, 0};\n    assert(looks_infinite(o5, j5, 2) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

@@ -5391,6 +5391,270 @@
  },
  {
   "t": "section",
+  "slug": "computability",
+  "anchor": "the-question",
+  "title": "The question",
+  "text": "Given a program and its input, does it stop? That is a perfectly ordinary question. For most programs you can answer it by looking. The claim is that no program can answer it for every program, and the proof takes four lines. Suppose exists and always returns the right answer. Then write: Now ask what returns. If it says yes, loops forever, so the answer was wrong. If it says no, returns immediately, so the answer was wrong. There is no third option, so does not exist.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "computability",
+  "anchor": "why-that-is-not-a-trick",
+  "title": "Why that is not a trick",
+  "text": "The construction looks like a word game and it is not. It is the same argument as three other famous results, and recognising the shape is worth more than the result itself. Cantor showed the real numbers are uncountable by assuming a list of them and building a number that differs from the first in the first digit, the second in the second, and so on. Gödel showed that any consistent system strong enough for arithmetic contains a true statement it cannot prove, by writing down a sentence that says of itself that it is unprovable. Russell asked whether the set of all sets that do not contain themselves contains itself. All four are the same move: something that can talk about all of its kind can be made to talk about itself, and self-reference plus negation is a contradiction. Any system rich enough to describe its own descriptions has this hole, and the richness is exactly what made it universal in the first place.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "computability",
+  "anchor": "the-generalisation-that-hurts",
+  "title": "The generalisation that hurts",
+  "text": "Halting is one question. Rice's theorem says every question of this kind is undecidable, and the statement is broader than people expect. Take any property of a program's behaviour rather than its text. If some programs have it and some do not, then no program can decide which. Not the ones that are hard. All of them. So each of these is impossible, in full generality: Does this program ever print anything. Does it always return the same answer as that one. Does it ever dereference a null pointer. Does it terminate on every input. Does it compute the identity function. Is this code dead. Is this allocation ever freed. Is this a virus. The condition, a property of behaviour rather than of text, is doing real work. \"Does the source contain the word \" is perfectly decidable. \"Does it ever execute a \" is not. The line is not difficulty, it is text against behaviour. Everything on the right is impossible in general and approximated in practice.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "computability",
+  "anchor": "what-this-does-not-mean",
+  "title": "What this does not mean",
+  "text": "It does not mean the questions are unanswerable for the program in front of you. Almost every program you meet is easy: the loop is a with a constant bound and it obviously terminates. Undecidable is a statement about all programs at once. It says no single method works for every input, which leaves plenty of room for methods that work for most of them. The compiler on your machine proves termination of loops all day. It just cannot promise to, and the difference between doing and promising is the whole of static analysis. So the correct reading is not give up. It is: you cannot have a tool that is always right, so decide in advance which way it will be wrong.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "computability",
+  "anchor": "the-four-escapes",
+  "title": "The four escapes",
+  "text": "Every real tool takes one of four exits, and knowing which one a tool took tells you how to use it. The first is to be conservative. Answer yes only when you can prove it, and say no or unknown otherwise. This is sound: it never lets a bad program through. It is also incomplete: it rejects safe programs it cannot prove safe. Type checkers work this way, and so does Rust's borrow checker, which is why every user of it has at some point written a correct program the compiler refused. The second is to be unsound on purpose. Answer with a heuristic that is usually right and can miss things. Most linters and most bug finders live here, and they are useful precisely because a tool that only reported certainties would report almost nothing. The third is to restrict the language until the question becomes decidable. If there are no loops and no recursion, everything terminates. That is why the kernel's eBPF verifier rejects backward jumps, why some template and configuration languages are deliberately not universal, and why total functional languages exist. You give up expressiveness and you get a guarantee. The fourth is to bound the resources. Run it for a million steps and report halted",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "computability",
+  "anchor": "why-the-virus-scanner-works-the-way-it-does",
+  "title": "Why the virus scanner works the way it does",
+  "text": "Fred Cohen proved in 1987 that detecting whether a program is a virus is undecidable, by the same construction: a program that reads the detector's verdict about itself and does the opposite. So no scanner detects viruses. Scanners match signatures, which is a decidable question about text, and they run samples in a sandbox for a while, which is the fourth exit. Both are approximations, both have false negatives by construction, and the arms race between packers and scanners is a fight over how much text has to stay recognisable. The same reasoning explains why your optimiser leaves code you know is dead, why your leak detector reports things that are not leaks, and why no linter finds every bug. None of these are engineering failures. They are the shape the problem has.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "computability",
+  "anchor": "the-bound-nobody-can-compute",
+  "title": "The bound nobody can compute",
+  "text": "One more consequence, and it is the one that makes the fourth exit harder than it looks. If you are going to run a program for a while and give up, how long should you wait? For a program of a given size there is some longest running time among the ones that do eventually halt. Wait that long and you have decided halting for every program of that size. So that number cannot be computable, and it is not. It is the busy beaver function, and it grows faster than any function you can write down. For Turing machines with five states the answer was settled in 2024 after decades of work: 47176870 steps. For six states nobody knows, and the best known lower bound is a number too large to write in ordinary notation. The practical form of this is mundane and constant. Every timeout you have ever set is a guess, there is no principled value for it, and the reason there is no principled value is a theorem rather than a gap in the literature. A step limit that is generous for one input is nowhere near enough for the next, and no amount of profiling turns that into a rule.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "computability",
+  "anchor": "semi-decidable-which-is-not-nothing",
+  "title": "Semi-decidable, which is not nothing",
+  "text": "One refinement, because it is the difference between hopeless and merely one-sided. Halting is semi-decidable. You can write a procedure that says yes for every program that halts: run it and wait. If it halts you find out. What you cannot do is say no, because at no point during the waiting do you learn that waiting is futile. This asymmetry is everywhere. A proof search finds a proof if one exists and otherwise runs forever. A model checker that finds a bug has found a bug, and one that has not found a bug has told you nothing yet. Knowing which side of an answer is trustworthy is most of knowing how to use a verification tool.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "computability",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "The boundary drawn here is absolute and it is about capability. The next unit draws a different one, about cost, and that one is where practical work actually lives: the questions that are perfectly decidable and take longer than the universe has. Both boundaries have the same practical lesson, which is why they sit together. Neither says stop. Both say pick your compromise deliberately, because the alternative is a tool that pretends it has none.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "computability",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These exercises build the approximations rather than the impossible thing. Three outcomes rather than two is the recurring shape: yes, no, and not known, where the third is an honest answer and not a failure. names the case you got wrong, and in several of these the case is deliberately the one where the honest answer is unknown. means your analysis did the thing this unit says no analysis may do, which is wait forever for an answer that is not coming.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "computability",
+  "n": 1,
+  "title": "Three answers, not two",
+  "text": "Bounding the resources turns an undecidable question into a decidable question about something else, and the something else is what you actually get to know. The fourth escape, and the one every timeout is. Write , which runs a program for at most steps and reports 1 if it halted, 0 if it did not halt within the budget, and never runs longer than that. The machine is the subleq from unit 017. It halts when the program counter goes negative or past the end of memory.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "computability",
+  "n": 2,
+  "title": "Sound, and therefore annoying",
+  "text": "A sound analysis rejects programs it cannot prove safe, which is a different thing from programs that are unsafe. The first escape. Write , a conservative analysis over a tiny instruction list: 0 sets a register to a constant, 1 divides register 0 by register 1, 2 sets register 1 from an unknown source. Return 1 only when you can prove no division by zero happens. Once a register's value is unknown, it stays unknown, and a division by an unknown divisor cannot be proved safe.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "computability",
+  "n": 3,
+  "title": "Restrict the language until the question is easy",
+  "text": "Removing the ability to loop makes termination decidable, which is a trade of expressiveness for a guarantee rather than a clever analysis. The third escape, and the one the kernel takes. Write , which accepts a program only if every jump goes forward. A program with no backward jump cannot loop, so it terminates, and proving that took one pass rather than a theorem.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "computability",
+  "n": 4,
+  "title": "The diagonal, in a table you can see",
+  "text": "Something that can describe all of its kind can be made to describe one that is not among them, which is the whole mechanism behind the halting proof. The proof of undecidability is a diagonal argument, and the argument works just as well on something finite and concrete. is given an by table of zeroes and ones. Produce a row of entries that differs from every row of the table. It differs from row in column , so it cannot be any of them.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "computability",
+  "n": 5,
+  "title": "Yes is trustworthy, no is not",
+  "text": "One side of a semi-decidable answer is knowledge and the other is absence of knowledge, and telling them apart is most of using a verification tool. Halting is semi-decidable: a procedure can say yes for every program that halts, and can never say no. Write , which runs a growing budget until the program halts, and returns the number of steps it took. Return -1 if it exceeds , which is the concession to running on a real machine.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "computability",
+  "n": 6,
+  "title": "Text is decidable, behaviour is not",
+  "text": "The undecidable line is not difficulty, it is text against behaviour, and a reachability analysis is an approximation of the second built from the first. Write two functions. reports whether a program's text contains a given instruction opcode, which is a question about text and perfectly decidable. reports whether the instruction is on a path reachable from the start, which is the beginning of a question about behaviour. Implement as a reachability walk over the jump graph. It is sound in one direction only, and the last check shows which.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "computability",
+  "n": 7,
+  "title": "The scanner that matches text",
+  "text": "A signature match is a question about text, which is why it can be answered at all, and why it fails the moment the text changes. Fred Cohen proved that deciding whether a program is a virus is undecidable, so scanners do the decidable thing instead and match signatures. Write , which reports whether any signature appears as a contiguous run inside the program.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "computability",
+  "n": 8,
+  "title": "Unsound on purpose",
+  "text": "A tool that only reported certainties would report almost nothing, so useful bug finders accept false negatives and refuse false positives. The second escape. A heuristic that is usually right and can miss things, which is where most linters live. Write , which reports 1 when an instruction jumps to itself with nothing that could change the condition. It must never report 1 for a program that terminates, and it is allowed to report 0 for programs that do not.",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "computability",
+  "n": 1,
+  "title": "What does the halting proof actually construct?",
+  "text": " If the decider says it halts, it loops forever; if it says it loops, it returns at once. There is no third option, so the decider does not exist. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "computability",
+  "n": 2,
+  "title": "What do Cantor's diagonal, Gödel's theorem, Russell's paradox and the halting problem share?",
+  "text": " Self-reference plus negation is a contradiction. Any system rich enough to describe its own descriptions has this hole, and that richness is what made it universal. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "computability",
+  "n": 3,
+  "title": "What does Rice's theorem say?",
+  "text": " Not the hard ones. All of them. If some programs have the property and some do not, no program decides which. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "computability",
+  "n": 4,
+  "title": "Which of these questions is decidable?",
+  "text": " The condition in Rice's theorem is a property of behaviour rather than of text, and that distinction is doing all the work. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "computability",
+  "n": 5,
+  "title": "Does undecidable mean your compiler cannot prove your loop terminates?",
+  "text": " Your compiler proves termination all day. It just cannot promise to, and the difference between doing and promising is the whole of static analysis. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "computability",
+  "n": 6,
+  "title": "A sound analysis is one that...",
+  "text": " It never lets a bad program through and it is incomplete as a consequence. This is why every user of a strict type checker has written a correct program the compiler refused. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "computability",
+  "n": 7,
+  "title": "Where do most linters and bug finders sit?",
+  "text": " A tool that only reported certainties would report almost nothing, which is why accepting false negatives is the useful choice rather than a compromise. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "computability",
+  "n": 8,
+  "title": "Why does the kernel's eBPF verifier reject backward jumps?",
+  "text": " eBPF programs run in the kernel with no timeout and no way to be killed, so the verifier cannot afford to be wrong. It pays for that with every loop it refuses. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "computability",
+  "n": 9,
+  "title": "What is a timeout, in the terms of this unit?",
+  "text": " Running for a million steps decides \"did it halt within a million steps\", which is a different and answerable question. Fuzzers, sanitizers and test suites are the same exit wearing different clothes. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "computability",
+  "n": 10,
+  "title": "What did Fred Cohen prove in 1987?",
+  "text": " By the same construction: a program that reads the detector's verdict about itself and does the opposite. So scanners match text and sandbox samples for a while, and both are approximations. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "computability",
+  "n": 11,
+  "title": "Why do scanners have false negatives by construction?",
+  "text": " The arms race between packers and scanners is a fight over how much text has to stay recognisable, and it is a consequence of the theorem rather than of engineering effort. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "computability",
+  "n": 12,
+  "title": "Halting is semi-decidable. What does that buy you?",
+  "text": " Run it and wait. If it halts you find out. At no point during the waiting do you learn that waiting is futile. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "computability",
+  "n": 13,
+  "title": "A model checker reports no bug found. What do you know?",
+  "text": " Knowing which side of an answer is trustworthy is most of knowing how to use a verification tool. Finding a bug is a proof; not finding one is an absence. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "computability",
+  "n": 14,
+  "title": "What is the busy beaver function, and why does it matter here?",
+  "text": " If you could compute it you could decide halting: wait that long and give up. It grows faster than any function you can write down, which is why no timeout has a principled value. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "computability",
+  "n": 15,
+  "title": "For how many states is the busy beaver value now known?",
+  "text": " Six is unknown and its best lower bound is too large to write in ordinary notation. Decades of work went into the five-state answer. ",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
   "slug": "registers",
   "anchor": "what-a-register-actually-is",
   "title": "What a register actually is",
