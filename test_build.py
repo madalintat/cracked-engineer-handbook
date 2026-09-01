@@ -5,7 +5,9 @@ Run: python3 test_build.py
 """
 
 import re
+import shutil
 import sys
+from pathlib import Path
 
 import build
 import contrast
@@ -25,6 +27,24 @@ def check(name, fn):
     except Exception as e:
         FAILED.append(name)
         print(f"  ERROR {name}: {type(e).__name__}: {e}")
+
+
+def build_into_temp(**kw):
+    """build.build() writes. Tests must not write over the real data/.
+
+    Without this, running the suite regenerates data/ as a side effect, and
+    `release.sh --check` -- which exists to verify without changing anything --
+    rebuilt the very directory it had just declared current.
+    """
+    import tempfile
+    saved = build.DATA
+    tmp = tempfile.mkdtemp(prefix="hh-test-")
+    build.DATA = Path(tmp)
+    try:
+        return build.build(**kw)
+    finally:
+        build.DATA = saved
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def ex_file(body, n=build.N_EXERCISES, backend="godbolt"):
@@ -276,7 +296,7 @@ def t_expect_without_a_diagnose_is_an_error():
 
 def t_solution_never_reaches_the_browser():
     import json, shutil, pathlib as _p
-    manifest, units = build.build(strict=False)
+    manifest, units = build_into_temp(strict=False)
     for f in (build.DATA / "ex").glob("*.json"):
         blob = f.read_text()
         assert '"solution"' not in blob, f"{f.name} ships the solution"
@@ -411,7 +431,7 @@ def t_the_real_nand_content_builds_strictly():
     import pathlib as _p
     if not (build.CONTENT / "units" / "nand.md").exists():
         return
-    manifest, units = build.build(strict=True)
+    manifest, units = build_into_temp(strict=True)
     u = next(x for x in manifest if x["slug"] == "nand")
     assert u["ready"], "nand should be ready"
     assert u["exercises"] == build.N_EXERCISES, u["exercises"]
@@ -439,7 +459,7 @@ def t_lang_is_inferred_where_a_backend_has_only_one():
 def t_the_real_integers_content_builds_strictly():
     if not (build.CONTENT / "units" / "integers.md").exists():
         return
-    manifest, _ = build.build(strict=True)
+    manifest, _ = build_into_temp(strict=True)
     u = next(x for x in manifest if x["slug"] == "integers")
     assert u["ready"] and u["exercises"] == 8 and u["drills"] == 15, u
 
@@ -586,6 +606,29 @@ def t_prose_attached_to_nothing_is_an_error():
         assert False, "orphan prose after a directive was accepted"
 
 
+def t_authoring_guide_commands_still_run():
+    """A guide that tells you to run something that errors is worse than none."""
+    import subprocess
+    doc = Path(__file__).parent / "docs" / "AUTHORING.md"
+    assert doc.exists(), "docs/AUTHORING.md is missing"
+    cmds = re.findall(r'`(python3 -c "[^"]+")`', doc.read_text())
+    assert cmds, "the guide names no runnable command, which is suspicious"
+    for c in cmds:
+        r = subprocess.run(c, shell=True, capture_output=True, text=True,
+                           cwd=doc.parent.parent)
+        assert r.returncode == 0, f"{c} failed: {r.stderr.strip()[:200]}"
+
+
+def t_authoring_guide_numbers_match_the_code():
+    doc = (Path(__file__).parent / "docs" / "AUTHORING.md").read_text()
+    assert f"{build.NOTE_WORDS[0]} and {build.NOTE_WORDS[1]} words" in doc, \
+        "the guide states a word range the build does not enforce"
+    for n, word in ((build.N_EXERCISES, "eight"), (build.N_DRILLS, "fifteen")):
+        assert word in doc.lower(), f"the guide does not state the count {n}"
+    for backend in build.VERDICTS:
+        assert backend in doc, f"the guide does not mention the {backend} backend"
+
+
 def t_the_palette_clears_wcag_aa():
     problems = contrast.check("light") + contrast.check("dark")
     assert not problems, "\n  " + "\n  ".join(problems)
@@ -643,7 +686,7 @@ def t_a_part_in_two_phases_is_an_error():
 
 def t_needs_must_point_backwards():
     """A prerequisite that comes later is a broken track, not a hint."""
-    manifest, _ = build.build(strict=False)
+    manifest, _ = build_into_temp(strict=False)
     order = {u["slug"]: u["num"] for u in manifest}
     for u in manifest:
         for n in u.get("needs", []):
@@ -651,7 +694,7 @@ def t_needs_must_point_backwards():
 
 
 def t_reverse_edges_match_forward_edges():
-    manifest, _ = build.build(strict=False)
+    manifest, _ = build_into_temp(strict=False)
     fwd = {u["slug"]: set(u.get("needs", [])) for u in manifest}
     for u in manifest:
         for dep in u["neededBy"]:
@@ -662,7 +705,7 @@ def t_reverse_edges_match_forward_edges():
 
 
 def t_build_emits_a_stub_for_every_track_entry():
-    manifest, _ = build.build(strict=False)
+    manifest, _ = build_into_temp(strict=False)
     assert len(manifest) == len(track.TRACK)
     assert {u["slug"] for u in manifest} == {u[0] for u in track.TRACK}
 

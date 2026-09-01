@@ -44,7 +44,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] Judged expectations: `verdict` / `match` / `silent`, per-backend vocabulary
 - [x] Diagnostics UI: prose beside the real error, ordered first-match
 - [x] Pass state, hint counting, editor buffer persisted per exercise
-- [ ] Vim mode
+- [ ] Vim mode (not started, and not on the path to anything)
 
 ## 4. Content
 
@@ -92,7 +92,10 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 ## 6. Ship
 
 - [x] `build.py --validate`: proven for all four backends, 32 of 32 exercises
-- [ ] `release.sh --check`, staleness gate on `data/`
+- [x] `release.sh --check`, staleness gate on `data/`. Checks freshness,
+      tests, palette, syntax, no leaked solution, no leftover TODO, and the
+      real tools when the network is there. Reports what it skipped rather
+      than passing it, and verifies it changed nothing
 - [x] `runner/app.py` with a self-test, and the settings page that explains it
-- [ ] `docs/AUTHORING.md`
+- [x] `docs/AUTHORING.md`, with its commands and its numbers under test
 - [ ] Mascot from the user, wired at its single swap point

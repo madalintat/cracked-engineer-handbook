@@ -751,6 +751,53 @@ def parse_drills(text, where):
 
 # ---------------------------------------------------------------------- build
 
+# Everything whose contents can change what lands in data/. If a file here
+# changes and the build is not rerun, the site serves stale JSON, and nothing
+# about the page would look wrong.
+INPUT_GLOBS = ("content/**/*.md", "content/**/*.json",
+               "build.py", "track.py", "prose.py", "contrast.py",
+               "assets/app.js")
+
+
+def input_files():
+    root = Path(__file__).parent
+    out = []
+    for pattern in INPUT_GLOBS:
+        out.extend(sorted(root.glob(pattern)))
+    return [p for p in out if p.is_file()]
+
+
+def input_digest():
+    """One hash over every input, path included so a rename counts."""
+    import hashlib
+    h = hashlib.sha256()
+    root = Path(__file__).parent
+    for f in input_files():
+        h.update(str(f.relative_to(root)).encode())
+        h.update(b"\0")
+        h.update(f.read_bytes())
+        h.update(b"\0")
+    return h.hexdigest()
+
+
+def stale():
+    """Why data/ does not match content/, or [] if it does."""
+    stamp = DATA / "build.json"
+    if not stamp.exists():
+        return ["data/build.json is missing, so nothing records what data/ was "
+                "built from. Run build.py."]
+    try:
+        recorded = json.loads(stamp.read_text()).get("inputs")
+    except json.JSONDecodeError:
+        return ["data/build.json is not valid JSON"]
+    now = input_digest()
+    if recorded != now:
+        return [f"data/ was built from different inputs than are on disk "
+                f"({str(recorded)[:12]} vs {now[:12]}). Run build.py, and "
+                f"commit data/ with the change that caused it."]
+    return []
+
+
 def build(strict=True):
     track.validate()
     # The palette is content too. A grey nudged to taste can put body text
@@ -861,6 +908,12 @@ def build(strict=True):
             "exercises": sum(u["exercises"] for u in manifest),
             "drills": sum(u["drills"] for u in manifest),
         },
+    })
+
+    write(DATA / "build.json", {
+        "inputs": input_digest(),
+        "files": len(input_files()),
+        "counts": {"units": len(manifest), "errors": len(errors)},
     })
 
     for slug, u in units.items():
@@ -1511,6 +1564,8 @@ def main():
     ap.add_argument("--validate", action="store_true",
                     help="compile every starter and solution for real")
     ap.add_argument("--stats", action="store_true")
+    ap.add_argument("--stale", action="store_true",
+                    help="exit nonzero if data/ is older than content/")
     ap.add_argument("--lax", action="store_true",
                     help="skip word and file-presence checks (scaffolding only)")
     a = ap.parse_args()
@@ -1530,6 +1585,14 @@ def main():
                 ex = parse_exercises(p.read_text(), p.name, backend)
                 print(f"{len(ex)} exercises, {p.name}: clean")
             return 0
+
+        if a.stale:
+            problems = stale()
+            for p in problems:
+                print(p, file=sys.stderr)
+            if not problems:
+                print("data/ is current with content/")
+            return 1 if problems else 0
 
         manifest, units = build(strict=not a.lax)
         c = json.loads((DATA / "manifest.json").read_text())["counts"]
