@@ -1,0 +1,78 @@
+{
+ "slug": "complexity",
+ "num": 19,
+ "title": "Complexity as advice",
+ "blurb": "NP-hardness tells you which approach to take, not that you should give up. SAT solvers crush intractable instances daily.",
+ "part": "theory",
+ "partRoman": "IV",
+ "partTitle": "Theory",
+ "phase": "understand",
+ "accent": "copper",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "computability",
+   "languages"
+  ],
+  "minutes": 55,
+  "one_idea": "NP-hard is advice about which approach to take, and the approaches that work are the reason intractable problems get solved every day.",
+  "sources": [
+   "compilers-interpreters-terminals-unix",
+   "nand2tetris-eater-scott"
+  ]
+ },
+ "html": "<p>The last unit drew a line around what no machine can do. This one draws a different line, around what machines can do and not quickly, and this is the line you will actually stand on.</p>\n<p>It also has the worse reputation of the two. Undecidable is understood as impossible, which is correct. NP-hard is understood as impossible, which is not, and the misunderstanding costs real work: people abandon problems that are solved routinely, and people reach for exact algorithms on problems where an approximation would have been fine.</p>\n<h2 id=\"growth-not-speed\">Growth, not speed</h2>\n<p>Start with what the notation means, because it is often read as a claim about time and it is not.</p>\n<p>Saying an algorithm is O(n log n) says how its cost grows as the input grows. It says nothing about how long it takes on your input, on your machine, today. A quadratic algorithm with a small constant beats a linearithmic one with a large one, and it beats it for every input below the crossover point.</p>\n<p>Real libraries are built on exactly that. Almost every serious sort switches to insertion sort below some threshold, because insertion sort is quadratic and it is faster at that size. Almost every serious matrix multiply ignores the asymptotically better algorithms, because their constants are large enough to lose at every size anyone actually multiplies.</p>\n<p>So the first practical rule is that asymptotic analysis tells you where an algorithm goes and measurement tells you where it is. Both are needed and neither substitutes.</p>\n<h2 id=\"verify-against-find\">Verify against find</h2>\n<p>Now the class distinction, which is simpler than its reputation.</p>\n<p>Some problems are easy to check and appear to be hard to solve. Given a proposed schedule, you can verify in one pass that no two meetings clash. Finding a schedule that satisfies every constraint is another matter. Given a factorisation you can multiply it out; finding one is what a good deal of cryptography depends on being hard.</p>\n<p>P is the problems solvable in time polynomial in the input size. NP is the problems where a proposed answer is checkable in polynomial time. Every problem in P is in NP, because solving it is one way to check it. Whether the reverse holds is the open question, and the honest summary is that after fifty years nobody has an approach, and almost everyone expects the answer is no.</p>\n<p>The word nondeterministic in NP is the source of most of the confusion. It does not mean random. It means a machine allowed to guess, which is the same as saying a machine whose answer is easy to check once someone hands you the guess.</p>\n<h2 id=\"the-hardest-ones-and-why-that-is-useful\">The hardest ones, and why that is useful</h2>\n<p>Some problems in NP have the property that every other problem in NP reduces to them: translate any instance of any NP problem into an instance of this one, in polynomial time, and solve it there. Those are the NP-complete problems, and Cook and Levin showed in 1971 that Boolean satisfiability is one.</p>\n<p>The reduction is the technique that matters, and it runs both ways.</p>\n<p>To show your problem is hard, reduce a known hard problem to it. To solve your problem, reduce it to one somebody has already built a good solver for. That second direction is done constantly and is the reason this theory earns its place. Scheduling, register allocation, layout, dependency resolution and verification all get translated into satisfiability and handed to a solver somebody else spent a career on.</p>\n<h2 id=\"the-solvers-win-anyway\">The solvers win anyway</h2>\n<p>Here is the part that makes NP-hard advice rather than a verdict.</p>\n<p>Satisfiability is NP-complete, and solvers routinely settle instances with millions of variables. Not toys. Industrial instances from chip verification, package management and program analysis, every day.</p>\n<p>The measurement below is from a solver simple enough to be an exercise in this unit: unit propagation and branching, with none of the machinery a real one has. The instances are the pigeonhole family, <code>n+1</code> items into <code>n</code> boxes, which is unsatisfiable and is the standard hard case for this method.</p>\n<figure class=\"fig\" data-kind=\"plot\"><svg viewBox=\"-14 -14 506 262\" class=\"fig-svg\" style=\"max-width:734px\" role=\"img\" aria-label=\"A logarithmic plot comparing brute force assignments against solver decisions on pigeonhole instances from 6 to 56 variables.\" preserveAspectRatio=\"xMidYMid meet\"><g transform=\"translate(58.0,0)\"><line x1=\"0\" y1=\"172.2\" x2=\"420.0\" y2=\"172.2\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"176.2\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">1e+07G</text><line x1=\"0\" y1=\"144.5\" x2=\"420.0\" y2=\"144.5\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"148.5\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">2e+07G</text><line x1=\"0\" y1=\"116.7\" x2=\"420.0\" y2=\"116.7\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"120.7\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">3e+07G</text><line x1=\"0\" y1=\"89.0\" x2=\"420.0\" y2=\"89.0\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"93.0\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">4e+07G</text><line x1=\"0\" y1=\"61.2\" x2=\"420.0\" y2=\"61.2\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"65.2\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">5e+07G</text><line x1=\"0\" y1=\"33.5\" x2=\"420.0\" y2=\"33.5\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"37.5\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">6e+07G</text><line x1=\"0\" y1=\"5.7\" x2=\"420.0\" y2=\"5.7\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"9.7\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">7e+07G</text><line x1=\"33.6\" y1=\"0\" x2=\"33.6\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"33.6\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">10</text><line x1=\"117.6\" y1=\"0\" x2=\"117.6\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"117.6\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">20</text><line x1=\"201.6\" y1=\"0\" x2=\"201.6\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"201.6\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">30</text><line x1=\"285.6\" y1=\"0\" x2=\"285.6\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"285.6\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">40</text><line x1=\"369.6\" y1=\"0\" x2=\"369.6\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"369.6\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">50</text><path d=\"M0.0 200.0 L50.4 200.0 L117.6 200.0 L201.6 200.0 L302.4 200.0 L420.0 0.0\" class=\"fig-line\" style=\"stroke:var(--bad)\"/><text x=\"416.0\" y=\"-7.0\" font-size=\"10\" text-anchor=\"end\" class=\"fig-accent\" font-weight=\"600\">every assignment</text><path d=\"M0.0 200.0 L50.4 200.0 L117.6 200.0 L201.6 200.0 L302.4 200.0 L420.0 200.0\" class=\"fig-line\" style=\"stroke:var(--jade-ink, var(--accent))\"/><text x=\"416.0\" y=\"193.0\" font-size=\"10\" text-anchor=\"end\" class=\"fig-accent\" font-weight=\"600\">propagate and branch</text><line x1=\"0\" y1=\"200.0\" x2=\"420.0\" y2=\"200.0\" class=\"fig-axis\"/><line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"200.0\" class=\"fig-axis\"/></g></svg><figcaption>Measured. At 56 variables the exhaustive search is 2 to the 56, about 72 quadrillion assignments; the solver settles it in 65561 decisions.</figcaption></figure>\n<p>The solver is still exponential. Pigeonhole is provably hard for this family of methods, and the curve is a straight line on a log axis just like the other one. It is a straight line with a very different slope, and that difference is what gets work done.</p>\n<p>The reason is the one from unit 015. Real instances are not worst cases. They have structure, a decision about one variable forces twenty others, and a solver that records why a branch failed never revisits that region. Worst-case complexity describes an adversary choosing your input. Most of the time nobody is.</p>\n<h2 id=\"what-np-hard-actually-tells-you\">What NP-hard actually tells you</h2>\n<p>It tells you to stop looking for a fast exact algorithm that works on every input, and to pick one of four other plans instead.</p>\n<p>Accept an approximate answer. Many NP-hard problems have algorithms that guarantee a result within a known factor of the best, and for most purposes a solution within a few percent, found quickly, is worth more than the best one found next week.</p>\n<p>Use a solver. Reduce to satisfiability or to integer programming and let somebody else's decades of work run. This is the option people most often fail to consider, and it is usually the right one.</p>\n<p>Exploit the structure you have. Hardness is over all instances. Many problems become easy on trees, on planar graphs, on bounded widths, or when a parameter you control is small.</p>\n<p>Or note that your instances are small. Exponential in 20 is a million, which is nothing. A great deal of anxiety about complexity concerns inputs that will never exceed a few dozen elements.</p>\n<p>The bad plan is the fifth one, which is to give up, and the second bad plan is to write your own exact solver for a problem the world already has one for.</p>\n<h2 id=\"where-the-reduction-goes-wrong\">Where the reduction goes wrong</h2>\n<p>Two failure modes worth naming, because both are common and both come from treating a class as a verdict.</p>\n<p>The first is calling something NP-hard when it is not. Hardness is a property of a problem, meaning the general case over all inputs, and it is established by exhibiting a reduction rather than by the problem feeling difficult. A great deal of code has been abandoned on the grounds that something resembled the travelling salesman, when the actual instance had ten nodes or a structure that made it polynomial.</p>\n<p>The second is the opposite: reducing to a solver and then being surprised when it does not return. A reduction is only useful if it produces instances the solver is good at, and an encoding that multiplies the variable count by a thousand can turn a tractable problem into one nothing will finish. Two correct encodings of the same problem routinely differ by orders of magnitude in solving time, and choosing between them is a real skill rather than a formality.</p>\n<p>Both mistakes share a root. A complexity class is a statement about the worst case over an infinite family of inputs, and your job concerns a particular finite input with a particular shape. The class tells you which shelf to look on. It does not tell you what is on it.</p>\n<h2 id=\"beyond-np\">Beyond NP</h2>\n<p>Two things worth knowing, because they explain some familiar tools.</p>\n<p>Above NP sits PSPACE, the problems solvable with polynomial memory and any amount of time. Deciding a winning strategy in a two-player game lives here, and so do several questions in model checking. Above that sits EXPTIME, where some problems are provably not in P, which is a stronger statement than anything known about NP.</p>\n<p>And the whole tower sits under the line from the last unit. Undecidable is a different kind of statement from intractable: one says no algorithm exists, the other says every algorithm is slow. Confusing them is common and leads to the wrong plan in both directions.</p>\n<h2 id=\"what-to-carry-into-part-v\">What to carry into Part V</h2>\n<p>Part IV has been about what machines can do in principle, and none of it referred to a cache, a pipeline or a clock.</p>\n<p>That is deliberate, and it is also the limit of its usefulness. Two algorithms with identical asymptotic cost can differ by ten times on a real machine because one of them walks memory in a way the hardware likes. Part V is about that machine, and Part X returns to cost with the hardware in the picture.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These exercises count operations rather than measuring time, because a step count is reproducible and a wall clock on a shared service is not.</p>\n<p><code>assert-failed</code> names the case where your count or your answer is wrong. Several of the exercises assert an exact number of steps, and those numbers were measured by running the reference implementation rather than derived from the formula, so if yours differs the difference is real.</p>",
+ "headings": [
+  {
+   "id": "growth-not-speed",
+   "text": "Growth, not speed",
+   "level": 2
+  },
+  {
+   "id": "verify-against-find",
+   "text": "Verify against find",
+   "level": 2
+  },
+  {
+   "id": "the-hardest-ones-and-why-that-is-useful",
+   "text": "The hardest ones, and why that is useful",
+   "level": 2
+  },
+  {
+   "id": "the-solvers-win-anyway",
+   "text": "The solvers win anyway",
+   "level": 2
+  },
+  {
+   "id": "what-np-hard-actually-tells-you",
+   "text": "What NP-hard actually tells you",
+   "level": 2
+  },
+  {
+   "id": "where-the-reduction-goes-wrong",
+   "text": "Where the reduction goes wrong",
+   "level": 2
+  },
+  {
+   "id": "beyond-np",
+   "text": "Beyond NP",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-into-part-v",
+   "text": "What to carry into Part V",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1503,
+ "needs": [
+  "languages",
+  "computability"
+ ],
+ "neededBy": []
+}

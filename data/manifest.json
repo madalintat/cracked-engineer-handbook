@@ -734,7 +734,8 @@
     "universal"
    ],
    "neededBy": [
-    "computability"
+    "computability",
+    "complexity"
    ],
    "minutes": 55
   },
@@ -757,7 +758,9 @@
     "universal",
     "languages"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "complexity"
+   ],
    "minutes": 55
   },
   {
@@ -771,12 +774,16 @@
    "phase": "understand",
    "accent": "copper",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1503,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "languages",
+    "computability"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "registers",
@@ -2645,9 +2652,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 22,
-  "words": 33691,
-  "exercises": 176,
-  "drills": 330
+  "ready": 23,
+  "words": 35194,
+  "exercises": 184,
+  "drills": 345
  }
 }

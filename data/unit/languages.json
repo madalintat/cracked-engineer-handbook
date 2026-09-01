@@ -73,6 +73,7 @@
   "universal"
  ],
  "neededBy": [
-  "computability"
+  "computability",
+  "complexity"
  ]
 }

@@ -1,0 +1,310 @@
+{
+ "slug": "complexity",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Checking is the easy half",
+   "brief": "<p>The definition of NP is about verification. Write <code>verify_assignment</code>, which takes a formula in conjunctive normal form and a proposed assignment, and reports whether every clause is satisfied.</p>\n<p>Clauses are stored flat, terminated by 0. A positive number is a variable, a negative one is its negation, and variables are numbered from 1.</p>",
+   "kind": "output",
+   "concept": "A problem is in NP when a proposed answer can be checked in polynomial time, and this function is what that sentence means.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A clause is satisfied when at least one of its literals is true. The formula is satisfied when every clause is."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The two quantifiers go in opposite directions: any literal satisfies a clause, and every clause must be satisfied. The starter requires every literal in a clause to be true, which is a different formula entirely.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>One pass over the formula, linear in its size, and it works whatever the assignment came from. Finding the assignment is the other half, and nothing about this function suggests how hard that is.</p>",
+   "starter": "int verify_assignment(const int *cnf, int n, const unsigned char *val) {\n    for (int i = 0; i < n; ) {\n        while (cnf[i] != 0) {\n            int l = cnf[i];\n            if (l > 0 ? !val[l] : val[-l]) return 0;\n            i++;\n        }\n        i++;\n    }\n    return 1;\n}",
+   "tests": "#include <assert.h>\nint verify_assignment(const int *, int, const unsigned char *);\nint main(void) {\n    /* (x1 or x2) and (not x1 or x3) */\n    int f[] = {1, 2, 0, -1, 3, 0};\n    unsigned char a1[] = {0, 1, 0, 1};   /* x1=1, x2=0, x3=1 */\n    assert(verify_assignment(f, 6, a1) == 1);\n    unsigned char a2[] = {0, 1, 0, 0};   /* x1=1, x3=0: second clause fails */\n    assert(verify_assignment(f, 6, a2) == 0);\n    unsigned char a3[] = {0, 0, 1, 0};   /* x2=1 satisfies first, x1=0 second */\n    assert(verify_assignment(f, 6, a3) == 1);\n    unsigned char a4[] = {0, 0, 0, 0};   /* first clause fails */\n    assert(verify_assignment(f, 6, a4) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "Every assignment, counted",
+   "brief": "<p>Write <code>brute_sat</code>, which tries every assignment of <code>nv</code> variables and returns the number of assignments it examined before finding one that works, or the full count if none does.</p>\n<p>The step counts are exact, because the search order is fixed: assignment <code>m</code> sets variable <code>i</code> to bit <code>i-1</code> of <code>m</code>.</p>",
+   "kind": "output",
+   "concept": "An exhaustive search over n variables costs 2 to the n, and that number stops being a quantity you can wait for somewhere around forty.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Count every assignment you examine, including the one that succeeds."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The count includes the successful assignment, and an unsatisfiable formula costs the full 2 to the n. Starting the count at zero and incrementing before the test gives the numbers the checks want.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Twenty variables is a million and it is instant. Fifty is a quadrillion and it is not. The next exercise solves the same formulas with a method whose counts are three orders of magnitude smaller at twenty variables.</p>",
+   "starter": "#include <stdlib.h>\nlong brute_sat(const int *cnf, int n, int nv) {\n    unsigned char val[32];\n    long tried = 0;\n    for (long m = 0; m < (1L << nv); m++) {\n        for (int i = 1; i <= nv; i++) val[i] = (m >> (i - 1)) & 1;\n        int ok = 1;\n        for (int i = 0; i < n; ) {\n            int sat = 0;\n            while (cnf[i] != 0) {\n                int l = cnf[i];\n                if (l > 0 ? val[l] : !val[-l]) sat = 1;\n                i++;\n            }\n            i++;\n            if (!sat) { ok = 0; break; }\n        }\n        if (ok) return tried;\n    }\n    return tried;\n}",
+   "tests": "#include <assert.h>\nlong brute_sat(const int *, int, int);\nint main(void) {\n    /* (x1) and (x2): only assignment 3 works, and it is the fourth tried. */\n    int f1[] = {1, 0, 2, 0};\n    assert(brute_sat(f1, 4, 2) == 4);\n    /* (x1) and (not x1): unsatisfiable, so all four are tried. */\n    int f2[] = {1, 0, -1, 0};\n    assert(brute_sat(f2, 4, 2) == 4);\n    /* (not x1) and (not x2): assignment 0 works, and it is the first. */\n    int f3[] = {-1, 0, -2, 0};\n    assert(brute_sat(f3, 4, 2) == 1);\n    /* Three variables, only x1=1 x2=1 x3=1 works: assignment 7, the eighth. */\n    int f4[] = {1, 0, 2, 0, 3, 0};\n    assert(brute_sat(f4, 6, 3) == 8);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "The rule that does the work",
+   "brief": "<p>Unit propagation is the whole reason solvers beat exhaustive search. If every literal of a clause but one is already false, that last literal has no choice.</p>\n<p>Write <code>propagate</code>, which repeatedly applies that rule until nothing changes, and reports 0 if it reaches a clause with every literal false.</p>\n<p>Values are 0 for false, 1 for true, and 2 for unassigned.</p>",
+   "kind": "output",
+   "concept": "One forced assignment forces others, so a single decision can settle many variables and prune an enormous part of the search.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Loop until a full pass changes nothing. A clause with one unassigned literal and no true literal forces that literal."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Two conditions have to be separated: a clause with no unassigned literals and no true literal is a conflict, and a clause with exactly one unassigned literal and no true literal is a forced assignment. A clause that already has a true literal is neither, and skipping that test makes correct formulas look like conflicts.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>On the pigeonhole formulas this rule alone takes the search from 1048576 assignments to 103 decisions at twenty variables. It is one page of code, it is what every solver starts from, and everything else a real solver does is about learning from the conflicts this rule finds.</p>",
+   "starter": "int propagate(const int *cnf, int n, unsigned char *val) {\n    int changed = 1;\n    while (changed) {\n        changed = 0;\n        for (int i = 0; i < n; ) {\n            int unassigned = 0, unit = 0;\n            while (cnf[i] != 0) {\n                int l = cnf[i];\n                if (val[l > 0 ? l : -l] == 2) { unassigned++; unit = l; }\n                i++;\n            }\n            i++;\n            if (unassigned == 0) return 0;\n            if (unassigned == 1) {\n                val[unit > 0 ? unit : -unit] = unit > 0;\n                changed = 1;\n            }\n        }\n    }\n    return 1;\n}",
+   "tests": "#include <assert.h>\nint propagate(const int *, int, unsigned char *);\nint main(void) {\n    /* (x1) forces x1 = 1, then (not x1 or x2) forces x2 = 1. */\n    int f[] = {1, 0, -1, 2, 0};\n    unsigned char v[] = {0, 2, 2};\n    assert(propagate(f, 5, v) == 1);\n    assert(v[1] == 1 && v[2] == 1);\n    /* (x1) and (not x1) is a conflict. */\n    int f2[] = {1, 0, -1, 0};\n    unsigned char v2[] = {0, 2};\n    assert(propagate(f2, 4, v2) == 0);\n    /* A clause already satisfied is neither a conflict nor a unit. */\n    int f3[] = {1, 2, 0};\n    unsigned char v3[] = {0, 1, 0};\n    assert(propagate(f3, 3, v3) == 1);\n    /* Nothing forced: two unassigned literals. */\n    int f4[] = {1, 2, 0};\n    unsigned char v4[] = {0, 2, 2};\n    assert(propagate(f4, 3, v4) == 1);\n    assert(v4[1] == 2 && v4[2] == 2);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Reduce it to something with a solver",
+   "brief": "<p>The second plan. Rather than write an algorithm for your problem, translate it into satisfiability and hand it over.</p>\n<p>Write <code>encode_colouring</code>, which turns a graph colouring instance into clauses: every vertex gets at least one colour, and no edge has both ends the same colour. Variable for vertex <code>v</code> and colour <code>c</code> is <code>v * k + c + 1</code>.</p>\n<p>Return the number of integers written, including the terminating zeroes.</p>",
+   "kind": "output",
+   "concept": "Reduction is how a problem reaches a solver somebody else spent a career on, and it is the option people most often fail to consider.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "One clause per vertex with k positive literals, then two negative literals per edge per colour."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees on the length. Count what you emit: <code>nv</code> clauses of <code>k</code> literals plus a zero, and for every edge, <code>k</code> clauses of two literals plus a zero. The starter omits the edge constraints entirely, which encodes a problem where every vertex may take any colour independently.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The encoding is the design decision. This one uses <code>nv</code> times <code>k</code> variables and is the obvious choice; adding clauses that forbid a vertex holding two colours at once changes nothing about which colourings are legal and can change the solving time by orders of magnitude. Two correct encodings are not equally good, and choosing between them is a real skill.</p>",
+   "starter": "int encode_colouring(int nv, int k, const int *edges, int ne, int *out) {\n    int n = 0;\n    for (int v = 0; v < nv; v++) {\n        for (int c = 0; c < k; c++) out[n++] = v * k + c + 1;\n        out[n++] = 0;\n    }\n    (void)edges; (void)ne;\n    return n;\n}",
+   "tests": "#include <assert.h>\nint encode_colouring(int, int, const int *, int, int *);\nint main(void) {\n    int out[256];\n    /* Two vertices, one edge, two colours. */\n    int e1[] = {0, 1};\n    int n = encode_colouring(2, 2, e1, 1, out);\n    /* 2 vertices * (2 literals + 0) = 6, then 1 edge * 2 colours * 3 = 6. */\n    assert(n == 12);\n    assert(out[0] == 1 && out[1] == 2 && out[2] == 0);\n    assert(out[3] == 3 && out[4] == 4 && out[5] == 0);\n    assert(out[6] == -1 && out[7] == -3 && out[8] == 0);\n    assert(out[9] == -2 && out[10] == -4 && out[11] == 0);\n    /* Three vertices, no edges, three colours: 3 * 4 = 12. */\n    assert(encode_colouring(3, 3, e1, 0, out) == 12);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Twice as bad is good enough",
+   "brief": "<p>The first plan. Minimum vertex cover is NP-hard, and a greedy rule gives an answer never worse than twice the best, in one pass.</p>\n<p>Write <code>greedy_cover</code>: for each edge whose endpoints are both uncovered, add both endpoints. Return the size of the cover.</p>",
+   "kind": "output",
+   "concept": "An approximation with a proved factor is often worth more than an exact answer that arrives too late, and this one is four lines.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Skip an edge if either end is already in the cover."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Adding both endpoints is what makes the factor of two provable: every edge you pick must be in the true optimum's cover somehow, and you spent two vertices where it spent at least one. Adding only one endpoint is a different algorithm with no such guarantee.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Never worse than twice the best, and the proof is one sentence: the edges you picked share no vertices, so any cover needs at least one endpoint from each of them, and you took two. A guarantee like that turns an intractable problem into a decision about whether a factor of two matters.</p>",
+   "starter": "int greedy_cover(const int *edges, int ne, int nv, unsigned char *in_cover) {\n    int size = 0;\n    for (int v = 0; v < nv; v++) in_cover[v] = 0;\n    for (int e = 0; e < ne; e++) {\n        int a = edges[e * 2], b = edges[e * 2 + 1];\n        if (!in_cover[a] && !in_cover[b]) {\n            in_cover[a] = 1;\n            size++;\n        }\n    }\n    return size;\n}",
+   "tests": "#include <assert.h>\nint greedy_cover(const int *, int, int, unsigned char *);\nint main(void) {\n    unsigned char c[8];\n    /* A single edge: both ends go in. */\n    int e1[] = {0, 1};\n    assert(greedy_cover(e1, 1, 2, c) == 2);\n    assert(c[0] == 1 && c[1] == 1);\n    /* A path 0-1-2: the first edge covers 0 and 1, so 1-2 is already covered. */\n    int e2[] = {0, 1, 1, 2};\n    assert(greedy_cover(e2, 2, 3, c) == 2);\n    assert(c[0] == 1 && c[1] == 1 && c[2] == 0);\n    /* Two disjoint edges need four vertices; the optimum is two. */\n    int e3[] = {0, 1, 2, 3};\n    assert(greedy_cover(e3, 2, 4, c) == 4);\n    /* A triangle: the first edge covers two, the rest are already covered. */\n    int e4[] = {0, 1, 1, 2, 0, 2};\n    assert(greedy_cover(e4, 3, 3, c) == 2);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "The structure you already have",
+   "brief": "<p>The third plan. Subset sum is NP-hard in general and easy when the target is small, because the table you fill has one entry per reachable total rather than one per subset.</p>\n<p>Write <code>subset_sum</code>, which reports whether any subset of <code>n</code> values sums to <code>target</code>, using a table of size <code>target + 1</code>.</p>",
+   "kind": "output",
+   "concept": "Hardness is over all instances, and a parameter you control being small is one of the commonest ways out of it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "For each value, walk the table downwards so a value is not used twice."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees, and it will be a case where one value was counted twice. Walking the table upwards lets the same item be reused, which answers a different question. Walk from the target down to the value.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Work proportional to <code>n</code> times <code>target</code>, against 2 to the <code>n</code> for the obvious search. That is not a polynomial algorithm, because the target's size in bits is what counts as input length, and it is nonetheless the reason this problem is routine whenever the numbers are small. Knowing which parameter your instance keeps small is most of escaping a hardness result.</p>",
+   "starter": "int subset_sum(const int *vals, int n, int target) {\n    unsigned char can[1024] = {0};\n    can[0] = 1;\n    for (int i = 0; i < n; i++)\n        for (int t = vals[i]; t <= target; t++)\n            if (can[t - vals[i]]) can[t] = 1;\n    return can[target];\n}",
+   "tests": "#include <assert.h>\nint subset_sum(const int *, int, int);\nint main(void) {\n    int v[] = {3, 34, 4, 12, 5, 2};\n    assert(subset_sum(v, 6, 9) == 1);    /* 4 + 5 */\n    assert(subset_sum(v, 6, 30) == 0);\n    assert(subset_sum(v, 6, 0) == 1);    /* the empty subset */\n    /* One value of 4: 8 needs it twice, which is not allowed. */\n    int w[] = {4};\n    assert(subset_sum(w, 1, 4) == 1);\n    assert(subset_sum(w, 1, 8) == 0);\n    int x[] = {2, 3};\n    assert(subset_sum(x, 2, 5) == 1);\n    assert(subset_sum(x, 2, 4) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "The constant that decides it",
+   "brief": "<p>Asymptotic cost says where an algorithm goes, not where it is. Write <code>sort_hybrid</code>, which uses insertion sort below a threshold and merge sort above it, and count the comparisons.</p>\n<p>The counts are exact, so the crossover is visible in the numbers rather than argued about.</p>",
+   "kind": "output",
+   "concept": "A quadratic algorithm with a small constant beats a linearithmic one below the crossover, which is why every serious sort in every standard library is a hybrid.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Below the threshold, insertion sort and nothing else. Above it, split, recurse on both halves, and merge."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees on a comparison count. Count exactly one comparison per element comparison: in insertion sort, each test of the element against the one before it, and in the merge, each choice between the two heads.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The threshold in real libraries is somewhere between 8 and 32 elements and it was chosen by measuring, not by analysis. Asymptotic reasoning cannot produce that number, because it is entirely about the constants the notation throws away.</p>",
+   "starter": "static void ins(int *a, int lo, int hi, long *cmp) {\n    for (int i = lo + 1; i < hi; i++) {\n        int v = a[i], j = i - 1;\n        while (j >= lo) { (*cmp)++; if (a[j] <= v) break; a[j + 1] = a[j]; j--; }\n        a[j + 1] = v;\n    }\n}\n\nlong sort_hybrid(int *a, int n, int threshold) {\n    long cmp = 0;\n    ins(a, 0, n, &cmp);\n    (void)threshold;\n    return cmp;\n}",
+   "tests": "#include <assert.h>\nlong sort_hybrid(int *, int, int);\nint main(void) {\n    /* Already sorted: insertion sort does one comparison per element. */\n    int a[] = {1, 2, 3, 4};\n    assert(sort_hybrid(a, 4, 16) == 3);\n    assert(a[0] == 1 && a[3] == 4);\n    /* Reversed, four elements, below the threshold: 1 + 2 + 3 = 6. */\n    int b[] = {4, 3, 2, 1};\n    assert(sort_hybrid(b, 4, 16) == 6);\n    assert(b[0] == 1 && b[3] == 4);\n    /* The same reversed input, now above the threshold, uses merge sort:\n       two halves of 1 comparison each, then 2 to merge. */\n    int c[] = {4, 3, 2, 1};\n    assert(sort_hybrid(c, 4, 2) == 4);\n    assert(c[0] == 1 && c[1] == 2 && c[2] == 3 && c[3] == 4);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Exponential, until you write it down",
+   "brief": "<p>Memoisation turns a recursion that recomputes into one that does not, and the difference is exponential rather than a constant factor.</p>\n<p>Write <code>fib_memo</code>, which returns the nth Fibonacci number and counts how many times it did real work. The naive version calls itself 2 to the n times; this one calls itself once per distinct argument.</p>",
+   "kind": "output",
+   "concept": "An exponential running time is often an exponential amount of recomputation, which a table removes entirely.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Check the table first. Count a call only when the answer was not already there."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees on the work count. Every distinct argument the recursion reaches is computed exactly once, and a lookup that finds a stored answer is not work. For an n of 2 or more that comes to n plus 1; for 0 and 1 it is one, because those return without recursing. The starter has no table at all and does exponentially more.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>41 units of work for n equal to 40, against about 300 million calls for the version without a table. Nothing about the problem changed, and the search space was never really that large: it only looked that way because the same subproblem was being solved over and over.</p>",
+   "starter": "static long work;\nstatic long fib(int n) {\n    work++;\n    if (n < 2) return n;\n    return fib(n - 1) + fib(n - 2);\n}\n\nlong fib_memo(int n, long *calls) {\n    work = 0;\n    long r = fib(n);\n    *calls = work;\n    return r;\n}",
+   "tests": "#include <assert.h>\nlong fib_memo(int, long *);\nint main(void) {\n    long calls;\n    assert(fib_memo(0, &calls) == 0 && calls == 1);\n    assert(fib_memo(1, &calls) == 1 && calls == 1);\n    assert(fib_memo(10, &calls) == 55 && calls == 11);\n    assert(fib_memo(40, &calls) == 102334155 && calls == 41);\n    assert(fib_memo(80, &calls) == 23416728348467685L && calls == 81);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

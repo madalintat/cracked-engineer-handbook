@@ -1,0 +1,185 @@
+{
+ "slug": "complexity",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What does saying an algorithm is O(n log n) tell you?",
+   "options": [
+    "How its cost grows as the input grows, and nothing about how long it takes today",
+    "That it is faster than any quadratic algorithm",
+    "Its running time in seconds, up to a machine-dependent constant",
+    "That it is optimal for comparison-based problems"
+   ],
+   "correct": 0,
+   "why": "<p>A quadratic algorithm with a small constant beats a linearithmic one with a large one, for every input below the crossover. Asymptotic analysis says where an algorithm goes; measurement says where it is.</p>"
+  },
+  {
+   "n": 2,
+   "q": "Why does every serious sorting library include insertion sort?",
+   "options": [
+    "It is quadratic and it is faster below some threshold",
+    "It is stable and merge sort is not",
+    "It needs no extra memory for small arrays",
+    "It handles already-sorted input in linear time"
+   ],
+   "correct": 0,
+   "why": "<p>The threshold is somewhere between 8 and 32 elements and was chosen by measuring. Asymptotic reasoning cannot produce that number, because it is entirely about the constants the notation discards.</p>"
+  },
+  {
+   "n": 3,
+   "q": "What is NP?",
+   "options": [
+    "The problems whose proposed answers can be checked in polynomial time",
+    "The problems that cannot be solved in polynomial time",
+    "The problems requiring randomness to solve efficiently",
+    "The problems solvable only by exhaustive search"
+   ],
+   "correct": 0,
+   "why": "<p>Every problem in P is in NP, because solving it is one way to check it. The open question is whether the reverse holds.</p>"
+  },
+  {
+   "n": 4,
+   "q": "What does the \"nondeterministic\" in NP mean?",
+   "options": [
+    "A machine allowed to guess, which is the same as an answer that is easy to check",
+    "A machine that makes random choices",
+    "A machine whose running time varies between runs",
+    "A machine with unbounded parallelism"
+   ],
+   "correct": 0,
+   "why": "<p>It is the source of most of the confusion about the class, and it does not mean random.</p>"
+  },
+  {
+   "n": 5,
+   "q": "What makes a problem NP-complete?",
+   "options": [
+    "It is in NP and every problem in NP reduces to it in polynomial time",
+    "It has been proved to require exponential time",
+    "It has no known approximation algorithm",
+    "It is the hardest problem anyone has found by experiment"
+   ],
+   "correct": 0,
+   "why": "<p>Cook and Levin showed in 1971 that Boolean satisfiability is one, which is what made reduction into the technique that organises the whole subject.</p>"
+  },
+  {
+   "n": 6,
+   "q": "Which direction of reduction actually gets work done?",
+   "options": [
+    "Reducing your problem to one somebody has already built a good solver for",
+    "Reducing a known hard problem to yours, to prove yours is hard",
+    "Both are equally common in practice",
+    "Neither; reductions are a theoretical device"
+   ],
+   "correct": 0,
+   "why": "<p>Scheduling, register allocation, layout, dependency resolution and verification all get translated into satisfiability and handed over. It is the option people most often fail to consider.</p>"
+  },
+  {
+   "n": 7,
+   "q": "Satisfiability is NP-complete, and solvers settle instances with millions of variables. Why?",
+   "options": [
+    "Real instances have structure, and a solver that learns from conflicts exploits it",
+    "Modern hardware has made the exponential tolerable",
+    "The solvers are approximate and may return a wrong answer",
+    "Industrial instances are all in a polynomial subclass"
+   ],
+   "correct": 0,
+   "why": "<p>Worst-case complexity describes an adversary choosing your input. Most of the time nobody is, which is the same observation that made equivalence checking practical in unit 015.</p>"
+  },
+  {
+   "n": 8,
+   "q": "On the pigeonhole instances, how did brute force and propagate-and-branch compare at twenty variables?",
+   "options": [
+    "1048576 assignments against 103 decisions",
+    "1048576 assignments against about 1000 decisions",
+    "They were within a factor of two",
+    "The solver was slower, because pigeonhole is its worst case"
+   ],
+   "correct": 0,
+   "why": "<p>Measured. At 56 variables the exhaustive search is about 72 quadrillion assignments and the solver settles it in 65561. Both curves are exponential and the slopes are what differ.</p>"
+  },
+  {
+   "n": 9,
+   "q": "What does NP-hard tell you to do?",
+   "options": [
+    "Stop looking for a fast exact general algorithm, and pick one of four other plans",
+    "Abandon the problem",
+    "Use randomisation",
+    "Prove your instances are in P"
+   ],
+   "correct": 0,
+   "why": "<p>Approximate, reduce to a solver, exploit your structure, or notice your instances are small. Giving up is the bad plan, and writing your own exact solver for a problem the world already has one for is the second bad plan.</p>"
+  },
+  {
+   "n": 10,
+   "q": "Greedy vertex cover adds both endpoints of an uncovered edge. What does that buy?",
+   "options": [
+    "A cover never worse than twice the best, with a one-sentence proof",
+    "The exact minimum on graphs without triangles",
+    "A cover within a constant additive term of the best",
+    "Nothing provable; it is a heuristic"
+   ],
+   "correct": 0,
+   "why": "<p>The edges you picked share no vertices, so any cover needs at least one endpoint from each, and you took two.</p>"
+  },
+  {
+   "n": 11,
+   "q": "Subset sum with a table of size target+1 runs in time proportional to n times target. Is that polynomial?",
+   "options": [
+    "No, because the target's size in bits is what counts as input length",
+    "Yes, and it proves subset sum is in P",
+    "Yes, but only for positive integers",
+    "No, because the table lookup is not constant time"
+   ],
+   "correct": 0,
+   "why": "<p>It is pseudo-polynomial, and it is nonetheless why the problem is routine whenever the numbers are small. Knowing which parameter your instance keeps small is most of escaping a hardness result.</p>"
+  },
+  {
+   "n": 12,
+   "q": "What lives in PSPACE that does not appear to be in NP?",
+   "options": [
+    "Deciding a winning strategy in a two-player game",
+    "Boolean satisfiability",
+    "Graph colouring",
+    "Integer factorisation"
+   ],
+   "correct": 0,
+   "why": "<p>Polynomial memory and any amount of time. Several model checking questions live there too.</p>"
+  },
+  {
+   "n": 13,
+   "q": "What is the difference between undecidable and intractable?",
+   "options": [
+    "One says no algorithm exists; the other says every algorithm is slow",
+    "They are the same for problems with infinite input domains",
+    "Intractable problems become decidable with more memory",
+    "Undecidable problems have approximation algorithms and intractable ones do not"
+   ],
+   "correct": 0,
+   "why": "<p>Confusing them is common and leads to the wrong plan in both directions.</p>"
+  },
+  {
+   "n": 14,
+   "q": "Two correct encodings of the same problem into satisfiability...",
+   "options": [
+    "Routinely differ by orders of magnitude in solving time",
+    "Take the same time, since they describe the same problem",
+    "Differ only in the number of variables, not the time",
+    "Cannot both be correct"
+   ],
+   "correct": 0,
+   "why": "<p>A reduction is only useful if it produces instances the solver is good at. Choosing between encodings is a real skill rather than a formality.</p>"
+  },
+  {
+   "n": 15,
+   "q": "Why does Part IV end without mentioning caches or pipelines?",
+   "options": [
+    "It is about what machines can do in principle, and that is also the limit of its usefulness",
+    "Those details do not affect asymptotic cost",
+    "They belong to hardware rather than to computer science",
+    "They are covered by the constants in the notation"
+   ],
+   "correct": 0,
+   "why": "<p>Two algorithms with identical asymptotic cost can differ by ten times on a real machine because one walks memory in a way the hardware likes. Part V is about that machine.</p>"
+  }
+ ]
+}
