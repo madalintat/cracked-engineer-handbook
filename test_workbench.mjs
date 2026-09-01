@@ -163,6 +163,83 @@ t('asm: the same word is a label in one position and a mnemonic in another', () 
      'indented it is a mnemonic');
 });
 
+/* ------------------------------------------- the compiler-explorer client */
+/* No network here. These lock in the shapes that were established by probing
+ * the live service, so a refactor cannot quietly undo them. */
+
+const ESC = String.fromCharCode(27);
+
+t('normalise strips the full CSI form, not only colour', () => {
+  // gcc emits ESC[K as well as ESC[01;31m. Stripping only the ones ending in
+  // `m` leaves the erase-line sequence behind, and every anchored rule after
+  // it then fails to match.
+  const noisy = ESC + '[01m' + ESC + '[K<source>:3:5: ' + ESC + '[01;31m' +
+                ESC + '[Kerror: ' + ESC + '[m' + ESC + '[Kx undeclared';
+  const got = WB.normalise(noisy);
+  is(got === '3:5: error: x undeclared', JSON.stringify(got));
+});
+
+t('normalise removes the virtual filename and absolute paths', () => {
+  is(WB.normalise('<source>:12:9: warning: w') === '12:9: warning: w');
+  is(WB.normalise('/tmp/b/example.cpp:4:1: error: no') === 'example.cpp:4:1: error: no');
+});
+
+t('normalise leaves the diagnostic text alone', () => {
+  const d = "12:9: warning: unused variable 'x' [-Wunused-variable]";
+  is(WB.normalise(d) === d, WB.normalise(d));
+});
+
+t('warningFlag lifts the closest thing C has to an error code', () => {
+  is(WB.warningFlag('warning: unused [-Wunused-variable]') === '-Wunused-variable');
+  is(WB.warningFlag('error: no member named') === null);
+});
+
+t('a failed assert is classified by its text, not its exit code', () => {
+  // Measured against the live service: Compiler Explorer reports 139 and
+  // "Program terminated with signal: SIGSEGV" for an assertion failure, while
+  // its own stderr carries "Assertion `x' failed". The code lies; the text
+  // does not.
+  const real = "output.s: /app/example.cpp:3: int main(): Assertion `f() == 7' " +
+               'failed.' + String.fromCharCode(10) + 'Program terminated with signal: SIGSEGV';
+  is(WB.ceVerdictOf({ code: 139, didExecute: true, buildResult: { code: 0 } }, true, real)
+     === 'assert-failed', 'assert not detected');
+});
+
+t('a real segfault is still a signal', () => {
+  is(WB.ceVerdictOf({ code: 139, didExecute: true, buildResult: { code: 0 } },
+                    true, 'Program terminated with signal: SIGSEGV') === 'signal');
+});
+
+t('the exit code path still works where the text is silent', () => {
+  const ok = { didExecute: true, buildResult: { code: 0 } };
+  is(WB.ceVerdictOf({ ...ok, code: 0 }, true, '') === 'ok', 'ok');
+  is(WB.ceVerdictOf({ ...ok, code: 1 }, true, '') === 'nonzero-exit', 'nonzero');
+  is(WB.ceVerdictOf({ ...ok, code: 134 }, true, '') === 'assert-failed', 'abort');
+});
+
+t('a build failure is not a program exit status', () => {
+  // didExecute:false with code -1 is a failed build, not a crash.
+  is(WB.ceVerdictOf({ code: -1, didExecute: false, buildResult: { code: 1 } },
+                    true, '') === 'compile-error');
+});
+
+t('compile-only mode does not invent a run', () => {
+  is(WB.ceVerdictOf({ code: 0 }, false, '') === 'ok');
+  is(WB.ceVerdictOf({ code: 1 }, false, '') === 'compile-error');
+});
+
+t('a timeout beats everything else', () => {
+  is(WB.ceVerdictOf({ timedOut: true, code: 0, didExecute: true }, true, '')
+     === 'timeout');
+});
+
+t('a diagnostic past the last user line is labelled as the checks', () => {
+  const out = WB.withUserLineNote('3:5: error: yours' + String.fromCharCode(10) +
+                                  '11:2: error: theirs', 8);
+  is(out.includes('3:5: error: yours'), 'user line was relabelled');
+  is(out.includes('[in the checks] 11:2:'), 'test line was not labelled');
+});
+
 /* --------------------------------------------------------- the registry */
 
 t('an unknown backend reports unavailable, not failed', async () => {

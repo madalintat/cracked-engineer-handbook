@@ -299,7 +299,242 @@ const WB = (() => {
     },
   });
 
-  return { highlight, mountEditor, run, register, BACKENDS, RULES };
+  /* godbolt: Compiler Explorer's public API.
+   *
+   * Two things here are not obvious and both were established by measurement:
+   *
+   * 1. The nonce goes in userArguments, never in the source. Options are part
+   *    of the cache key, so this defeats the cache; and unlike a comment it
+   *    shifts no line numbers. A nonce in the source moves every diagnostic
+   *    down by one and silently breaks the mapping from error to editor line.
+   *
+   * 2. In executor mode the COMPILER's diagnostics live in buildResult, and
+   *    the top-level stderr belongs to the running program. Reading the wrong
+   *    one finds no diagnostics and reports success.
+   *
+   * Also: check didExecute before trusting code. A build failure reports
+   * didExecute:false with code -1, which is not a program exit status.
+   */
+
+  const uuid = () =>
+    (crypto.randomUUID ? crypto.randomUUID()
+     : String(Date.now()) + Math.random().toString(16).slice(2))
+    .replace(/-/g, '').slice(0, 16);
+
+  /** Compiler prose is not stable across releases, but its shape is. Strip the
+   *  parts that move so a regex written today still matches tomorrow. */
+  function normalise(text) {
+    // The full CSI form, not only the colour sequences. gcc also emits
+    // ESC[K (erase-line), and stripping only the ones ending in `m` leaves
+    // that behind, which then stops every anchored rule below from matching.
+    const CSI = new RegExp(String.fromCharCode(27) + '\\[[0-9;?]*[ -\\/]*[@-~]', 'g');
+    return String(text || '')
+      .replace(CSI, '')
+      .replace(/\r\n/g, '\n')
+      .replace(/^\s*<source>:/gm, '')                     // the virtual file
+      .replace(/^\s*\/[^\s:]*\/(?=[\w.-]+:\d)/gm, '')    // absolute paths
+      .split('\n').map(l => l.replace(/\s+$/, '')).join('\n')
+      .trim();
+  }
+
+  /** The closest thing C and C++ have to a stable error code. */
+  function warningFlag(text) {
+    const m = /\[-W([a-z0-9-]+)\]/.exec(text || '');
+    return m ? `-W${m[1]}` : null;
+  }
+
+  /* Classify the run.
+   *
+   * The exit code is not enough. Measured against the live service: a failed
+   * assert reports code 139 and "Program terminated with signal: SIGSEGV",
+   * while its own stderr says "Assertion `x' failed". The sandbox's signal
+   * number is not the process's. So the text decides where the text is
+   * unambiguous, and the code decides the rest.
+   *
+   * In executor mode there is no execResult: the top-level object IS the run,
+   * and the compiler lives in buildResult. Reading that backwards finds no
+   * diagnostics and reports success.
+   */
+  function ceVerdictOf(res, ran, runText) {
+    if (res.timedOut) return 'timeout';
+    if (!ran) return res.code === 0 ? 'ok' : 'compile-error';
+
+    const build = res.buildResult;
+    if (build && build.code !== 0) return 'compile-error';
+    if (res.didExecute === false) return 'compile-error';
+
+    // Not anchored: the real line begins with the object and source path,
+    // e.g. "output.s: /app/example.cpp:3: int main(): Assertion `x' failed."
+    if (/\bAssertion\b.*\bfailed\b/.test(runText || '')) return 'assert-failed';
+
+    const code = res.code;
+    if (code === null || code === undefined) return 'compile-error';
+    if (code === 0) return 'ok';
+    if (code === 134) return 'assert-failed';
+    if (code > 128) return 'signal';
+    return 'nonzero-exit';
+  }
+
+  register('godbolt', {
+    label: 'compiler',
+    async run(ex, source, cfg) {
+      const conf = (cfg.judges && cfg.judges.godbolt) || null;
+      if (!conf) {
+        return {
+          pass: false, signals: [],
+          verdicts: [{ who: 'compiler', state: 'unavailable',
+                       title: 'The compiler configuration has not loaded.' }],
+        };
+      }
+      const lang = ex.lang || 'cpp';
+      const L = conf.langs[lang];
+      if (!L) {
+        return {
+          pass: false, signals: [],
+          verdicts: [{ who: 'compiler', state: 'unavailable',
+                       title: `No compiler is configured for ${lang}.` }],
+        };
+      }
+
+      const wantsRun = ex.kind === 'output' || !!ex.tests;
+      const full = ex.tests
+        ? source + '\n' + ex.tests + '\n'
+        : source;
+      const userLines = source.split('\n').length;
+
+      const args = [L.flags, ex.flags || '', `${conf.nonceFlag}=${uuid()}`]
+        .filter(Boolean).join(' ');
+
+      const body = {
+        source: full,
+        lang: lang === 'cpp' ? 'c++' : lang,
+        allowStoreCodeDebug: false,
+        options: {
+          userArguments: args,
+          compilerOptions: { executorRequest: wantsRun, skipAsm: wantsRun },
+          filters: { execute: wantsRun, binary: false, intel: true,
+                     labels: true, directives: true, commentOnly: true,
+                     demangle: true, trim: false },
+          executeParameters: { args: [], stdin: '' },
+          tools: [],
+        },
+      };
+
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), conf.timeoutMs || 30000);
+      let res;
+      try {
+        const r = await fetch(conf.endpoint.replace('{id}', L.id), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(body),
+          signal: ctl.signal,
+        });
+        if (!r.ok) throw new Error(`the compiler service answered ${r.status}`);
+        res = await r.json();
+      } catch (e) {
+        return {
+          pass: false, signals: [],
+          verdicts: [{
+            who: 'compiler', state: 'unavailable',
+            title: e.name === 'AbortError'
+              ? 'The compiler did not answer in time. This is the service, not your code.'
+              : `Could not reach the compiler: ${e.message}`,
+          }],
+        };
+      } finally { clearTimeout(t); }
+
+      // In executor mode the compiler speaks in buildResult; the top level is
+      // the program. Read both, and never mix them up.
+      const build = res.buildResult || res;
+      const diagText = normalise(
+        (build.stderr || []).map(x => x.text).join('\n'));
+      const progOut = normalise((res.stdout || []).map(x => x.text).join('\n'));
+      const progErr = normalise((res.stderr || []).map(x => x.text).join('\n'));
+
+      // In executor mode the top-level object is the run itself.
+      const exec = wantsRun ? (res.execResult || res) : null;
+      const verdict = ceVerdictOf(res, wantsRun, progErr + '\n' + progOut);
+
+      const tagged = (build.stderr || []).filter(x => x.tag);
+      const errors = tagged.filter(x => x.tag.severity === 3);
+      const warnings = tagged.filter(x => x.tag.severity === 2);
+
+      const signals = [{ judge: 'verdict', key: verdict }];
+      if (diagText) signals.push({ judge: 'match', key: diagText });
+      if (progErr) signals.push({ judge: 'match', key: progErr });
+      for (const w of warnings) {
+        const f = warningFlag(w.tag.text);
+        if (f) signals.push({ judge: 'verdict', key: 'warning' },
+                            { judge: 'match', key: f });
+      }
+      if (verdict === 'ok' && !errors.length && !warnings.length) {
+        signals.push({ judge: 'silent', key: '' });
+      }
+
+      const verdicts = [];
+      const firstErr = errors[0] || warnings[0];
+      verdicts.push({
+        who: 'compiler',
+        state: errors.length ? 'bad' : (warnings.length ? 'warn' : 'ok'),
+        title: errors.length
+          ? `${errors.length} error${errors.length > 1 ? 's' : ''}.`
+          : warnings.length
+            ? `Compiled, with ${warnings.length} warning${warnings.length > 1 ? 's' : ''}.`
+            : 'Compiled cleanly.',
+        detail: diagText
+          ? `<pre>${escHtml(withUserLineNote(diagText, userLines))}</pre>` : '',
+        code: firstErr ? (warningFlag(firstErr.tag.text) || 'error') : null,
+        line: firstErr ? firstErr.tag.line : null,
+      });
+
+      if (wantsRun) {
+        const code = exec ? exec.code : null;
+        const ok = verdict === 'ok';
+        verdicts.push({
+          who: 'program',
+          state: !errors.length && ok ? 'ok'
+               : (!errors.length ? 'bad' : 'unavailable'),
+          title: errors.length
+            ? 'Not run, because it did not compile.'
+            : verdict === 'assert-failed'
+              ? 'A check failed. The line above says which.'
+            : verdict === 'signal' ? `Killed by signal ${code - 128}.`
+            : verdict === 'nonzero-exit' ? `Exited with status ${code}.`
+            : verdict === 'timeout' ? 'Took too long and was stopped.'
+            : 'Ran and every check passed.',
+          detail: (progOut || progErr)
+            ? `<pre>${escHtml([progOut, progErr].filter(Boolean).join('\n'))}</pre>`
+            : '',
+        });
+      }
+
+      // Correct and clean are different questions. A program that compiles
+      // with warnings and passes its checks is right, and not yet finished.
+      const pass = verdict === 'ok' && errors.length === 0;
+      const clean = pass && warnings.length === 0;
+      if (pass && !clean) {
+        verdicts[0].title =
+          `Correct, and not clean: ${warnings.length} ` +
+          `warning${warnings.length > 1 ? 's' : ''} to answer for.`;
+      }
+      return { pass, clean, signals, verdicts, toolchain: L.name };
+    },
+  });
+
+  const escHtml = s => String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  /* Hidden tests are appended after the learner's code, so a diagnostic past
+   * their last line is about the tests, not about them. Say so rather than
+   * pointing at a line they cannot see. */
+  function withUserLineNote(text, userLines) {
+    return text.replace(/^(\d+):(\d+):/gm, (m0, l, c) =>
+      Number(l) > userLines ? `[in the checks] ${l}:${c}:` : m0);
+  }
+
+  return { highlight, mountEditor, run, register, BACKENDS, RULES,
+           normalise, warningFlag, ceVerdictOf, withUserLineNote };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = WB;

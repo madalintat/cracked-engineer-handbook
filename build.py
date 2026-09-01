@@ -72,6 +72,33 @@ JUDGES = ("verdict", "match", "silent")
 # matching on wording a toolchain release can change. Anything not listed here
 # has to go through `match` with a regex, and --validate then carries the weight
 # of noticing when the wording drifts.
+# The toolchain each backend actually uses. Pinned, never "trunk": an exercise
+# whose explanation describes a specific diagnostic is a claim about a specific
+# compiler version. This dict is emitted to data/judges.json and the browser
+# reads it from there, so the page cannot call a configuration --validate has
+# never checked.
+JUDGES_CONFIG = {
+    "godbolt": {
+        "endpoint": "https://godbolt.org/api/compiler/{id}/compile",
+        "nonceFlag": "-DHH_NONCE",
+        "timeoutMs": 30000,
+        "langs": {
+            "c":    {"id": "cg162", "name": "x86-64 gcc 16.2",
+                     "flags": "-O2 -Wall -Wextra -std=c17"},
+            "cpp":  {"id": "g162",  "name": "x86-64 gcc 16.2",
+                     "flags": "-O2 -Wall -Wextra -std=c++23"},
+            "asm":  {"id": "llvmas2310", "name": "x86-64 clang 23.1.0",
+                     "flags": ""},
+            "cuda": {"id": "nvcc133", "name": "NVCC 13.3.0",
+                     "flags": "-O2 -arch=sm_90 -lineinfo"},
+        },
+    },
+    "sim": {"name": "in-page logic simulator", "timeoutMs": 5000},
+    "yosys": {"name": "yowasp-yosys", "timeoutMs": 60000},
+    "modal": {"nonceFlag": "-DHH_NONCE", "timeoutMs": 300000,
+              "pollMs": 1500, "catalog": "data/modal-gpus.json"},
+}
+
 VERDICTS = {
     "sim": {
         "table-mismatch",     # output disagreed with the specification
@@ -656,6 +683,7 @@ def build(strict=True):
         write(DATA / "drills" / f"{slug}.json",
               {"slug": slug, "drills": u["drills"]})
 
+    write(DATA / "judges.json", JUDGES_CONFIG)
     write(DATA / "search.json", build_search(manifest, units))
     prune(DATA, units)
     return manifest, units

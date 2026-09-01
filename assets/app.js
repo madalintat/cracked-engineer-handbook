@@ -503,7 +503,7 @@ function wireWork() {
     renderVerdicts([{ who: ex.backend, state: 'running', title: 'Checking.' }]);
     el('#diagnosis').innerHTML = '';
     try {
-      const res = await WB.run(ex, editor.value, {});
+      const res = await WB.run(ex, editor.value, { judges: HH.judges });
       renderVerdicts(res.verdicts);
       renderDiagnosis(ex, res);
       if (res.pass) {
@@ -523,9 +523,12 @@ function wireWork() {
   };
 }
 
-function renderVerdicts(verdicts) {
+function renderVerdicts(verdicts, toolchain) {
   const box = el('#verdicts');
   if (!box) return;
+  const foot = toolchain
+    ? `<p style="margin:2px 0 0;color:var(--ink-4);font:500 var(--t-micro)/1.5 var(--mono)">
+         checked by ${esc(toolchain)}</p>` : '';
   box.innerHTML = verdicts.map(v => `
     <div class="vrow" data-state="${esc(v.state)}">
       <div class="who">${esc(v.who)}</div>
@@ -534,7 +537,7 @@ function renderVerdicts(verdicts) {
         ${esc(v.title)}
         ${v.detail || ''}
       </div>
-    </div>`).join('');
+    </div>`).join('') + foot;
 }
 
 /* Ordered, first match wins. The reader gets prose about the error they
@@ -657,6 +660,9 @@ async function boot() {
   initTheme();
   try {
     HH.manifest = await getJSON('data/manifest.json');
+    // The backend configuration comes from the build, not from this file, so
+    // the page cannot call a toolchain --validate has never checked.
+    HH.judges = await getJSON('data/judges.json');
     const c = HH.manifest.counts;
     el('#footcount').textContent =
       `${c.parts} parts, ${c.units} units, ${c.ready} written. ` +

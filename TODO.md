@@ -38,7 +38,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] Tokenizers: netlist, C, C++, CUDA, Verilog, Python, x86-64. 29 tests
 - [x] Backend interface: one shape, registry, three distinct non-pass states
 - [x] `sim` — in-page logic simulator, 24 tests, Worker-ready
-- [ ] `godbolt` — Compiler Explorer client, nonce in `userArguments`
+- [x] `godbolt` — Compiler Explorer client, nonce proven to defeat the cache
 - [ ] `yosys` — `yowasp-yosys` in a Worker
 - [ ] `modal` — submit and poll against the learner's own endpoint
 - [x] Judged expectations: `verdict` / `match` / `silent`, per-backend vocabulary
@@ -55,7 +55,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 
 ## 4a. From the family analysis, not yet done
 
-- [ ] `data/judges.json` authored by `build.py`, so the browser cannot call a
+- [x] `data/judges.json` authored by `build.py`, so the browser cannot call a
       backend configuration that `--validate` never checked
 - [ ] Label the verdict row per backend rather than badging the exercise; badge
       only Modal, because it is the one with a cost
@@ -67,7 +67,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
       dependency order at build time and throws it away. At 122 units "each
       unit depends on the ones before it" stops being true, and `needs:` is
       already in the front matter
-- [ ] Non-binary pass state: "correct, but not clean"
+- [x] Non-binary pass state: "Correct, and not clean"
 - [ ] Empty states worth reading, which is the family's weakest copy
 
 ## 5. The rest of the site
