@@ -234,6 +234,8 @@ function countGates(chip, library, seen = new Set()) {
   return n;
 }
 
+const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + 's')}`;
+
 /* ---------------------------------------------------------------- check */
 
 /**
@@ -349,8 +351,8 @@ function check(src, spec) {
   if (spec.maxGates && gates > spec.maxGates) {
     return {
       verdict: 'gate-budget', gates, rows,
-      message: `correct, but ${gates} nand gates against a budget of ` +
-               `${spec.maxGates}.`,
+      message: `correct, but ${plural(gates, 'nand gate')} against a budget ` +
+               `of ${spec.maxGates}.`,
     };
   }
 
@@ -358,8 +360,9 @@ function check(src, spec) {
     verdict: 'ok', gates, rows,
     minGates: spec.minGates,
     message: spec.minGates && gates > spec.minGates
-      ? `correct, in ${gates} gates. A known solution uses ${spec.minGates}.`
-      : `correct, in ${gates} gates.`,
+      ? `correct, in ${plural(gates, 'gate')}. ` +
+        `A known solution uses ${spec.minGates}.`
+      : `correct, in ${plural(gates, 'gate')}.`,
   };
 }
 

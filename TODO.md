@@ -42,13 +42,13 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [ ] `yosys` — `yowasp-yosys` in a Worker
 - [ ] `modal` — submit and poll against the learner's own endpoint
 - [x] Judged expectations: `verdict` / `match` / `silent`, per-backend vocabulary
-- [ ] Diagnostics UI: prose beside the real error, ordered first-match
-- [ ] Pass state, hint counting, editor buffer persisted per exercise
+- [x] Diagnostics UI: prose beside the real error, ordered first-match
+- [x] Pass state, hint counting, editor buffer persisted per exercise
 - [ ] Vim mode
 
 ## 4. Content
 
-- [~] Unit `nand`: note + 8 exercises done and validated; drills next
+- [x] Unit `nand` complete: note, 8 exercises, 15 drills, all validated
 - [ ] Unit `registers` complete (proves `godbolt`)
 - [ ] Unit `clock-edge` complete (proves `yosys`)
 - [ ] Unit `execution-model` complete (proves `modal`)

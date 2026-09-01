@@ -502,10 +502,32 @@ def _check_judged(e, backend, w):
 
 
 def parse_drills(text, where):
+    """One file, N drills.
+
+        ## The question, which may wrap across lines
+        - [ ] a wrong option
+        - [x] the right one
+        - [ ] another wrong option
+        @why why the right one is right, and what the wrong ones confuse
+
+    A wrapped question is joined rather than dropped. The first version of this
+    parser took only the heading's first line, and two questions in the first
+    unit lost half their text without the build saying anything.
+    """
     problems, drills = [], []
     for n, chunk in enumerate(re.split(r"^##\s+", text, flags=re.M)[1:], 1):
-        q, _, rest = chunk.partition("\n")
         w = f"{where} drill{n}"
+        lines = chunk.split("\n")
+        qparts, i = [], 0
+        while i < len(lines):
+            line = lines[i]
+            if re.match(r"^\s*[-*]\s*\[[ xX]\]", line) or line.startswith("@"):
+                break
+            if line.strip():
+                qparts.append(line.strip())
+            i += 1
+        q = " ".join(qparts)
+        rest = "\n".join(lines[i:])
         opts, correct, why = [], None, []
         sink = None
         for line in rest.split("\n"):
@@ -528,7 +550,19 @@ def parse_drills(text, where):
             problems.append(f"{w}: no option marked [x]")
         if not "".join(why).strip():
             problems.append(f"{w}: no @why explanation")
+        if not q.strip():
+            problems.append(f"{w}: no question")
+        elif not q.rstrip().endswith(("?", ".", ":")):
+            problems.append(f"{w}: question does not end in punctuation, so it "
+                            f"is probably cut off: {q!r}")
+        if len(set(opts)) != len(opts):
+            problems.append(f"{w}: two options are identical")
+        for o in opts:
+            if not o.strip():
+                problems.append(f"{w}: an option is empty")
         problems += prose.lint(q, f"{w} question")
+        for o in opts:
+            problems += prose.lint(o, f"{w} option")
         drills.append({
             "n": n, "q": q.strip(), "options": opts, "correct": correct,
             "why": render("\n".join(why).strip())[0],

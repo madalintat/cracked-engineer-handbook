@@ -279,7 +279,7 @@
    "ready": true,
    "words": 1541,
    "exercises": 8,
-   "drills": 0
+   "drills": 15
   },
   {
    "slug": "selection",
@@ -2049,6 +2049,6 @@
   "ready": 1,
   "words": 1541,
   "exercises": 8,
-  "drills": 0
+  "drills": 15
  }
 }

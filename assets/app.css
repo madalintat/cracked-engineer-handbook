@@ -703,6 +703,11 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
   word-break: normal;
   text-align: left;
   text-indent: 0;
+  /* No ligatures. They preserve advance width so the layers do not drift, but
+     rendering `->` as an arrow shows the reader a character they did not type,
+     and this is a course about what is actually there. */
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
 }
 .editor[data-wrap="on"] pre.hl,
 .editor[data-wrap="on"] textarea { white-space: pre-wrap; overflow-wrap: anywhere; }

@@ -203,6 +203,11 @@ async function viewUnit(slug) {
       <div class="facts">${facts}</div>
     </header>
     <article class="body prose">${u.html}</article>
+    <p class="head" style="grid-column:2;margin-top:28px">
+      <a class="btn" href="#/work/${esc(slug)}/1">Start the exercises</a>
+      <a class="btn ghost" href="#/drills/${esc(slug)}"
+         style="margin-left:8px">Drills</a>
+    </p>
     <nav class="unitnav" aria-label="Adjacent units">
       ${navLink(prev, 'prev')}${navLink(next, 'next')}
     </nav>
@@ -354,6 +359,207 @@ function wireSheet(rail) {
   HH.teardown.push(() => { removeEventListener('keydown', onKey); closeSheet(); });
 }
 
+/* ------------------------------------------------------------- workbench */
+
+async function viewWork(slug, nRaw) {
+  const meta = HH.manifest.units.find(u => u.slug === slug);
+  if (!meta || !meta.ready) return viewNotFound(`#/work/${slug}`);
+
+  const data = await getJSON(`data/ex/${slug}.json`);
+  const n = Math.min(Math.max(parseInt(nRaw || '1', 10) || 1, 1),
+                     data.exercises.length);
+  const ex = data.exercises[n - 1];
+  HH.work = { slug, n, ex, unit: meta };
+
+  const nav = data.exercises.map((e, i) => {
+    const done = Store.get(`pass.${slug}.${i + 1}`, false);
+    return `<a href="#/work/${esc(slug)}/${i + 1}"
+       class="${done ? 'done' : ''}"
+       ${i + 1 === n ? 'aria-current="page"' : ''}
+       title="${esc(e.title)}">${i + 1}</a>`;
+  }).join('');
+
+  const saved = Store.get(`draft.${slug}.${n}`, null);
+  const passed = Store.get(`pass.${slug}.${n}`, false);
+
+  return `
+  <div class="wrap wb" data-accent="${esc(meta.accent)}">
+    <div class="pane">
+      <header class="exhead">
+        <div class="kicker">
+          <span class="n">${String(meta.num).padStart(3, '0')}</span>
+          <a href="#/unit/${esc(slug)}">${esc(meta.title)}</a>
+          <span>exercise ${n} of ${data.exercises.length}</span>
+          ${ex.backend === 'modal'
+            ? '<span class="badge warn">runs on your GPU</span>' : ''}
+        </div>
+        <nav class="exnav" aria-label="Exercises">${nav}</nav>
+        <h1>${esc(ex.title)}</h1>
+      </header>
+
+      <div class="prose" style="font-size:var(--t-body)">${ex.brief}</div>
+
+      <div class="editor" id="ed" data-wrap="off"></div>
+
+      <div class="wbbar">
+        <button class="btn" id="run">Run</button>
+        <button class="btn ghost" id="reset">Reset to starter</button>
+        <span class="spacer"></span>
+        <button class="tog" id="wrap" aria-pressed="false">wrap</button>
+      </div>
+
+      <div class="verdicts" id="verdicts" aria-live="polite"></div>
+      <div id="diagnosis"></div>
+      <div id="afterword" hidden>
+        <div class="diagnosis" style="border-color:var(--ok)">
+          <span class="lbl" style="color:var(--ok)">Passed</span>${ex.after}
+        </div>
+      </div>
+    </div>
+
+    <aside class="pane">
+      <div class="card" style="position:sticky;top:76px">
+        <div class="meta"><span>What this is about</span></div>
+        <p style="color:var(--ink-2);font-size:var(--t-sm)">${esc(ex.concept)}</p>
+        <div class="hintbox" id="hints">
+          <div id="hintlist"></div>
+          ${ex.hints.length
+            ? `<button class="btn ghost" id="hintbtn">Hint
+                 <span style="opacity:.6">1 of ${ex.hints.length}</span></button>`
+            : ''}
+        </div>
+        <p style="margin-top:14px;color:var(--ink-4);font-size:var(--t-micro)">
+          There are hints and no answers. A hint is a sentence that makes you
+          see the error.
+        </p>
+      </div>
+    </aside>
+  </div>`;
+}
+
+function wireWork() {
+  const w = HH.work;
+  if (!w) return;
+  const { slug, n, ex } = w;
+  const host = el('#ed');
+  if (!host) return;
+
+  const lang = ex.backend === 'sim' ? 'netlist'
+             : ex.backend === 'yosys' ? 'verilog'
+             : ex.backend === 'modal' ? 'cuda' : 'cpp';
+
+  const draftKey = `draft.${slug}.${n}`;
+  const editor = WB.mountEditor(host, {
+    value: Store.get(draftKey, null) ?? ex.starter,
+    lang,
+    onChange: v => {
+      clearTimeout(HH._saveT);
+      HH._saveT = setTimeout(() => Store.set(draftKey, v), 400);
+    },
+  });
+  HH.teardown.push(() => clearTimeout(HH._saveT));
+
+  el('#wrap').onclick = ev => {
+    const on = ev.currentTarget.getAttribute('aria-pressed') !== 'true';
+    ev.currentTarget.setAttribute('aria-pressed', String(on));
+    editor.setWrap(on);
+  };
+
+  el('#reset').onclick = () => {
+    // Reset means the starter, not the last thing you typed. The reference
+    // implementation restores the edit, which makes the button useless at
+    // exactly the moment you need it.
+    editor.value = ex.starter;
+    Store.set(draftKey, ex.starter);
+    announce('Reset to the starter');
+    editor.focus();
+  };
+
+  let shown = 0;
+  const hintBtn = el('#hintbtn');
+  if (hintBtn) {
+    shown = Store.get(`hints.${slug}.${n}`, 0);
+    const paintHints = () => {
+      el('#hintlist').innerHTML = ex.hints.slice(0, shown)
+        .map(h => `<div class="hint">${esc(h)}</div>`).join('');
+      if (shown >= ex.hints.length) hintBtn.remove();
+      else hintBtn.innerHTML =
+        `Hint <span style="opacity:.6">${shown + 1} of ${ex.hints.length}</span>`;
+    };
+    paintHints();
+    hintBtn.onclick = () => {
+      shown = Math.min(shown + 1, ex.hints.length);
+      Store.set(`hints.${slug}.${n}`, shown);
+      paintHints();
+      announce('Hint shown');
+    };
+  }
+
+  if (Store.get(`pass.${slug}.${n}`, false)) el('#afterword').hidden = false;
+
+  const runBtn = el('#run');
+  runBtn.onclick = async () => {
+    runBtn.disabled = true;
+    renderVerdicts([{ who: ex.backend, state: 'running', title: 'Checking.' }]);
+    el('#diagnosis').innerHTML = '';
+    try {
+      const res = await WB.run(ex, editor.value, {});
+      renderVerdicts(res.verdicts);
+      renderDiagnosis(ex, res);
+      if (res.pass) {
+        Store.set(`pass.${slug}.${n}`, true);
+        el('#afterword').hidden = false;
+        document.querySelector(`.exnav a[href$="/${n}"]`)?.classList.add('done');
+        announce('Correct. ' + (res.verdicts[0]?.title || ''));
+      } else {
+        announce('Not yet. ' + (res.verdicts[0]?.title || ''));
+      }
+    } catch (err) {
+      renderVerdicts([{ who: ex.backend, state: 'unavailable',
+                        title: 'The checker could not run: ' + err.message }]);
+    } finally {
+      runBtn.disabled = false;
+    }
+  };
+}
+
+function renderVerdicts(verdicts) {
+  const box = el('#verdicts');
+  if (!box) return;
+  box.innerHTML = verdicts.map(v => `
+    <div class="vrow" data-state="${esc(v.state)}">
+      <div class="who">${esc(v.who)}</div>
+      <div class="what">
+        ${v.state === 'ok' ? '<span class="stamp">Correct</span><br>' : ''}
+        ${esc(v.title)}
+        ${v.detail || ''}
+      </div>
+    </div>`).join('');
+}
+
+/* Ordered, first match wins. The reader gets prose about the error they
+ * actually hit, not the one the exercise expected them to hit. */
+function renderDiagnosis(ex, res) {
+  const box = el('#diagnosis');
+  if (!box) return;
+  box.innerHTML = '';
+  if (res.pass) return;
+
+  for (const d of ex.diagnose || []) {
+    const hit = (res.signals || []).some(s => {
+      if (s.judge !== d.judge) return false;
+      if (d.judge === 'silent') return true;
+      if (d.judge === 'verdict') return s.key === d.key;
+      try { return new RegExp(d.key.slice(1, -1)).test(s.key); }
+      catch { return false; }
+    });
+    if (!hit) continue;
+    box.innerHTML =
+      `<div class="diagnosis"><span class="lbl">What this means</span>${d.prose}</div>`;
+    return;
+  }
+}
+
 function viewNotFound(hash) {
   return `<div class="wrap" style="padding:80px 0">
     <h1>No such page</h1>
@@ -383,6 +589,7 @@ const ROUTES = {
   '': viewHome,
   'track': viewTrack,
   'unit': viewUnit,
+  'work': viewWork,
   'atlas': () => viewSoon('Atlas'),
   'progress': () => viewSoon('Progress'),
   'glossary': () => viewSoon('Glossary'),
@@ -405,6 +612,7 @@ async function render() {
     const fn = ROUTES[route];
     main.innerHTML = fn ? await fn(a, b) : viewNotFound(location.hash || '#/');
     if (route === 'unit' && a) wireUnit(a);
+    if (route === 'work') wireWork();
   } catch (err) {
     console.error(err);
     main.innerHTML = viewError(err);

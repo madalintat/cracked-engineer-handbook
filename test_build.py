@@ -315,6 +315,70 @@ def t_drill_with_two_answers_is_an_error():
         assert "more than one correct" in str(e), e
 
 
+def t_a_wrapped_drill_question_is_joined_not_dropped():
+    """Two questions in the first unit lost half their text this way, and the
+    build said nothing."""
+    wrapped = """## The checker reports your gate count beside a known minimum.
+Why does it not fail you for exceeding it?
+- [ ] Because gate counts vary between simulators and are unreliable
+- [x] Because correctness and efficiency are separate questions
+- [ ] Because the stated minimum is only an estimate
+@why Conflating the two teaches the wrong lesson about circuits.
+"""
+    text = wrapped + "".join(DRILL.replace("{i}", str(i))
+                             for i in range(build.N_DRILLS - 1))
+    d = build.parse_drills(text, "t")
+    assert d[0]["q"].endswith("for exceeding it?"), d[0]["q"]
+    assert d[0]["q"].startswith("The checker reports"), d[0]["q"]
+    assert len(d[0]["options"]) == 3
+
+
+def t_a_truncated_question_is_an_error():
+    bad = """## This question just stops
+- [ ] one wrong option here
+- [x] the right option here
+- [ ] another wrong option
+@why Because it is.
+"""
+    text = bad + "".join(DRILL.replace("{i}", str(i))
+                         for i in range(build.N_DRILLS - 1))
+    try:
+        build.parse_drills(text, "t")
+        raise AssertionError("no error raised")
+    except build.BuildError as e:
+        assert "probably cut off" in str(e), e
+
+
+def t_identical_options_are_an_error():
+    dup = """## Which is it?
+- [ ] the same text
+- [x] the right one
+- [ ] the same text
+@why Because.
+"""
+    text = dup + "".join(DRILL.replace("{i}", str(i))
+                         for i in range(build.N_DRILLS - 1))
+    try:
+        build.parse_drills(text, "t")
+        raise AssertionError("no error raised")
+    except build.BuildError as e:
+        assert "identical" in str(e), e
+
+
+def t_the_real_nand_content_builds_strictly():
+    """The first unit is the format's reference. If it needs --lax, the format
+    is wrong or the content is."""
+    import pathlib as _p
+    if not (build.CONTENT / "units" / "nand.md").exists():
+        return
+    manifest, units = build.build(strict=True)
+    u = next(x for x in manifest if x["slug"] == "nand")
+    assert u["ready"], "nand should be ready"
+    assert u["exercises"] == build.N_EXERCISES, u["exercises"]
+    assert u["drills"] == build.N_DRILLS, u["drills"]
+    assert build.NOTE_WORDS[0] <= u["words"] <= build.NOTE_WORDS[1], u["words"]
+
+
 # ------------------------------------------------------------------- markdown
 
 def t_render_basics():

@@ -48,6 +48,18 @@ t('not from one nand', () => {
     out = nand(a, a)
   }`, NOT);
   eq(r.verdict, 'ok'); eq(r.gates, 1);
+  is(r.message.includes('1 gate.'), 'singular, not "1 gates": ' + r.message);
+  is(!r.message.includes('1 gates'), 'said "1 gates": ' + r.message);
+});
+
+t('counts read as English at every number', () => {
+  const two = SIM.check('chip And(a, b) -> out { n = nand(a, b) out = nand(n, n) }', AND);
+  is(two.message.includes('2 gates'), two.message);
+  const budget = SIM.check(`chip Xor(a, b) -> out {
+    na = nand(a, a) nb = nand(b, b)
+    t1 = nand(a, nb) t2 = nand(na, b) out = nand(t1, t2)
+  }`, { ...XOR, maxGates: 1 });
+  is(budget.message.includes('5 nand gates'), budget.message);
 });
 
 t('and from two nands', () => {
