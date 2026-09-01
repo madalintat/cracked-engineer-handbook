@@ -1,0 +1,310 @@
+{
+ "slug": "syscalls",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Ask the kernel to write",
+   "brief": "<p>Write <code>emit</code>, which writes the bytes at <code>rsi</code> for a length in <code>rdx</code> to the descriptor in <code>rdi</code>, and returns whatever the kernel returned.</p>\n<p>The syscall number for <code>write</code> is 1, and it goes in <code>rax</code>. The three arguments are already in the right registers.</p>",
+   "kind": "output",
+   "concept": "The syscall number goes in <code>rax</code>, the arguments are already where the convention wants them, and the result comes back in <code>rax</code>.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "One instruction to set the number, then <code>syscall</code>, then return."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The kernel returned the wrong thing, or a different call ran. <code>write</code> is number 1; the starter sets 60, which is <code>exit</code>, and exiting from inside a helper is not what the checks are waiting for.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>Three arguments, one number, one instruction. Everything libc adds on top of this, the buffering, the retry on partial writes and the setting of <code>errno</code>, is a decision somebody made rather than something the kernel provides.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global emit\nemit:\n    mov eax, 60\n    syscall\n    ret",
+   "tests": ".data\nmsg: .ascii \"hi\\n\"\n.text\n.global _start\n_start:\n    mov rdi, 1\n    lea rsi, [rip + msg]\n    mov rdx, 3\n    call emit\n    cmp rax, 3\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 2,
+   "title": "The error is the return value",
+   "brief": "<p>Write <code>try_write</code>, which attempts a write and returns 1 if it failed and 0 if it succeeded.</p>\n<p>There is no <code>errno</code> here. A syscall returns a small negative number on failure, and the checks use a descriptor that is not open.</p>",
+   "kind": "output",
+   "concept": "The kernel signals failure by returning a negative value in the same register as the result, and <code>errno</code> is something the C library invented on top of that.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "A failure is a negative return. The sign flag after a test of <code>rax</code> tells you."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The check that fails is the one with the bad descriptor. Writing to descriptor 999 returns -9, which is <code>EBADF</code>, and that is negative rather than -1. Comparing against -1 catches one error code out of a hundred and thirty.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>The rule is that anything from -1 to -4095 is an error and everything else is a result. libc checks that range, puts the magnitude in a thread-local <code>errno</code>, and hands you -1, which is why <code>errno</code> is per-thread and why it is not the kernel's idea.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global try_write\ntry_write:\n    mov eax, 1\n    syscall\n    xor edx, edx\n    cmp rax, -1\n    sete dl\n    mov rax, rdx\n    ret",
+   "tests": ".data\nmsg: .ascii \"x\"\n.text\n.global _start\n_start:\n    mov rdi, 1\n    lea rsi, [rip + msg]\n    mov rdx, 1\n    call try_write\n    cmp rax, 0\n    jne fail\n    mov rdi, 999\n    lea rsi, [rip + msg]\n    mov rdx, 1\n    call try_write\n    cmp rax, 1\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 3,
+   "title": "The instruction destroys two registers",
+   "brief": "<p>The <code>syscall</code> instruction puts the return address in <code>rcx</code> and the flags in <code>r11</code>. Both are gone when it returns, whatever they held before.</p>\n<p>Write <code>survives</code>, which keeps the value it is given in <code>rsi</code> across a syscall and returns it. The starter parks it in <code>rcx</code>.</p>",
+   "kind": "output",
+   "concept": "<code>syscall</code> clobbers <code>rcx</code> and <code>r11</code>, which is a property of the instruction rather than of the kernel, and it is why the syscall convention differs from the function one.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Pick a register the instruction does not touch, or use the stack."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The value came back as an address inside your own function. <code>syscall</code> writes the return address into <code>rcx</code>, so anything parked there is destroyed, and what you read back is where execution was about to resume.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>This is why the syscall convention uses <code>r10</code> where the function convention uses <code>rcx</code>. The register the function rules wanted for the fourth argument is the one the instruction overwrites, so libc's wrappers for calls with four or more arguments all contain a <code>mov r10, rcx</code> that exists only to bridge the two.</p>",
+   "starter": ".intel_syntax noprefix\n.data\ndot: .ascii \".\"\n.text\n.global survives\nsurvives:\n    mov rcx, rsi\n    push rdi\n    mov eax, 1\n    mov rdi, 1\n    lea rsi, [rip + dot]\n    mov rdx, 1\n    syscall\n    pop rdi\n    mov rax, rcx\n    ret",
+   "tests": ".global _start\n_start:\n    mov rsi, 12345\n    call survives\n    cmp rax, 12345\n    jne fail\n    mov rsi, -7\n    call survives\n    cmp rax, -7\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 4,
+   "title": "Count the crossings",
+   "brief": "<p>Write <code>emit_bytes</code>, which writes <code>rdx</code> bytes from <code>rsi</code> to descriptor 1 and returns the number of syscalls it performed.</p>\n<p>The starter writes one byte at a time, which is one privilege transition per byte. Write them in a single call instead.</p>",
+   "kind": "output",
+   "concept": "The boundary is expensive, so the way to make a program that crosses it often faster is to cross it less often rather than to make each crossing cheaper.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The kernel takes a length. There is no reason to hand it one."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The count is wrong. Whatever the length, the whole buffer goes in one call, so the answer is 1 for a non-empty buffer. The starter loops, which is correct output and the wrong number of transitions.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>This is the entire reason <code>printf</code> is not a syscall. A program writing a byte at a time performs one transition per byte, and the same program through a buffered stream performs one per few kilobytes. Nothing about the disk changed.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global emit_bytes\nemit_bytes:\n    xor r12, r12\n    mov r13, rsi\n    mov r14, rdx\n.loop:\n    test r14, r14\n    jz .done\n    mov eax, 1\n    mov rdi, 1\n    mov rsi, r13\n    mov rdx, 1\n    syscall\n    inc r12\n    inc r13\n    dec r14\n    jmp .loop\n.done:\n    mov rax, r12\n    ret",
+   "tests": ".data\nbuf: .ascii \"abcdef\"\n.text\n.global _start\n_start:\n    lea rsi, [rip + buf]\n    mov rdx, 6\n    call emit_bytes\n    cmp rax, 1\n    jne fail\n    lea rsi, [rip + buf]\n    mov rdx, 3\n    call emit_bytes\n    cmp rax, 1\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 5,
+   "title": "Two conventions, one shuffle",
+   "brief": "<p>Write <code>call_by_number</code>, which performs the syscall whose number is in <code>rdi</code>, using the three arguments in <code>rsi</code>, <code>rdx</code> and <code>rcx</code>, and returns the result.</p>\n<p>Your caller used the function convention. The kernel wants the syscall one. Every argument has to move one place.</p>",
+   "kind": "output",
+   "concept": "The syscall convention and the function convention are not the same convention, so a wrapper is a shuffle rather than a label.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Four moves, and the order matters: do not overwrite a register before you have read it."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The kernel saw the wrong arguments. Your first argument arrived in <code>rsi</code> and the kernel reads the first from <code>rdi</code>, so all three move down one position, and the number goes to <code>rax</code> first because <code>rdi</code> is about to be overwritten.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>A fourth argument would not have been this easy. The function convention puts it in <code>rcx</code> and the <code>syscall</code> instruction destroys <code>rcx</code>, so the syscall convention uses <code>r10</code> instead. That is why every C library on this platform contains a <code>mov r10, rcx</code> in every wrapper for a call with four or more arguments, doing nothing except reconciling two conventions that differ in one slot.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global call_by_number\ncall_by_number:\n    mov rax, rdi\n    mov rdi, rsi\n    mov rsi, rdx\n    syscall\n    ret",
+   "tests": ".data\nmsg: .ascii \"ok\\n\"\n.text\n.global _start\n_start:\n    mov rdi, 1\n    mov rsi, 1\n    lea rdx, [rip + msg]\n    mov rcx, 3\n    call call_by_number\n    cmp rax, 3\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 6,
+   "title": "Exit is a syscall too",
+   "brief": "<p>Write <code>finish</code>, which ends the process with the status in <code>rdi</code>.</p>\n<p>There is no return from this one. <code>exit</code> is number 60, and the status is its only argument.</p>",
+   "kind": "output",
+   "concept": "Process termination is a request like any other, and a program with no library underneath has to make it explicitly or run off the end of its own code.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The status is already in the right register. Only the number is missing."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The process exited with the wrong status, or did not exit at all. The status is the first argument and stays in <code>rdi</code>; only <code>rax</code> needs setting, and 60 is the number.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>A program without a C library has no <code>main</code> and nothing that runs after it. <code>_start</code> is where the kernel begins, and returning from it returns to nowhere, which is why every one of these exercises ends in this call rather than a <code>ret</code>.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global finish\nfinish:\n    mov eax, 1\n    syscall\n    ret",
+   "tests": ".global _start\n_start:\n    mov rdi, 0\n    call finish\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 7,
+   "title": "Advance and retry",
+   "brief": "<p>A destination that accepts a limited number of bytes at a time is ordinary: a pipe, a socket, a terminal. The loop that handles it advances the pointer by what was taken and reduces the count by the same amount.</p>\n<p>Write <code>write_chunks</code>, which writes <code>rdx</code> bytes from <code>rsi</code> to descriptor 1 in chunks of at most <code>rcx</code> bytes, and returns the number of write calls it made.</p>",
+   "kind": "output",
+   "concept": "A write takes what it can and tells you how much, so correct code advances by the return value rather than assuming the whole request went.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Each pass writes the smaller of the cap and what is left, then moves the pointer forward by that much."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The call count is wrong. Eight bytes in chunks of three is three calls: three, three, and two. The starter hands the kernel the whole length once, which produces the right bytes and the wrong number of transitions, and would lose data against a destination that really did accept less than it was offered.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>On a regular file a short write is rare and on a pipe it is routine, so this loop is what every correct writer contains. The cap here stands in for the kernel's own limit, and the shape of the code is identical either way: advance by what was accepted, never by what was asked.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global write_chunks\nwrite_chunks:\n    mov eax, 1\n    mov rdi, 1\n    syscall\n    mov rax, 1\n    ret",
+   "tests": ".data\nbuf: .ascii \"abcdefgh\"\n.text\n.global _start\n_start:\n    lea rsi, [rip + buf]\n    mov rdx, 8\n    mov rcx, 3\n    call write_chunks\n    cmp rax, 3\n    jne fail\n    lea rsi, [rip + buf]\n    mov rdx, 8\n    mov rcx, 8\n    call write_chunks\n    cmp rax, 1\n    jne fail\n    lea rsi, [rip + buf]\n    mov rdx, 6\n    mov rcx, 2\n    call write_chunks\n    cmp rax, 3\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 8,
+   "title": "The number never changes",
+   "brief": "<p>Write <code>write_number</code>, returning the syscall number for <code>write</code> on Linux x86-64.</p>\n<p>One instruction. The point is what the number means rather than what it is.</p>",
+   "kind": "output",
+   "concept": "The syscall table is the strongest compatibility guarantee in the system, because a program compiled a decade ago has these numbers baked into its instruction stream.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "It is the second entry in the table, and <code>read</code> is the first."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Wrong number. <code>read</code> is 0, <code>write</code> is 1, <code>open</code> is 2, and <code>exit</code> is 60. Those assignments have not moved since the 64-bit port and they are not going to.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>Old calls that turned out badly get a second version beside the first rather than a change to the original, which is why the table holds several pairs doing nearly the same thing. That is the cost of the promise, and the benefit is that this boundary is the one interface in the whole stack you can rely on absolutely.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global write_number\nwrite_number:\n    mov eax, 4\n    ret",
+   "tests": ".global _start\n_start:\n    call write_number\n    cmp rax, 1\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  }
+ ]
+}

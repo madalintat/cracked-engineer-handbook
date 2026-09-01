@@ -1,0 +1,81 @@
+{
+ "slug": "syscalls",
+ "num": 22,
+ "title": "Syscalls",
+ "blurb": "The one interface Linux promises never to renumber, and the register contract that is not the C one.",
+ "part": "machine",
+ "partRoman": "V",
+ "partTitle": "The machine",
+ "phase": "understand",
+ "accent": "copper",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "addressing"
+  ],
+  "minutes": 50,
+  "one_idea": "A syscall is not a function call, it is a controlled change of privilege level, and everything about its cost and its conventions follows from that.",
+  "sources": [
+   "x86-64-assembly",
+   "cpu-architectures"
+  ]
+ },
+ "html": "<p>Your program cannot touch the disk. It cannot open a socket, allocate a page, or find out what time it is. Every one of those is done by asking, and this unit is about what the asking actually costs and why it is shaped the way it is.</p>\n<h2 id=\"not-a-call\">Not a call</h2>\n<p><code>write(1, buf, n)</code> looks like a function call in your source, and libc does make it one. Underneath, the thing that happens is not a call at all.</p>\n<p>The processor runs at a privilege level. Your code runs at the least privileged one, where the instructions that touch page tables, device registers and interrupt state are simply not available. The kernel runs at the most privileged. A syscall is the one sanctioned way to cross that line.</p>\n<p>The <code>syscall</code> instruction does not jump where you tell it. It jumps to an address the kernel put in a machine register at boot, switches privilege level, and switches stack. You do not choose the destination. That is the entire point: if the caller could pick the address, the privilege boundary would not be one.</p>\n<h2 id=\"a-different-convention-for-a-hardware-reason\">A different convention, for a hardware reason</h2>\n<p>Function calls on this platform pass arguments in <code>rdi</code>, <code>rsi</code>, <code>rdx</code>, <code>rcx</code>, <code>r8</code>, <code>r9</code>. Syscalls pass them in <code>rdi</code>, <code>rsi</code>, <code>rdx</code>, <code>r10</code>, <code>r8</code>, <code>r9</code>.</p>\n<p>One register differs, and the reason is mechanical rather than arbitrary. The <code>syscall</code> instruction stores the return address in <code>rcx</code> and the flags in <code>r11</code>, because there is no stack push involved and those two registers were the ones chosen to hold them. So <code>rcx</code> cannot carry an argument: it is destroyed by the instruction that delivers it.</p>\n<p><code>r10</code> takes its place, and the mismatch is why libc's wrappers are not simply labels. Every wrapper for a syscall with four or more arguments contains a <code>mov r10, rcx</code> that exists purely to bridge two conventions that differ in one slot.</p>\n<p>The syscall number goes in <code>rax</code>, and the result comes back in <code>rax</code>.</p>\n<h2 id=\"the-return-value-is-the-error\">The return value is the error</h2>\n<p>There is no <code>errno</code> at this level. A syscall returns a small negative number to mean failure, where the magnitude is the error code.</p>\n<p>Write to a closed descriptor and you get -9, which is <code>EBADF</code>. Read past the end and you get 0. Ask for memory that is not there and you get -12, <code>ENOMEM</code>. The convention is that anything in the range -1 to -4095 is an error and everything else is a result.</p>\n<p>libc turns that into the interface you know: it checks the range, stores the magnitude in the thread-local <code>errno</code>, and returns -1. Which means <code>errno</code> is not something the kernel sets. It is something your C library invented, and it is per-thread because making it global was a bug that took years to remove.</p>\n<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 714 153\" class=\"fig-svg\" style=\"max-width:1035px\" role=\"img\" aria-label=\"A program calling libc, which sets up registers and executes the syscall instruction, crossing into the kernel and returning a value that libc converts into a result and errno.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><line x1=\"141\" y1=\"90\" x2=\"176\" y2=\"90\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"326\" y1=\"90\" x2=\"361\" y2=\"90\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"510\" y1=\"90\" x2=\"546\" y2=\"90\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><rect x=\"0.0\" y=\"61.6\" width=\"140.8\" height=\"57.2\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"70.4\" y=\"94.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">your code</text><rect x=\"176.0\" y=\"61.6\" width=\"149.6\" height=\"57.2\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--copper-ink, var(--accent));stroke:var(--copper-ink, var(--accent))\"/><text x=\"250.8\" y=\"89.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">libc wrapper</text><text x=\"250.8\" y=\"105.2\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">sets errno</text><rect x=\"360.8\" y=\"61.6\" width=\"149.6\" height=\"57.2\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--gold-ink, var(--accent));stroke:var(--gold-ink, var(--accent))\"/><text x=\"435.6\" y=\"89.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">syscall</text><text x=\"435.6\" y=\"105.2\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">privilege change</text><rect x=\"545.6\" y=\"61.6\" width=\"140.8\" height=\"57.2\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"616.0\" y=\"94.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">kernel</text></svg><figcaption>Two boundaries, not one. The interesting one is the privilege change in the middle; the one you see in your source is a wrapper around it.</figcaption></figure>\n<h2 id=\"the-number-is-a-promise\">The number is a promise</h2>\n<p>One property of this interface is unusual enough to be worth stating on its own: the numbers never change.</p>\n<p>Syscall 1 is <code>write</code> and it will be <code>write</code> for as long as the kernel runs 64-bit x86 binaries. Not because renumbering would be difficult, but because a program compiled ten years ago has the number 1 baked into its instruction stream, and the kernel's rule is that a working program keeps working.</p>\n<p>This is the strongest compatibility guarantee in the system, stronger than any library's, and it is why static binaries from a decade ago still run. New calls get new numbers. Old calls that turned out to be badly designed get a second version beside the first rather than a change to the original, which is why the table contains several pairs that do nearly the same thing.</p>\n<p>The cost of that promise is a table nobody can tidy. The benefit is that the boundary between your program and the kernel is the one interface in the whole stack you can rely on absolutely.</p>\n<h2 id=\"what-it-costs\">What it costs</h2>\n<p>A syscall used to be measured in the low hundreds of nanoseconds, most of it spent saving and restoring state rather than doing the work.</p>\n<p>Then Meltdown happened. The mitigation, page table isolation, gives the kernel a separate set of page tables from the process, so entering the kernel means switching page tables and flushing translation caches. On the machines that need it, this roughly doubled or tripled the cost of the cheapest syscalls, and the patch's arrival in early 2018 is visible as a step in a great many production latency graphs.</p>\n<p>The number matters less than the shape. A syscall is not free, it is not predictable, and the way to make a program that does many of them faster is almost never to make each one faster.</p>\n<h2 id=\"three-ways-round-it\">Three ways round it</h2>\n<p>The first is buffering, and it is why <code>printf</code> is not a syscall. A program that writes one byte at a time through <code>write</code> performs one privilege transition per byte. The same program writing through a buffered stream performs one per few kilobytes. That difference has nothing to do with the disk and everything to do with the boundary.</p>\n<p>The second is the vDSO. Some kernel information changes rarely and is not secret: what time it is, which processor you are on. The kernel maps a small shared page into every process containing both the data and the code to read it, so <code>clock_gettime</code> on a modern system usually performs no privilege transition at all. It is a normal function call into a page the kernel wrote.</p>\n<p>The third is batching, which is what io_uring is. Two ring buffers shared between the process and the kernel, one for submissions and one for completions. You write requests into memory, the kernel reads them from memory, and a syscall is needed only to wake somebody up. A workload doing a million small reads goes from a million transitions to almost none.</p>\n<p>All three are the same move. The boundary is expensive, so cross it less often rather than more cheaply.</p>\n<h2 id=\"where-the-numbers-in-your-profile-come-from\">Where the numbers in your profile come from</h2>\n<p>This is the unit that explains a class of profile you will meet.</p>\n<p>A program spending most of its time in the kernel is usually not doing too much work. It is doing its work in units that are too small, and the fix is upstream of anything the kernel is doing. Reading a file a line at a time through an unbuffered descriptor is the canonical example, and the repair is a buffer rather than a faster filesystem.</p>\n<p>The inverse also happens. A program with almost no system time and poor throughput is often waiting on a lock or a cache, and looking at syscall counts will tell you nothing at all.</p>\n<h2 id=\"not-every-crossing-is-yours\">Not every crossing is yours</h2>\n<p>One more source of transitions, because it explains profiles that look impossible.</p>\n<p>A page fault is a crossing you did not ask for. Touch a page that is mapped but not present and the processor traps into the kernel, which finds the page, installs it, and returns to the instruction that faulted as though nothing happened. Your code contains no call and the transition happened anyway.</p>\n<p>That is how a memory-mapped file works, how lazy allocation works, and how a program that never calls <code>read</code> can spend most of its time in the kernel. It is also why the first pass over a freshly allocated array is slower than the second, and why a benchmark that skips the warm-up measures the fault handler rather than the algorithm.</p>\n<p>Interrupts are the same shape from the other direction: a device wants attention, the processor saves state and enters the kernel, and your program resumes with no record of having been interrupted except the time that went missing.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>A syscall is a privilege transition wearing the syntax of a function call. Its argument convention differs from the function one in exactly one register, because the instruction destroys the register the function convention wanted to use there.</p>\n<p>Its cost is dominated by the crossing rather than the work, which means the useful optimisation is always to cross less. Buffer, share a page, or batch.</p>\n<p>Unit 023 asks the next question: where did the code the kernel is running come from, and what did the loader have to do before your first instruction ran.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These call the kernel directly with no library underneath. Numbers are the Linux x86-64 ones: 1 is <code>write</code>, 60 is <code>exit</code>.</p>\n<p><code>nonzero-exit</code> means your program ran and the checks disagreed. <code>signal</code> usually means a pointer handed to the kernel was not valid. A syscall that fails does not crash: it returns a small negative number, and noticing that is one of the exercises.</p>",
+ "headings": [
+  {
+   "id": "not-a-call",
+   "text": "Not a call",
+   "level": 2
+  },
+  {
+   "id": "a-different-convention-for-a-hardware-reason",
+   "text": "A different convention, for a hardware reason",
+   "level": 2
+  },
+  {
+   "id": "the-return-value-is-the-error",
+   "text": "The return value is the error",
+   "level": 2
+  },
+  {
+   "id": "the-number-is-a-promise",
+   "text": "The number is a promise",
+   "level": 2
+  },
+  {
+   "id": "what-it-costs",
+   "text": "What it costs",
+   "level": 2
+  },
+  {
+   "id": "three-ways-round-it",
+   "text": "Three ways round it",
+   "level": 2
+  },
+  {
+   "id": "where-the-numbers-in-your-profile-come-from",
+   "text": "Where the numbers in your profile come from",
+   "level": 2
+  },
+  {
+   "id": "not-every-crossing-is-yours",
+   "text": "Not every crossing is yours",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1494,
+ "needs": [
+  "addressing"
+ ],
+ "neededBy": []
+}

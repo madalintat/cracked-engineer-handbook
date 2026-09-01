@@ -1,0 +1,185 @@
+{
+ "slug": "syscalls",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What does the <code>syscall</code> instruction actually do?",
+   "options": [
+    "Jumps to an address the kernel set at boot, changing privilege level and stack",
+    "Calls the address in <code>rax</code>",
+    "Raises an interrupt the kernel has registered a handler for",
+    "Pushes a return address and jumps to a fixed offset in the kernel"
+   ],
+   "correct": 0,
+   "why": "<p>You do not choose the destination, and that is the whole point. If the caller could pick the address, the privilege boundary would not be one.</p>"
+  },
+  {
+   "n": 2,
+   "q": "Which register differs between the function convention and the syscall convention?",
+   "options": [
+    "The fourth argument: <code>rcx</code> for functions, <code>r10</code> for syscalls",
+    "The first argument: <code>rdi</code> for functions, <code>rax</code> for syscalls",
+    "The return value: <code>rax</code> for functions, <code>rdx</code> for syscalls",
+    "None; they are the same convention"
+   ],
+   "correct": 0,
+   "why": "<p>The <code>syscall</code> instruction stores the return address in <code>rcx</code> and the flags in <code>r11</code>, so <code>rcx</code> cannot carry an argument through the instruction that delivers it.</p>"
+  },
+  {
+   "n": 3,
+   "q": "What does a syscall return when it fails?",
+   "options": [
+    "A small negative number whose magnitude is the error code",
+    "-1, with the code left in a kernel-managed <code>errno</code>",
+    "Zero, with the code in <code>rdx</code>",
+    "It raises a signal rather than returning"
+   ],
+   "correct": 0,
+   "why": "<p>Anything from -1 to -4095 is an error and everything else is a result. Writing to a closed descriptor gives -9, which is <code>EBADF</code>.</p>"
+  },
+  {
+   "n": 4,
+   "q": "Where does <code>errno</code> come from?",
+   "options": [
+    "The C library, which checks the return range and stores the magnitude per-thread",
+    "The kernel, which writes it to a fixed address in the process",
+    "A register the syscall sets alongside the result",
+    "The dynamic loader, at process startup"
+   ],
+   "correct": 0,
+   "why": "<p>It is per-thread because making it global was a bug that took years to remove, and it is not the kernel's idea at all.</p>"
+  },
+  {
+   "n": 5,
+   "q": "Why do syscall numbers never change?",
+   "options": [
+    "A program compiled a decade ago has the number baked into its instruction stream",
+    "Renumbering would break the interrupt descriptor table",
+    "The numbers are defined by the x86-64 architecture",
+    "They do change, but only across major kernel versions"
+   ],
+   "correct": 0,
+   "why": "<p>It is the strongest compatibility guarantee in the system, stronger than any library's, and the cost is a table nobody can tidy.</p>"
+  },
+  {
+   "n": 6,
+   "q": "How does the kernel handle a syscall that turned out to be badly designed?",
+   "options": [
+    "It adds a second version beside the first rather than changing the original",
+    "It changes the behaviour behind a version flag",
+    "It removes it after a deprecation period",
+    "It rejects the old number and returns an error"
+   ],
+   "correct": 0,
+   "why": "<p>Which is why the table contains several pairs that do nearly the same thing, and why a working program keeps working.</p>"
+  },
+  {
+   "n": 7,
+   "q": "What did page table isolation do to syscall cost?",
+   "options": [
+    "Roughly doubled or tripled it, because entering the kernel now switches page tables",
+    "Left it unchanged, since the mitigation is in userspace",
+    "Reduced it, by removing a permission check",
+    "Made it unpredictable but not slower on average"
+   ],
+   "correct": 0,
+   "why": "<p>It gives the kernel a separate set of page tables from the process, so the crossing involves a page table switch and a translation cache flush. Its arrival in early 2018 is a visible step in production latency graphs.</p>"
+  },
+  {
+   "n": 8,
+   "q": "Why is <code>printf</code> not a syscall?",
+   "options": [
+    "Buffering turns one transition per byte into one per few kilobytes",
+    "It needs to format, which the kernel cannot do",
+    "It writes to a stream rather than a descriptor",
+    "The kernel has no formatting syscall"
+   ],
+   "correct": 0,
+   "why": "<p>That difference has nothing to do with the disk and everything to do with the boundary.</p>"
+  },
+  {
+   "n": 9,
+   "q": "What is the vDSO?",
+   "options": [
+    "A page the kernel maps into every process, holding data and code to read it without a transition",
+    "A shared library that wraps syscalls with error handling",
+    "A cache of recent syscall results",
+    "The dynamic loader's symbol table for kernel functions"
+   ],
+   "correct": 0,
+   "why": "<p><code>clock_gettime</code> on a modern system usually performs no privilege transition at all. It is a normal function call into a page the kernel wrote.</p>"
+  },
+  {
+   "n": 10,
+   "q": "What does io_uring change?",
+   "options": [
+    "Requests and completions live in shared ring buffers, so a syscall is needed only to wake somebody",
+    "It makes each syscall faster by skipping validation",
+    "It runs syscalls on a dedicated core",
+    "It replaces syscalls with signals"
+   ],
+   "correct": 0,
+   "why": "<p>A workload doing a million small reads goes from a million transitions to almost none. It is the same move as buffering and the vDSO: cross less often rather than more cheaply.</p>"
+  },
+  {
+   "n": 11,
+   "q": "A program spends most of its time in the kernel. What is the usual cause?",
+   "options": [
+    "Its work is split into units that are too small",
+    "The kernel is misconfigured",
+    "It is blocked on a lock",
+    "The disk is slow"
+   ],
+   "correct": 0,
+   "why": "<p>Reading a file a line at a time through an unbuffered descriptor is the canonical case, and the repair is a buffer rather than a faster filesystem.</p>"
+  },
+  {
+   "n": 12,
+   "q": "What is a page fault, in the terms of this unit?",
+   "options": [
+    "A crossing into the kernel that your code did not ask for",
+    "A syscall issued by the memory allocator",
+    "An error that terminates the process",
+    "A cache miss handled entirely in hardware"
+   ],
+   "correct": 0,
+   "why": "<p>It is how memory-mapped files and lazy allocation work, and why the first pass over a freshly allocated array is slower than the second.</p>"
+  },
+  {
+   "n": 13,
+   "q": "<code>write</code> returned less than you asked for. What does that mean?",
+   "options": [
+    "It took that many bytes and you should call again with the rest",
+    "An error occurred and <code>errno</code> holds the reason",
+    "The descriptor was closed mid-write",
+    "Nothing; it is not possible for a valid descriptor"
+   ],
+   "correct": 0,
+   "why": "<p>On a regular file it is rare. On a pipe, a socket or a terminal it is ordinary, and a loop that advances and retries is what every correct writer contains.</p>"
+  },
+  {
+   "n": 14,
+   "q": "Which syscall numbers are <code>read</code>, <code>write</code> and <code>exit</code> on Linux x86-64?",
+   "options": [
+    "0, 1 and 60",
+    "1, 2 and 60",
+    "3, 4 and 1",
+    "0, 1 and 231"
+   ],
+   "correct": 0,
+   "why": "<p>231 is <code>exit_group</code>, which ends every thread. 60 ends the calling thread, which for a single-threaded program is the same thing.</p>"
+  },
+  {
+   "n": 15,
+   "q": "A program without a C library returns from <code>_start</code>. What happens?",
+   "options": [
+    "It returns to nowhere, because nothing called it",
+    "The kernel treats the return value as the exit status",
+    "The loader catches it and exits cleanly",
+    "It restarts from the entry point"
+   ],
+   "correct": 0,
+   "why": "<p><code>_start</code> is where the kernel begins execution, not a function anybody called, which is why every one of these exercises ends with an explicit exit.</p>"
+  }
+ ]
+}

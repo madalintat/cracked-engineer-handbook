@@ -6423,6 +6423,270 @@
  },
  {
   "t": "section",
+  "slug": "syscalls",
+  "anchor": "not-a-call",
+  "title": "Not a call",
+  "text": "looks like a function call in your source, and libc does make it one. Underneath, the thing that happens is not a call at all. The processor runs at a privilege level. Your code runs at the least privileged one, where the instructions that touch page tables, device registers and interrupt state are simply not available. The kernel runs at the most privileged. A syscall is the one sanctioned way to cross that line. The instruction does not jump where you tell it. It jumps to an address the kernel put in a machine register at boot, switches privilege level, and switches stack. You do not choose the destination. That is the entire point: if the caller could pick the address, the privilege boundary would not be one.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "syscalls",
+  "anchor": "a-different-convention-for-a-hardware-reason",
+  "title": "A different convention, for a hardware reason",
+  "text": "Function calls on this platform pass arguments in , , , , , . Syscalls pass them in , , , , , . One register differs, and the reason is mechanical rather than arbitrary. The instruction stores the return address in and the flags in , because there is no stack push involved and those two registers were the ones chosen to hold them. So cannot carry an argument: it is destroyed by the instruction that delivers it. takes its place, and the mismatch is why libc's wrappers are not simply labels. Every wrapper for a syscall with four or more arguments contains a that exists purely to bridge two conventions that differ in one slot. The syscall number goes in , and the result comes back in .",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "syscalls",
+  "anchor": "the-return-value-is-the-error",
+  "title": "The return value is the error",
+  "text": "There is no at this level. A syscall returns a small negative number to mean failure, where the magnitude is the error code. Write to a closed descriptor and you get -9, which is . Read past the end and you get 0. Ask for memory that is not there and you get -12, . The convention is that anything in the range -1 to -4095 is an error and everything else is a result. libc turns that into the interface you know: it checks the range, stores the magnitude in the thread-local , and returns -1. Which means is not something the kernel sets. It is something your C library invented, and it is per-thread because making it global was a bug that took years to remove. Two boundaries, not one. The interesting one is the privilege change in the middle; the one you see in your source is a wrapper around it.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "syscalls",
+  "anchor": "the-number-is-a-promise",
+  "title": "The number is a promise",
+  "text": "One property of this interface is unusual enough to be worth stating on its own: the numbers never change. Syscall 1 is and it will be for as long as the kernel runs 64-bit x86 binaries. Not because renumbering would be difficult, but because a program compiled ten years ago has the number 1 baked into its instruction stream, and the kernel's rule is that a working program keeps working. This is the strongest compatibility guarantee in the system, stronger than any library's, and it is why static binaries from a decade ago still run. New calls get new numbers. Old calls that turned out to be badly designed get a second version beside the first rather than a change to the original, which is why the table contains several pairs that do nearly the same thing. The cost of that promise is a table nobody can tidy. The benefit is that the boundary between your program and the kernel is the one interface in the whole stack you can rely on absolutely.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "syscalls",
+  "anchor": "what-it-costs",
+  "title": "What it costs",
+  "text": "A syscall used to be measured in the low hundreds of nanoseconds, most of it spent saving and restoring state rather than doing the work. Then Meltdown happened. The mitigation, page table isolation, gives the kernel a separate set of page tables from the process, so entering the kernel means switching page tables and flushing translation caches. On the machines that need it, this roughly doubled or tripled the cost of the cheapest syscalls, and the patch's arrival in early 2018 is visible as a step in a great many production latency graphs. The number matters less than the shape. A syscall is not free, it is not predictable, and the way to make a program that does many of them faster is almost never to make each one faster.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "syscalls",
+  "anchor": "three-ways-round-it",
+  "title": "Three ways round it",
+  "text": "The first is buffering, and it is why is not a syscall. A program that writes one byte at a time through performs one privilege transition per byte. The same program writing through a buffered stream performs one per few kilobytes. That difference has nothing to do with the disk and everything to do with the boundary. The second is the vDSO. Some kernel information changes rarely and is not secret: what time it is, which processor you are on. The kernel maps a small shared page into every process containing both the data and the code to read it, so on a modern system usually performs no privilege transition at all. It is a normal function call into a page the kernel wrote. The third is batching, which is what io_uring is. Two ring buffers shared between the process and the kernel, one for submissions and one for completions. You write requests into memory, the kernel reads them from memory, and a syscall is needed only to wake somebody up. A workload doing a million small reads goes from a million transitions to almost none. All three are the same move. The boundary is expensive, so cross it less often rather than more cheaply.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "syscalls",
+  "anchor": "where-the-numbers-in-your-profile-come-from",
+  "title": "Where the numbers in your profile come from",
+  "text": "This is the unit that explains a class of profile you will meet. A program spending most of its time in the kernel is usually not doing too much work. It is doing its work in units that are too small, and the fix is upstream of anything the kernel is doing. Reading a file a line at a time through an unbuffered descriptor is the canonical example, and the repair is a buffer rather than a faster filesystem. The inverse also happens. A program with almost no system time and poor throughput is often waiting on a lock or a cache, and looking at syscall counts will tell you nothing at all.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "syscalls",
+  "anchor": "not-every-crossing-is-yours",
+  "title": "Not every crossing is yours",
+  "text": "One more source of transitions, because it explains profiles that look impossible. A page fault is a crossing you did not ask for. Touch a page that is mapped but not present and the processor traps into the kernel, which finds the page, installs it, and returns to the instruction that faulted as though nothing happened. Your code contains no call and the transition happened anyway. That is how a memory-mapped file works, how lazy allocation works, and how a program that never calls can spend most of its time in the kernel. It is also why the first pass over a freshly allocated array is slower than the second, and why a benchmark that skips the warm-up measures the fault handler rather than the algorithm. Interrupts are the same shape from the other direction: a device wants attention, the processor saves state and enters the kernel, and your program resumes with no record of having been interrupted except the time that went missing.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "syscalls",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "A syscall is a privilege transition wearing the syntax of a function call. Its argument convention differs from the function one in exactly one register, because the instruction destroys the register the function convention wanted to use there. Its cost is dominated by the crossing rather than the work, which means the useful optimisation is always to cross less. Buffer, share a page, or batch. Unit 023 asks the next question: where did the code the kernel is running come from, and what did the loader have to do before your first instruction ran.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "syscalls",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These call the kernel directly with no library underneath. Numbers are the Linux x86-64 ones: 1 is , 60 is . means your program ran and the checks disagreed. usually means a pointer handed to the kernel was not valid. A syscall that fails does not crash: it returns a small negative number, and noticing that is one of the exercises.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "syscalls",
+  "n": 1,
+  "title": "Ask the kernel to write",
+  "text": "The syscall number goes in <code>rax</code>, the arguments are already where the convention wants them, and the result comes back in <code>rax</code>. Write , which writes the bytes at for a length in to the descriptor in , and returns whatever the kernel returned. The syscall number for is 1, and it goes in . The three arguments are already in the right registers.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "syscalls",
+  "n": 2,
+  "title": "The error is the return value",
+  "text": "The kernel signals failure by returning a negative value in the same register as the result, and <code>errno</code> is something the C library invented on top of that. Write , which attempts a write and returns 1 if it failed and 0 if it succeeded. There is no here. A syscall returns a small negative number on failure, and the checks use a descriptor that is not open.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "syscalls",
+  "n": 3,
+  "title": "The instruction destroys two registers",
+  "text": "<code>syscall</code> clobbers <code>rcx</code> and <code>r11</code>, which is a property of the instruction rather than of the kernel, and it is why the syscall convention differs from the function one. The instruction puts the return address in and the flags in . Both are gone when it returns, whatever they held before. Write , which keeps the value it is given in across a syscall and returns it. The starter parks it in .",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "syscalls",
+  "n": 4,
+  "title": "Count the crossings",
+  "text": "The boundary is expensive, so the way to make a program that crosses it often faster is to cross it less often rather than to make each crossing cheaper. Write , which writes bytes from to descriptor 1 and returns the number of syscalls it performed. The starter writes one byte at a time, which is one privilege transition per byte. Write them in a single call instead.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "syscalls",
+  "n": 5,
+  "title": "Two conventions, one shuffle",
+  "text": "The syscall convention and the function convention are not the same convention, so a wrapper is a shuffle rather than a label. Write , which performs the syscall whose number is in , using the three arguments in , and , and returns the result. Your caller used the function convention. The kernel wants the syscall one. Every argument has to move one place.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "syscalls",
+  "n": 6,
+  "title": "Exit is a syscall too",
+  "text": "Process termination is a request like any other, and a program with no library underneath has to make it explicitly or run off the end of its own code. Write , which ends the process with the status in . There is no return from this one. is number 60, and the status is its only argument.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "syscalls",
+  "n": 7,
+  "title": "Advance and retry",
+  "text": "A write takes what it can and tells you how much, so correct code advances by the return value rather than assuming the whole request went. A destination that accepts a limited number of bytes at a time is ordinary: a pipe, a socket, a terminal. The loop that handles it advances the pointer by what was taken and reduces the count by the same amount. Write , which writes bytes from to descriptor 1 in chunks of at most bytes, and returns the number of write calls it made.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "syscalls",
+  "n": 8,
+  "title": "The number never changes",
+  "text": "The syscall table is the strongest compatibility guarantee in the system, because a program compiled a decade ago has these numbers baked into its instruction stream. Write , returning the syscall number for on Linux x86-64. One instruction. The point is what the number means rather than what it is.",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "syscalls",
+  "n": 1,
+  "title": "What does the <code>syscall</code> instruction actually do?",
+  "text": " You do not choose the destination, and that is the whole point. If the caller could pick the address, the privilege boundary would not be one. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "syscalls",
+  "n": 2,
+  "title": "Which register differs between the function convention and the syscall convention?",
+  "text": " The  syscall  instruction stores the return address in  rcx  and the flags in  r11 , so  rcx  cannot carry an argument through the instruction that delivers it. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "syscalls",
+  "n": 3,
+  "title": "What does a syscall return when it fails?",
+  "text": " Anything from -1 to -4095 is an error and everything else is a result. Writing to a closed descriptor gives -9, which is  EBADF . ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "syscalls",
+  "n": 4,
+  "title": "Where does <code>errno</code> come from?",
+  "text": " It is per-thread because making it global was a bug that took years to remove, and it is not the kernel's idea at all. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "syscalls",
+  "n": 5,
+  "title": "Why do syscall numbers never change?",
+  "text": " It is the strongest compatibility guarantee in the system, stronger than any library's, and the cost is a table nobody can tidy. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "syscalls",
+  "n": 6,
+  "title": "How does the kernel handle a syscall that turned out to be badly designed?",
+  "text": " Which is why the table contains several pairs that do nearly the same thing, and why a working program keeps working. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "syscalls",
+  "n": 7,
+  "title": "What did page table isolation do to syscall cost?",
+  "text": " It gives the kernel a separate set of page tables from the process, so the crossing involves a page table switch and a translation cache flush. Its arrival in early 2018 is a visible step in production latency graphs. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "syscalls",
+  "n": 8,
+  "title": "Why is <code>printf</code> not a syscall?",
+  "text": " That difference has nothing to do with the disk and everything to do with the boundary. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "syscalls",
+  "n": 9,
+  "title": "What is the vDSO?",
+  "text": "  clock_gettime  on a modern system usually performs no privilege transition at all. It is a normal function call into a page the kernel wrote. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "syscalls",
+  "n": 10,
+  "title": "What does io_uring change?",
+  "text": " A workload doing a million small reads goes from a million transitions to almost none. It is the same move as buffering and the vDSO: cross less often rather than more cheaply. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "syscalls",
+  "n": 11,
+  "title": "A program spends most of its time in the kernel. What is the usual cause?",
+  "text": " Reading a file a line at a time through an unbuffered descriptor is the canonical case, and the repair is a buffer rather than a faster filesystem. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "syscalls",
+  "n": 12,
+  "title": "What is a page fault, in the terms of this unit?",
+  "text": " It is how memory-mapped files and lazy allocation work, and why the first pass over a freshly allocated array is slower than the second. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "syscalls",
+  "n": 13,
+  "title": "<code>write</code> returned less than you asked for. What does that mean?",
+  "text": " On a regular file it is rare. On a pipe, a socket or a terminal it is ordinary, and a loop that advances and retries is what every correct writer contains. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "syscalls",
+  "n": 14,
+  "title": "Which syscall numbers are <code>read</code>, <code>write</code> and <code>exit</code> on Linux x86-64?",
+  "text": " 231 is  exit_group , which ends every thread. 60 ends the calling thread, which for a single-threaded program is the same thing. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "syscalls",
+  "n": 15,
+  "title": "A program without a C library returns from <code>_start</code>. What happens?",
+  "text": "  _start  is where the kernel begins execution, not a function anybody called, which is why every one of these exercises ends with an explicit exit. ",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
   "slug": "integers",
   "anchor": "the-representation-briefly",
   "title": "The representation, briefly",

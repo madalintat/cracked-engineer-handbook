@@ -79,5 +79,7 @@
   "encoding",
   "registers"
  ],
- "neededBy": []
+ "neededBy": [
+  "syscalls"
+ ]
 }

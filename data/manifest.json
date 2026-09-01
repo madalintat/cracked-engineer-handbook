@@ -829,7 +829,9 @@
     "encoding",
     "registers"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "syscalls"
+   ],
    "minutes": 50
   },
   {
@@ -843,12 +845,15 @@
    "phase": "understand",
    "accent": "copper",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1494,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "addressing"
+   ],
+   "neededBy": [],
+   "minutes": 50
   },
   {
    "slug": "elf",
@@ -2659,9 +2664,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 24,
-  "words": 36600,
-  "exercises": 192,
-  "drills": 360
+  "ready": 25,
+  "words": 38094,
+  "exercises": 200,
+  "drills": 375
  }
 }
