@@ -82,5 +82,7 @@
  "needs": [
   "addressing"
  ],
- "neededBy": []
+ "neededBy": [
+  "pipeline"
+ ]
 }

@@ -1,0 +1,310 @@
+{
+ "slug": "pipeline",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "The chain and the tree",
+   "brief": "<p>Write <code>chain_depth</code>, returning how many additions deep a reduction is, for <code>n</code> values combined either left to right or pairwise.</p>\n<p>Left to right is <code>n - 1</code> additions in a row. Pairwise halves the count at each round, so the depth is the number of halvings.</p>",
+   "kind": "output",
+   "concept": "Out-of-order execution runs what does not depend on something still running, so the depth of the dependency chain is the number that decides whether the machine is busy.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Count rounds: pairwise, how many times can you halve <code>n</code> before reaching one?"
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The pairwise depth is the number of halving rounds, which for 8 values is 3 and for 1024 is 10, not 512. The starter returns half the chain length, which is a different and much larger number.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Both arrangements perform the same <code>n - 1</code> additions. Only the shape differs, and the shape decides whether the adder can start a new operation every cycle or has to wait for the previous result. In a loop accumulating a million values that is typically a factor of four.</p>",
+   "starter": "#include <stddef.h>\nsize_t chain_depth(size_t n, int pairwise) {\n    if (n <= 1) return 0;\n    return pairwise ? (n - 1) / 2 : n - 1;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t chain_depth(size_t, int);\nint main(void) {\n    assert(chain_depth(1, 0) == 0);\n    assert(chain_depth(1, 1) == 0);\n    assert(chain_depth(2, 0) == 1);\n    assert(chain_depth(2, 1) == 1);\n    assert(chain_depth(8, 0) == 7);\n    assert(chain_depth(8, 1) == 3);\n    assert(chain_depth(1024, 0) == 1023);\n    assert(chain_depth(1024, 1) == 10);\n    /* Not a power of two: one extra round for the leftover. */\n    assert(chain_depth(5, 1) == 3);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "A two-bit saturating counter",
+   "brief": "<p>The standard branch predictor per branch is a two-bit counter. It predicts taken when the value is 2 or 3, increments on a taken branch and decrements on a not-taken one, and saturates at both ends.</p>\n<p>Write <code>mispredicts</code>, counting how many times this predictor is wrong on a sequence, starting from state 1.</p>",
+   "kind": "output",
+   "concept": "Two bits rather than one means a single exception does not flip the prediction, which is what makes a loop with one unusual iteration cheap.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Predict first, compare, then update. The counter saturates rather than wrapping."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Saturation matters: at 3 a taken branch leaves the state at 3 rather than moving to 0, and at 0 a not-taken branch leaves it at 0. Without it a long run of one outcome eventually predicts the opposite.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Watch the long run with one exception. The not-taken branch costs a misprediction and moves the counter from 3 to 2, which still predicts taken, so the very next iteration is right again. One bit would have flipped outright and been wrong twice. That is the entire reason the counter has two bits and not one, and it is also why the alternating case is wrong every time: nothing with a short memory predicts a pattern that changes on every branch.</p>",
+   "starter": "#include <stddef.h>\nsize_t mispredicts(const unsigned char *taken, size_t n) {\n    int state = 1;\n    size_t wrong = 0;\n    for (size_t i = 0; i < n; i++) {\n        int predict = state >= 2;\n        if (predict != taken[i]) wrong++;\n        state = taken[i] ? state + 1 : state - 1;\n    }\n    return wrong;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t mispredicts(const unsigned char *, size_t);\nint main(void) {\n    /* Always taken. State 1 predicts not-taken once, then learns. */\n    unsigned char always[8] = {1,1,1,1,1,1,1,1};\n    assert(mispredicts(always, 8) == 1);\n    /* Always not taken: state 1 already predicts not-taken. */\n    unsigned char never[8] = {0,0,0,0,0,0,0,0};\n    assert(mispredicts(never, 8) == 0);\n    /* A long run of taken with one exception near the end. */\n    unsigned char loopish[10] = {1,1,1,1,1,1,1,1,0,1};\n    assert(mispredicts(loopish, 10) == 2);\n    /* Alternating from the initial state is wrong every single time. */\n    unsigned char alt[8] = {1,0,1,0,1,0,1,0};\n    assert(mispredicts(alt, 8) == 8);\n    /* Twelve taken, then six not taken. A counter that keeps climbing takes\n       twelve decrements to change its mind; one that saturates takes two. */\n    unsigned char turn[18];\n    for (int i = 0; i < 12; i++) turn[i] = 1;\n    for (int i = 12; i < 18; i++) turn[i] = 0;\n    assert(mispredicts(turn, 18) == 3);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "What a wrong guess costs",
+   "brief": "<p>Write <code>branch_cycles</code>, returning the total cycles a sequence of branches costs, given that a correct prediction is 1 cycle and a wrong one is 1 plus a penalty.</p>\n<p>The predictor is the two-bit counter from the previous exercise.</p>",
+   "kind": "output",
+   "concept": "The cost of a branch is not the branch, it is the misprediction rate times the pipeline depth, which is why a perfectly predicted branch is nearly free.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Every branch costs one cycle. The mispredicted ones cost the penalty on top."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Every branch costs its cycle whether or not it was predicted, and a wrong guess adds the penalty rather than replacing the cycle. The starter charges the penalty and nothing else.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A thousand-iteration loop with a penalty of 20 costs about 1020 cycles for its branches. The same thousand branches with an unpredictable condition cost around 11000. That is the same instruction count, and it is why sorting an array before a loop that tests each element makes the loop several times faster.</p>",
+   "starter": "#include <stddef.h>\nsize_t branch_cycles(const unsigned char *taken, size_t n, size_t penalty) {\n    int state = 1;\n    size_t cycles = 0;\n    for (size_t i = 0; i < n; i++) {\n        int predict = state >= 2;\n        if (predict != taken[i]) cycles += penalty;\n        if (taken[i]) { if (state < 3) state++; }\n        else          { if (state > 0) state--; }\n    }\n    return cycles;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t branch_cycles(const unsigned char *, size_t, size_t);\nint main(void) {\n    unsigned char always[8] = {1,1,1,1,1,1,1,1};\n    /* Eight branches, one mispredicted, penalty 20. */\n    assert(branch_cycles(always, 8, 20) == 28);\n    unsigned char never[8] = {0,0,0,0,0,0,0,0};\n    assert(branch_cycles(never, 8, 20) == 8);\n    unsigned char alt[8] = {1,0,1,0,1,0,1,0};\n    assert(branch_cycles(alt, 8, 20) == 168);\n    /* A penalty of zero makes every branch cost its one cycle. */\n    assert(branch_cycles(alt, 8, 0) == 8);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Three sums, three answers",
+   "brief": "<p>Floating point addition is not associative, so regrouping a sum changes the rounding and therefore the result.</p>\n<p>Write <code>sum_pairwise</code>, which adds <code>n</code> values by repeatedly combining adjacent pairs. The checks compare it against the same values summed left to right, in both orders, and the three answers differ.</p>",
+   "kind": "output",
+   "concept": "The compiler may not reassociate a floating point sum, because the grouping is part of the specified result rather than an implementation detail.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Combine <code>t[2i]</code> and <code>t[2i+1]</code> into <code>t[i]</code>, halve the width, repeat. An odd element carries forward untouched."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The three expected values are not arbitrary: 16777216 is 2 to the 24, where a 32-bit float's steps become larger than one, so seven ones added before it survive and seven ones added after it vanish. Pairwise keeps most of them and lands closest to the true total of 16777223.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Three groupings, three answers, all correct arithmetic. This is why a compiler asked to optimise a reduction has to leave it alone, and why <code>-ffast-math</code> grants permission to change results. That flag also permits assuming no infinities and no not-a-numbers, which turns some correct code into wrong code silently.</p>",
+   "starter": "#include <stddef.h>\nfloat sum_pairwise(const float *a, size_t n) {\n    float s = 0.0f;\n    for (size_t i = 0; i < n; i++) s += a[i];\n    return s;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nfloat sum_pairwise(const float *, size_t);\n\nstatic float seq(const float *a, size_t n) {\n    float s = 0.0f;\n    for (size_t i = 0; i < n; i++) s += a[i];\n    return s;\n}\n\nint main(void) {\n    float small_first[8] = {1,1,1,1,1,1,1, 16777216.0f};\n    float big_first[8]   = {16777216.0f, 1,1,1,1,1,1,1};\n    /* Measured, not derived. The true total is 16777223. */\n    assert(seq(small_first, 8) == 16777224.0f);\n    assert(seq(big_first, 8) == 16777216.0f);\n    assert(sum_pairwise(small_first, 8) == 16777222.0f);\n    assert(sum_pairwise(big_first, 8) == 16777222.0f);\n    /* On values that need no rounding, every grouping agrees. */\n    float exact[4] = {1.0f, 2.0f, 3.0f, 4.0f};\n    assert(sum_pairwise(exact, 4) == 10.0f);\n    assert(sum_pairwise(exact, 4) == seq(exact, 4));\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Several accumulators",
+   "brief": "<p>A reduction into one variable is one dependency chain. Splitting it across several partial sums gives the processor independent work.</p>\n<p>Write <code>sum_split</code>, which accumulates into <code>k</code> partial sums by index and combines them at the end, over integers where the arithmetic is exact.</p>",
+   "kind": "output",
+   "concept": "Independent chains let the adder start a new operation every cycle instead of waiting for the previous result, and the total arithmetic is unchanged.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Element <code>i</code> goes into accumulator <code>i % k</code>. Combine the accumulators after the loop."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Every element has to land in exactly one accumulator and every accumulator has to be added into the total, so the answer equals the plain sum whatever <code>k</code> is. The starter drops everything except the first accumulator.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The answer is identical for every <code>k</code>, which is the point: nothing about the result changed and the dependency structure did. On integers the compiler is allowed to do this for you. On floats it is not, for the reason the previous exercise measured.</p>",
+   "starter": "#include <stddef.h>\nlong sum_split(const long *a, size_t n, size_t k) {\n    long acc[8] = {0};\n    for (size_t i = 0; i < n; i++) acc[i % k] += a[i];\n    return acc[0];\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nlong sum_split(const long *, size_t, size_t);\nint main(void) {\n    long a[8] = {1, 2, 3, 4, 5, 6, 7, 8};\n    assert(sum_split(a, 8, 1) == 36);\n    assert(sum_split(a, 8, 2) == 36);\n    assert(sum_split(a, 8, 4) == 36);\n    assert(sum_split(a, 8, 8) == 36);\n    /* A count that is not a multiple of k still covers every element. */\n    assert(sum_split(a, 5, 4) == 15);\n    assert(sum_split(a, 0, 4) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Lanes, and the tail",
+   "brief": "<p>A vector instruction operates on several values at once. An element count that is not a multiple of the width leaves a remainder that has to be done one at a time.</p>\n<p>Write <code>vector_plan</code>, returning how many vector iterations and how many scalar ones a loop of <code>n</code> elements needs at a given width.</p>",
+   "kind": "output",
+   "concept": "The vector width divides the work and the remainder is handled rather than prevented, which is why a vectorised loop has two loops in it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Integer division gives the full vectors and the modulus gives the tail."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Rounding the vector count up would process elements past the end of the array, which is why the tail exists at all. Round down and handle the remainder separately.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Sixteen floats per instruction at 512 bits, eight at 256, four at 128. A loop of 100 elements at width 8 is twelve vector iterations and four scalar ones, and the tail is why a hot loop is often padded to a multiple of the width rather than left to handle it.</p>",
+   "starter": "#include <stddef.h>\nvoid vector_plan(size_t n, size_t width, size_t *vecs, size_t *tail) {\n    *vecs = (n + width - 1) / width;\n    *tail = 0;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nvoid vector_plan(size_t, size_t, size_t *, size_t *);\nint main(void) {\n    size_t v, t;\n    vector_plan(64, 8, &v, &t);\n    assert(v == 8 && t == 0);\n    vector_plan(100, 8, &v, &t);\n    assert(v == 12 && t == 4);\n    vector_plan(7, 8, &v, &t);\n    assert(v == 0 && t == 7);\n    vector_plan(16, 16, &v, &t);\n    assert(v == 1 && t == 0);\n    vector_plan(0, 4, &v, &t);\n    assert(v == 0 && t == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "The pointers that might be the same",
+   "brief": "<p>A compiler vectorises a loop only when it can prove the iterations are independent. Two pointers that might overlap defeat that proof, because a write in one iteration could change a read in the next.</p>\n<p>Write <code>copy_scaled</code>, which must produce the correct result even when the two ranges overlap with the destination after the source.</p>",
+   "kind": "output",
+   "concept": "An optimiser needs a proof rather than a probability, and two pointers it cannot separate are two pointers that might be the same.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "When the destination is after the source and they overlap, a forward loop overwrites values it has not read yet."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees on the overlapping case. Copying forwards writes <code>dst[0]</code> before reading <code>src[1]</code>, and when <code>dst</code> is <code>src + 1</code> those are the same location. Going backwards reads every element before anything overwrites it.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is exactly the case a compiler must assume is possible, which is why it will not vectorise the forward version. Adding <code>restrict</code> to both parameters promises the ranges do not overlap, the compiler vectorises, and the promise becomes yours to keep: break it and the result is whatever the vectorised code happens to do.</p>",
+   "starter": "#include <stddef.h>\nvoid copy_scaled(long *dst, const long *src, size_t n, long k) {\n    for (size_t i = 0; i < n; i++) dst[i] = src[i] * k;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nvoid copy_scaled(long *, const long *, size_t, long);\nint main(void) {\n    long a[8] = {1, 2, 3, 4, 5, 6, 7, 8};\n    long out[8];\n    copy_scaled(out, a, 8, 2);\n    for (int i = 0; i < 8; i++) assert(out[i] == (i + 1) * 2);\n    /* Overlapping, destination after source by one. */\n    long b[6] = {1, 2, 3, 4, 5, 0};\n    copy_scaled(b + 1, b, 5, 3);\n    assert(b[0] == 1);\n    assert(b[1] == 3 && b[2] == 6 && b[3] == 9 && b[4] == 12 && b[5] == 15);\n    /* Disjoint again, to confirm nothing was broken for the ordinary case. */\n    long c[4] = {2, 4, 6, 8};\n    long d[4];\n    copy_scaled(d, c, 4, 10);\n    assert(d[0] == 20 && d[3] == 80);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Latency against throughput",
+   "brief": "<p>An instruction's latency is how long until its result is usable. Its throughput is how often a new one can start. They are different numbers, and which matters depends on whether your next operation needs the previous answer.</p>\n<p>Write <code>issue_cycles</code>, returning how many cycles <code>n</code> operations take: <code>latency</code> each if they form a chain, and <code>n</code> times the reciprocal throughput if they are independent.</p>",
+   "kind": "output",
+   "concept": "A four-cycle multiply that accepts a new operand every cycle is either four times slower or exactly as fast, depending entirely on the dependency structure.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A chain of <code>n</code> operations at latency <code>L</code> takes <code>n</code> times <code>L</code>. Independent ones are limited by how often a new one can begin."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Independent operations are not free: they are limited by throughput, so <code>n</code> of them at one per cycle take <code>n</code> cycles and not <code>n</code> divided by the latency. The chain is the one that pays the latency every time.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A million multiplies into one accumulator at four cycles of latency is four million cycles. The same million split across four accumulators is one million, because the unit is busy every cycle. The instruction count never changed, and neither did the arithmetic.</p>",
+   "starter": "#include <stddef.h>\nsize_t issue_cycles(size_t n, size_t latency, size_t recip_tput, int chained) {\n    (void)recip_tput;\n    return n * latency / (chained ? 1 : latency);\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t issue_cycles(size_t, size_t, size_t, int);\nint main(void) {\n    /* Four-cycle latency, one per cycle. */\n    assert(issue_cycles(100, 4, 1, 1) == 400);\n    assert(issue_cycles(100, 4, 1, 0) == 100);\n    /* A unit that accepts one every two cycles. */\n    assert(issue_cycles(100, 4, 2, 0) == 200);\n    assert(issue_cycles(100, 4, 2, 1) == 400);\n    /* Latency one is the same either way. */\n    assert(issue_cycles(50, 1, 1, 1) == 50);\n    assert(issue_cycles(50, 1, 1, 0) == 50);\n    assert(issue_cycles(0, 4, 1, 1) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

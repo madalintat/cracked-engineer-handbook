@@ -1,0 +1,76 @@
+{
+ "slug": "pipeline",
+ "num": 25,
+ "title": "Pipelines, prediction and SIMD",
+ "blurb": "The processor is guessing, and it is right 95% of the time. The other 5% is where your performance went.",
+ "part": "machine",
+ "partRoman": "V",
+ "partTitle": "The machine",
+ "phase": "understand",
+ "accent": "copper",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "cache"
+  ],
+  "minutes": 55,
+  "one_idea": "The processor is pretending to run your instructions one at a time, and every performance surprise in this unit is a place where the pretence costs something.",
+  "sources": [
+   "cpu-architectures",
+   "x86-64-assembly"
+  ]
+ },
+ "html": "<p>Your instructions do not execute one after another. They execute several at a time, out of order, some of them speculatively before anyone knows whether they should run at all, and the results are put back in order afterwards so that you never notice.</p>\n<p>That machinery is why a modern core is fast. It is also why the same loop can be four times slower after a change that added no instructions.</p>\n<h2 id=\"overlap-and-what-it-buys\">Overlap, and what it buys</h2>\n<p>A pipeline splits instruction handling into stages: work out what the instruction is, fetch its operands, do the arithmetic, write the result. Each stage is separate hardware, so once the first instruction moves to stage two, the second can start stage one.</p>\n<p>The point is throughput rather than latency. Any individual instruction takes as long as it ever did, or slightly longer. What changes is that one finishes every cycle instead of one finishing every four.</p>\n<p>This is the same trade as the pipelined adder in unit 016, at a different scale and for the same reason: cutting a long path with registers lets you clock it faster, and each result now takes more cycles to appear.</p>\n<h2 id=\"what-breaks-the-overlap\">What breaks the overlap</h2>\n<p>Three things, and they have names.</p>\n<p>A data hazard is an instruction needing a result that is not ready. Multiply two numbers and add to the product on the next line, and the add waits.</p>\n<p>A control hazard is not knowing which instruction comes next. A conditional branch is not resolved until its condition is computed, and by then the pipeline would like to have fetched a dozen more instructions.</p>\n<p>A structural hazard is two instructions wanting the same piece of hardware, such as two divisions when there is one divider.</p>\n<p>Out-of-order execution answers the first. The processor keeps a window of instructions, executes any whose inputs are ready, and retires them in program order so the outside world sees a sequential machine. Register renaming removes the false dependencies that arise from reusing register names, which is why having only sixteen architectural registers is less crippling than it sounds: there are far more physical ones underneath.</p>\n<h2 id=\"guessing-and-what-a-wrong-guess-costs\">Guessing, and what a wrong guess costs</h2>\n<p>The control hazard is answered by guessing.</p>\n<p>A branch predictor watches which way each branch went and predicts accordingly. Modern ones are very good: on ordinary code they are right well over ninety percent of the time, and on a loop that runs a thousand times they are wrong twice.</p>\n<p>When the guess is wrong, everything fetched after the branch is discarded and fetching restarts from the right place. That costs roughly the depth of the pipeline, which on current parts is somewhere around fifteen to twenty cycles.</p>\n<p>So the cost of a branch is not the branch. It is the misprediction rate times twenty. A perfectly predicted branch is nearly free, and an unpredictable one costs more than the work it was guarding, which is the entire reason the branchless techniques in unit 021 exist.</p>\n<p>The classic demonstration is a loop over an array with a condition inside it. Sort the array first and the same loop runs several times faster, because the condition becomes predictable. The instruction count is identical.</p>\n<figure class=\"fig\" data-kind=\"timing\"><svg viewBox=\"-14 -14 384 169\" class=\"fig-svg\" style=\"max-width:557px\" role=\"img\" aria-label=\"Four pipeline stages shown across cycles, with instructions overlapping, then a mispredicted branch flushing the following instructions.\" preserveAspectRatio=\"xMidYMid meet\"><line x1=\"74.0\" y1=\"0\" x2=\"74.0\" y2=\"141\" class=\"fig-grid\"/><line x1=\"109.2\" y1=\"0\" x2=\"109.2\" y2=\"141\" class=\"fig-grid\"/><line x1=\"144.4\" y1=\"0\" x2=\"144.4\" y2=\"141\" class=\"fig-grid\"/><line x1=\"179.6\" y1=\"0\" x2=\"179.6\" y2=\"141\" class=\"fig-grid\"/><line x1=\"214.8\" y1=\"0\" x2=\"214.8\" y2=\"141\" class=\"fig-grid\"/><line x1=\"250.0\" y1=\"0\" x2=\"250.0\" y2=\"141\" class=\"fig-grid\"/><line x1=\"285.2\" y1=\"0\" x2=\"285.2\" y2=\"141\" class=\"fig-grid\"/><line x1=\"320.4\" y1=\"0\" x2=\"320.4\" y2=\"141\" class=\"fig-grid\"/><line x1=\"355.6\" y1=\"0\" x2=\"355.6\" y2=\"141\" class=\"fig-grid\"/><text x=\"64.0\" y=\"21.6\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">fetch</text><rect x=\"214.8\" y=\"8.0\" width=\"35.2\" height=\"19.2\" class=\"fig-unknown\"/><path d=\"M74.0 8.0L109.2 8.0L144.4 8.0L179.6 8.0L214.8 8.0L214.8 8.0L214.8 27.2L250.0 27.2L250.0 27.2L250.0 8.0L285.2 8.0L320.4 8.0L355.6 8.0\" class=\"fig-wave\" style=\"stroke:var(--azure-ink, var(--accent))\"/><text x=\"64.0\" y=\"56.8\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">decode</text><rect x=\"250.0\" y=\"43.2\" width=\"35.2\" height=\"19.2\" class=\"fig-unknown\"/><path d=\"M74.0 62.4L109.2 62.4L109.2 62.4L109.2 43.2L144.4 43.2L179.6 43.2L214.8 43.2L250.0 43.2L250.0 43.2L250.0 62.4L285.2 62.4L285.2 62.4L285.2 43.2L320.4 43.2L355.6 43.2\" class=\"fig-wave\" style=\"stroke:var(--azure-ink, var(--accent))\"/><text x=\"64.0\" y=\"92.0\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">exec</text><rect x=\"285.2\" y=\"78.4\" width=\"35.2\" height=\"19.2\" class=\"fig-unknown\"/><path d=\"M74.0 97.6L109.2 97.6L144.4 97.6L144.4 97.6L144.4 78.4L179.6 78.4L214.8 78.4L250.0 78.4L285.2 78.4L285.2 78.4L285.2 97.6L320.4 97.6L320.4 97.6L320.4 78.4L355.6 78.4\" class=\"fig-wave\" style=\"stroke:var(--gold-ink, var(--accent))\"/><text x=\"64.0\" y=\"127.2\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">retire</text><path d=\"M74.0 132.8L109.2 132.8L144.4 132.8L179.6 132.8L179.6 132.8L179.6 113.6L214.8 113.6L250.0 113.6L285.2 113.6L320.4 113.6L355.6 113.6\" class=\"fig-wave\" style=\"stroke:var(--jade-ink, var(--accent))\"/></svg><figcaption>One instruction finishes every cycle while the guessing holds. A wrong guess throws away everything fetched since, which is about twenty cycles of work.</figcaption></figure>\n<h2 id=\"speculation-has-a-shadow\">Speculation has a shadow</h2>\n<p>The processor executes past an unresolved branch, and if the guess was wrong it undoes the architectural effects. Registers are restored, memory writes never happen, and your program cannot tell.</p>\n<p>Except that the cache can. A speculatively executed load brings a line in, and the line stays there after the speculation is discarded. Nothing in the program's visible state changed, and the timing of a later access reveals which line arrived.</p>\n<p>That is Spectre, and it is the reason a hardware optimisation from the 1990s became a security problem in 2018. Part XV takes it apart properly. The point here is that speculation is not free even when it is correct, and that undoing the architectural state was never the same as undoing all the state.</p>\n<h2 id=\"chains-against-trees\">Chains against trees</h2>\n<p>Out-of-order execution can only run what does not depend on something still running.</p>\n<p>Summing four values as <code>((a + b) + c) + d</code> is three additions in a row, each waiting for the previous. Summing them as <code>(a + b) + (c + d)</code> is the same three additions with two of them independent, so the chain is two deep rather than three. At four elements this is noise. In a loop accumulating a million values into one variable it is the difference between running at the adder's latency and running at its throughput, which is typically a factor of four.</p>\n<p>Which is why a hot reduction loop is written with several accumulators. Four partial sums that are combined at the end have four independent chains, and the processor can keep the adder busy every cycle instead of every fourth.</p>\n<p>Instruction latency and instruction throughput are different numbers for exactly this reason. A multiply might take four cycles to produce a result and still accept a new one every cycle. Whether that matters depends entirely on whether your next multiply needs the previous answer.</p>\n<h2 id=\"the-order-you-wrote-is-the-order-you-get\">The order you wrote is the order you get</h2>\n<p>There is a catch, and it is the reason the compiler cannot make that transformation for you.</p>\n<p>Floating point addition is not associative. Regrouping a sum changes the rounding and therefore the answer. Here are three ways to add the same eight values, all of which are correct arithmetic and none of which agree:</p>\n<p>The values are seven ones and 16777216, which is 2 to the 24 and the point where a 32-bit float's steps become larger than one. Summing them small first gives</p>\n<ol><li>Summing them large first gives 16777216. Summing them pairwise gives</li></ol>\n<p>16777222, which is also the closest representable value to the true answer of 16777223.</p>\n<p>So a compiler asked to optimise a reduction has to leave it alone, because reassociating would change results the standard says are determined. <code>-ffast-math</code> is the flag that grants permission, and it grants rather more than most people intend: it also allows assuming no infinities and no not-a-numbers, which turns some correct code into wrong code silently.</p>\n<h2 id=\"many-lanes-one-instruction\">Many lanes, one instruction</h2>\n<p>The other way to get more work per cycle is to make each instruction do more.</p>\n<p>A vector register holds several values and one instruction operates on all of them. On x86-64 the widths have gone 128 bits, then 256, then 512, which is four, eight or sixteen 32-bit floats per instruction.</p>\n<p>Compilers will do this automatically when they can prove it is safe, and the proof is where it usually fails. Two pointers that might overlap mean the writes of one iteration could affect the reads of the next, so the iterations are not independent and the loop cannot be vectorised. Telling the compiler they do not overlap, with <code>restrict</code> in C, is often the entire fix.</p>\n<p>The other blockers are the same shape: a loop-carried dependency, a call the compiler cannot see into, an exit condition that depends on the data, or an element count that is not a multiple of the vector width, which needs a scalar tail and is handled rather than prevented.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>The processor pretends to be sequential and is not. The pretence is maintained by retiring in order, and it costs a misprediction penalty when a guess is wrong and a security problem when a discarded speculation leaves a trace.</p>\n<p>Dependencies are the currency. Independent work fills the machine, a chain starves it, and the two are often the same arithmetic written differently. What stops the compiler rearranging it for you is usually either floating point rounding or a pointer it cannot prove is separate.</p>\n<p>Unit 026 is the last in this part, and it is about what happens when two of these machines look at the same memory.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These count and model rather than measure, for the reason the last unit gave. A misprediction count under a stated predictor is reproducible where a timing on a shared machine is not.</p>\n<p><code>assert-failed</code> names the case your model got wrong. One exercise asserts three different sums of the same eight numbers, and those three values were produced by running the code rather than reasoned about.</p>",
+ "headings": [
+  {
+   "id": "overlap-and-what-it-buys",
+   "text": "Overlap, and what it buys",
+   "level": 2
+  },
+  {
+   "id": "what-breaks-the-overlap",
+   "text": "What breaks the overlap",
+   "level": 2
+  },
+  {
+   "id": "guessing-and-what-a-wrong-guess-costs",
+   "text": "Guessing, and what a wrong guess costs",
+   "level": 2
+  },
+  {
+   "id": "speculation-has-a-shadow",
+   "text": "Speculation has a shadow",
+   "level": 2
+  },
+  {
+   "id": "chains-against-trees",
+   "text": "Chains against trees",
+   "level": 2
+  },
+  {
+   "id": "the-order-you-wrote-is-the-order-you-get",
+   "text": "The order you wrote is the order you get",
+   "level": 2
+  },
+  {
+   "id": "many-lanes-one-instruction",
+   "text": "Many lanes, one instruction",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1405,
+ "needs": [
+  "cache"
+ ],
+ "neededBy": []
+}

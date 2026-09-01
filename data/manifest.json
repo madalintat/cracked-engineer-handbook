@@ -897,7 +897,9 @@
    "needs": [
     "addressing"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "pipeline"
+   ],
    "minutes": 55
   },
   {
@@ -911,12 +913,15 @@
    "phase": "understand",
    "accent": "copper",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1405,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "cache"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "atomics",
@@ -2673,9 +2678,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 27,
-  "words": 41138,
-  "exercises": 216,
-  "drills": 405
+  "ready": 28,
+  "words": 42543,
+  "exercises": 224,
+  "drills": 420
  }
 }
