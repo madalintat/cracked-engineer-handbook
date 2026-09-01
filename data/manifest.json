@@ -609,7 +609,8 @@
     "control"
    ],
    "neededBy": [
-    "clock-edge"
+    "clock-edge",
+    "proving"
    ],
    "minutes": 50
   },
@@ -633,7 +634,9 @@
     "clock-bus",
     "structure"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "proving"
+   ],
    "minutes": 55
   },
   {
@@ -647,12 +650,16 @@
    "phase": "build",
    "accent": "gold",
    "backend": "yosys",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1462,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "structure",
+    "clock-edge"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "timing",
@@ -2613,9 +2620,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 17,
-  "words": 26123,
-  "exercises": 136,
-  "drills": 255
+  "ready": 18,
+  "words": 27585,
+  "exercises": 144,
+  "drills": 270
  }
 }

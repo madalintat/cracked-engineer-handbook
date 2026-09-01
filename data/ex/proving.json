@@ -1,0 +1,357 @@
+{
+ "slug": "proving",
+ "backend": "yosys",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Two expressions, one function",
+   "brief": "<p>De Morgan says the complement of an and is the or of the complements. Prove it by building <code>demorgan</code> as an or of two inverted inputs and letting the solver prove it equals <code>~(a &amp; b)</code>.</p>\n<p>The starter inverts one input and forgets the other.</p>",
+   "kind": "property",
+   "concept": "An equivalence check compares two descriptions over every input, so two forms of one function either agree everywhere or the tool names where they do not.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "Both inputs are complemented. Neither the result nor one of them."
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>The solver names the assignment where you and the reference disagree, and here it is the one input whose complement is missing. Four cases exist and the starter gets three of them right, which is exactly the kind of near miss a handful of hand-picked tests would let through.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names. Bitwise not is <code>~</code>.</p>"
+    }
+   ],
+   "after": "<p>Four cases, proved rather than tried. At this width the difference is academic, and the next exercise is at a width where it is not.</p>",
+   "starter": "module demorgan(input a, input b, output y);\n  assign y = ~a | b;\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "demorgan",
+    "gold": "module gold(input a, input b, output y); assign y = ~(a & b); endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 2,
+   "title": "The case a sample would miss",
+   "brief": "<p>Build <code>add8</code>, an eight-bit adder with a nine-bit result. The starter is correct for 65280 of the 65536 input pairs.</p>\n<p>Testing at random has a one in 256 chance of finding the fault per attempt. The solver finds it every time, and tells you which pair.</p>",
+   "kind": "property",
+   "concept": "A design that is right almost everywhere is the normal shape of a hardware bug, and it is the shape sampling is worst at.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "Look at what the carry input to the addition is, and ask when that value is not zero."
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>Read the counterexample. The starter adds an extra 1 whenever the top bit of <code>a</code> is set, because <code>a[7]</code> was used where a carry input of 0 belongs. Every pair with <code>a</code> under 128 is correct, which is 65280 of them, and the fault is in the remaining 256.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names. A vector output is <code>output [8:0] s</code>.</p>"
+    }
+   ],
+   "after": "<p>65536 cases decided at once. The Pentium's table was 1066 entries with 5 wrong, which is a rarer fault than this one and was still expensive enough to change how the industry works.</p>",
+   "starter": "module add8(input [7:0] a, input [7:0] b, output [8:0] s);\n  assign s = a + b + a[7];\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "add8",
+    "gold": "module gold(input [7:0] a, input [7:0] b, output [8:0] s); assign s = a + b; endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 3,
+   "title": "A property, with no reference to be wrong",
+   "brief": "<p>A two to four decoder should raise exactly one output. Rather than compare against another decoder, <code>onehot</code> computes the claim itself: it builds the four outputs and then reports whether exactly one of them is high.</p>\n<p>The reference is the constant 1. Proving your module equal to it proves the property holds for every input.</p>",
+   "kind": "property",
+   "concept": "A property has no second implementation, so a misunderstanding cannot survive by being made twice.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "The starter's four outputs do not cover all four input combinations. Write out which value of <code>sel</code> lights nothing."
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>The solver names a value of <code>sel</code> where the claim is false. Decode the four cases by hand: the starter's third line repeats a condition the second already covers, so one combination raises two outputs and another raises none.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names. A two-bit input is <code>input [1:0] sel</code>.</p>"
+    }
+   ],
+   "after": "<p>The reference is a constant, so there is nothing in it to get wrong. This is the cheapest form of formal verification there is and it catches a class of bug that a reference model, written by the same person on the same afternoon, tends not to.</p>",
+   "starter": "module onehot(input [1:0] sel, output ok);\n  wire [3:0] d;\n  assign d[0] = (sel == 2'b00);\n  assign d[1] = (sel == 2'b01);\n  assign d[2] = (sel == 2'b01);\n  assign d[3] = (sel == 2'b11);\n  assign ok = (d[0] + d[1] + d[2] + d[3]) == 1;\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "onehot",
+    "gold": "module gold(input [1:0] sel, output ok); assign ok = 1'b1; endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 4,
+   "title": "Never both at once",
+   "brief": "<p>Build <code>arbiter</code>, which grants one of two requests and prefers request 0 when both arrive. It reports <code>safe</code>, which is high when the two grants are not both high.</p>\n<p>The reference is again the constant 1, so what gets proved is that the arbiter can never grant both in the same cycle, for any request pattern.</p>",
+   "kind": "property",
+   "concept": "Mutual exclusion is a property rather than a value, and stating it directly is cheaper than building a second arbiter to compare against.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "Grant 1 has to know that grant 0 was not given."
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>The solver names the request pattern that breaks it, and it will be both requests high at once. The starter grants each request independently, so the priority it claims to have does not exist: nothing about grant 1 refers to request 0.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names.</p>"
+    }
+   ],
+   "after": "<p>A bus arbiter that grants twice is a short circuit on the shared bus from Part II, and it is a fault that appears only under a request pattern that may be rare in traffic and is not rare at all to a solver.</p>",
+   "starter": "module arbiter(input r0, input r1, output g0, output g1, output safe);\n  assign g0 = r0;\n  assign g1 = r1;\n  assign safe = ~(g0 & g1);\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "arbiter",
+    "gold": "module gold(input r0, input r1, output g0, output g1, output safe); assign g0 = r0; assign g1 = r1 & ~r0; assign safe = 1'b1; endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 5,
+   "title": "Unsigned is not signed",
+   "brief": "<p>Build <code>lt</code>, high when <code>a</code> is less than <code>b</code>, treating both as two's complement signed values.</p>\n<p>The starter compares them as unsigned. Half the input space is correct.</p>",
+   "kind": "property",
+   "concept": "Whether a comparison is signed is a property of the operator rather than of the bits, and the bits look identical either way.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "Verilog compares unsigned unless something in the expression is signed. Declare the inputs, or cast them."
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>The solver names a pair where you disagree, and it will be one where exactly one operand has its top bit set. As unsigned, a negative number is the large one; as signed it is the small one. Both readings of the same four bits are legitimate and the operator has to be told which you meant.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names. A signed vector is <code>input signed [3:0] a</code>.</p>"
+    }
+   ],
+   "after": "<p>The bits never changed. This is the whole content of unit 027 arriving early: a representation is a decision about how to read a pattern, and nothing in the pattern records which decision was made.</p>",
+   "starter": "module lt(input [3:0] a, input [3:0] b, output y);\n  assign y = a < b;\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "lt",
+    "gold": "module gold(input signed [3:0] a, input signed [3:0] b, output y); assign y = a < b; endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 6,
+   "title": "Proving across a clock edge",
+   "brief": "<p>Two shift registers, one written as a chain of named flops and one as a vector shift. Prove them equal.</p>\n<p>This one needs induction rather than a table: the outputs depend on state, and the sequences of inputs that could have produced that state are infinite.</p>",
+   "kind": "property",
+   "concept": "Induction over one clock edge covers every sequence of any length, and it is the same induction you already know.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "Count the stages the reference has, then count yours."
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>Your design and the reference disagree after some sequence of inputs. Count the flops: the reference delays by three edges and the starter delays by two, so they differ from the third cycle onwards and agree before it. A test that ran for two cycles would have passed.</p>"
+    },
+    {
+     "id": "cells",
+     "judge": "verdict",
+     "key": "cell-budget",
+     "prose": "<p>The design is correct and the number of flip-flops is not three. A delay of three edges is exactly three flops, and the optimiser will not remove one unless two of them always agree.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names. Use non-blocking assignment inside a clocked block.</p>"
+    }
+   ],
+   "after": "<p>The inductive argument proves agreement in the reset state, then proves that agreement survives an edge. Nothing enumerated a sequence, which is fortunate, because there is no longest one.</p>",
+   "starter": "module shift3(input clk, input d, output q);\n  reg a, b;\n  always @(posedge clk) begin\n    a <= d;\n    b <= a;\n  end\n  assign q = b;\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "shift3",
+    "cells": {
+     "$_DFF_P_": 3
+    },
+    "gold": "module gold(input clk, input d, output q); reg [2:0] r; always @(posedge clk) r <= {r[1:0], d}; assign q = r[2]; endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 7,
+   "title": "A counter that must not exceed its bound",
+   "brief": "<p>Build <code>count5</code>, which counts 0 to 4 and wraps to 0. It reports <code>inrange</code>, high when the count is at most 4.</p>\n<p>Prove <code>inrange</code> is always high. That is a claim about every reachable state after every sequence of edges, which is the kind of claim testing cannot make.</p>",
+   "kind": "property",
+   "concept": "A bound on a state machine is proved by induction over one edge, so it holds for every run length rather than the ones you simulated.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "What does the counter do after 4?"
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>The property is false in some reachable state. The starter wraps at the wrong value, so the count reaches 5 for one cycle before returning to 0. A simulation that checked the count only on the cycles it printed could easily miss a single cycle of overshoot.</p>"
+    },
+    {
+     "id": "cells",
+     "judge": "verdict",
+     "key": "cell-budget",
+     "prose": "<p>Correct, and larger than a three-bit counter with a comparison needs. Three flops hold values up to 4, and the wrap condition is one equality test. A counter wider than the range it uses will overshoot this budget.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names.</p>"
+    }
+   ],
+   "after": "<p>The proof covers a run of any length, including the ones nobody will ever simulate. The starter's bug is one cycle wide and periodic, which is precisely the shape that survives a test bench and reaches a customer.</p>",
+   "starter": "module count5(input clk, output [2:0] q, output inrange);\n  reg [2:0] c = 0;\n  always @(posedge clk)\n    c <= (c == 3'd5) ? 3'd0 : c + 3'd1;\n  assign q = c;\n  assign inrange = (c <= 3'd4);\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "count5",
+    "maxCells": 12,
+    "gold": "module gold(input clk, output [2:0] q, output inrange); reg [2:0] c = 0; always @(posedge clk) c <= (c == 3'd4) ? 3'd0 : c + 3'd1; assign q = c; assign inrange = 1'b1; endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 8,
+   "title": "Proved, and too big",
+   "brief": "<p>Build <code>eq8</code>, high when the two eight-bit inputs are equal, in at most fifteen cells.</p>\n<p>The starter subtracts and tests the difference against zero. It is correct, the solver proves it, and it costs 40 cells because a subtractor is a carry chain and equality does not need one.</p>\n<p>Both checks run here: the proof, and then a real synthesis whose cells are counted.</p>",
+   "kind": "property",
+   "concept": "Correct and shippable are different claims, and a proof of the first says nothing at all about the second.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "cell-budget"
+    }
+   ],
+   "hints": [
+    "Two vectors are equal when no bit position differs. Nothing about that needs a carry."
+   ],
+   "diagnose": [
+    {
+     "id": "cells",
+     "judge": "verdict",
+     "key": "cell-budget",
+     "prose": "<p>The proof passed, so this is correct. It is also carrying a subtractor: <code>a - b</code> builds a borrow chain across all eight bits, every stage of which has to settle, and then the comparison against zero throws almost all of it away. At four bits the optimiser flattens the difference and at eight it cannot.</p>"
+    },
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>Smaller, and no longer equal to <code>a == b</code>. Check the polarity: exclusive or is 1 where the bits differ, so equality is the case where none of them is.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names. Reduction or is a leading <code>|</code> on a vector.</p>"
+    }
+   ],
+   "after": "<p>Fifteen cells against 40, for the same function proved the same way. This is the pairing the rest of Part III runs on: a proof answers whether the design computes the right thing and says nothing about what it costs, and the carry chain the starter dragged in is also the slowest thing in it.</p>",
+   "starter": "module eq8(input [7:0] a, input [7:0] b, output y);\n  assign y = ((a - b) == 8'd0);\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "eq8",
+    "maxCells": 15,
+    "gold": "module gold(input [7:0] a, input [7:0] b, output y); assign y = (a == b); endmodule"
+   },
+   "lang": "verilog"
+  }
+ ]
+}

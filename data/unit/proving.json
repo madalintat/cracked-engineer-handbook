@@ -1,0 +1,78 @@
+{
+ "slug": "proving",
+ "num": 14,
+ "title": "Proving it works",
+ "blurb": "Verification is the job, and for hardware you can sometimes actually prove it rather than test it.",
+ "part": "silicon",
+ "partRoman": "III",
+ "partTitle": "Silicon",
+ "phase": "build",
+ "accent": "gold",
+ "backend": "yosys",
+ "meta": {
+  "needs": [
+   "structure",
+   "clock-edge"
+  ],
+  "minutes": 55,
+  "one_idea": "For a circuit you can often prove correctness over every input at once, and the proof costs about what testing one case costs.",
+  "sources": [
+   "digital-design-hdl-fpga",
+   "nand2tetris-eater-scott"
+  ]
+ },
+ "html": "<p>In 1994 Intel shipped a Pentium whose floating point divide was wrong. Not wrong in general: wrong for a small set of operands, rarely enough that the part passed its tests and reached customers before a mathematician noticed his results drifting.</p>\n<p>The cause was a lookup table. The design used a table of quotient digit estimates, five of its entries were never written, and the tool that generated it had a bug nobody looked for because the table was generated rather than typed. Intel took a charge of 475 million dollars.</p>\n<p>The interesting part is not the bug. It is that the bug was findable, and by a method that had existed for years and was not yet the default. This unit is about that method.</p>\n<h2 id=\"testing-samples-and-sampling-is-the-problem\">Testing samples, and sampling is the problem</h2>\n<p>Your 4-bit adder from the last unit has eight input bits, so 256 input combinations. You could try all of them in a fraction of a second and know.</p>\n<p>Widen it to 32 bits and there are two operands of 32 bits each, so 2^64 combinations. At a billion per second that is 584 years. There is no schedule in which you enumerate them, which means every test you write is a sample, and a sample tells you about the cases you picked.</p>\n<p>The Pentium's table had 1066 entries of which 5 were wrong. A random test has about one chance in 200 of hitting one, and the operands that reach a bad entry are not random-looking, so a human writing test cases by hand would have had to be unlucky in a very particular way to find it.</p>\n<p>This is the ordinary situation, not an unusual one. Any interesting circuit has more states than you can visit.</p>\n<h2 id=\"what-a-proof-looks-like\">What a proof looks like</h2>\n<p>Here is the whole idea, and it is smaller than the reputation suggests.</p>\n<p>Take your design and a reference design. Wire the same inputs into both. Wire their outputs into a comparator that produces 1 when they disagree. That combined circuit is called a miter, and it is an ordinary circuit made of ordinary gates.</p>\n<p>Now ask one question about it: is there any assignment of the inputs that makes that output 1?</p>\n<p>If the answer is no, your design and the reference agree on every input there is, and you have not tried any of them. If the answer is yes, the tool hands you the assignment, which is a failing test case you did not have to think of.</p>\n<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 732 223\" class=\"fig-svg\" style=\"max-width:1061px\" role=\"img\" aria-label=\"Inputs feeding both a design under test and a reference design, their outputs meeting at a comparator whose single output asks whether they ever disagree.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><line x1=\"62\" y1=\"70\" x2=\"260\" y2=\"66\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"62\" y1=\"128\" x2=\"260\" y2=\"132\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"260\" y1=\"66\" x2=\"471\" y2=\"70\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"260\" y1=\"132\" x2=\"471\" y2=\"128\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"546\" y1=\"99\" x2=\"590\" y2=\"99\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><rect x=\"0.0\" y=\"70.4\" width=\"123.2\" height=\"57.2\" rx=\"4\" class=\"fig-box\"/><text x=\"61.6\" y=\"98.0\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">inputs</text><text x=\"61.6\" y=\"114.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">all of them at once</text><rect x=\"184.8\" y=\"8.8\" width=\"149.6\" height=\"57.2\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"259.6\" y=\"41.4\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">your design</text><rect x=\"184.8\" y=\"132.0\" width=\"149.6\" height=\"57.2\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--copper-ink, var(--accent));stroke:var(--copper-ink, var(--accent))\"/><text x=\"259.6\" y=\"164.6\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">reference</text><rect x=\"396.0\" y=\"70.4\" width=\"149.6\" height=\"57.2\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"470.8\" y=\"103.0\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">differ?</text><rect x=\"589.6\" y=\"70.4\" width=\"114.4\" height=\"57.2\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--gold-ink, var(--accent));stroke:var(--gold-ink, var(--accent))\"/><text x=\"646.8\" y=\"103.0\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">ever 1?</text></svg><figcaption>The miter. Everything about equivalence checking is this picture plus a solver that answers one question about it.</figcaption></figure>\n<h2 id=\"the-question-is-famously-hard-and-answered-anyway\">The question is famously hard and answered anyway</h2>\n<p>Asking whether a circuit of Boolean gates can ever output 1 is Boolean satisfiability, and it is the problem everything else in Part IV's complexity unit is measured against. In the worst case it takes time exponential in the number of inputs, and nobody expects that to change.</p>\n<p>It is answered anyway, on circuits with hundreds of thousands of gates, in seconds. The gap between the worst case and the ordinary case is enormous, and it is the most useful fact in this unit.</p>\n<p>The reason is that real circuits are not worst cases. They have structure: the same subexpression appears in both designs, a decision about one bit constrains twenty others, and a solver that learns a contradiction once never revisits that region of the search. Modern solvers do conflict-driven learning, and on circuits derived from hardware they cut the search down by many orders of magnitude.</p>\n<p>So the practical rule is not \"this is exponential, avoid it\". It is: try it, and find out. The failure mode is that the solver runs out of time rather than that it gives you a wrong answer.</p>\n<h2 id=\"combinational-is-easy-sequential-is-not\">Combinational is easy, sequential is not</h2>\n<p>The picture above assumes both designs settle to a function of their inputs. Add a flip-flop and it stops being true, because now the output depends on state, and state depends on history.</p>\n<p>Two shift registers are equivalent if they produce the same output on every possible sequence of inputs, and there are infinitely many sequences. You cannot enumerate those either, and this time you cannot even bound them.</p>\n<p>The standard answer is induction, and it is the same induction you already know. Show that the two designs agree in their reset state. Then show that if they agree now, and they see the same input, they still agree after the next edge. Those two facts together cover every sequence of any length.</p>\n<p>Yosys spells this as two steps. <code>equiv_simple</code> proves the combinational parts equal where it can, and <code>equiv_induct</code> does the inductive argument across the flip-flops. When a check in this handbook passes, that is what happened.</p>\n<p>Induction does not always succeed. The inductive step can fail on states the design can never actually reach, because the argument as stated allows starting from any state at all. The repair is to strengthen the claim, which usually means telling the tool an invariant about which states are reachable, and it is where formal verification stops being push-button.</p>\n<h2 id=\"a-proof-is-relative-to-what-you-proved-against\">A proof is relative to what you proved against</h2>\n<p>The uncomfortable part.</p>\n<p>Proving your adder equals <code>a + b</code> proves your adder equals <code>a + b</code>. If the specification wanted saturating arithmetic and you wrote the reference as wrapping, the proof is valid and the chip is wrong.</p>\n<p>This is not a small caveat. It is where most of the remaining risk lives once equivalence checking is in place, and it moves the hard question from \"is my implementation right\" to \"is my reference right\", which is a better question but not a free one.</p>\n<p>Two things help. The reference can be written in a different style by a different person, so that a shared misunderstanding has to survive two independent expressions of it. Or the property can be stated directly rather than as a second implementation: rather than compare against a decoder, assert that exactly one output is ever high. A property has no implementation to be wrong in the same way twice.</p>\n<h2 id=\"properties-and-what-they-are-good-for\">Properties, and what they are good for</h2>\n<p>A property is a claim about the design that should hold for every input, written so a solver can attack it.</p>\n<p>Exactly one output of this decoder is high. This counter never exceeds its bound. These two requests are never granted in the same cycle. This buffer never reports empty and full at once.</p>\n<p>Each of those is a small circuit that computes true or false, and the question is the same question as before: can it ever be false. Properties are cheaper to write than a reference model, they catch a different class of bug, and they survive changes to the implementation that a reference model would have to track.</p>\n<p>The exercises here express a property by computing it as an output and proving that output is always 1, which is the same thing with less machinery.</p>\n<h2 id=\"what-actually-changed-after-1994\">What actually changed after 1994</h2>\n<p>Formal equivalence checking is now routine. Every serious chip is checked for equivalence between its register transfer description and the gate netlist the synthesiser produced, and again after the netlist is modified for timing, and again after clock and test logic are inserted. That is a class of bug, tool introduced a difference, that essentially no longer reaches silicon.</p>\n<p>Property checking is more selective, because writing good properties is real work and the state spaces that resist induction are the interesting ones. It gets spent where a bug is expensive: arithmetic units, cache coherence, bus arbiters, anything with a protocol.</p>\n<p>And the thing the Pentium bug specifically taught is now standard practice: a generated table is verified against the algorithm that was supposed to generate it, rather than trusted because a program produced it.</p>\n<h2 id=\"what-to-carry-into-the-next-unit\">What to carry into the next unit</h2>\n<p>Correct is not the same as usable, and this unit only settled the first one.</p>\n<p>A design can be proved equal to its reference for every input and still be unshippable, because the proof says nothing about how long the gates take to settle. That is unit 016, and it is the point where a design stops being a function and starts being a physical object with a deadline.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p><code>sat-fail</code> is the interesting verdict here and it carries the most information of any error in this handbook: the tool found an input where you and the reference disagree, and it will name it. Read the counterexample before you read your code.</p>\n<p><code>cell-budget</code> where a design is otherwise correct means the proof passed and the size assertion did not. Both run now, so a correct design that is larger than the exercise allows will say exactly that.</p>",
+ "headings": [
+  {
+   "id": "testing-samples-and-sampling-is-the-problem",
+   "text": "Testing samples, and sampling is the problem",
+   "level": 2
+  },
+  {
+   "id": "what-a-proof-looks-like",
+   "text": "What a proof looks like",
+   "level": 2
+  },
+  {
+   "id": "the-question-is-famously-hard-and-answered-anyway",
+   "text": "The question is famously hard and answered anyway",
+   "level": 2
+  },
+  {
+   "id": "combinational-is-easy-sequential-is-not",
+   "text": "Combinational is easy, sequential is not",
+   "level": 2
+  },
+  {
+   "id": "a-proof-is-relative-to-what-you-proved-against",
+   "text": "A proof is relative to what you proved against",
+   "level": 2
+  },
+  {
+   "id": "properties-and-what-they-are-good-for",
+   "text": "Properties, and what they are good for",
+   "level": 2
+  },
+  {
+   "id": "what-actually-changed-after-1994",
+   "text": "What actually changed after 1994",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-into-the-next-unit",
+   "text": "What to carry into the next unit",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1462,
+ "needs": [
+  "structure",
+  "clock-edge"
+ ],
+ "neededBy": []
+}

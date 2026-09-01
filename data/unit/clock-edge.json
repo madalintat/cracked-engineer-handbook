@@ -76,5 +76,7 @@
   "clock-bus",
   "structure"
  ],
- "neededBy": []
+ "neededBy": [
+  "proving"
+ ]
 }
