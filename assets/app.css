@@ -89,8 +89,9 @@
   --warn-ink: #765305;
   --bad-ink:  #a02f2f;   /* 4.8:1 on its own 14% tint */
 
-  --btn-ink:    #f6f7f8;
-  --btn-shadow: #5c4408;
+  --btn-ink:    #16130a;
+  --btn-bg: #c99a1e;
+  --btn-shadow: #916f16;
 
   /* syntax. tokenised so a theme swap reaches them, and every one of them
    * measured against --code-bg rather than against the page: five of these
@@ -182,7 +183,7 @@
   --warn: #e8b04a;
   --bad:  #ef7676;
 
-  --btn-ink:    #0a0d0f;
+  --btn-ink:    #16130a;
   --btn-shadow: #8a6a12;
 
   --tok-kw:   #b090e8;
@@ -204,13 +205,39 @@
 }
 
 
-[data-accent="gold"]   { --accent: var(--gold);   --accent-ink: var(--gold-ink);   --btn-shadow: #8a6a12; }
-[data-accent="copper"] { --accent: var(--copper); --accent-ink: var(--copper-ink); --btn-shadow: #8a541c; }
-[data-accent="clay"]   { --accent: var(--clay);   --accent-ink: var(--clay-ink);   --btn-shadow: #85422c; }
-[data-accent="azure"]  { --accent: var(--azure);  --accent-ink: var(--azure-ink);  --btn-shadow: #1d5980; }
-[data-accent="violet"] { --accent: var(--violet); --accent-ink: var(--violet-ink); --btn-shadow: #5d3d84; }
-[data-accent="jade"]   { --accent: var(--jade);   --accent-ink: var(--jade-ink);   --btn-shadow: #0c6349; }
-[data-accent="slate"]  { --accent: var(--slate);  --accent-ink: var(--slate-ink);  --btn-shadow: #44505a; }
+/* Three tokens per accent, not three overrides per component.
+ *
+ * --accent      decoration: rules, dots, borders, a waveform
+ * --accent-ink  anything read as text on the page ground
+ * --btn-bg      the ground a button's label sits on, fitted per hue so that
+ *               near-black text clears 4.8:1 on every one of them. Violet at
+ *               its page value gives 3.7, so a single ground would have meant
+ *               either an illegible button or seven buttons that do not match.
+ */
+[data-accent="gold"]   { --accent: var(--gold);   --accent-ink: var(--gold-ink);
+                         --btn-bg: #c99a1e; --btn-shadow: #916f16; }
+[data-accent="copper"] { --accent: var(--copper); --accent-ink: var(--copper-ink);
+                         --btn-bg: #c07829; --btn-shadow: #8a561e; }
+[data-accent="clay"]   { --accent: var(--clay);   --accent-ink: var(--clay-ink);
+                         --btn-bg: #c76745; --btn-shadow: #8f4a32; }
+[data-accent="azure"]  { --accent: var(--azure);  --accent-ink: var(--azure-ink);
+                         --btn-bg: #2e88c4; --btn-shadow: #21628d; }
+[data-accent="violet"] { --accent: var(--violet); --accent-ink: var(--violet-ink);
+                         --btn-bg: #9c68dd; --btn-shadow: #704b9f; }
+[data-accent="jade"]   { --accent: var(--jade);   --accent-ink: var(--jade-ink);
+                         --btn-bg: #13946f; --btn-shadow: #0e6b50; }
+[data-accent="slate"]  { --accent: var(--slate);  --accent-ink: var(--slate-ink);
+                         --btn-bg: #738490; --btn-shadow: #535f68; }
+
+/* In dark mode the page accent is already bright enough to be a button, so
+ * the two are the same value and the shadow is the accent darkened. */
+:root[data-theme="dark"] [data-accent="gold"]   { --btn-bg: var(--gold);   --btn-shadow: #a3821f; }
+:root[data-theme="dark"] [data-accent="copper"] { --btn-bg: var(--copper); --btn-shadow: #9c682f; }
+:root[data-theme="dark"] [data-accent="clay"]   { --btn-bg: var(--clay);   --btn-shadow: #955c45; }
+:root[data-theme="dark"] [data-accent="azure"]  { --btn-bg: var(--azure);  --btn-shadow: #47799e; }
+:root[data-theme="dark"] [data-accent="violet"] { --btn-bg: var(--violet); --btn-shadow: #78629e; }
+:root[data-theme="dark"] [data-accent="jade"]   { --btn-bg: var(--jade);   --btn-shadow: #409070; }
+:root[data-theme="dark"] [data-accent="slate"]  { --btn-bg: var(--slate);  --btn-shadow: #647079; }
 
 /* ----------------------------------------------------------------- reset */
 
@@ -356,8 +383,7 @@ nav.main a[aria-current="page"] { color: var(--accent-ink); background: var(--ra
   gap: 8px;
   font: 700 var(--t-sm)/1 var(--sans);
   color: var(--btn-ink);
-  /* the darkened accent, so the label on it clears 4.5:1 on the light ground */
-  background: var(--accent-ink);
+  background: var(--btn-bg, var(--accent));
   border: 0;
   border-radius: var(--r-2);
   padding: 11px 16px;

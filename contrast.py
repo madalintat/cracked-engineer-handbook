@@ -85,7 +85,7 @@ PAIRS = [
     ("--ink-3",     "--surface",  AA_TEXT),
     ("--accent-ink", "--bg",      AA_TEXT),   # links
     ("--accent-ink", "--surface", AA_TEXT),
-    ("--btn-ink",   "--accent-ink", AA_TEXT), # a button's label on its ground
+    ("--btn-ink",   "--btn-bg",   AA_TEXT),   # a button's label on its ground
     ("--code-ink",  "--code-bg",  AA_TEXT),
     ("--tok-kw",    "--code-bg",  AA_TEXT),
     ("--tok-str",   "--code-bg",  AA_TEXT),
@@ -110,6 +110,27 @@ ACCENT_INKS = ["--gold-ink", "--copper-ink", "--clay-ink", "--azure-ink",
                "--violet-ink", "--jade-ink", "--slate-ink"]
 
 
+def accent_button_grounds(theme):
+    """Every per-accent button ground, from the [data-accent] blocks.
+
+    There are seven of them and they are not the page accent: violet at its
+    page value carries near-black text at 3.7:1, so a single ground would have
+    meant either an illegible button or seven buttons that do not match.
+    """
+    css = CSS.read_text()
+    out = {}
+    for m in re.finditer(
+            r'(:root\[data-theme="dark"\]\s*)?\[data-accent="([a-z]+)"\]'
+            r'[^{]*\{([^}]*)\}', css):
+        is_dark, name, body = m.group(1), m.group(2), m.group(3)
+        if bool(is_dark) != (theme == "dark"):
+            continue
+        bg = re.search(r"--btn-bg:\s*([^;]+);", body)
+        if bg:
+            out[name] = bg.group(1).strip()
+    return out
+
+
 def check(theme):
     p = palette(theme)
     problems = []
@@ -129,6 +150,19 @@ def check(theme):
                 problems.append(
                     f"{theme}: {ink} ({p[ink]}) on {bg} is {r:.2f}:1, "
                     f"want {AA_TEXT}")
+    for name, raw in accent_button_grounds(theme).items():
+        v = raw
+        m = re.fullmatch(r"var\((--[a-z0-9-]+)\)", v)
+        if m:
+            v = p.get(m.group(1))
+        if not v or not re.fullmatch(r"#[0-9a-f]{3,8}", v, re.I):
+            problems.append(f"{theme}: --btn-bg for {name} is not a colour")
+            continue
+        r = ratio(p["--btn-ink"], v)
+        if r < AA_TEXT:
+            problems.append(
+                f"{theme}: a {name} button's label ({p['--btn-ink']}) on its "
+                f"ground ({v}) is {r:.2f}:1, want {AA_TEXT}")
     for fg, tint, alpha, over, need in TINTED:
         ground = blend(p[tint], p[over], alpha)
         r = ratio(p[fg], ground)
