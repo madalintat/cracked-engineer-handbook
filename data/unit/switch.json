@@ -53,6 +53,7 @@
  "words": 1415,
  "needs": [],
  "neededBy": [
-  "cmos-gate"
+  "cmos-gate",
+  "power"
  ]
 }

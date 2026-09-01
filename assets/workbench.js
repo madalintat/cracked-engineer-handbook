@@ -818,8 +818,19 @@ const WB = (() => {
       Number(l) > userLines ? `[in the checks] ${l}:${c}:` : m0);
   }
 
+  /* Whether a result means the tool could not be reached, as opposed to the
+   * code being wrong. Only the tool's own row answers that: the program row is
+   * `unavailable` whenever the build failed, because a program that did not
+   * compile genuinely did not run. Conflating the two reported a plain compile
+   * error to an author as "could not be reached after three tries". */
+  function serviceDown(verdicts) {
+    return (verdicts || []).some(
+      v => v.who !== 'program' && v.state === 'unavailable');
+  }
+
   return { highlight, mountEditor, run, register, BACKENDS, RULES,
-           normalise, warningFlag, ceVerdictOf, withUserLineNote };
+           normalise, warningFlag, ceVerdictOf, withUserLineNote,
+           serviceDown };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = WB;

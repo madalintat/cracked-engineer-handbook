@@ -239,6 +239,23 @@ t('assembly highlights registers, mnemonics, labels and directives', () => {
   is(WB.highlight('movq %rax, %rbx', 'asm').includes('t-type'), 'AT&T registers');
 });
 
+t('a failed build is not a dead service', () => {
+  // The validator retries when the service is unreachable, and decided that
+  // from any unavailable row. A program that did not compile is correctly
+  // unavailable, so a plain compile error was reported to the author as
+  // "could not be reached after three tries". Both use this one predicate now.
+  is(!WB.serviceDown([{ who: 'compiler', state: 'bad' },
+                      { who: 'program', state: 'unavailable' }]),
+     'a failed build must not read as a dead service');
+  is(WB.serviceDown([{ who: 'compiler', state: 'unavailable' }]),
+     'an unreachable compiler must read as a dead service');
+  is(WB.serviceDown([{ who: 'synthesiser', state: 'unavailable' }]),
+     'any tool row counts, not only one named compiler');
+  is(!WB.serviceDown([{ who: 'compiler', state: 'ok' },
+                      { who: 'program', state: 'bad' }]),
+     'an ordinary wrong answer is not a dead service');
+});
+
 t('a link failure is not a compile failure', () => {
   // Measured against the live service assembling x86-64: every unit compiled,
   // so buildResult.code is 0, and the top level says only "Executable not

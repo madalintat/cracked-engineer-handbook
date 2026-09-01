@@ -1,0 +1,185 @@
+{
+ "slug": "fabrication",
+ "drills": [
+  {
+   "n": 1,
+   "q": "Under the Poisson model, how does yield change with die area?",
+   "options": [
+    "It falls exponentially",
+    "It falls linearly",
+    "It falls with the square root of area",
+    "It is independent of area"
+   ],
+   "correct": 0,
+   "why": "<p>Doubling the die does not halve the yield, it squares it. That shape is the reason a large modern part is several dies rather than one.</p>"
+  },
+  {
+   "n": 2,
+   "q": "What does the defect density <code>D</code> measure?",
+   "options": [
+    "Fatal defects per unit area of wafer",
+    "The fraction of dies that fail",
+    "The number of process steps that can go wrong",
+    "Impurity concentration in the silicon"
+   ],
+   "correct": 0,
+   "why": "<p>A particle, a misaligned layer or a random dopant fluctuation kills the die it lands on. The density is how often that happens per square centimetre.</p>"
+  },
+  {
+   "n": 3,
+   "q": "Which yield model does the industry use, and why?",
+   "options": [
+    "Murphy, because it accounts for defect density varying across the wafer",
+    "Poisson, because it is the simplest",
+    "Seeds, because it is the most conservative",
+    "Whichever gives the best number for a press release"
+   ],
+   "correct": 0,
+   "why": "<p>Fitted to TSMC's 17.92 mm point, Murphy predicts their 100 mm point to within a tenth of a percentage point. That is a two-parameter model of where dust lands predicting a manufacturing outcome to three figures.</p>"
+  },
+  {
+   "n": 4,
+   "q": "Fitted to the same measurement, Poisson and Seeds predict what at 100 mm squared?",
+   "options": [
+    "28.8 and 41.8 per cent, against a measured 32",
+    "Both about 32 per cent",
+    "32 and 28 per cent",
+    "They cannot be fitted to a single point"
+   ],
+   "correct": 0,
+   "why": "<p>The models disagree by a lot at large areas, which is why the choice is not a detail. Seeds is not a bad model, it is a model of a differently behaved factory.</p>"
+  },
+  {
+   "n": 5,
+   "q": "At the reticle limit on a new process, a monolithic die yields roughly:",
+   "options": [
+    "30 per cent",
+    "10 per cent",
+    "3 per cent",
+    "under 1 per cent"
+   ],
+   "correct": 3,
+   "why": "<p>Which is why a chip with two hundred billion transistors cannot be one piece of silicon. Not \"would be expensive\". Could not be manufactured.</p>"
+  },
+  {
+   "n": 6,
+   "q": "Why are chiplets used for large designs?",
+   "options": [
+    "Four dies of a quarter the area each yield far better than one die of the",
+    "They are cheaper to design",
+    "They allow mixing process nodes, and nothing else",
+    "They reduce power consumption"
+   ],
+   "correct": 0,
+   "why": "<p>Four 200 mm dies yield 13 per cent each where one 800 mm die yields 1 per cent. The packaging and the interconnect cost power and latency, and it is still overwhelmingly the better trade.</p>"
+  },
+  {
+   "n": 7,
+   "q": "The edge correction in the dies-per-wafer formula accounts for:",
+   "options": [
+    "Partial dies around the circular edge of the wafer, which cost",
+    "Dies damaged during handling",
+    "The area taken by test structures",
+    "Wafer thickness variation"
+   ],
+   "correct": 0,
+   "why": "<p>It is a second penalty on large dies, independent of yield and in the same direction. A big die is punished twice: fewer fit, and fewer of those work.</p>"
+  },
+  {
+   "n": 8,
+   "q": "What wavelength does extreme ultraviolet lithography use?",
+   "options": [
+    "13.5 nanometres",
+    "193 nanometres",
+    "248 nanometres",
+    "1.5 nanometres"
+   ],
+   "correct": 0,
+   "why": "<p>A fourteenfold jump down in one step, and it comes with the problem that every material absorbs it, so there are no lenses and the whole optical path is in vacuum.</p>"
+  },
+  {
+   "n": 9,
+   "q": "How is extreme ultraviolet light produced?",
+   "options": [
+    "Tin droplets vaporised into plasma by a two-pulse laser, fifty thousand",
+    "A solid-state laser at that wavelength",
+    "A synchrotron",
+    "Filtered output from a mercury arc lamp"
+   ],
+   "correct": 0,
+   "why": "<p>There is no laser at 13.5 nanometres. The first pulse flattens the droplet and the second turns it into a plasma at half a million kelvin, which radiates at the right wavelength.</p>"
+  },
+  {
+   "n": 10,
+   "q": "Roughly what fraction of generated extreme ultraviolet light reaches the wafer?",
+   "options": [
+    "About 70 per cent",
+    "About 40 per cent",
+    "About 4 per cent",
+    "Almost all of it"
+   ],
+   "correct": 2,
+   "why": "<p>Every mirror returns about 70 per cent and there are eight or more in the path. That is why the source has to make hundreds of watts to deliver a few, and why the source is the hardest part of the machine.</p>"
+  },
+  {
+   "n": 11,
+   "q": "What does a node name like \"3 nm\" measure?",
+   "options": [
+    "Nothing physical; it is a marketing label for a generation",
+    "The gate length",
+    "Half the minimum metal pitch",
+    "The thickness of the gate oxide"
+   ],
+   "correct": 0,
+   "why": "<p>Until the 1990s the name tracked the gate length. Then they came apart. No dimension on a modern 3 nm chip is three nanometres, and different manufacturers' numbers are not comparable.</p>"
+  },
+  {
+   "n": 12,
+   "q": "What should you compare instead of node names?",
+   "options": [
+    "Transistor density, cell area, drive current and leakage, which are",
+    "Marketing generation numbers, normalised per vendor",
+    "Clock frequency",
+    "Wafer cost"
+   ],
+   "correct": 0,
+   "why": "<p>Those are the numbers that decide what a design can do, and they can be measured rather than announced.</p>"
+  },
+  {
+   "n": 13,
+   "q": "What is binning?",
+   "options": [
+    "Sorting working dies by measured speed, power and functional",
+    "Discarding dies that fail test",
+    "Grouping wafers by manufacturing date",
+    "Sorting by package type"
+   ],
+   "correct": 0,
+   "why": "<p>A sixteen-core design with two bad cores becomes a twelve-core part. The consumer ladder is often not several designs but one design and a test result.</p>"
+  },
+  {
+   "n": 14,
+   "q": "A flagship graphics die with 192 processing units shipping 170 enabled is:",
+   "options": [
+    "Yield harvesting, visible on the specification sheet",
+    "A power limit",
+    "A software restriction that can be unlocked",
+    "A thermal design choice"
+   ],
+   "correct": 0,
+   "why": "<p>Those disabled units are the answer to a defect that landed somewhere. The same is true of a datacenter part with 144 units shipping 132.</p>"
+  },
+  {
+   "n": 15,
+   "q": "Why does the same design get cheaper over a process's life without changing?",
+   "options": [
+    "Defect density falls by a factor of ten or more as the process matures,",
+    "Wafer prices fall",
+    "Designs are re-laid-out for higher density",
+    "Demand falls, so prices do"
+   ],
+   "correct": 0,
+   "why": "<p>About 1.27 defects per square centimetre during the ramp, and 0.05 to 0.2 on a mature process. It is also why the first parts on a new node are small ones: a manufacturer ramps on dies it can afford to throw away.</p>"
+  }
+ ]
+}

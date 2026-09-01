@@ -1,0 +1,185 @@
+{
+ "slug": "power",
+ "drills": [
+  {
+   "n": 1,
+   "q": "In <code>P = alpha <em> C </em> V^2 * f</code>, which term is squared?",
+   "options": [
+    "The supply voltage",
+    "The capacitance",
+    "The frequency",
+    "The activity factor"
+   ],
+   "correct": 0,
+   "why": "<p>That square is why voltage was the lever everyone pulled, and why the voltage refusing to fall further is the event this whole unit is about.</p>"
+  },
+  {
+   "n": 2,
+   "q": "What is the activity factor?",
+   "options": [
+    "How often an average node switches per clock cycle",
+    "The fraction of the chip that is powered on",
+    "The ratio of dynamic to static power",
+    "The clock duty cycle"
+   ],
+   "correct": 0,
+   "why": "<p>Usually between 0.05 and 0.3 for data nodes. A clock line is 1 by definition, because it switches every cycle, which is why the clock network is often the largest single consumer on a chip.</p>"
+  },
+  {
+   "n": 3,
+   "q": "At modern geometries, most switched capacitance is:",
+   "options": [
+    "Wire rather than transistor",
+    "Transistor gate capacitance",
+    "Junction capacitance",
+    "Package capacitance"
+   ],
+   "correct": 0,
+   "why": "<p>Which is why interconnect sets power rather than devices do, and why moving data is the expensive operation rather than computing on it.</p>"
+  },
+  {
+   "n": 4,
+   "q": "What does Dennard scaling hold constant?",
+   "options": [
+    "The electric field inside the device, and therefore power per unit area",
+    "The transistor count",
+    "The clock frequency",
+    "The supply voltage"
+   ],
+   "correct": 0,
+   "why": "<p>Scale every dimension and the supply by the same factor and raise the doping to match, and the field is unchanged. Hence its other name, constant-field scaling.</p>"
+  },
+  {
+   "n": 5,
+   "q": "Moore's law and Dennard scaling are:",
+   "options": [
+    "Different claims, and only one of them ended",
+    "Two names for the same observation",
+    "Both about transistor counts",
+    "Both about power density"
+   ],
+   "correct": 0,
+   "why": "<p>Moore's law is an observation about transistor counts doubling. Dennard scaling is what gave you permission to switch them all on. Transistors kept arriving; the permission ran out.</p>"
+  },
+  {
+   "n": 6,
+   "q": "Under Dennard scaling, one generation of 0.7x shrink gave you:",
+   "options": [
+    "Twice the transistors, 1.4 times the frequency, and the same watts per",
+    "Twice the transistors and half the power",
+    "The same transistors running twice as fast",
+    "Twice the transistors at twice the power density"
+   ],
+   "correct": 0,
+   "why": "<p>Free performance, in the strict sense: the same unmodified binary ran about forty per cent faster every generation and the chip did not get hotter. From 1975 to 2004 the right answer to a slow program was to wait.</p>"
+  },
+  {
+   "n": 7,
+   "q": "Why did the supply voltage stop falling?",
+   "options": [
+    "The threshold voltage could not keep falling, because leakage is",
+    "Manufacturing could not hold tolerances at lower voltages",
+    "Lower voltages made chips too slow to sell",
+    "Regulatory limits on power supplies"
+   ],
+   "correct": 0,
+   "why": "<p>Each link forces the next. The supply must fall, so the threshold must fall to keep the overdrive, but leakage is exponential in the threshold with a 60 mV per decade floor, so the threshold stopped, so the supply stopped.</p>"
+  },
+  {
+   "n": 8,
+   "q": "The supply voltage has sat at roughly what value for two decades?",
+   "options": [
+    "5 V",
+    "3.3 V",
+    "1.8 V",
+    "0.9 to 1.0 V"
+   ],
+   "correct": 3,
+   "why": "<p>Five volts in the 1980s, 3.3 in the mid-90s, 1.8 in 1999, and then it stopped. Everything structural about computing since is downstream of that one number refusing to move.</p>"
+  },
+  {
+   "n": 9,
+   "q": "Five generations of 0.7x shrink with the voltage frozen multiplies power density by about:",
+   "options": [
+    "2",
+    "5",
+    "12",
+    "35"
+   ],
+   "correct": 3,
+   "why": "<p>One over 0.49 to the fifth. A chip near 100 watts per square centimetre is already comparable to a hotplate, and 35 times that is rocket nozzle territory. No cooling closes that gap.</p>"
+  },
+  {
+   "n": 10,
+   "q": "Since 2005, clock frequency has:",
+   "options": [
+    "Stayed roughly between four and six gigahertz",
+    "Continued doubling, more slowly",
+    "Fallen steadily",
+    "Risen only in datacenter parts"
+   ],
+   "correct": 0,
+   "why": "<p>Intel's roadmap in 2000 projected ten gigahertz by mid-decade. It cancelled the four gigahertz Pentium 4 in October 2004, citing power. Nothing else in computing has been flat for twenty years.</p>"
+  },
+  {
+   "n": 11,
+   "q": "Why do two cores at 0.75 of the frequency beat one core at full speed?",
+   "options": [
+    "Voltage moves with frequency, so power goes roughly as the cube, and two",
+    "Two cores share a cache more efficiently",
+    "Parallel code is inherently faster",
+    "It does not; multicore was purely a consolation prize"
+   ],
+   "correct": 0,
+   "why": "<p>It is arithmetic rather than opinion, and you compute it in the fourth exercise. This is the real argument for multicore, and it is the same argument that later favours a GPU over a CPU.</p>"
+  },
+  {
+   "n": 12,
+   "q": "The end of Dennard scaling is the moment when, for programmers:",
+   "options": [
+    "Concurrency stopped being a specialist skill and became table stakes",
+    "Compilers became able to parallelise automatically",
+    "Memory became the bottleneck",
+    "Assembly language stopped being worth learning"
+   ],
+   "correct": 0,
+   "why": "<p>Every thread pool and async runtime you have used is downstream of subthreshold leakage having a floor. That is the point at which a hardware fact becomes a fact about your job.</p>"
+  },
+  {
+   "n": 13,
+   "q": "Why does a fixed-function matrix unit beat a general-purpose core on energy?",
+   "options": [
+    "It pays no instruction fetch, no scheduling and no register file ports per",
+    "Its transistors are physically smaller",
+    "It runs at a higher clock",
+    "It uses a lower supply voltage"
+   ],
+   "correct": 0,
+   "why": "<p>A general-purpose core spends most of its transistors and power on control rather than arithmetic. If power is the budget, the winning move is to stop paying for control.</p>"
+  },
+  {
+   "n": 14,
+   "q": "Halving the mantissa width changes multiplier energy by roughly:",
+   "options": [
+    "A factor of four, because energy goes as the square of the width",
+    "A factor of two",
+    "No change; energy depends on the exponent",
+    "A factor of eight"
+   ],
+   "correct": 0,
+   "why": "<p>Which is why narrow floating point is a power optimisation before it is a memory one, and why anyone would train a model in four bits at all.</p>"
+  },
+  {
+   "n": 15,
+   "q": "What is dark silicon?",
+   "options": [
+    "The fraction of a chip that cannot be powered on at once within the",
+    "Transistors that failed during manufacture",
+    "Circuitry disabled for product segmentation",
+    "Area occupied by wiring rather than devices"
+   ],
+   "correct": 0,
+   "why": "<p>Once you accept it, area is cheap and power is expensive, which inverts fifty years of instinct. Fill the area with specialised units and light up whichever suits the work. That is why a phone chip is a zoo.</p>"
+  }
+ ]
+}

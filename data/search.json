@@ -1351,6 +1351,494 @@
  },
  {
   "t": "section",
+  "slug": "power",
+  "anchor": "what-a-chip-spends",
+  "title": "What a chip spends",
+  "text": "Two terms, and the last unit gave you both. Dynamic power is the cost of switching. Every transition charges or discharges a capacitance through the supply, at a time, so multiply by how often it happens: The activity factor is how often an average node switches per clock, usually somewhere between 0.05 and 0.3. A clock line is 1 by definition, which is why the clock network is one of the largest single power consumers on a chip. is the capacitance being switched, and at modern geometries most of it is wire rather than transistor, so interconnect sets power rather than devices do. is the clock, linearly. And is squared. Everything hinges on that. Static power is the cost of existing. It is the leakage from the last unit, every transistor, all the time, whether the chip is doing anything or not.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "power",
+  "anchor": "the-bargain-that-held-for-thirty-years",
+  "title": "The bargain that held for thirty years",
+  "text": "In 1974 Robert Dennard and colleagues published the rule. Scale every dimension down by the same factor, scale the supply voltage down by that factor too, and raise the doping to match. Do all three and the electric field inside the device is unchanged, which is why it is called constant-field scaling. Work through what that gives you per generation, with each dimension multiplied by 0.7: Read the last line again, because that line is the twentieth-century computing industry. Twice the transistors, each running 1.4 times faster, and the same watts per square millimetre. Not performance you could buy with a better cooler. Free. It is worth separating two things that get said together. Moore's law is an observation about transistor counts doubling. Dennard scaling is what gave you permission to switch them all on. They are different claims, and only one of them ended.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "power",
+  "anchor": "the-chain-that-broke-it",
+  "title": "The chain that broke it",
+  "text": "Every link here is forced by the one before it, and the third link is the floor you computed in unit 1. The supply voltage has to fall by 0.7 per generation for constant-field scaling to hold. For gates to stay fast as it falls, the threshold voltage has to fall with it, because what sets drive current is the overdrive, the amount by which the supply exceeds the threshold. But leakage is exponential in the threshold voltage, with a hard floor of about 60 millivolts per decade set by temperature. So the threshold could not keep falling: below roughly 0.3 volts, the leakage from a billion off transistors becomes comparable to the whole chip's dynamic power. So the threshold stopped falling, so the supply stopped falling. It stalled around 0.9 to 1.0 volts and has essentially stayed there for twenty years. Compare five volts in the 1980s, 3.3 in the mid-90s, 1.8 in 1999. Dimensions kept shrinking. Transistor counts kept doubling. And with the voltage frozen, the last row of that table stops reading 1.0. The same five generations of shrinking, with and without the voltage falling. Under Dennard the lower line is flat for thirty years. With the voltage frozen the upper line reaches 35 t",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "power",
+  "anchor": "what-happened-next-in-order",
+  "title": "What happened next, in order",
+  "text": "The frequency wall. Clock speeds had climbed exponentially: 33 megahertz in 1990, one gigahertz in 2000, and Intel's public roadmap projected ten gigahertz by the middle of that decade. Instead Intel cancelled the four gigahertz Pentium 4 in October 2004 and killed its successors, citing power. Since 2005 clock frequency has sat between four and six gigahertz. Twenty years. Nothing else in the history of computing has been flat for twenty years. Multicore. If one core cannot go faster, spend the transistors on more of them. This is not only a consolation prize, and the arithmetic is worth following. Lowering the voltage lowers the achievable frequency too, so in practice the two move together and power goes roughly as the cube of either. Two cores at 0.75 of the frequency deliver 1.5 times the throughput for less power than one core at full speed. That is the moment the story stops being about hardware. Concurrency stopped being a specialist skill and became table stakes, Amdahl's law started mattering to ordinary programmers, and \"wait for next year's machine\" stopped being an answer. Every thread pool and async runtime you have ever used is downstream of subthreshold leakage havi",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "power",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "The constraint has been power for twenty years, and only the length scale changes. Transistor, then die, then package, then rack, and now the substation next to the datacenter. When a later unit explains why a GPU has thousands of simple cores rather than a few clever ones, why a tensor core exists, or why anyone would train a model in four-bit floating point, the answer is always this unit. Not because those are elegant ideas, but because watts ran out and the only remaining move was to buy more work per watt. The next unit is the other half of the story. Power says how much of a chip you can switch on. Manufacturing says how large a chip you can make at all, and the answer turns out to be a hard limit rather than a matter of expense.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "power",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "The exercises are the arithmetic of this unit, in C, checked by a real compiler. You will compute the Dennard table, watch it break when the voltage is held fixed, and work out how many cores at what frequency fit inside a fixed power budget. A wrong answer exits nonzero and prints what it wanted beside what it got. Two of these involve a ratio that is easy to invert, so read which way round the check states it before assuming the arithmetic is wrong.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "power",
+  "n": 1,
+  "title": "The equation itself",
+  "text": "Dynamic power is linear in three of its terms and quadratic in the fourth, which is the whole reason voltage was the lever everyone pulled. Return the dynamic power of a block, given the activity factor, the switched capacitance in farads, the supply in volts and the clock in hertz.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "power",
+  "n": 2,
+  "title": "The bargain, tabulated",
+  "text": "Under constant-field scaling power per area does not change, which is what made thirty years of speedup free. Return power density relative to the starting generation, after generations of Dennard scaling, where every dimension and the supply both scale by 0.7.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "power",
+  "n": 3,
+  "title": "The same table with the voltage stuck",
+  "text": "The whole post-2005 problem is one term refusing to scale while everything around it continues. Now return power density after generations when dimensions still scale by 0.7 but the supply voltage does not move and power per device stays the same.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "power",
+  "n": 4,
+  "title": "Two slow cores against one fast one",
+  "text": "Voltage and frequency move together, so power goes roughly as the cube of either, which is what makes many slow cores beat one fast one. Return the total power of cores each running at a frequency scaled by , relative to one core at full speed, taking power to go as the cube of frequency because voltage moves with it.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "power",
+  "n": 5,
+  "title": "How much of the chip can you switch on",
+  "text": "When transistors keep arriving and the power budget does not grow, a growing fraction of the chip has to be off. Return the fraction of a chip that can be powered at once, given the power a fully active chip would draw and the budget the package can remove.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "power",
+  "n": 6,
+  "title": "What halving the voltage buys",
+  "text": "Scaling both is what dynamic voltage and frequency scaling does, and the two effects multiply rather than add. Return the factor by which dynamic power changes when the supply is scaled by and the frequency by , relative to before.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "power",
+  "n": 7,
+  "title": "Where the power actually goes",
+  "text": "Total power is both terms, and the second one is paid whether the chip is working or not. Return total chip power, given dynamic watts, per-transistor leakage in amps, the supply, and the transistor count.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "power",
+  "n": 8,
+  "title": "The cost of a bit you did not need",
+  "text": "Narrower arithmetic is a power optimisation before it is a memory one, and that is why four-bit floating point exists at all. Return the relative energy of a multiply, given the mantissa widths before and after, taking energy to go as the square of the mantissa width.",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "power",
+  "n": 1,
+  "title": "In <code>P = alpha <em> C </em> V^2 * f</code>, which term is squared?",
+  "text": " That square is why voltage was the lever everyone pulled, and why the voltage refusing to fall further is the event this whole unit is about. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "power",
+  "n": 2,
+  "title": "What is the activity factor?",
+  "text": " Usually between 0.05 and 0.3 for data nodes. A clock line is 1 by definition, because it switches every cycle, which is why the clock network is often the largest single consumer on a chip. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "power",
+  "n": 3,
+  "title": "At modern geometries, most switched capacitance is:",
+  "text": " Which is why interconnect sets power rather than devices do, and why moving data is the expensive operation rather than computing on it. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "power",
+  "n": 4,
+  "title": "What does Dennard scaling hold constant?",
+  "text": " Scale every dimension and the supply by the same factor and raise the doping to match, and the field is unchanged. Hence its other name, constant-field scaling. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "power",
+  "n": 5,
+  "title": "Moore's law and Dennard scaling are:",
+  "text": " Moore's law is an observation about transistor counts doubling. Dennard scaling is what gave you permission to switch them all on. Transistors kept arriving; the permission ran out. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "power",
+  "n": 6,
+  "title": "Under Dennard scaling, one generation of 0.7x shrink gave you:",
+  "text": " Free performance, in the strict sense: the same unmodified binary ran about forty per cent faster every generation and the chip did not get hotter. From 1975 to 2004 the right answer to a slow program was to wait. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "power",
+  "n": 7,
+  "title": "Why did the supply voltage stop falling?",
+  "text": " Each link forces the next. The supply must fall, so the threshold must fall to keep the overdrive, but leakage is exponential in the threshold with a 60 mV per decade floor, so the threshold stopped, so the supply stopped. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "power",
+  "n": 8,
+  "title": "The supply voltage has sat at roughly what value for two decades?",
+  "text": " Five volts in the 1980s, 3.3 in the mid-90s, 1.8 in 1999, and then it stopped. Everything structural about computing since is downstream of that one number refusing to move. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "power",
+  "n": 9,
+  "title": "Five generations of 0.7x shrink with the voltage frozen multiplies power density by about:",
+  "text": " One over 0.49 to the fifth. A chip near 100 watts per square centimetre is already comparable to a hotplate, and 35 times that is rocket nozzle territory. No cooling closes that gap. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "power",
+  "n": 10,
+  "title": "Since 2005, clock frequency has:",
+  "text": " Intel's roadmap in 2000 projected ten gigahertz by mid-decade. It cancelled the four gigahertz Pentium 4 in October 2004, citing power. Nothing else in computing has been flat for twenty years. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "power",
+  "n": 11,
+  "title": "Why do two cores at 0.75 of the frequency beat one core at full speed?",
+  "text": " It is arithmetic rather than opinion, and you compute it in the fourth exercise. This is the real argument for multicore, and it is the same argument that later favours a GPU over a CPU. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "power",
+  "n": 12,
+  "title": "The end of Dennard scaling is the moment when, for programmers:",
+  "text": " Every thread pool and async runtime you have used is downstream of subthreshold leakage having a floor. That is the point at which a hardware fact becomes a fact about your job. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "power",
+  "n": 13,
+  "title": "Why does a fixed-function matrix unit beat a general-purpose core on energy?",
+  "text": " A general-purpose core spends most of its transistors and power on control rather than arithmetic. If power is the budget, the winning move is to stop paying for control. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "power",
+  "n": 14,
+  "title": "Halving the mantissa width changes multiplier energy by roughly:",
+  "text": " Which is why narrow floating point is a power optimisation before it is a memory one, and why anyone would train a model in four bits at all. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "power",
+  "n": 15,
+  "title": "What is dark silicon?",
+  "text": " Once you accept it, area is cheap and power is expensive, which inverts fifty years of instinct. Fill the area with specialised units and light up whichever suits the work. That is why a phone chip is a zoo. ",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "fabrication",
+  "anchor": "the-one-equation",
+  "title": "The one equation",
+  "text": "Defects arrive at some rate per unit area, call it , and a die of area survives if none of them lands on it. If defects were independent and uniformly scattered, the fraction of dies that survive would be a straightforward exponential: Read the shape rather than the formula. Yield falls exponentially with area. Not linearly, not with some awkward power: exponentially. Doubling the die does not halve the yield, it squares it. That single fact decides the physical form of every large chip made today. Real defects are not uniformly scattered, though, and the models that account for clustering are worth knowing because they disagree with each other by a lot at large areas. There are four in common use and you will implement all of them.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "fabrication",
+  "anchor": "which-model-is-right-settled-by-measurement",
+  "title": "Which model is right, settled by measurement",
+  "text": "TSMC published two points for its 5 nm process during the ramp. A die of 17.92 square millimetres yielded about 80 per cent, and a die of 100 square millimetres yielded 32 per cent. Two points is enough to do something better than argue. Fit each model to the first point, use the fitted defect density to predict the second, and see which one lands. Murphy's model reproduces the published number to within a tenth of a percentage point. That is not a small thing: it means a two-parameter model of where dust lands predicts a manufacturing outcome to three significant figures, and it is why Murphy is what the industry actually uses. You will fit these yourself in the exercises, and the discovery is the point.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "fabrication",
+  "anchor": "what-that-predicts-for-a-big-chip",
+  "title": "What that predicts for a big chip",
+  "text": "Take Murphy with the defect density fitted above and walk the area up. Yield against die area, using the defect density fitted to TSMC&#x27;s own published 5 nm points. At the reticle limit, the largest a single exposure can print, fewer than one die in a hundred works. At the reticle limit, which is the largest area a single exposure can print, the yield is under one per cent on a new process. So a chip with two hundred billion transistors cannot be one piece of silicon. Not \"would be expensive\". Could not be manufactured. That is where chiplets come from, and it is why a modern high-end part is several smaller dies packaged together rather than one large one. Four dies of 200 square millimetres yield 13 per cent each; the same area as one monolithic 800 would yield 1 per cent. The packaging is not free and the interconnect between dies costs power and latency, and it is still overwhelmingly the better trade.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "fabrication",
+  "anchor": "how-the-pattern-gets-there-at-all",
+  "title": "How the pattern gets there at all",
+  "text": "It is worth one section on the printing itself, because the difficulty explains both why the defect density is what it is and why there are three companies in the world doing this. The pattern is projected optically, and the smallest feature you can print scales with the wavelength of the light. Modern processes use extreme ultraviolet at 13.5 nanometres, which is a fourteenfold jump down in one step and comes with a problem: nothing transmits it. There is no laser at that wavelength either. The light is made by firing tin droplets across a vacuum chamber fifty thousand times a second and hitting each one with two pulses from a carbon dioxide laser: the first flattens the droplet, the second vaporises it into a plasma at half a million kelvin, and the plasma radiates at 13.5 nanometres. Because every material absorbs it, there are no lenses. The whole optical path is in vacuum and every element is a mirror, built from forty or fifty alternating layers a few nanometres thick, arranged so their reflections add in phase. Even so, each mirror returns about 70 per cent of what arrives. With eight of them in the path, roughly 96 per cent of the light generated never reaches the wafer, wh",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "fabrication",
+  "anchor": "the-number-in-the-marketing-is-not-a-length",
+  "title": "The number in the marketing is not a length",
+  "text": "Until roughly the 1990s a node name meant something measurable: the gate length, or half the minimum metal pitch. \"180 nanometres\" meant a gate of about 180 nanometres, and the name tracked the physics. They came apart. Today the name is a marketing label for a generation, and no dimension on a modern \"3 nm\" chip is three nanometres. Different manufacturers' numbers are not comparable with each other, and a given manufacturer's numbers are not comparable across time either. What you can compare is transistor density, which is measurable, and the numbers that actually matter to a design: how much area a standard cell takes, how much current a transistor drives, and how much it leaks. When a later unit compares two architectures, it compares those, and it does not compare node names.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "fabrication",
+  "anchor": "not-every-broken-die-is-scrap",
+  "title": "Not every broken die is scrap",
+  "text": "A die with a defect in one core is not a dead die. It is a cheaper product. Binning sorts working dies by measured speed, power and how much of them functions, and sells them as different things. A sixteen-core design with two bad cores becomes a twelve-core part with the failures fused off. A die that reaches its target frequency at a low voltage becomes the premium part, and one that needs more voltage becomes the cheaper one. This is not a rare salvage operation, it is the shape of the product line. The consumer ladder is often not several designs but one design and a test result. And it is visible in specifications if you know to look: a flagship graphics die with 192 processing units ships with 170 enabled, and a datacenter part with 144 ships 132. Those disabled units are yield harvesting, printed on the box. It also means that yield is the wrong single number to care about. What matters is the distribution of dies across bins weighted by what each bin sells for, and the marginal cost of the lowest bin is close to zero, which is exactly why cheap parts exist at all.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "fabrication",
+  "anchor": "why-a-new-process-gets-cheaper-without-changing",
+  "title": "Why a new process gets cheaper without changing",
+  "text": "The defect density fitted above, about 1.27 per square centimetre, is an early number for a process that has just started running. A mature process reaches 0.05 to 0.2. That is a factor of ten or more, and yield is exponential in it. So the same design, on the same process, with no change whatsoever, yields far better two years in than at launch. That improvement is most of why chips get cheaper over their lifetime, and it is why the first parts on a new node are small ones: a manufacturer ramps a process on dies it can afford to throw away.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "fabrication",
+  "anchor": "what-to-carry-into-part-ii",
+  "title": "What to carry into Part II",
+  "text": "Two limits, from two units. Power says how much of a chip you can switch on at once. Yield says how large you can make it. Both are exponential, neither is negotiable, and between them they explain the physical shape of everything you will meet later: many small cores rather than one large one, several dies rather than one, and specialised units that sit idle most of the time. Part II leaves the physics behind and starts building. It takes the gate the last unit said you get for free, treats it as the only thing you are allowed to use, and constructs arithmetic, memory and a working processor from it. Nothing in that part mentions a transistor again. But when a design there costs two gates rather than one, this is the part of the book that says what that costs. And when Part XVI asks why a graphics processor looks the way it does, the answer is in these four units rather than in anything about graphics.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "fabrication",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "The exercises implement the four yield models, fit them to real published data, and work out the arithmetic of dies on a wafer. They are ordinary C, checked by a real compiler. Two of them involve fitting, so they iterate. Where a check compares floating point it uses a tolerance, and the tolerance is stated in the failure message along with what was wanted, so a near miss reads as a near miss rather than as a mystery.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "fabrication",
+  "n": 1,
+  "title": "The simplest yield model",
+  "text": "Yield falls exponentially with area, which is the fact that decides the physical shape of every large chip. Return Poisson yield: the fraction of dies that survive when defects of density per square millimetre land independently and uniformly on a die of area .",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "fabrication",
+  "n": 2,
+  "title": "The one industry actually uses",
+  "text": "Clustering matters, and the model that accounts for it predicts real published numbers where the simple one does not. Return Murphy yield, which assumes the defect density itself varies across the wafer: squared, where is .",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "fabrication",
+  "n": 3,
+  "title": "Fitting a model to a real number",
+  "text": "Fitting a model to one measurement and testing it against another is how you find out which model is true. Given a measured yield at a known die area, return the Murphy defect density that produces it. Search for it rather than solving in closed form.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "fabrication",
+  "n": 4,
+  "title": "Clustered defects are kinder",
+  "text": "How you model clustering changes the answer by a lot at large areas, which is why the choice of model is not a detail. Return the Seeds yield, , which assumes defects cluster heavily, and the negative binomial yield with clustering parameter .",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "fabrication",
+  "n": 5,
+  "title": "How many dies fit on a wafer",
+  "text": "The edge waste is a second penalty on large dies, independent of yield and in the same direction. Return the number of whole dies on a round wafer, given the wafer diameter and the die area, including the correction for the partial dies around the edge.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "fabrication",
+  "n": 6,
+  "title": "Chiplets, in arithmetic",
+  "text": "Splitting a design into smaller dies raises yield superlinearly, which is why a large modern part is several dies rather than one. Return the number of working dies you get from one wafer for a design of a given total area, built either as one die or as equal pieces.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "fabrication",
+  "n": 7,
+  "title": "What maturity is worth",
+  "text": "The same design on the same process yields far better two years in, which is most of why chips get cheaper without changing. Return the ratio of yields for the same die area at two defect densities, so you can see what a process learning curve is worth.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "fabrication",
+  "n": 8,
+  "title": "Binning is the product line",
+  "text": "A die with a defect is not scrap, it is a cheaper product, and the ladder is often one design and a test result. Return how many units to enable on a part, given how many the design has, how many are defective, and the largest count the product ladder offers below the full one.",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "fabrication",
+  "n": 1,
+  "title": "Under the Poisson model, how does yield change with die area?",
+  "text": " Doubling the die does not halve the yield, it squares it. That shape is the reason a large modern part is several dies rather than one. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "fabrication",
+  "n": 2,
+  "title": "What does the defect density <code>D</code> measure?",
+  "text": " A particle, a misaligned layer or a random dopant fluctuation kills the die it lands on. The density is how often that happens per square centimetre. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "fabrication",
+  "n": 3,
+  "title": "Which yield model does the industry use, and why?",
+  "text": " Fitted to TSMC's 17.92 mm point, Murphy predicts their 100 mm point to within a tenth of a percentage point. That is a two-parameter model of where dust lands predicting a manufacturing outcome to three figures. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "fabrication",
+  "n": 4,
+  "title": "Fitted to the same measurement, Poisson and Seeds predict what at 100 mm squared?",
+  "text": " The models disagree by a lot at large areas, which is why the choice is not a detail. Seeds is not a bad model, it is a model of a differently behaved factory. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "fabrication",
+  "n": 5,
+  "title": "At the reticle limit on a new process, a monolithic die yields roughly:",
+  "text": " Which is why a chip with two hundred billion transistors cannot be one piece of silicon. Not \"would be expensive\". Could not be manufactured. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "fabrication",
+  "n": 6,
+  "title": "Why are chiplets used for large designs?",
+  "text": " Four 200 mm dies yield 13 per cent each where one 800 mm die yields 1 per cent. The packaging and the interconnect cost power and latency, and it is still overwhelmingly the better trade. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "fabrication",
+  "n": 7,
+  "title": "The edge correction in the dies-per-wafer formula accounts for:",
+  "text": " It is a second penalty on large dies, independent of yield and in the same direction. A big die is punished twice: fewer fit, and fewer of those work. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "fabrication",
+  "n": 8,
+  "title": "What wavelength does extreme ultraviolet lithography use?",
+  "text": " A fourteenfold jump down in one step, and it comes with the problem that every material absorbs it, so there are no lenses and the whole optical path is in vacuum. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "fabrication",
+  "n": 9,
+  "title": "How is extreme ultraviolet light produced?",
+  "text": " There is no laser at 13.5 nanometres. The first pulse flattens the droplet and the second turns it into a plasma at half a million kelvin, which radiates at the right wavelength. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "fabrication",
+  "n": 10,
+  "title": "Roughly what fraction of generated extreme ultraviolet light reaches the wafer?",
+  "text": " Every mirror returns about 70 per cent and there are eight or more in the path. That is why the source has to make hundreds of watts to deliver a few, and why the source is the hardest part of the machine. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "fabrication",
+  "n": 11,
+  "title": "What does a node name like \"3 nm\" measure?",
+  "text": " Until the 1990s the name tracked the gate length. Then they came apart. No dimension on a modern 3 nm chip is three nanometres, and different manufacturers' numbers are not comparable. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "fabrication",
+  "n": 12,
+  "title": "What should you compare instead of node names?",
+  "text": " Those are the numbers that decide what a design can do, and they can be measured rather than announced. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "fabrication",
+  "n": 13,
+  "title": "What is binning?",
+  "text": " A sixteen-core design with two bad cores becomes a twelve-core part. The consumer ladder is often not several designs but one design and a test result. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "fabrication",
+  "n": 14,
+  "title": "A flagship graphics die with 192 processing units shipping 170 enabled is:",
+  "text": " Those disabled units are the answer to a defect that landed somewhere. The same is true of a datacenter part with 144 units shipping 132. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "fabrication",
+  "n": 15,
+  "title": "Why does the same design get cheaper over a process's life without changing?",
+  "text": " About 1.27 defects per square centimetre during the ramp, and 0.05 to 0.2 on a mature process. It is also why the first parts on a new node are small ones: a manufacturer ramps on dies it can afford to throw away. ",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
   "slug": "nand",
   "anchor": "what-a-gate-actually-is",
   "title": "What a gate actually is",

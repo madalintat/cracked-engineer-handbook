@@ -1,0 +1,76 @@
+{
+ "slug": "fabrication",
+ "num": 3,
+ "title": "Making the thing is the hard part",
+ "blurb": "Yield falls exponentially with die area, so a big chip is not merely expensive. It is impossible. Chiplets follow.",
+ "part": "physics",
+ "partRoman": "I",
+ "partTitle": "Physics",
+ "phase": "build",
+ "accent": "gold",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "power"
+  ],
+  "minutes": "50",
+  "one_idea": "Yield falls exponentially with die area, so a big chip is not expensive, it is impossible, and everything about how modern chips are packaged follows from that.",
+  "sources": [
+   "transistors-cmos-fabrication",
+   "nvidia-architectures"
+  ]
+ },
+ "html": "<p>The last unit ended with a limit on how much of a chip you can switch on. This one is about a limit on how large a chip you can make at all, and it is the harder of the two, because no amount of money moves it.</p>\n<p>A modern processor is built by repeating a loop a few hundred times: deposit a layer, coat it in a light-sensitive resist, project a pattern onto it, develop away what the light touched, etch, strip, repeat. Everything that follows comes from one property of that loop. Occasionally it goes wrong in one spot, and when it does, the die containing that spot is dead.</p>\n<h2 id=\"the-one-equation\">The one equation</h2>\n<p>Defects arrive at some rate per unit area, call it <code>D</code>, and a die of area <code>A</code> survives if none of them lands on it. If defects were independent and uniformly scattered, the fraction of dies that survive would be a straightforward exponential:</p>\n<pre class=\"cb\" data-lang=\"text\"><code>Y = exp(-D * A)</code></pre>\n<p>Read the shape rather than the formula. Yield falls exponentially with area. Not linearly, not with some awkward power: exponentially. Doubling the die does not halve the yield, it squares it.</p>\n<p>That single fact decides the physical form of every large chip made today.</p>\n<p>Real defects are not uniformly scattered, though, and the models that account for clustering are worth knowing because they disagree with each other by a lot at large areas. There are four in common use and you will implement all of them.</p>\n<h2 id=\"which-model-is-right-settled-by-measurement\">Which model is right, settled by measurement</h2>\n<p>TSMC published two points for its 5 nm process during the ramp. A die of 17.92 square millimetres yielded about 80 per cent, and a die of 100 square millimetres yielded 32 per cent.</p>\n<p>Two points is enough to do something better than argue. Fit each model to the first point, use the fitted defect density to predict the second, and see which one lands.</p>\n<pre class=\"cb\" data-lang=\"text\"><code>model         fitted D        predicts Y(100 mm^2)    actual\nPoisson       1.245 /cm^2     28.8%                   32%\nMurphy        1.269 /cm^2     32.1%                   32%\nSeeds         1.395 /cm^2     41.8%                   32%\nnegative binomial (a=3)       34.1%                   32%</code></pre>\n<p>Murphy's model reproduces the published number to within a tenth of a percentage point. That is not a small thing: it means a two-parameter model of where dust lands predicts a manufacturing outcome to three significant figures, and it is why Murphy is what the industry actually uses. You will fit these yourself in the exercises, and the discovery is the point.</p>\n<h2 id=\"what-that-predicts-for-a-big-chip\">What that predicts for a big chip</h2>\n<p>Take Murphy with the defect density fitted above and walk the area up.</p>\n<figure class=\"fig\" data-kind=\"plot\"><svg viewBox=\"-14 -14 506 262\" class=\"fig-svg\" style=\"max-width:734px\" role=\"img\" aria-label=\"Yield against die area under Murphy&#x27;s model, falling from about eighty per cent at twenty square millimetres to under one per cent at the reticle limit.\" preserveAspectRatio=\"xMidYMid meet\"><g transform=\"translate(58.0,0)\"><line x1=\"0\" y1=\"173.8\" x2=\"420.0\" y2=\"173.8\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"177.8\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">0.01</text><line x1=\"0\" y1=\"86.9\" x2=\"420.0\" y2=\"86.9\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"90.9\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">0.1</text><line x1=\"0\" y1=\"0.0\" x2=\"420.0\" y2=\"0.0\" class=\"fig-grid\"/><text x=\"-8.0\" y=\"4.0\" font-size=\"10\" text-anchor=\"end\" class=\"fig-dim mono\">1</text><line x1=\"0.0\" y1=\"0\" x2=\"0.0\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"0.0\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">0</text><line x1=\"97.9\" y1=\"0\" x2=\"97.9\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"97.9\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">200</text><line x1=\"195.8\" y1=\"0\" x2=\"195.8\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"195.8\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">400</text><line x1=\"293.7\" y1=\"0\" x2=\"293.7\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"293.7\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">600</text><line x1=\"391.6\" y1=\"0\" x2=\"391.6\" y2=\"200.0\" class=\"fig-grid\"/><text x=\"391.6\" y=\"216.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">800</text><path d=\"M8.8 8.4 L24.5 22.7 L49.0 42.9 L97.9 76.4 L195.8 123.4 L293.7 153.8 L391.6 173.8 L420.0 182.3\" class=\"fig-line\" style=\"stroke:var(--clay-ink, var(--accent))\"/><text x=\"416.0\" y=\"175.3\" font-size=\"10\" text-anchor=\"end\" class=\"fig-accent\" font-weight=\"600\">Murphy</text><line x1=\"420.0\" y1=\"-4\" x2=\"420.0\" y2=\"200.0\" class=\"fig-mark\"/><text x=\"420.0\" y=\"-8.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-accent\">reticle limit</text><line x1=\"0\" y1=\"200.0\" x2=\"420.0\" y2=\"200.0\" class=\"fig-axis\"/><line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"200.0\" class=\"fig-axis\"/><text x=\"210.0\" y=\"232.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">die area (mm^2)</text></g><text x=\"-100\" y=\"12\" font-size=\"10\" text-anchor=\"middle\" transform=\"rotate(-90)\" class=\"fig-dim\">yield</text></svg><figcaption>Yield against die area, using the defect density fitted to TSMC&#x27;s own published 5 nm points. At the reticle limit, the largest a single exposure can print, fewer than one die in a hundred works.</figcaption></figure>\n<p>At the reticle limit, which is the largest area a single exposure can print, the yield is under one per cent on a new process. So a chip with two hundred billion transistors cannot be one piece of silicon. Not \"would be expensive\". Could not be manufactured.</p>\n<p>That is where chiplets come from, and it is why a modern high-end part is several smaller dies packaged together rather than one large one. Four dies of 200 square millimetres yield 13 per cent each; the same area as one monolithic 800 would yield 1 per cent. The packaging is not free and the interconnect between dies costs power and latency, and it is still overwhelmingly the better trade.</p>\n<h2 id=\"how-the-pattern-gets-there-at-all\">How the pattern gets there at all</h2>\n<p>It is worth one section on the printing itself, because the difficulty explains both why the defect density is what it is and why there are three companies in the world doing this.</p>\n<p>The pattern is projected optically, and the smallest feature you can print scales with the wavelength of the light. Modern processes use extreme ultraviolet at 13.5 nanometres, which is a fourteenfold jump down in one step and comes with a problem: nothing transmits it.</p>\n<p>There is no laser at that wavelength either. The light is made by firing tin droplets across a vacuum chamber fifty thousand times a second and hitting each one with two pulses from a carbon dioxide laser: the first flattens the droplet, the second vaporises it into a plasma at half a million kelvin, and the plasma radiates at 13.5 nanometres.</p>\n<p>Because every material absorbs it, there are no lenses. The whole optical path is in vacuum and every element is a mirror, built from forty or fifty alternating layers a few nanometres thick, arranged so their reflections add in phase. Even so, each mirror returns about 70 per cent of what arrives. With eight of them in the path, roughly 96 per cent of the light generated never reaches the wafer, which is why the source has to produce hundreds of watts to deliver a few.</p>\n<p>The mask is a mirror too, which forces the light to arrive at an angle, which introduces its own distortions to correct.</p>\n<p>None of that is a digression. It is why a step in the loop occasionally goes wrong, and the rest of this unit is about what happens when it does.</p>\n<h2 id=\"the-number-in-the-marketing-is-not-a-length\">The number in the marketing is not a length</h2>\n<p>Until roughly the 1990s a node name meant something measurable: the gate length, or half the minimum metal pitch. \"180 nanometres\" meant a gate of about 180 nanometres, and the name tracked the physics.</p>\n<p>They came apart. Today the name is a marketing label for a generation, and no dimension on a modern \"3 nm\" chip is three nanometres. Different manufacturers' numbers are not comparable with each other, and a given manufacturer's numbers are not comparable across time either.</p>\n<p>What you can compare is transistor density, which is measurable, and the numbers that actually matter to a design: how much area a standard cell takes, how much current a transistor drives, and how much it leaks. When a later unit compares two architectures, it compares those, and it does not compare node names.</p>\n<h2 id=\"not-every-broken-die-is-scrap\">Not every broken die is scrap</h2>\n<p>A die with a defect in one core is not a dead die. It is a cheaper product.</p>\n<p>Binning sorts working dies by measured speed, power and how much of them functions, and sells them as different things. A sixteen-core design with two bad cores becomes a twelve-core part with the failures fused off. A die that reaches its target frequency at a low voltage becomes the premium part, and one that needs more voltage becomes the cheaper one.</p>\n<p>This is not a rare salvage operation, it is the shape of the product line. The consumer ladder is often not several designs but one design and a test result. And it is visible in specifications if you know to look: a flagship graphics die with 192 processing units ships with 170 enabled, and a datacenter part with 144 ships 132. Those disabled units are yield harvesting, printed on the box.</p>\n<p>It also means that yield is the wrong single number to care about. What matters is the distribution of dies across bins weighted by what each bin sells for, and the marginal cost of the lowest bin is close to zero, which is exactly why cheap parts exist at all.</p>\n<h2 id=\"why-a-new-process-gets-cheaper-without-changing\">Why a new process gets cheaper without changing</h2>\n<p>The defect density fitted above, about 1.27 per square centimetre, is an early number for a process that has just started running. A mature process reaches 0.05 to 0.2. That is a factor of ten or more, and yield is exponential in it.</p>\n<p>So the same design, on the same process, with no change whatsoever, yields far better two years in than at launch. That improvement is most of why chips get cheaper over their lifetime, and it is why the first parts on a new node are small ones: a manufacturer ramps a process on dies it can afford to throw away.</p>\n<h2 id=\"what-to-carry-into-part-ii\">What to carry into Part II</h2>\n<p>Two limits, from two units. Power says how much of a chip you can switch on at once. Yield says how large you can make it. Both are exponential, neither is negotiable, and between them they explain the physical shape of everything you will meet later: many small cores rather than one large one, several dies rather than one, and specialised units that sit idle most of the time.</p>\n<p>Part II leaves the physics behind and starts building. It takes the gate the last unit said you get for free, treats it as the only thing you are allowed to use, and constructs arithmetic, memory and a working processor from it. Nothing in that part mentions a transistor again.</p>\n<p>But when a design there costs two gates rather than one, this is the part of the book that says what that costs. And when Part XVI asks why a graphics processor looks the way it does, the answer is in these four units rather than in anything about graphics.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>The exercises implement the four yield models, fit them to real published data, and work out the arithmetic of dies on a wafer. They are ordinary C, checked by a real compiler.</p>\n<p>Two of them involve fitting, so they iterate. Where a check compares floating point it uses a tolerance, and the tolerance is stated in the failure message along with what was wanted, so a near miss reads as a near miss rather than as a mystery.</p>",
+ "headings": [
+  {
+   "id": "the-one-equation",
+   "text": "The one equation",
+   "level": 2
+  },
+  {
+   "id": "which-model-is-right-settled-by-measurement",
+   "text": "Which model is right, settled by measurement",
+   "level": 2
+  },
+  {
+   "id": "what-that-predicts-for-a-big-chip",
+   "text": "What that predicts for a big chip",
+   "level": 2
+  },
+  {
+   "id": "how-the-pattern-gets-there-at-all",
+   "text": "How the pattern gets there at all",
+   "level": 2
+  },
+  {
+   "id": "the-number-in-the-marketing-is-not-a-length",
+   "text": "The number in the marketing is not a length",
+   "level": 2
+  },
+  {
+   "id": "not-every-broken-die-is-scrap",
+   "text": "Not every broken die is scrap",
+   "level": 2
+  },
+  {
+   "id": "why-a-new-process-gets-cheaper-without-changing",
+   "text": "Why a new process gets cheaper without changing",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-into-part-ii",
+   "text": "What to carry into Part II",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1586,
+ "needs": [
+  "power"
+ ],
+ "neededBy": []
+}

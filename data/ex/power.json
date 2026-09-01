@@ -1,0 +1,262 @@
+{
+ "slug": "power",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "The equation itself",
+   "brief": "<p>Return the dynamic power of a block, given the activity factor, the switched capacitance in farads, the supply in volts and the clock in hertz.</p>",
+   "kind": "output",
+   "concept": "Dynamic power is linear in three of its terms and quadratic in the fourth, which is the whole reason voltage was the lever everyone pulled.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "One of the four terms is squared."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Compare the numbers the check printed. A result that is too small by exactly the supply voltage means <code>V</code> appears once rather than twice, which is the term the next several exercises are all about.</p>"
+    }
+   ],
+   "after": "<p>A clock line has an activity factor of one, because it switches every cycle by definition. That is why the clock network is often the single largest consumer on a chip.</p>",
+   "starter": "double dynamic_watts(double alpha, double farads, double volts, double hertz) {\n    return alpha * farads * volts * hertz;\n}",
+   "tests": "#include <stdio.h>\n#include <math.h>\nint main(void) {\n    struct { double a, c, v, f, want; } t[] = {\n        {0.1, 1e-9, 1.0, 1e9, 0.1},\n        {1.0, 1e-9, 1.0, 1e9, 1.0},\n        {0.1, 1e-9, 2.0, 1e9, 0.4},\n        {0.2, 5e-10, 0.9, 2e9, 0.162},\n    };\n    for (int i = 0; i < 4; i++) {\n        double got = dynamic_watts(t[i].a, t[i].c, t[i].v, t[i].f);\n        if (fabs(got - t[i].want) > t[i].want * 1e-9) {\n            printf(\"case %d: got %g want %g\\n\", i, got, t[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "The bargain, tabulated",
+   "brief": "<p>Return power density relative to the starting generation, after <code>n</code> generations of Dennard scaling, where every dimension and the supply both scale by 0.7.</p>",
+   "kind": "output",
+   "concept": "Under constant-field scaling power per area does not change, which is what made thirty years of speedup free.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17 -lm",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Work out how power per device scales and how area scales, then divide."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Capacitance falls by 0.7 and the supply falls by 0.7, so power per device falls by 0.7 cubed times the frequency rise of 1/0.7, which is 0.49. Area also falls by 0.49. The ratio is one, at every generation, which is the point of the whole table.</p>"
+    }
+   ],
+   "after": "<p>The answer is 1 for every input, and the exercise exists so you get that by computing it rather than by being told. The next one holds the voltage fixed and the same arithmetic gives a very different column.</p>",
+   "starter": "#include <math.h>\n\ndouble dennard_density(int generations) {\n    return pow(0.7, generations);\n}",
+   "tests": "#include <stdio.h>\n#include <math.h>\nint main(void) {\n    for (int n = 0; n <= 5; n++) {\n        double got = dennard_density(n);\n        if (fabs(got - 1.0) > 1e-9) {\n            printf(\"after %d generations got %.4f, want 1.0\\n\", n, got);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "The same table with the voltage stuck",
+   "brief": "<p>Now return power density after <code>n</code> generations when dimensions still scale by 0.7 but the supply voltage does not move and power per device stays the same.</p>",
+   "kind": "output",
+   "concept": "The whole post-2005 problem is one term refusing to scale while everything around it continues.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17 -lm",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The numerator stopped changing. The denominator did not."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Power per device is now constant, so the density is one divided by the area, and the area is 0.49 to the number of generations. An answer that falls rather than rises means the division is the wrong way round.</p>"
+    }
+   ],
+   "after": "<p>Five generations gives 35 times. That is the number that ended the frequency era, and no cooling solution closes a gap of 35.</p>",
+   "starter": "#include <math.h>\n\ndouble frozen_density(int generations) {\n    return pow(0.49, generations);\n}",
+   "tests": "#include <stdio.h>\n#include <math.h>\nint main(void) {\n    double want[] = {1.0, 2.04, 4.16, 8.50, 17.35, 35.40};\n    for (int n = 0; n <= 5; n++) {\n        double got = frozen_density(n);\n        if (fabs(got - want[n]) > want[n] * 0.01) {\n            printf(\"after %d generations got %.2f, want about %.2f\\n\",\n                   n, got, want[n]);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Two slow cores against one fast one",
+   "brief": "<p>Return the total power of <code>n</code> cores each running at a frequency scaled by <code>s</code>, relative to one core at full speed, taking power to go as the cube of frequency because voltage moves with it.</p>",
+   "kind": "output",
+   "concept": "Voltage and frequency move together, so power goes roughly as the cube of either, which is what makes many slow cores beat one fast one.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17 -lm",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The cube applies to each core, and then there are <code>n</code> of them."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Each core costs the scale factor cubed, and the total is that times the number of cores. Cubing the total instead of each core gives a very different answer, and cubing <code>n</code> as well gives a worse one.</p>"
+    }
+   ],
+   "after": "<p>Two cores at 0.75 draw 0.84 of the power of one at full speed and deliver 1.5 times the throughput. That is the whole argument for multicore in one line, and it is arithmetic rather than opinion.</p>",
+   "starter": "#include <math.h>\n\ndouble relative_power(int cores, double freq_scale) {\n    return cores * freq_scale;\n}",
+   "tests": "#include <stdio.h>\n#include <math.h>\nint main(void) {\n    struct { int n; double s, want; } t[] = {\n        {1, 1.0, 1.0}, {2, 0.75, 0.84375}, {4, 0.5, 0.5}, {8, 0.4, 0.512},\n    };\n    for (int i = 0; i < 4; i++) {\n        double got = relative_power(t[i].n, t[i].s);\n        if (fabs(got - t[i].want) > 1e-6) {\n            printf(\"%d cores at %.2f: got %.5f want %.5f\\n\",\n                   t[i].n, t[i].s, got, t[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "How much of the chip can you switch on",
+   "brief": "<p>Return the fraction of a chip that can be powered at once, given the power a fully active chip would draw and the budget the package can remove.</p>",
+   "kind": "output",
+   "concept": "When transistors keep arriving and the power budget does not grow, a growing fraction of the chip has to be off.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "A fraction, and it cannot exceed one however generous the budget is."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The budget divided by what a fully active chip would draw is the fraction that can be on. A result above one means the budget exceeds the demand, and the right answer there is one: you cannot switch on more of a chip than it has.</p>"
+    }
+   ],
+   "after": "<p>The 2011 paper that named dark silicon projected that at 8 nm between half and four fifths of a chip may be dark. That is not a failure. It is what makes it worth filling the area with specialised units that are idle most of the time.</p>",
+   "starter": "double lit_fraction(double full_watts, double budget_watts) {\n    return budget_watts / full_watts;\n}",
+   "tests": "#include <stdio.h>\n#include <math.h>\nint main(void) {\n    struct { double f, b, want; } t[] = {\n        {100, 100, 1.0}, {400, 100, 0.25}, {250, 100, 0.4}, {50, 100, 1.0},\n    };\n    for (int i = 0; i < 4; i++) {\n        double got = lit_fraction(t[i].f, t[i].b);\n        if (fabs(got - t[i].want) > 1e-9) {\n            printf(\"full %.0f budget %.0f: got %.3f want %.3f\\n\",\n                   t[i].f, t[i].b, got, t[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "What halving the voltage buys",
+   "brief": "<p>Return the factor by which dynamic power changes when the supply is scaled by <code>v</code> and the frequency by <code>f</code>, relative to before.</p>",
+   "kind": "output",
+   "concept": "Scaling both is what dynamic voltage and frequency scaling does, and the two effects multiply rather than add.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Two of the terms in the power equation moved, and one of them is squared."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Voltage appears squared and frequency appears once, so the factor is <code>v*v*f</code>. Adding the two scalings rather than multiplying them gives a number that is larger than either and means nothing.</p>"
+    }
+   ],
+   "after": "<p>Halving both gives an eighth of the power for half the speed, which is why a phone drops its clock rather than switching cores off, and why a laptop on battery feels slower rather than dying sooner.</p>",
+   "starter": "double dvfs_factor(double v_scale, double f_scale) {\n    return v_scale + f_scale;\n}",
+   "tests": "#include <stdio.h>\n#include <math.h>\nint main(void) {\n    struct { double v, f, want; } t[] = {\n        {1.0, 1.0, 1.0}, {0.5, 0.5, 0.125}, {0.9, 0.8, 0.648}, {0.7, 1.0, 0.49},\n    };\n    for (int i = 0; i < 4; i++) {\n        double got = dvfs_factor(t[i].v, t[i].f);\n        if (fabs(got - t[i].want) > 1e-9) {\n            printf(\"v %.2f f %.2f: got %.4f want %.4f\\n\",\n                   t[i].v, t[i].f, got, t[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "Where the power actually goes",
+   "brief": "<p>Return total chip power, given dynamic watts, per-transistor leakage in amps, the supply, and the transistor count.</p>",
+   "kind": "output",
+   "concept": "Total power is both terms, and the second one is paid whether the chip is working or not.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The static term is the one you built two units ago."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Static power is the leakage current times the supply times the transistor count, and total power is that added to the dynamic term. Returning only the dynamic term passes the first row and fails the moment leakage matters.</p>"
+    }
+   ],
+   "after": "<p>The last row is a part where leakage is most of the budget. Notice that nothing about it depends on what the chip is doing, which is why an idle server still has to be cooled and still costs money.</p>",
+   "starter": "double total_watts(double dynamic_w, double leak_amps, double volts, double n) {\n    return dynamic_w;\n}",
+   "tests": "#include <stdio.h>\n#include <math.h>\nint main(void) {\n    struct { double d, l, v, n, want; } t[] = {\n        {100, 0, 1.0, 1e9, 100.0},\n        {100, 1e-8, 1.0, 1e9, 110.0},\n        {60, 5e-8, 0.9, 2e9, 150.0},\n    };\n    for (int i = 0; i < 3; i++) {\n        double got = total_watts(t[i].d, t[i].l, t[i].v, t[i].n);\n        if (fabs(got - t[i].want) > 0.01) {\n            printf(\"case %d: got %.2f want %.2f\\n\", i, got, t[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "The cost of a bit you did not need",
+   "brief": "<p>Return the relative energy of a multiply, given the mantissa widths before and after, taking energy to go as the square of the mantissa width.</p>",
+   "kind": "output",
+   "concept": "Narrower arithmetic is a power optimisation before it is a memory one, and that is why four-bit floating point exists at all.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17 -lm",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The ratio of the widths, and then the square of it."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The energy goes as the square of the width, so the ratio of energies is the square of the ratio of widths. Squaring each width and subtracting gives a difference rather than a factor.</p>"
+    }
+   ],
+   "after": "<p>From a 24-bit mantissa to a 1-bit one is a factor of 576 in multiplier energy, before counting the data movement saved. That number is why the last part of this handbook exists.</p>",
+   "starter": "#include <math.h>\n\ndouble multiply_energy_ratio(int mantissa_before, int mantissa_after) {\n    return (double)mantissa_after / mantissa_before;\n}",
+   "tests": "#include <stdio.h>\n#include <math.h>\nint main(void) {\n    struct { int a, b; double want; } t[] = {\n        {24, 24, 1.0},\n        {24, 8, 0.1111},\n        {24, 1, 0.001736},\n        {8, 4, 0.25},\n    };\n    for (int i = 0; i < 4; i++) {\n        double got = multiply_energy_ratio(t[i].a, t[i].b);\n        if (fabs(got - t[i].want) > t[i].want * 0.01) {\n            printf(\"%d to %d bits: got %g want about %g\\n\",\n                   t[i].a, t[i].b, got, t[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

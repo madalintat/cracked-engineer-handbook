@@ -320,7 +320,8 @@
    "drills": 15,
    "needs": [],
    "neededBy": [
-    "cmos-gate"
+    "cmos-gate",
+    "power"
    ]
   },
   {
@@ -342,6 +343,7 @@
     "switch"
    ],
    "neededBy": [
+    "power",
     "nand",
     "integers"
    ]
@@ -357,12 +359,17 @@
    "phase": "build",
    "accent": "gold",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1464,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "switch",
+    "cmos-gate"
+   ],
+   "neededBy": [
+    "fabrication"
+   ]
   },
   {
    "slug": "fabrication",
@@ -375,11 +382,13 @@
    "phase": "build",
    "accent": "gold",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
+   "ready": true,
+   "words": 1586,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "power"
+   ],
    "neededBy": []
   },
   {
@@ -2550,9 +2559,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 7,
-  "words": 11403,
-  "exercises": 56,
-  "drills": 105
+  "ready": 9,
+  "words": 14453,
+  "exercises": 72,
+  "drills": 135
  }
 }

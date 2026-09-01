@@ -50,6 +50,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 
 ## 4. Content
 
+- [x] Part I complete: `switch`, `cmos-gate`, `power`, `fabrication`
 - [x] Unit `nand` complete: note, 8 exercises, 15 drills, all validated
 - [x] Unit `integers` complete: note, 8 exercises, 15 drills (proves `godbolt`)
 - [x] Unit `registers` complete: note, 8 exercises, 15 drills, all validated

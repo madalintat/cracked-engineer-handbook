@@ -37,11 +37,14 @@ async function pool(jobs, limit) {
   return out;
 }
 
+/* Shared with the browser client and under test there, so the validator and
+ * the page cannot disagree about what "the service is down" means. */
+const serviceDown = r => WB.serviceDown(r.verdicts);
+
 const attempt = async (ex, source) => {
   for (let tryN = 0; tryN < 3; tryN++) {
     const r = await WB.run(ex, source, { judges });
-    const unavailable = r.verdicts.some(v => v.state === 'unavailable');
-    if (!unavailable) return r;
+    if (!serviceDown(r)) return r;
     // The service being busy is not the content being wrong. Back off and
     // retry rather than failing a build over someone else's load.
     if (tryN < 2) await new Promise(res => setTimeout(res, 1500 * (tryN + 1)));
@@ -65,14 +68,14 @@ const jobs = items.map(item => async () => {
     starterVerdicts: keys(starter),
     starterVerdict: keys(starter)[0],
     starterPass: starter.pass,
-    starterUnavailable: starter.verdicts.some(v => v.state === 'unavailable'),
+    starterUnavailable: serviceDown(starter),
     starterText: (starter.verdicts.find(v => v.detail) || {}).detail || '',
     starterSignals: starter.signals.map(s => ({ judge: s.judge, key: String(s.key).slice(0, 400) })),
     solutionVerdicts: keys(solution),
     solutionVerdict: keys(solution)[0],
     solutionPass: solution.pass,
     solutionClean: solution.clean,
-    solutionUnavailable: solution.verdicts.some(v => v.state === 'unavailable'),
+    solutionUnavailable: serviceDown(solution),
     solutionTitle: solution.verdicts.map(v => v.title).join(' / '),
     toolchain: solution.toolchain || starter.toolchain,
   };
