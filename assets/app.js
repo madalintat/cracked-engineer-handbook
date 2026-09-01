@@ -115,7 +115,9 @@ function viewHome() {
         <p class="hero-note">${ready} of ${c.units} units written so far, and
           the rest are in the track so the whole spine is visible.</p>
       </div>
-      <div class="hero-art" aria-hidden="false">${HH.manifest.hero || ''}</div>
+      <img class="hero-mascot" src="assets/img/mascot-512.png" width="190"
+           height="190" alt="" decoding="async">
+      <div class="hero-art">${HH.manifest.hero || ''}</div>
     </section>
     <section>
       <h2 style="margin-bottom:16px">The track</h2>
@@ -825,10 +827,21 @@ function wireWork() {
                      res.pass);
       renderDiagnosis(ex, res);
       if (res.pass) {
+        const wasNew = !Store.get(`pass.${slug}.${n}`, false);
         Store.set(`pass.${slug}.${n}`, true);
         el('#afterword').hidden = false;
         document.querySelector(`.exnav a[href$="/${n}"]`)?.classList.add('done');
         announce('Correct. ' + (res.verdicts[0]?.title || ''));
+        // The one place anything is allowed to speak, and only for a solve
+        // that was not already solved.
+        if (wasNew && typeof COMPANION !== 'undefined') {
+          const total = meta.exercises || 0;
+          let done = 0;
+          for (let i = 1; i <= total; i++) {
+            if (Store.get(`pass.${slug}.${i}`, false)) done++;
+          }
+          COMPANION.cheer(done, total);
+        }
       } else {
         announce('Not yet. ' + (res.verdicts[0]?.title || ''));
       }

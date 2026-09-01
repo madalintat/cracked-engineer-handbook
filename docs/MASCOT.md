@@ -39,9 +39,26 @@ thing you see.
 
 ## Where it appears
 
-The header mark, the favicon, the apple touch icon, the social preview, and the
-404. Nowhere else. A mascot that turns up on every page is one you stop seeing,
-and then it cannot do the one job it has.
+The header mark, the favicon, the apple touch icon, the social preview, the
+hero, and the 404. Nowhere else as decoration.
+
+## The companion
+
+`assets/companion.js` is the mascot's only behaviour, called from exactly one
+place: the branch of the workbench where an exercise has just passed, and only
+for a solve that was not already solved.
+
+The gating is the design. It speaks on the first solve, on the last one in a
+unit, and on every third in between, with a hard floor of one line every two
+minutes whatever those rules say. A session longer than ninety minutes gets one
+line about stopping, once, and that pre-empts everything else.
+
+It says nothing on failure. There is already a verdict, a diagnosis and a hint
+on screen when something is wrong, and a cartoon bird is not what that reading
+list needs.
+
+A companion that comments on everything is one you close, and then it cannot
+say the one thing that mattered.
 
 The header image is decorative and carries an empty `alt`, because the brand
 link is already named by the words beside it and repeating them to a screen

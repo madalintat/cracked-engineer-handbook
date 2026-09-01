@@ -1550,10 +1550,22 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-  gap: 48px;
+  /* The headline sets the first column: it carries an explicit line break and
+   * must not wrap again, so the copy gets the room and the other two share
+   * what is left. */
+  grid-template-columns: minmax(0, 1.5fr) auto minmax(0, 0.9fr);
+  gap: 24px;
   align-items: center;
   padding: 56px 0 44px;
+}
+/* He sits between the words and the diagram, which is where he would be if he
+ * were reading one and drawing the other. Decorative, so no alt text: the page
+ * says everything he does. */
+.hero-mascot {
+  width: 150px;
+  height: auto;
+  align-self: end;
+  margin-bottom: -6px;
 }
 .hero-copy { max-width: 60ch; }
 .hero h1 { margin: 12px 0 0; }
@@ -1597,6 +1609,12 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
   margin: 0;
 }
 
+/* Below a certain width the three columns stop fitting and the mascot is the
+ * first thing to go: he is the only part of the hero that is decoration. */
+@media (max-width: 1180px) {
+  .hero { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: 40px; }
+  .hero-mascot { display: none; }
+}
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; gap: 28px; padding: 40px 0 32px; }
   /* The art goes first on a narrow screen only if it earns the space; it does
@@ -1858,3 +1876,51 @@ a.gl:hover { text-decoration-style: solid; color: var(--accent-ink); }
 }
 .vimhelp .prose { margin-top: 10px; font-size: var(--t-sm); }
 .vimhelp code { white-space: nowrap; }
+
+/* ------------------------------------------------------------- companion */
+/* The mascot's only behaviour, and the gating lives in companion.js rather
+ * than here. This is what it looks like when it has earned a line. */
+
+.companion {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 300;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: min(360px, calc(100vw - 40px));
+  padding: 14px 14px 14px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  box-shadow: 0 12px 34px rgb(0 0 0 / .3);
+  animation: companion-in .22s var(--ease) both;
+}
+@keyframes companion-in {
+  from { opacity: 0; transform: translateY(10px) scale(.98); }
+}
+.companion img { flex: 0 0 auto; width: 46px; height: auto; }
+.companion p {
+  margin: 2px 0 0;
+  font-size: var(--t-sm);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.companion button {
+  flex: 0 0 auto;
+  border: 0;
+  background: none;
+  color: var(--ink-4);
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: var(--r-1);
+}
+.companion button:hover { color: var(--ink); background: var(--raised); }
+
+/* Below 900px the tab bar owns the bottom of the screen. */
+@media (max-width: 900px) {
+  .companion { bottom: calc(var(--tabbar-h) + 12px); right: 12px; }
+}
