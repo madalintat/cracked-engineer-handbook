@@ -907,9 +907,30 @@ def build(strict=True):
     for sub in ("unit", "ex", "drills"):
         (DATA / sub).mkdir(exist_ok=True)
 
+    # The home page argues that each of these forced the next. Drawing it is
+    # the one place a figure earns its keep before the reader has read
+    # anything, and the hero was otherwise half a page of empty column.
+    hero_p = CONTENT / "hero.json"
+    if not hero_p.exists():
+        raise BuildError("content/hero.json is missing, so the home page has "
+                         "nothing in its second column")
+    try:
+        hero = figures.render(hero_p.read_text(), "hero.json")
+    except figures.FigureError as e:
+        raise BuildError(str(e)) from e
+
     atlas = build_atlas()
     glossary = build_glossary(units)
     errors = build_errors()
+
+    # Inline every glossary definition into the link that points at it. The
+    # reader gets the definition where they met the word, with no fetch and no
+    # navigation away from the sentence they were in the middle of. The gate
+    # that rejects a link to an undefined term already ran, so every link here
+    # has something to carry.
+    gloss_by_slug = {g["slug"]: g for g in glossary}
+    for u in units.values():
+        u["html"] = attach_glossary(u["html"], gloss_by_slug)
 
     parts = [{"id": p[0], "roman": p[1], "title": p[2], "blurb": p[3],
               "phase": track.PHASE_OF[p[0]], "accent": track.accent_of(p[0]),
@@ -917,6 +938,7 @@ def build(strict=True):
     phases = [{"id": ph[0], "title": ph[1], "blurb": ph[2], "accent": ph[3],
                "parts": list(ph[4])} for ph in track.PHASES]
     write(DATA / "manifest.json", {
+        "hero": hero,
         "phases": phases, "parts": parts, "units": manifest,
         "backends": list(track.BACKENDS),
         "counts": {
@@ -966,6 +988,25 @@ def build(strict=True):
     write(DATA / "search.json", search_index)
     prune(DATA, units)
     return manifest, units
+
+
+GL_LINK = re.compile(r'<a class="gl" href="#/glossary#([a-z0-9-]+)">')
+
+
+def attach_glossary(html_text, by_slug):
+    """Put each definition on the link that points at it.
+
+    A second pass rather than doing it in inline(), because a note is rendered
+    before the glossary is built: the glossary is assembled from what the notes
+    linked to, so at render time the definition does not exist yet.
+    """
+    def sub(m):
+        g = by_slug.get(m.group(1))
+        if not g:
+            return m.group(0)
+        return (f'<a class="gl" href="#/glossary#{m.group(1)}" '
+                f'data-g="{html.escape(g["html"], quote=True)}">')
+    return GL_LINK.sub(sub, html_text)
 
 
 def build_errors():
@@ -1167,6 +1208,10 @@ def build_atlas():
       Wikipedia's CUDA specs table produces "128 K registers/SM at CC 8.0".
     * A table may declare what it could not verify, and those notes are shown
       to the reader rather than dropped.
+
+    A row may also carry a `detail` object, which is everything a hover card
+    shows and the table does not have room for. It is a declared key rather
+    than a smuggled one, so the ragged-row check still means what it says.
     """
     d = CONTENT / "atlas"
     if not d.exists():
@@ -1190,8 +1235,19 @@ def build_atlas():
         if len(set(keys)) != len(keys):
             problems.append(f"{w}: duplicate column keys")
         for i, row in enumerate(t["rows"]):
-            extra = set(row) - set(keys)
+            extra = set(row) - set(keys) - {"detail"}
             missing = set(keys) - set(row)
+            det = row.get("detail")
+            if det is not None:
+                if not isinstance(det, dict):
+                    problems.append(f"{w}: row {i} detail is not an object")
+                elif not det.get("summary"):
+                    problems.append(
+                        f"{w}: row {i} has a detail with no summary. A hover "
+                        f"card that only repeats the row is worse than none.")
+                else:
+                    problems += prose.check_summary(
+                        det["summary"], f"{w} row {i} detail summary", 5, 32)
             if extra:
                 problems.append(f"{w}: row {i} has columns the table does not "
                                 f"declare: {', '.join(sorted(extra))}")
@@ -1206,7 +1262,93 @@ def build_atlas():
             problems += prose.lint(t["note"], f"{w} note")
         tables.append({**t, "rowCount": len(t["rows"])})
     fail(problems)
+    for t in tables:
+        for row in t["rows"]:
+            if row.get("detail"):
+                row["detail"]["html"] = atlas_card(row, t)
     return tables
+
+
+# Every numeric format a tensor core can be asked for, in the order they
+# arrived. The strip shows all of them every time, because "this one does not
+# have FP4" is the answer as often as "this one does".
+TENSOR_FORMATS = ("tf32", "bf16", "fp16", "fp8", "fp4", "int8")
+
+GEN_LABEL = {
+    0: "no tensor cores",
+    1: "1st generation tensor cores",
+    2: "2nd generation tensor cores",
+    3: "3rd generation tensor cores",
+    4: "4th generation tensor cores",
+    5: "5th generation tensor cores",
+}
+
+
+def atlas_card(row, table):
+    """The hover card for one atlas row, rendered at build time.
+
+    Rendered here rather than in the browser for the reason the reference
+    handbook inlines its glossary definitions: the card is already in the
+    document when the pointer arrives, so there is no fetch, no spinner and
+    nothing to get wrong on a slow connection.
+    """
+    det = row["detail"]
+    t = det.get("tensor") or {}
+    gen = int(t.get("gen", 0))
+    fmts = set(t.get("formats") or [])
+
+    cells = [{"label": f, "on": f in fmts,
+              "accent": "jade" if f in ("fp4", "fp8") else "azure"}
+             for f in TENSOR_FORMATS]
+    strip = figures.render(json.dumps({
+        "kind": "strip",
+        "alt": (f"Numeric formats the tensor cores of {row['sm']} support: "
+                + (", ".join(sorted(fmts)) if fmts
+                   else "none, this generation has no tensor cores")),
+        "caption": GEN_LABEL.get(gen, ""),
+        "cells": cells,
+    }), f"atlas card {row['sm']}")
+
+    # What a learner can actually rent, joined from the Modal catalogue, so the
+    # card answers "can I run this" rather than only "does it exist".
+    offered = [g for g in load_gpu_catalog()["gpus"]
+               if g.get("smMin") == row["sm"] or g.get("sm") == row["sm"]]
+    # Modal spells "this exact part, no substitution" as a trailing !, and
+    # "this or better" as a trailing +. Those are the same silicon at the same
+    # price, so listing both reads as two products rather than one.
+    seen, distinct = set(), []
+    for g in sorted(offered, key=lambda g: (g["price_per_hour"],
+                                            len(g["gpu_string"]))):
+        k = (g["price_per_hour"], g["vram_gb"])
+        if k in seen:
+            continue
+        seen.add(k)
+        distinct.append(g)
+    if distinct:
+        rent = ", ".join(
+            f"{g['gpu_string']} at ${g['price_per_hour']:.2f} an hour, "
+            f"{g['vram_gb']} GB"
+            for g in distinct)
+        rent_html = f"<dt>To rent</dt><dd>{html.escape(rent)}</dd>"
+    else:
+        rent_html = ("<dt>To rent</dt><dd class=\"none\">Not offered by the "
+                     "GPU runner this handbook uses.</dd>")
+
+    rows_html = "".join(
+        f"<dt>{html.escape(c['label'])}</dt>"
+        f"<dd{' class=\"mono\"' if c.get('mono') else ''}>"
+        f"{html.escape(str(row.get(c['key']) or '')) or '&mdash;'}</dd>"
+        for c in table["columns"] if c["key"] != "sm")
+
+    note = det["tensor"].get("note") if det.get("tensor") else None
+    note_html = (f'<p class="acard-note">{inline(note)}</p>' if note else "")
+
+    return (f'<div class="acard">'
+            f'<p class="eyebrow">{html.escape(row["sm"])}</p>'
+            f'<p class="acard-sum">{inline(det["summary"])}</p>'
+            f'{strip}'
+            f'<dl class="acard-dl">{rows_html}{rent_html}</dl>'
+            f'{note_html}</div>')
 
 
 def load_gpu_catalog():

@@ -232,6 +232,10 @@ body {
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Inter's single-storey l and alternate digits. In a book where a sentence
+   * can turn on whether a character is l, 1 or I, telling them apart is not a
+   * refinement. */
+  font-feature-settings: "cv05" 1, "ss01" 1;
 }
 
 img, svg, video { max-width: 100%; height: auto; display: block; }
@@ -1500,3 +1504,265 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
 .fig-bracket { fill: none; stroke: var(--ink-4); stroke-width: 1.2;
                stroke-linejoin: round; }
 .fig-junction { fill: var(--ink-4); stroke: none; }
+
+/* -------------------------------------------------------------------- hero */
+/* Two columns, because one column left half the page empty and the argument
+ * the lede makes is a chain, which is a thing you can draw. */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 48px;
+  align-items: center;
+  padding: 56px 0 44px;
+}
+.hero-copy { max-width: 60ch; }
+.hero h1 { margin: 12px 0 0; }
+.hero .lede {
+  margin: 20px 0 0;
+  font-size: var(--t-lede);
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 46ch;
+}
+.hero-cta { display: flex; flex-wrap: wrap; gap: 10px; margin: 26px 0 0; }
+.hero-note {
+  margin: 16px 0 0;
+  font-size: var(--t-sm);
+  color: var(--ink-3);
+}
+.hero-art { min-width: 0; }
+.hero-art .fig { margin: 0; max-width: none; }
+/* The chain is tall and narrow, so height is what constrains it here, not
+ * width. Left to width:100% in a 530px column it drew 800px tall and pushed
+ * the whole hero past the fold. preserveAspectRatio does the letterboxing. */
+.hero-art .fig-svg {
+  max-width: none !important;
+  max-height: min(58vh, 460px);
+  width: 100%;
+  background: transparent;
+  border-color: transparent;
+  padding: 0;
+}
+.hero-art figcaption { text-align: center; border-left: 0; padding-left: 0;
+                       margin-top: 12px; }
+.hero-art figcaption { font-size: var(--t-tiny); }
+
+/* The eyebrow. One rule for every small-caps label in the app, because seven
+ * components had spelled the same four declarations out and drifted. */
+.eyebrow {
+  font: 700 var(--t-micro)/1 var(--mono);
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; gap: 28px; padding: 40px 0 32px; }
+  /* The art goes first on a narrow screen only if it earns the space; it does
+   * not, so it goes last and stays. Hiding it entirely would lose the one
+   * thing that shows what the book is about before any prose is read. */
+  .hero-art { order: 2; max-width: 380px; }
+}
+
+/* ------------------------------------------------------------ touch targets */
+/* Keyed on the pointer, not the width. A trackpad at 700px does not need a
+ * 44px row and a tablet at 1100px does. Four sizes, each with a reason:
+ *
+ *   44px  the standard, for anything a finger aims at deliberately
+ *   40px  the two sticky bars, because a 44px row under a 57px header hands a
+ *         fifth of a phone to chrome before a word is read
+ *   38px  dense rows of many small controls, which wrap to four lines at 44
+ *   36px  controls that sit inside running text and cannot grow without
+ *         opening gaps between the lines around them
+ */
+/* Both conditions: CDP's mobile emulation does not always report a coarse
+ * pointer, and a real phone in landscape is wider than many people expect. */
+@media (pointer: coarse), (max-width: 760px) {
+  .btn { min-height: 44px; }
+  .track li.u > a { min-height: 44px; padding-top: 13px; padding-bottom: 13px; }
+  .footnav a { min-height: 44px; display: inline-flex; align-items: center; }
+  /* The link is the target, not the row, so it fills the row. */
+  .edges li { min-height: 40px; }
+  .edges li a { display: flex; align-items: center; min-height: 40px; }
+
+  /* A link inside a sentence cannot be 44px without opening a gap between
+   * the lines around it. WCAG exempts inline targets for exactly that reason,
+   * so these grow their hit area to 24px with padding cancelled by an equal
+   * negative margin, which changes nothing about the layout. */
+  .see a, .usedby a, .empty a, .prose a, .body p a {
+    padding: 6px 0;
+    margin: -6px 0;
+  }
+  nav.tabs a { min-height: 44px; }
+  .track .chip { min-height: 38px; display: inline-flex; align-items: center; }
+  .exnav a { min-width: 40px; min-height: 40px; }
+  a.gl, .term { padding: 4px 0; }
+  .wbbar .tog, .tfilter input, .filter { min-height: 40px; }
+  .rail a { min-height: 36px; display: flex; align-items: center; }
+  /* The letter and backend jump rows: many small controls in one line, so 38
+   * rather than 44, which would wrap them to four rows. */
+  .atlastabs a { min-height: 38px; min-width: 38px; display: inline-flex;
+                 align-items: center; justify-content: center; }
+  /* A link inside an eyebrow inherits the eyebrow's 11px line and becomes a
+   * 14px target. It cannot grow the line, so it grows its hit area instead. */
+  .kicker a, .exhead .kicker a { padding: 12px 0; margin: -12px 0; }
+}
+
+/* Inline code in prose can be long enough to overflow a phone. It may wrap
+ * anywhere rather than push the column sideways: a broken identifier is
+ * legible, a horizontally scrolled paragraph is not. */
+.prose code, .body code, .empty code, .fig figcaption code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.fig-off { fill: var(--sunken); stroke: var(--border-soft); stroke-width: 1; }
+.fig-strip { border: 0; background: transparent; padding: 0; }
+
+/* --------------------------------------------------------------- popovers */
+/* One node for the whole page, moved and refilled. The content is already in
+ * the document when the pointer arrives, so there is no fetch and nothing to
+ * get wrong on a slow connection. */
+
+.pop {
+  position: absolute;
+  z-index: 200;
+  width: min(400px, calc(100vw - 24px));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  box-shadow: 0 10px 34px rgb(0 0 0 / .28), 0 2px 6px rgb(0 0 0 / .18);
+  padding: 14px 16px;
+  animation: popin .13s var(--ease) both;
+}
+@keyframes popin { from { opacity: 0; transform: translateY(-3px); } }
+
+.acard-open {
+  font: inherit;
+  color: var(--accent-ink);
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  cursor: help;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.acard-open:hover { text-decoration-style: solid; }
+
+.acard .eyebrow { color: var(--accent-ink); }
+.acard-sum {
+  margin: 6px 0 12px;
+  font-size: var(--t-sm);
+  line-height: 1.5;
+  color: var(--ink);
+  font-weight: 600;
+}
+.acard .fig { margin: 0 0 4px; max-width: none; }
+.acard .fig figcaption {
+  border-left: 0;
+  padding-left: 0;
+  margin-top: 4px;
+  font-size: var(--t-micro);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--ink-4);
+}
+.acard-dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 12px;
+  margin: 12px 0 0;
+  font-size: var(--t-sm);
+}
+.acard-dl dt {
+  color: var(--ink-4);
+  font: 600 var(--t-micro)/1.7 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.acard-dl dd { margin: 0; color: var(--ink-2); line-height: 1.45; }
+.acard-dl dd.mono { font-family: var(--mono); }
+.acard-dl dd.none { color: var(--ink-4); }
+.acard-note {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+  font-size: var(--t-sm);
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+/* A hover card is meaningless on touch, and the tap that would open it is the
+ * tap meant for the row. The button still works: it toggles on click. */
+@media (pointer: coarse) {
+  .pop { width: min(400px, calc(100vw - 24px)); }
+}
+
+/* A glossed term carries its definition, so hovering it answers the question
+ * without leaving the sentence it was asked in. */
+a.gl {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  cursor: help;
+  font-weight: 600;
+}
+a.gl:hover { text-decoration-style: solid; color: var(--accent-ink); }
+.pop-gloss { width: min(360px, calc(100vw - 24px)); }
+.gloss-def { margin-top: 6px; font-size: var(--t-sm); line-height: 1.55; }
+.gloss-def p { margin: 0; }
+.gloss-more {
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--border-soft);
+  font-size: var(--t-tiny);
+  color: var(--ink-4);
+}
+
+/* A part's progress, as one element and no SVG. The conic gradient takes two
+ * stops rather than one: a single hard cut leaves a jagged leading edge at
+ * this size, and the extra degree smooths it without being visible. */
+.ring {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  position: relative;
+  background: conic-gradient(var(--accent) calc(var(--p, 0) * 1%),
+                             var(--raised) calc(var(--p, 0) * 1% + 1deg));
+  transition: background var(--slow) var(--ease);
+}
+.ring::after {
+  content: attr(data-n);
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--bg);
+  display: grid;
+  place-items: center;
+  font: 700 var(--t-micro)/1 var(--mono);
+  color: var(--ink-3);
+}
+.ring.done::after { content: "✓"; color: var(--ok); }
+
+.track .part-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.track .part-head > div { min-width: 0; }
+
+/* Three pixels on the left is this app's mark for "this block belongs to
+ * something". It is on the callout, on the caption, and here. */
+.track .part {
+  border-left: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  padding-left: 16px;
+  margin-left: 2px;
+}
+.track .part h3 { margin-top: 2px; }

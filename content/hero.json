@@ -1,0 +1,75 @@
+{
+  "kind": "blocks",
+  "alt": "A chain of five consequences: leakage current forces a frequency wall, the wall forces multiple cores, multiple cores force GPUs, and GPUs force four-bit arithmetic.",
+  "caption": "Each of these forced the next. The track follows the same order.",
+  "boxes": [
+    {
+      "id": "leak",
+      "x": 0,
+      "y": 0.0,
+      "w": 7,
+      "h": 1.55,
+      "label": "Leakage",
+      "sub": "a switch costs energy to flip",
+      "accent": "gold"
+    },
+    {
+      "id": "wall",
+      "x": 0,
+      "y": 2.35,
+      "w": 7,
+      "h": 1.55,
+      "label": "The wall",
+      "sub": "voltage stopped falling in 2005",
+      "accent": "copper"
+    },
+    {
+      "id": "cores",
+      "x": 0,
+      "y": 4.7,
+      "w": 7,
+      "h": 1.55,
+      "label": "More cores",
+      "sub": "the only remaining direction",
+      "accent": "clay"
+    },
+    {
+      "id": "gpu",
+      "x": 0,
+      "y": 7.05,
+      "w": 7,
+      "h": 1.55,
+      "label": "The GPU",
+      "sub": "many slow cores beat a few fast ones",
+      "accent": "jade"
+    },
+    {
+      "id": "fp4",
+      "x": 0,
+      "y": 9.4,
+      "w": 7,
+      "h": 1.55,
+      "label": "Four-bit arithmetic",
+      "sub": "because moving bytes is the cost",
+      "accent": "azure"
+    }
+  ],
+  "arrows": [
+    {
+      "from": "leak",
+      "to": "wall"
+    },
+    {
+      "from": "wall",
+      "to": "cores"
+    },
+    {
+      "from": "cores",
+      "to": "gpu"
+    },
+    {
+      "from": "gpu",
+      "to": "fp4"
+    }
+  ]
+}

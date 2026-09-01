@@ -388,11 +388,15 @@ def _blocks(spec, where):
 
     U = GRID * 2
     def geom(b):
-        return (int(b.get("x", 0)) * U, int(b.get("y", 0)) * U,
-                int(b.get("w", 3)) * U, int(b.get("h", 2)) * U)
+        # Fractional, so a caller can tighten a tall chain without the
+        # renderer needing a scale knob. A grid of whole units is a default,
+        # not a constraint.
+        return (float(b.get("x", 0)) * U, float(b.get("y", 0)) * U,
+                float(b.get("w", 3)) * U, float(b.get("h", 2)) * U)
 
     W = max((geom(b)[0] + geom(b)[2]) for b in boxes)
     H = max((geom(b)[1] + geom(b)[3]) for b in boxes)
+    W, H = round(W), round(H)
     out = [f'<svg viewBox="{-PAD} {-PAD - 6} {W + PAD * 2} {H + PAD * 2 + 6}" '
            f'class="fig-svg" role="img" preserveAspectRatio="xMidYMid meet">',
            '<defs><marker id="fig-arrow" viewBox="0 0 10 10" refX="9" refY="5" '
@@ -433,8 +437,8 @@ def _blocks(spec, where):
         col = _accent(b.get("accent"), where) if b.get("accent") else None
         cls = "fig-box fig-box-tint" if col else "fig-box"
         st = f' style="fill:{col};stroke:{col}"' if col else ""
-        out.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="4" '
-                   f'class="{cls}"{st}/>')
+        out.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" '
+                   f'height="{h:.1f}" rx="4" class="{cls}"{st}/>')
         label, sub = b.get("label", b["id"]), b.get("sub")
         cy = y + h / 2 + (0 if not sub else -5)
         out.append(_text(x + w / 2, cy + 4, label, size=FONT, weight=600,
@@ -446,7 +450,47 @@ def _blocks(spec, where):
     return "".join(out)
 
 
-KINDS = {"bits": _bits, "gates": _gates, "timing": _timing, "blocks": _blocks}
+# ------------------------------------------------------------------ strip
+
+def _strip(spec, where):
+    """A row of cells, each on or off. What a thing supports, at a glance.
+
+    Used for tensor core formats, where "which numeric types does this
+    generation do in hardware" is the question and a list of prose sentences
+    is a worse answer than eight boxes.
+    """
+    cells = _need(spec, "cells", where, list)
+    if not cells:
+        raise FigureError(f"{where}: a strip with no cells shows nothing")
+    cw, ch = 52.0, GRID + 4
+    W, H = len(cells) * cw, ch + FONT_SM + 6
+    out = [f'<svg viewBox="{-PAD/2} {-PAD/2} {W + PAD:.0f} {H + PAD:.0f}" '
+           f'class="fig-svg fig-strip" role="img" '
+           f'preserveAspectRatio="xMidYMid meet">']
+    for i, c in enumerate(cells):
+        x = i * cw
+        on = bool(c.get("on"))
+        label = _need(c, "label", where, str)
+        col = _accent(c.get("accent"), where)
+        if on:
+            out.append(f'<rect x="{x + 2:.1f}" y="0" width="{cw - 4:.1f}" '
+                       f'height="{ch}" rx="3" class="fig-field" '
+                       f'style="fill:{col};stroke:{col}"/>')
+        else:
+            out.append(f'<rect x="{x + 2:.1f}" y="0" width="{cw - 4:.1f}" '
+                       f'height="{ch}" rx="3" class="fig-off"/>')
+        out.append(_text(x + cw / 2, ch / 2 + 4, label,
+                         cls="fg" if on else "dim", size=FONT_SM, mono=True,
+                         weight=700 if on else 400))
+        if c.get("note"):
+            out.append(_text(x + cw / 2, ch + FONT_SM + 1, c["note"],
+                             cls="dim", size=FONT_SM - 1))
+    out.append("</svg>")
+    return "".join(out)
+
+
+KINDS = {"bits": _bits, "gates": _gates, "timing": _timing,
+         "blocks": _blocks, "strip": _strip}
 
 
 def render(body, where):
@@ -534,6 +578,10 @@ def _selfcheck():
                     {"id": "b", "x": 4, "y": 0, "label": "B"}],
           "arrows": [{"from": "a", "to": "b"}]}, "fig-arrow")
 
+    good({**base, "kind": "strip",
+          "cells": [{"label": "fp16", "on": True, "accent": "jade"},
+                    {"label": "fp4", "on": False}]}, "fig-strip")
+    bad({**base, "kind": "strip", "cells": []}, "no cells")
     bad({**base, "kind": "nope"}, "unknown figure kind")
     bad({**base, "kind": "bits", "bits": 8,
          "groups": [{"from": 0, "to": 3}, {"from": 3, "to": 5}]}, "in two groups")

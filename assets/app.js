@@ -92,19 +92,30 @@ function viewHome() {
       </a>`;
   }).join('');
 
+  const ready = HH.manifest.units.filter(u => u.ready).length;
+  const started = HH.manifest.units.find(u => Store.get(`read.${u.slug}`, -1) >= 0);
+
   return `
   <div class="wrap">
-    <section style="padding:64px 0 40px;max-width:var(--measure)">
-      <h1>How computers work,<br>from the transistor up.</h1>
-      <p class="prose" style="margin-top:20px;font-size:var(--t-lede)">
-        ${c.parts} parts and ${c.units} units in one dependency chain. Leakage
-        physics forces the frequency wall, the wall forces multicore, multicore
-        forces GPUs, and GPUs force four-bit arithmetic. Every exercise is
-        checked by a tool that complains specifically.
-      </p>
-      <p style="margin-top:24px">
-        <a class="btn" href="#/track">Start at the switch</a>
-      </p>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">${c.phases} phases &middot; ${c.parts} parts &middot;
+          ${c.units} units</p>
+        <h1>How computers work,<br>from the transistor up.</h1>
+        <p class="lede">One dependency chain, from what a switch costs to flip
+          to why a modern GPU multiplies four-bit numbers. Every exercise is
+          checked by a tool that complains specifically: a simulator, a real
+          compiler, a real synthesiser, or a GPU you rent by the second.</p>
+        <p class="hero-cta">
+          <a class="btn" href="#/track">${started
+            ? 'Back to the track' : 'Start at the switch'}</a>
+          ${started ? `<a class="btn ghost" href="#/unit/${esc(started.slug)}"
+            >Continue: ${esc(started.title)}</a>` : ''}
+        </p>
+        <p class="hero-note">${ready} of ${c.units} units written so far, and
+          the rest are in the track so the whole spine is visible.</p>
+      </div>
+      <div class="hero-art" aria-hidden="false">${HH.manifest.hero || ''}</div>
     </section>
     <section>
       <h2 style="margin-bottom:16px">The track</h2>
@@ -155,10 +166,19 @@ function viewTrack() {
     const parts = ph.parts.map(pid => {
       const p = partById.get(pid);
       const us = byPart.get(pid) || [];
+      const read = us.filter(u => Store.get(`read.${u.slug}`, -1) >= 0).length;
+      const pct = us.length ? Math.round(read / us.length * 100) : 0;
       return `
       <section class="part" id="${esc(p.id)}" data-part="${esc(p.id)}">
-        <h3><span class="roman">${esc(p.roman)}</span> ${esc(p.title)}</h3>
-        <p class="pb">${esc(p.blurb)}</p>
+        <div class="part-head">
+          <span class="ring${read === us.length && us.length ? ' done' : ''}"
+                style="--p:${pct}" data-n="${read}"
+                role="img" aria-label="${read} of ${us.length} started"></span>
+          <div>
+            <h3><span class="roman">${esc(p.roman)}</span> ${esc(p.title)}</h3>
+            <p class="pb">${esc(p.blurb)}</p>
+          </div>
+        </div>
         <ol class="units">${us.map(row).join('')}</ol>
       </section>`;
     }).join('');
@@ -429,7 +449,23 @@ function gpuPicker(ex) {
  * implementation recomputes both from the current scroll position, so its dots
  * un-fill when you scroll back up, which makes it a scroll indicator wearing a
  * progress indicator's clothes. */
+function wireGlossHover() {
+  wirePopover({
+    openers: 'a.gl[data-g]',
+    cls: 'pop pop-gloss',
+    cardFor: el => {
+      const term = el.textContent.trim();
+      return `<p class="eyebrow">${esc(term)}</p>
+        <div class="gloss-def">${el.dataset.g}</div>
+        <p class="gloss-more">Open the
+          <a href="${esc(el.getAttribute('href'))}">glossary</a>
+          for where else it is used.</p>`;
+    },
+  });
+}
+
 function wireUnit(slug) {
+  wireGlossHover();
   const unit = el('.unit');
   if (!unit) return;
   const rail = el('.rail');
@@ -951,9 +987,23 @@ async function viewAtlas(id) {
       ${esc(x.title)}</a>`).join('');
 
   const head = t.columns.map(c => `<th>${esc(c.label)}</th>`).join('');
-  const body = t.rows.map(r => `<tr>${t.columns.map(c =>
-    `<td${c.mono ? ' class="mono"' : ''}>${esc(r[c.key] || '')}</td>`
-  ).join('')}</tr>`).join('');
+  /* A row with a detail card gets a button in its first cell. A button
+   * because it must be reachable from the keyboard, and the card carries
+   * things a table cell has no room for: what the generation actually does,
+   * which numeric formats it has in hardware, and what it costs to rent. */
+  const body = t.rows.map((r, i) => {
+    const cells = t.columns.map((c, j) => {
+      const v = esc(r[c.key] || '');
+      if (j === 0 && r.detail) {
+        return `<td${c.mono ? ' class="mono"' : ''}>
+          <button class="acard-open" type="button" data-row="${i}"
+                  aria-expanded="false"
+                  aria-label="Details for ${v}">${v}</button></td>`;
+      }
+      return `<td${c.mono ? ' class="mono"' : ''}>${v}</td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
 
   return `
   <div class="wrap" style="padding:48px 0" data-accent="slate">
@@ -994,7 +1044,89 @@ async function viewAtlas(id) {
   </div>`;
 }
 
+/* One popover node for the whole table, moved and refilled, rather than one
+ * per row created and destroyed on every hover. Opens on pointer and on
+ * focus, because a card that only answers to a mouse is a card some readers
+ * never see, and closes on Escape, on scroll, and on the next open. */
+function wirePopover({ openers, cardFor, cls }) {
+  const pop = document.createElement('div');
+  pop.className = cls;
+  pop.setAttribute('role', 'dialog');
+  pop.hidden = true;
+  document.body.appendChild(pop);
+  let current = null;
+
+  const close = () => {
+    if (!current) return;
+    current.setAttribute('aria-expanded', 'false');
+    current = null;
+    pop.hidden = true;
+  };
+
+  const open = (el) => {
+    const html = cardFor(el);
+    if (!html) return;
+    if (current === el) return;
+    close();
+    current = el;
+    el.setAttribute('aria-expanded', 'true');
+    pop.innerHTML = html;
+    pop.hidden = false;
+    // Measure after filling, then place: above if there is no room below, and
+    // clamped to the viewport so a row at the right edge does not open a card
+    // half off the screen.
+    const r = el.getBoundingClientRect();
+    const pr = pop.getBoundingClientRect();
+    const margin = 10;
+    let top = r.bottom + scrollY + 8;
+    if (r.bottom + pr.height + 8 > innerHeight && r.top - pr.height - 8 > 0) {
+      top = r.top + scrollY - pr.height - 8;
+    }
+    let left = r.left + scrollX;
+    left = Math.max(margin + scrollX,
+                    Math.min(left, scrollX + innerWidth - pr.width - margin));
+    pop.style.top = `${top}px`;
+    pop.style.left = `${left}px`;
+  };
+
+  const onOver = e => {
+    const el = e.target.closest(openers);
+    if (el) open(el); else if (!e.target.closest('.' + cls)) close();
+  };
+  const onFocus = e => {
+    const el = e.target.closest(openers);
+    if (el) open(el);
+  };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  const onClick = e => {
+    const el = e.target.closest(openers);
+    if (el) { e.preventDefault(); current === el ? close() : open(el); }
+    else if (!e.target.closest('.' + cls)) close();
+  };
+
+  addEventListener('pointerover', onOver);
+  addEventListener('focusin', onFocus);
+  addEventListener('keydown', onKey);
+  addEventListener('click', onClick);
+  addEventListener('scroll', close, { passive: true });
+  HH.teardown.push(() => {
+    removeEventListener('pointerover', onOver);
+    removeEventListener('focusin', onFocus);
+    removeEventListener('keydown', onKey);
+    removeEventListener('click', onClick);
+    removeEventListener('scroll', close);
+    pop.remove();
+  });
+}
+
 function wireAtlas() {
+  if (HH.atlas) {
+    wirePopover({
+      openers: '.acard-open',
+      cls: 'pop',
+      cardFor: el => (HH.atlas.rows[+el.dataset.row] || {}).detail?.html,
+    });
+  }
   const q = el('#atlasq');
   if (!q) return;
   const rows = [...document.querySelectorAll('#atlastable tbody tr')];

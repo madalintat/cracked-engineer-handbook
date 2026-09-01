@@ -81,6 +81,18 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
       mistyped unit slug names the nearest real one, and progress before any
       work shows where to start rather than a table of zeros
 
+## 4b. Design pass
+
+- [x] Gold-led palette. Green is free for `--ok` now that the brand is not green
+- [x] `figures.py`: five diagram kinds rendered to inline SVG at build time
+- [x] Hero is two columns, with the argument the lede makes drawn beside it
+- [x] Track list: progress ring per part, accent spine, compact rows
+- [x] Atlas hover cards: a capability strip, the full row, and what it costs
+      to rent, joined from the Modal catalogue
+- [x] Glossary hover cards, with the definition inlined at build time
+- [x] Touch targets at 390px: 44 / 40 / 38 / 36, and 24 for inline links
+- [ ] Prose pass over every note, for connection rather than correctness
+
 ## 5. The rest of the site
 
 - [x] Drills view: marks, explains every answer, persists best and attempts

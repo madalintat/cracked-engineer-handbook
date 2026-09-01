@@ -8,7 +8,11 @@
    "sources": [
     "NVIDIA CUDA C++ Programming Guide, compute capability tables (5.1, tables 28-33)",
     "NVIDIA architecture whitepapers (GA100, GA102, GV100, TU102, Ada, Hopper, Blackwell)",
-    "PTX ISA target notes for tcgen05 availability"
+    "PTX ISA target notes for tcgen05 availability",
+    {
+     "title": "NVIDIA architecture generations, tensor core generations and formats",
+     "url": "https://docs.nvidia.com/cuda/cuda-c-programming-guide/#compute-capabilities"
+    }
    ],
    "checked": "2026-09-01",
    "columns": [
@@ -45,7 +49,15 @@
      "arch": "Maxwell",
      "datacenter": "Tesla M10",
      "consumer": "GTX 750 Ti, Quadro K2200",
-     "year": "2014"
+     "year": "2014",
+     "detail": {
+      "summary": "The last generation with no matrix unit of any kind.",
+      "tensor": {
+       "gen": 0,
+       "formats": []
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_50</p><p class=\"acard-sum\">The last generation with no matrix unit of any kind.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_50 support: none, this generation has no tensor cores\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">int8</text></svg><figcaption>no tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>5.0</dd><dt>Architecture</dt><dd>Maxwell</dd><dt>Datacenter</dt><dd>Tesla M10</dd><dt>Consumer and workstation</dt><dd>GTX 750 Ti, Quadro K2200</dd><dt>Year</dt><dd>2014</dd><dt>To rent</dt><dd class=\"none\">Not offered by the GPU runner this handbook uses.</dd></dl></div>"
+     }
     },
     {
      "sm": "sm_52",
@@ -53,7 +65,15 @@
      "arch": "Maxwell",
      "datacenter": "Tesla M40, M60",
      "consumer": "GTX Titan X, 980 Ti, Quadro M6000",
-     "year": "2014"
+     "year": "2014",
+     "detail": {
+      "summary": "Maxwell at its widest, and still without a tensor core.",
+      "tensor": {
+       "gen": 0,
+       "formats": []
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_52</p><p class=\"acard-sum\">Maxwell at its widest, and still without a tensor core.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_52 support: none, this generation has no tensor cores\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">int8</text></svg><figcaption>no tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>5.2</dd><dt>Architecture</dt><dd>Maxwell</dd><dt>Datacenter</dt><dd>Tesla M40, M60</dd><dt>Consumer and workstation</dt><dd>GTX Titan X, 980 Ti, Quadro M6000</dd><dt>Year</dt><dd>2014</dd><dt>To rent</dt><dd class=\"none\">Not offered by the GPU runner this handbook uses.</dd></dl></div>"
+     }
     },
     {
      "sm": "sm_60",
@@ -61,7 +81,15 @@
      "arch": "Pascal",
      "datacenter": "Tesla P100, DGX-1",
      "consumer": "Quadro GP100",
-     "year": "2016"
+     "year": "2016",
+     "detail": {
+      "summary": "Pascal brought fast FP16 arithmetic and no matrix unit to run it on.",
+      "tensor": {
+       "gen": 0,
+       "formats": []
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_60</p><p class=\"acard-sum\">Pascal brought fast FP16 arithmetic and no matrix unit to run it on.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_60 support: none, this generation has no tensor cores\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">int8</text></svg><figcaption>no tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>6.0</dd><dt>Architecture</dt><dd>Pascal</dd><dt>Datacenter</dt><dd>Tesla P100, DGX-1</dd><dt>Consumer and workstation</dt><dd>Quadro GP100</dd><dt>Year</dt><dd>2016</dd><dt>To rent</dt><dd class=\"none\">Not offered by the GPU runner this handbook uses.</dd></dl></div>"
+     }
     },
     {
      "sm": "sm_61",
@@ -69,7 +97,16 @@
      "arch": "Pascal",
      "datacenter": "Tesla P40, P4",
      "consumer": "GTX 1080 Ti, Titan Xp, Quadro P6000",
-     "year": "2016"
+     "year": "2016",
+     "detail": {
+      "summary": "The consumer Pascal, with INT8 dot products in the scalar pipe.",
+      "tensor": {
+       "gen": 0,
+       "formats": [],
+       "note": "dp4a does INT8 dot products in the scalar pipe. That is not a matrix unit."
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_61</p><p class=\"acard-sum\">The consumer Pascal, with INT8 dot products in the scalar pipe.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_61 support: none, this generation has no tensor cores\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">int8</text></svg><figcaption>no tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>6.1</dd><dt>Architecture</dt><dd>Pascal</dd><dt>Datacenter</dt><dd>Tesla P40, P4</dd><dt>Consumer and workstation</dt><dd>GTX 1080 Ti, Titan Xp, Quadro P6000</dd><dt>Year</dt><dd>2016</dd><dt>To rent</dt><dd class=\"none\">Not offered by the GPU runner this handbook uses.</dd></dl><p class=\"acard-note\">dp4a does INT8 dot products in the scalar pipe. That is not a matrix unit.</p></div>"
+     }
     },
     {
      "sm": "sm_70",
@@ -77,7 +114,17 @@
      "arch": "Volta",
      "datacenter": "Tesla V100 16/32 GB",
      "consumer": "Titan V, Quadro GV100",
-     "year": "2017"
+     "year": "2017",
+     "detail": {
+      "summary": "The break: tensor cores, and a program counter for every thread.",
+      "tensor": {
+       "gen": 1,
+       "formats": [
+        "fp16"
+       ]
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_70</p><p class=\"acard-sum\">The break: tensor cores, and a program counter for every thread.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_70 support: fp16\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">int8</text></svg><figcaption>1st generation tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>7.0</dd><dt>Architecture</dt><dd>Volta</dd><dt>Datacenter</dt><dd>Tesla V100 16/32 GB</dd><dt>Consumer and workstation</dt><dd>Titan V, Quadro GV100</dd><dt>Year</dt><dd>2017</dd><dt>To rent</dt><dd class=\"none\">Not offered by the GPU runner this handbook uses.</dd></dl></div>"
+     }
     },
     {
      "sm": "sm_72",
@@ -85,7 +132,17 @@
      "arch": "Volta",
      "datacenter": "",
      "consumer": "Jetson AGX Xavier, DRIVE AGX Xavier",
-     "year": "2018"
+     "year": "2018",
+     "detail": {
+      "summary": "Volta for embedded parts, with the same first-generation unit.",
+      "tensor": {
+       "gen": 1,
+       "formats": [
+        "fp16"
+       ]
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_72</p><p class=\"acard-sum\">Volta for embedded parts, with the same first-generation unit.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_72 support: fp16\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">int8</text></svg><figcaption>1st generation tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>7.2</dd><dt>Architecture</dt><dd>Volta</dd><dt>Datacenter</dt><dd>&mdash;</dd><dt>Consumer and workstation</dt><dd>Jetson AGX Xavier, DRIVE AGX Xavier</dd><dt>Year</dt><dd>2018</dd><dt>To rent</dt><dd class=\"none\">Not offered by the GPU runner this handbook uses.</dd></dl></div>"
+     }
     },
     {
      "sm": "sm_75",
@@ -93,7 +150,19 @@
      "arch": "Turing",
      "datacenter": "Tesla T4",
      "consumer": "RTX 2080 Ti, Titan RTX, GTX 1660 (no tensor cores)",
-     "year": "2018"
+     "year": "2018",
+     "detail": {
+      "summary": "Tensor cores learn integers, and a public instruction to reach them.",
+      "tensor": {
+       "gen": 2,
+       "formats": [
+        "fp16",
+        "int8"
+       ],
+       "note": "TU116 and TU117 carry the sm_75 target and have no tensor cores at all."
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_75</p><p class=\"acard-sum\">Tensor cores learn integers, and a public instruction to reach them.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_75 support: fp16, int8\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">int8</text></svg><figcaption>2nd generation tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>7.5</dd><dt>Architecture</dt><dd>Turing</dd><dt>Datacenter</dt><dd>Tesla T4</dd><dt>Consumer and workstation</dt><dd>RTX 2080 Ti, Titan RTX, GTX 1660 (no tensor cores)</dd><dt>Year</dt><dd>2018</dd><dt>To rent</dt><dd>T4 at $0.59 an hour, 16 GB</dd></dl><p class=\"acard-note\">TU116 and TU117 carry the sm_75 target and have no tensor cores at all.</p></div>"
+     }
     },
     {
      "sm": "sm_80",
@@ -101,7 +170,20 @@
      "arch": "Ampere",
      "datacenter": "A100 40/80 GB, A30",
      "consumer": "",
-     "year": "2020"
+     "year": "2020",
+     "detail": {
+      "summary": "TF32 and BF16 arrive, and the memory pipeline learns to copy asynchronously.",
+      "tensor": {
+       "gen": 3,
+       "formats": [
+        "tf32",
+        "bf16",
+        "fp16",
+        "int8"
+       ]
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_80</p><p class=\"acard-sum\">TF32 and BF16 arrive, and the memory pipeline learns to copy asynchronously.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_80 support: bf16, fp16, int8, tf32\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">int8</text></svg><figcaption>3rd generation tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>8.0</dd><dt>Architecture</dt><dd>Ampere</dd><dt>Datacenter</dt><dd>A100 40/80 GB, A30</dd><dt>Consumer and workstation</dt><dd>&mdash;</dd><dt>Year</dt><dd>2020</dd><dt>To rent</dt><dd>A100-40GB at $2.10 an hour, 40 GB, A100-80GB at $2.50 an hour, 80 GB</dd></dl></div>"
+     }
     },
     {
      "sm": "sm_86",
@@ -109,7 +191,21 @@
      "arch": "Ampere",
      "datacenter": "A40, A10, A16, A2",
      "consumer": "RTX 3090 Ti, 3080, RTX A6000",
-     "year": "2020"
+     "year": "2020",
+     "detail": {
+      "summary": "The same formats as sm_80 on a very different die.",
+      "tensor": {
+       "gen": 3,
+       "formats": [
+        "tf32",
+        "bf16",
+        "fp16",
+        "int8"
+       ],
+       "note": "Same formats as sm_80 and a different FP64 ratio, so it is not a drop-in for it."
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_86</p><p class=\"acard-sum\">The same formats as sm_80 on a very different die.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_86 support: bf16, fp16, int8, tf32\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">int8</text></svg><figcaption>3rd generation tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>8.6</dd><dt>Architecture</dt><dd>Ampere</dd><dt>Datacenter</dt><dd>A40, A10, A16, A2</dd><dt>Consumer and workstation</dt><dd>RTX 3090 Ti, 3080, RTX A6000</dd><dt>Year</dt><dd>2020</dd><dt>To rent</dt><dd>A10 at $1.10 an hour, 24 GB</dd></dl><p class=\"acard-note\">Same formats as sm_80 and a different FP64 ratio, so it is not a drop-in for it.</p></div>"
+     }
     },
     {
      "sm": "sm_87",
@@ -117,7 +213,20 @@
      "arch": "Ampere",
      "datacenter": "",
      "consumer": "Jetson AGX Orin, Orin NX, DRIVE AGX Orin",
-     "year": "2022"
+     "year": "2022",
+     "detail": {
+      "summary": "Ampere for embedded and automotive parts.",
+      "tensor": {
+       "gen": 3,
+       "formats": [
+        "tf32",
+        "bf16",
+        "fp16",
+        "int8"
+       ]
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_87</p><p class=\"acard-sum\">Ampere for embedded and automotive parts.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_87 support: bf16, fp16, int8, tf32\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">int8</text></svg><figcaption>3rd generation tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>8.7</dd><dt>Architecture</dt><dd>Ampere</dd><dt>Datacenter</dt><dd>&mdash;</dd><dt>Consumer and workstation</dt><dd>Jetson AGX Orin, Orin NX, DRIVE AGX Orin</dd><dt>Year</dt><dd>2022</dd><dt>To rent</dt><dd class=\"none\">Not offered by the GPU runner this handbook uses.</dd></dl></div>"
+     }
     },
     {
      "sm": "sm_89",
@@ -125,7 +234,21 @@
      "arch": "Ada Lovelace",
      "datacenter": "L40S, L40, L20, L4",
      "consumer": "RTX 4090, 4080, RTX 6000 Ada",
-     "year": "2022"
+     "year": "2022",
+     "detail": {
+      "summary": "The first FP8 tensor cores, on a consumer-derived architecture.",
+      "tensor": {
+       "gen": 4,
+       "formats": [
+        "tf32",
+        "bf16",
+        "fp16",
+        "fp8",
+        "int8"
+       ]
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_89</p><p class=\"acard-sum\">The first FP8 tensor cores, on a consumer-derived architecture.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_89 support: bf16, fp16, fp8, int8, tf32\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">int8</text></svg><figcaption>4th generation tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>8.9</dd><dt>Architecture</dt><dd>Ada Lovelace</dd><dt>Datacenter</dt><dd>L40S, L40, L20, L4</dd><dt>Consumer and workstation</dt><dd>RTX 4090, 4080, RTX 6000 Ada</dd><dt>Year</dt><dd>2022</dd><dt>To rent</dt><dd>L4 at $0.80 an hour, 24 GB, L40S at $1.95 an hour, 48 GB</dd></dl></div>"
+     }
     },
     {
      "sm": "sm_90a",
@@ -133,7 +256,22 @@
      "arch": "Hopper",
      "datacenter": "H100 SXM/PCIe/NVL, H200, GH200",
      "consumer": "",
-     "year": "2022"
+     "year": "2022",
+     "detail": {
+      "summary": "Threads stop doing the copying, and the tensor core takes shared memory directly.",
+      "tensor": {
+       "gen": 4,
+       "formats": [
+        "tf32",
+        "bf16",
+        "fp16",
+        "fp8",
+        "int8"
+       ],
+       "note": "Warpgroup scope, shared-memory operands and real FP64. The same generation number as Ada and a different unit."
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_90a</p><p class=\"acard-sum\">Threads stop doing the copying, and the tensor core takes shared memory directly.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_90a support: bf16, fp16, fp8, int8, tf32\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-off\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\" font-weight=\"400\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">int8</text></svg><figcaption>4th generation tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>9.0</dd><dt>Architecture</dt><dd>Hopper</dd><dt>Datacenter</dt><dd>H100 SXM/PCIe/NVL, H200, GH200</dd><dt>Consumer and workstation</dt><dd>&mdash;</dd><dt>Year</dt><dd>2022</dd><dt>To rent</dt><dd>H100 at $3.95 an hour, 80 GB, H200 at $4.54 an hour, 141 GB</dd></dl><p class=\"acard-note\">Warpgroup scope, shared-memory operands and real FP64. The same generation number as Ada and a different unit.</p></div>"
+     }
     },
     {
      "sm": "sm_100a",
@@ -141,7 +279,23 @@
      "arch": "Blackwell, datacenter",
      "datacenter": "B200, B100, GB200",
      "consumer": "",
-     "year": "2024"
+     "year": "2024",
+     "detail": {
+      "summary": "FP4 in hardware, with the scaling factors handled by the tensor core itself.",
+      "tensor": {
+       "gen": 5,
+       "formats": [
+        "tf32",
+        "bf16",
+        "fp16",
+        "fp8",
+        "fp4",
+        "int8"
+       ],
+       "note": "Second-generation Transformer Engine, with per-block FP4 scaling in hardware."
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_100a</p><p class=\"acard-sum\">FP4 in hardware, with the scaling factors handled by the tensor core itself.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_100a support: bf16, fp16, fp4, fp8, int8, tf32\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">int8</text></svg><figcaption>5th generation tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>10.0</dd><dt>Architecture</dt><dd>Blackwell, datacenter</dd><dt>Datacenter</dt><dd>B200, B100, GB200</dd><dt>Consumer and workstation</dt><dd>&mdash;</dd><dt>Year</dt><dd>2024</dd><dt>To rent</dt><dd>B200 at $6.25 an hour, 180 GB</dd></dl><p class=\"acard-note\">Second-generation Transformer Engine, with per-block FP4 scaling in hardware.</p></div>"
+     }
     },
     {
      "sm": "sm_103a",
@@ -149,7 +303,22 @@
      "arch": "Blackwell Ultra",
      "datacenter": "B300, GB300 NVL72",
      "consumer": "GB300 DGX Station",
-     "year": "2025"
+     "year": "2025",
+     "detail": {
+      "summary": "Blackwell Ultra, with roughly half the softmax cost of the part before it.",
+      "tensor": {
+       "gen": 5,
+       "formats": [
+        "tf32",
+        "bf16",
+        "fp16",
+        "fp8",
+        "fp4",
+        "int8"
+       ]
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_103a</p><p class=\"acard-sum\">Blackwell Ultra, with roughly half the softmax cost of the part before it.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_103a support: bf16, fp16, fp4, fp8, int8, tf32\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">int8</text></svg><figcaption>5th generation tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>10.3</dd><dt>Architecture</dt><dd>Blackwell Ultra</dd><dt>Datacenter</dt><dd>B300, GB300 NVL72</dd><dt>Consumer and workstation</dt><dd>GB300 DGX Station</dd><dt>Year</dt><dd>2025</dd><dt>To rent</dt><dd>B300 at $7.10 an hour, 288 GB</dd></dl></div>"
+     }
     },
     {
      "sm": "sm_110",
@@ -157,7 +326,22 @@
      "arch": "Blackwell, Thor",
      "datacenter": "",
      "consumer": "Jetson T5000, T4000",
-     "year": "2025"
+     "year": "2025",
+     "detail": {
+      "summary": "Blackwell for robotics, where the power budget is a vehicle rather than a rack.",
+      "tensor": {
+       "gen": 5,
+       "formats": [
+        "tf32",
+        "bf16",
+        "fp16",
+        "fp8",
+        "fp4",
+        "int8"
+       ]
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_110</p><p class=\"acard-sum\">Blackwell for robotics, where the power budget is a vehicle rather than a rack.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_110 support: bf16, fp16, fp4, fp8, int8, tf32\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">int8</text></svg><figcaption>5th generation tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>11.0</dd><dt>Architecture</dt><dd>Blackwell, Thor</dd><dt>Datacenter</dt><dd>&mdash;</dd><dt>Consumer and workstation</dt><dd>Jetson T5000, T4000</dd><dt>Year</dt><dd>2025</dd><dt>To rent</dt><dd class=\"none\">Not offered by the GPU runner this handbook uses.</dd></dl></div>"
+     }
     },
     {
      "sm": "sm_120",
@@ -165,7 +349,23 @@
      "arch": "Blackwell, consumer",
      "datacenter": "RTX PRO 6000 Server Edition",
      "consumer": "RTX 5090, 5080, 5070, RTX PRO Blackwell",
-     "year": "2025"
+     "year": "2025",
+     "detail": {
+      "summary": "Consumer Blackwell: FP4 arithmetic without the datacenter instruction set.",
+      "tensor": {
+       "gen": 5,
+       "formats": [
+        "tf32",
+        "bf16",
+        "fp16",
+        "fp8",
+        "fp4",
+        "int8"
+       ],
+       "note": "FP4 tensor cores without tcgen05, so Hopper-era and Blackwell-datacenter kernels do not carry over."
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_120</p><p class=\"acard-sum\">Consumer Blackwell: FP4 arithmetic without the datacenter instruction set.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_120 support: bf16, fp16, fp4, fp8, int8, tf32\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">int8</text></svg><figcaption>5th generation tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>12.0</dd><dt>Architecture</dt><dd>Blackwell, consumer</dd><dt>Datacenter</dt><dd>RTX PRO 6000 Server Edition</dd><dt>Consumer and workstation</dt><dd>RTX 5090, 5080, 5070, RTX PRO Blackwell</dd><dt>Year</dt><dd>2025</dd><dt>To rent</dt><dd>RTX-PRO-6000 at $3.03 an hour, 96 GB</dd></dl><p class=\"acard-note\">FP4 tensor cores without tcgen05, so Hopper-era and Blackwell-datacenter kernels do not carry over.</p></div>"
+     }
     },
     {
      "sm": "sm_121",
@@ -173,7 +373,22 @@
      "arch": "Blackwell, GB10",
      "datacenter": "",
      "consumer": "DGX Spark",
-     "year": "2025"
+     "year": "2025",
+     "detail": {
+      "summary": "Blackwell in a desktop machine, aimed at running a model rather than training one.",
+      "tensor": {
+       "gen": 5,
+       "formats": [
+        "tf32",
+        "bf16",
+        "fp16",
+        "fp8",
+        "fp4",
+        "int8"
+       ]
+      },
+      "html": "<div class=\"acard\"><p class=\"eyebrow\">sm_121</p><p class=\"acard-sum\">Blackwell in a desktop machine, aimed at running a model rather than training one.</p><figure class=\"fig\" data-kind=\"strip\"><svg viewBox=\"-7.0 -7.0 326 56\" class=\"fig-svg fig-strip\" role=\"img\" aria-label=\"Numeric formats the tensor cores of sm_121 support: bf16, fp16, fp4, fp8, int8, tf32\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"2.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"26.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">tf32</text><rect x=\"54.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"78.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">bf16</text><rect x=\"106.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"130.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp16</text><rect x=\"158.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"182.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp8</text><rect x=\"210.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"234.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">fp4</text><rect x=\"262.0\" y=\"0\" width=\"48.0\" height=\"26\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"286.0\" y=\"17.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"700\">int8</text></svg><figcaption>5th generation tensor cores</figcaption></figure><dl class=\"acard-dl\"><dt>CC</dt><dd>12.1</dd><dt>Architecture</dt><dd>Blackwell, GB10</dd><dt>Datacenter</dt><dd>&mdash;</dd><dt>Consumer and workstation</dt><dd>DGX Spark</dd><dt>Year</dt><dd>2025</dd><dt>To rent</dt><dd class=\"none\">Not offered by the GPU runner this handbook uses.</dd></dl></div>"
+     }
     }
    ],
    "unverified": [
