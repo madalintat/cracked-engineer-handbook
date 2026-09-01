@@ -17,7 +17,8 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 ## 1. Reference study
 
 - [x] Rust Handbook: design system, app architecture, workbench, content pipeline
-- [ ] Python, Voice and Medical handbooks: what the family converged on
+- [x] Python handbook: structured verdicts, the `silent` case, solution leak
+- [~] Voice and Medical handbooks: family conventions (agent running)
 - [ ] Fold the findings into the design doc
 
 ## 2. The unit view
@@ -40,7 +41,8 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [ ] `godbolt` — Compiler Explorer client, nonce in `userArguments`
 - [ ] `yosys` — `yowasp-yosys` in a Worker
 - [ ] `modal` — submit and poll against the learner's own endpoint
-- [ ] Diagnostics: normalise, ordered rule match, prose beside the real error
+- [x] Judged expectations: `verdict` / `match` / `silent`, per-backend vocabulary
+- [ ] Diagnostics UI: prose beside the real error, ordered first-match
 - [ ] Pass state, hint counting, editor buffer persisted per exercise
 - [ ] Vim mode
 

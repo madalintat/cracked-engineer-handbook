@@ -32,9 +32,9 @@ def ex_file(body, n=build.N_EXERCISES):
 ## Filler {i}
 A brief that says something real about the exercise at hand.
 @concept placeholder
-@expect /error: something/
+@expect match /error: something/
 @hint Look at the line the compiler points at.
-@diagnose d /error: something/
+@diagnose d match /error: something/
 The compiler could not find the name you used.
 ```starter
 int main(){}
@@ -52,11 +52,11 @@ GOOD = """A real brief explaining what the reader has to do here.
 @concept Moving out of a value leaves nothing behind.
 @backend godbolt
 @flags -O2 -Wall
-@expect /error: use of moved value/
+@expect match /error: use of moved value/
 @hint The compiler is telling you where the value went.
-@diagnose moved /error: use of moved value/
+@diagnose moved match /error: use of moved value/
 You gave the value away on the line above, so this line has nothing to read.
-@diagnose borrow /error: cannot borrow/
+@diagnose borrow match /error: cannot borrow/
 Two names wanted write access to the same value at the same time.
 @after Now the value is copied instead of moved.
 ```starter
@@ -81,7 +81,7 @@ def t_parses_a_good_exercise():
     assert e["kind"] == "compile-error"
     assert e["backend"] == "godbolt"
     assert e["flags"] == "-O2 -Wall"
-    assert e["expect"] == ["/error: use of moved value/"]
+    assert e["expect"] == [{"judge": "match", "key": "/error: use of moved value/"}]
     assert len(e["hints"]) == 1
     assert [d["id"] for d in e["diagnose"]] == ["moved", "borrow"]
     assert "gave the value away" in e["diagnose"][0]["prose"]
@@ -136,10 +136,58 @@ def t_wrong_exercise_count_is_an_error():
     expect_problem(ex_file(GOOD, n=3), "3 exercises, expected 8")
 
 
-def t_expect_must_be_a_regex():
-    expect_problem(ex_file(GOOD.replace("/error: use of moved value/",
-                                        "error: use of moved value")),
-                   "@expect must be a /regex/")
+def t_match_must_be_a_regex():
+    expect_problem(ex_file(GOOD.replace("@expect match /error: use of moved value/",
+                                        "@expect match error: use of moved value")),
+                   "match takes a /regex/")
+
+
+def t_judge_must_be_named():
+    expect_problem(ex_file(GOOD.replace("@expect match /error: use of moved value/",
+                                        "@expect /error: use of moved value/")),
+                   "judge must be one of")
+
+
+def t_unknown_verdict_is_an_error():
+    """A verdict must exist in its backend's vocabulary."""
+    expect_problem(ex_file(GOOD
+        .replace("@expect match /error: use of moved value/", "@expect verdict banana")
+        .replace("@diagnose moved match /error: use of moved value/",
+                 "@diagnose moved verdict banana")),
+        "is not a godbolt verdict")
+
+
+def t_verdict_from_the_wrong_backend_is_an_error():
+    """`cycle` is a sim verdict; it means nothing on godbolt."""
+    expect_problem(ex_file(GOOD
+        .replace("@expect match /error: use of moved value/", "@expect verdict cycle")
+        .replace("@diagnose moved match /error: use of moved value/",
+                 "@diagnose moved verdict cycle")),
+        "is not a godbolt verdict")
+
+
+def t_silent_is_a_verdict():
+    body = (GOOD.replace("@expect match /error: use of moved value/", "@expect silent")
+                .replace("@diagnose moved match /error: use of moved value/",
+                         "@diagnose moved silent"))
+    ex = build.parse_exercises(ex_file(body), "t", "godbolt")
+    assert ex[0]["expect"] == [{"judge": "silent", "key": ""}], ex[0]["expect"]
+
+
+def t_expect_without_a_diagnose_is_an_error():
+    """Every way the starter can fail needs prose, or the reader gets an error
+    the handbook has nothing to say about."""
+    body = GOOD.replace("@diagnose moved match /error: use of moved value/\n"
+                        "You gave the value away on the line above, so this line has nothing to read.\n", "")
+    expect_problem(ex_file(body), "has no matching @diagnose")
+
+
+def t_solution_never_reaches_the_browser():
+    import json, shutil, pathlib as _p
+    manifest, units = build.build(strict=False)
+    for f in (build.DATA / "ex").glob("*.json"):
+        blob = f.read_text()
+        assert '"solution"' not in blob, f"{f.name} ships the solution"
 
 
 def t_broken_regex_is_caught_at_build_time():
@@ -149,9 +197,9 @@ def t_broken_regex_is_caught_at_build_time():
 
 def t_diagnose_without_prose_is_an_error():
     body = GOOD.replace(
-        "@diagnose borrow /error: cannot borrow/\n"
+        "@diagnose borrow match /error: cannot borrow/\n"
         "Two names wanted write access to the same value at the same time.\n",
-        "@diagnose borrow /error: cannot borrow/\n")
+        "@diagnose borrow match /error: cannot borrow/\n")
     expect_problem(ex_file(body), "has no explanation")
 
 

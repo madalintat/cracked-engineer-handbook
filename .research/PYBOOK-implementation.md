@@ -434,14 +434,14 @@ rather than showing three coloured rows and silence:
 if (!parts.length && (run?.exc || ruff.length || mypy.length)) {
   parts.push(`<div class="reading"><h4>Not one of this exercise's errors</h4>
     <p>The judges are objecting to something the exercise does not have a written
-    reading for — usually a typo, or a change further from the starter than the
+    reading for, usually a typo or a change further from the starter than the
     exercise expects. Read their messages above; they are the real ones, not a
     simplification. <b>reset</b> restores the starter if you want to begin again.</p></div>`);
 }
 ```
 
-(Note: this string contains an em dash, which the project's own prose standard
-forbids. It is one of two in the codebase — see §6.)
+Note the comma where an em dash would sit. That is deliberate and it holds across
+the whole repository; see §6.
 
 ### The derived errors index
 
@@ -979,3 +979,436 @@ and no amount of unit testing substitutes for. But Python threw away
 
 For the new handbook: take Python's `release.sh` and `--validate` design, and
 keep Rust's `test_views.mjs` stubbed-DOM approach. They are not alternatives.
+
+---
+
+## 6. Content conventions
+
+### The trio
+
+Every unit is exactly three files, enforced:
+
+```
+content/units/<slug>.md    the note        1,400-2,600 prose words, >= 3 `## ` sections
+content/ex/<slug>.md       exactly 8 exercises
+content/drills/<slug>.md   exactly 15 drills
+```
+
+Actual measurements across the ten written units: 1,402 to 1,603 words, 8 to 12
+sections. The authors sit at the bottom of the allowed band, which suggests the
+1,400 floor is the real target and 2,600 is slack.
+
+### How a unit note is structured
+
+The rule from `docs/AUTHORING.md`:
+
+> Open with the reader's existing wrong model, not with a definition. The unit
+> is worth writing only if there is something they currently believe that is
+> false.
+
+Unit 02's opening does exactly that, and links back rather than restating:
+
+> Unit 01 established that a name refers to an object and that binding never
+> copies. This unit is about the consequence, which is where the bugs actually
+> are: when two names share an object, changing it through one of them changes
+> it for both, and Python offers you at least four different operations that
+> look like copying and are not.
+
+Section titles are claims, not topics. Unit 02's are: "Which types can change at
+all", "The list that changed under you", "Four things that look like copies",
+"The multiplication trap", "`+=` is two different operators", "Immutable does not
+mean deeply immutable", "The default argument, properly", "Mutating what you are
+iterating over", "Mutable state that outlives the call", "Copying, decided",
+"What to carry forward".
+
+Two structural habits worth copying:
+
+- **Every note ends with "What to carry forward"**, a single paragraph the next
+  unit is allowed to lean on. It makes the dependency chain explicit and it means
+  a reader can re-read one paragraph instead of one unit.
+- **Forward references are specific**: "Unit 04 makes that precise", "Unit 30
+  takes packaging apart properly", "Unit 12 shows the one-line version". Never
+  "we will see later".
+
+The strongest single paragraph in the notes, because it names the general rule
+after four specific instances rather than before:
+
+> The question that catches all of them is the same: **how many times does this
+> line run, and how many things can see the result?** If the answer to the first
+> is "once" and to the second is "more than one", you have shared mutable state,
+> and the only remaining question is whether anybody is going to mutate it.
+
+And it immediately refuses the moralising conclusion:
+
+> Shared mutable state is not automatically wrong, a cache is exactly that,
+> deliberately. What makes it a bug is sharing you did not intend and cannot see
+> at the call site.
+
+### How exercises are worded
+
+The prompt describes what to look at, not what to type, and it names the number
+of judges that will object:
+
+> `relabel` takes a row that is a tuple and replaces its first field. Two judges
+> object, and one of them does so without running anything. Note precisely what
+> the tuple was guaranteeing and what it was not.
+
+> `drop_negatives` removes every negative score from a dictionary. A list would
+> let you do this and quietly give a wrong answer; a dictionary refuses. Read
+> which exception it chooses and decide which behaviour you would rather have.
+
+That second one is the whole pedagogy in two sentences: it does not ask for a
+fix, it asks for a judgement about a design decision CPython made.
+
+Hidden test assertions carry messages written for the reader, not for a CI log:
+
+```python
+assert grid[1][0] == 0, f"writing to row 0 changed row 1: {grid}"
+assert grid[0] is not grid[1], "two rows are the same object"
+assert original == [1, 2], f"the caller's list was extended: {original}"
+assert scores == {"a": 1, "c": 2}, "it was supposed to be in place"
+```
+
+Starters are short. The longest in unit 02 is seven lines, and AUTHORING states
+the rule: "Keep starters short. The longest one in unit 01 is nine lines."
+
+### How hints are pitched
+
+> A hint is a sentence that makes the reader see the error. It is never the
+> corrected code.
+
+Two hints per exercise, ordered from observation to mechanism:
+
+```
+@hint `[x] * 3` does not evaluate `x` three times. It evaluates it once and repeats the reference.
+@hint A comprehension evaluates its expression on every iteration. That is the difference you need.
+```
+
+```
+@hint `+=` asks the object whether it can extend itself in place. A list says yes.
+@hint For a tuple the same line would be harmless. Ask why the type changes the meaning.
+```
+
+The second hint in each pair is a question or a redirection, never the answer.
+And the hint count is tracked as a progress metric ("needed a hint"), which is
+honest: it treats hint use as data rather than as failure.
+
+### How diagnose prose is written
+
+This is the highest-value prose in the book and it has a consistent four-move
+shape: **what happened, why the language does that, what the general rule is,
+what to do instead.**
+
+> Nothing raised. `[[0] * width] * height` built one row and then made a list
+> holding that same row `height` times, so every row in the grid is the same
+> object and writing to one writes to all of them. The inner `[0] * width` is
+> fine, because integers are immutable and cannot be changed through any of the
+> references. Use a comprehension, which runs its expression once per iteration
+> and so produces genuinely separate rows.
+
+> It ran and returned the right value, and it damaged the caller on the way.
+> `items += extra` calls the list's `__iadd__`, which extends the existing list
+> in place and returns it, so this is `items.extend(extra)` wearing different
+> clothes, and every name bound to that list sees the new elements. A tuple has
+> no `__iadd__`, so the identical line there would fall back to
+> `items = items + extra`, build a new object and rebind. Same syntax, opposite
+> effect, decided entirely by the type.
+
+The `RuntimeError` reading goes further and defends the language's choice:
+
+> A dictionary keeps a version counter and its iterator checks it on every step,
+> so changing the size mid-loop raises `RuntimeError: dictionary changed size
+> during iteration` rather than skipping entries. That is a deliberate kindness:
+> a list in the same situation walks an index forward through a shrinking
+> sequence and silently skips elements, which is far harder to notice.
+
+Note the openings. `silent` readings always start by stating the absence:
+"Nothing raised.", "Runs clean, and...", "No error, because...", "It runs, and
+both names now refer to one list". That is a small convention doing real work,
+because the learner's first question is "did anything even happen?"
+
+### How drills are written
+
+Fifteen, exactly one correct, at least three options, mandatory `> ` explanation.
+The AUTHORING rule: "The explanation is shown whether the reader was right or
+wrong, so write it as teaching rather than as a verdict."
+
+```
+## `grid = [[0] * 3] * 3`. How many list objects exist?
+- ( ) Four: one outer and three rows
+- (x) Two: one outer and one row referenced three times
+- ( ) Nine
+- ( ) Three
+> `[x] * n` repeats a reference. The outer list holds the same row three times,
+> so writing to one row writes to all of them.
+```
+
+The distractors are the point. "Four: one outer and three rows" is what the
+reader believes. "Nine" is someone counting cells. Neither is random.
+
+Drills come in **paired** form where the language's behaviour depends on a type,
+which is the cheapest way to teach a distinction:
+
+```
+## `a = [1]; b = a; a += [2]`. What is `b`?     -> (x) `[1, 2]`
+## `a = (1,); b = a; a += (2,)`. What is `b`?   -> (x) `(1,)`
+```
+
+One distractor is dated rather than merely wrong, which teaches that "it changed
+in a version" is a real answer shape: "It can, but only in Python 3.12 and later".
+
+### Prose quality against the no-AI-tells standard
+
+The project states its own rules:
+
+> - Second person. The reader is doing something, not being lectured.
+> - Name the thing, then say what it costs. Never introduce a feature without the
+>   case where it is the wrong answer.
+> - No exclamation marks, no "simply", no "just", no "obviously". If it were
+>   obvious the unit would not exist.
+> - Prefer the specific to the general: `257 is 257` beats "identity comparisons
+>   can be surprising".
+> - British spelling, Oxford commas off.
+
+Measured against them:
+
+| tell | result |
+|---|---|
+| **em dashes** | **Zero.** Not one in `content/`, `assets/*.js`, `assets/*.css` or `index.html`. Where an em dash would sit, there is a comma or a colon: "reading for, usually a typo or a change further from the starter". This is the cleanest result of the audit and it is clearly a deliberate, enforced habit. |
+| **exclamation marks** | **Zero** in prose. The 22 `!` characters in content are all `!=`, `!r` or `!s`. |
+| **rule-of-three padding** | Largely absent. Where three items appear they are exhaustive, not rhetorical: "`list`, `dict`, `set`, `bytearray`" is four because there are four; "`int`, `float`, `str`, `bytes`, `tuple`, `frozenset`, `bool`, `None`" is eight. The one place a triple appears it is a real enumeration with a stated source: "`__len__` must give a non-negative integer, `__bool__` must give a bool, `__hash__` must give an integer." |
+| **promotional language** | Absent. No "powerful", "seamless", "robust", "leverage", "crucial", "vital", "delve". The closest thing to a superlative is "This is the single most common shape of bug in Python code that handles collections", which is a claim, not a boast, and it is immediately cashed out with a tell to look for. |
+| **plain copulas** | Held. "A slice is an object." "`+=` is two different operators." "Python has no variables." No "serves as", "represents", "stands as", "plays a role in". |
+| **superficial `-ing` analysis** | Absent. No "highlighting the importance of", "underscoring", "showcasing". |
+| **vague attribution** | Absent. Every claim names a mechanism: not "it is generally understood that dicts preserve order" but "the insertion order that became a language guarantee in 3.7". |
+| **"simply" / "just"** | **The one rule the project breaks.** About 18 uses across `content/`. Most are idiomatic ("it just answers a different question than you meant", "a loop over it simply does not run") rather than the dismissive AI register ("simply do X"), so they read as natural prose. But the standard is the project's own, and `build.py` does not check it. A three-line regex in `parse_unit` would close it. |
+
+Net judgement: **this is the best prose in either repository and it clears the
+no-AI-tells bar comfortably.** The em-dash discipline in particular is total, and
+across roughly 15,000 words of content plus every UI string that does not happen
+by accident. The one gap is that the project's own "no simply/just" rule is
+documented but not enforced, and unenforced rules drift; §3 shows the same repo
+learning that lesson twice about the vocabulary gate.
+
+---
+
+## 7. A concrete list for the new handbook
+
+Context: 122 units across 19 parts, and **four execution backends behind one
+interface** rather than one. That last constraint changes which of these ideas
+are optional and which are load-bearing.
+
+### Copy verbatim
+
+1. **`data/judges.json`, generalised to `data/backends.json`.** Declare all four
+   backends once in `build.py` — id, version, CDN or endpoint, flags, rule
+   selection — and have the browser `fetch()` it rather than restating it. With
+   one backend this is tidy; with four it is the only thing that stops the
+   offline validator and the browser disagreeing about what "clean" means. Copy
+   the comment too, because it explains the constraint to the next author:
+
+   > The one description of the judges. build.py runs them from here and the
+   > browser fetches this as data/judges.json, so what `--validate` calls clean
+   > and what a reader is told is clean cannot drift apart.
+
+2. **`cached()`, exactly as written.** Memoise the success, drop the failure. One
+   flaky CDN fetch must not kill a backend for the session. Four backends means
+   four times the chance of hitting this.
+
+3. **The `settle()` concurrency pattern.** Launch every backend at once, attach
+   handlers immediately, consume in display order. With four backends "awaiting
+   them in series turned a max into a sum" becomes four times worse.
+
+4. **Per-backend failure isolation.** Each `await` in its own `try`; a dead
+   backend renders `unavailable (reason)` and the others still produce a verdict.
+   Non-negotiable at four backends: the probability that all four are up is the
+   product, not the minimum.
+
+5. **`globalThis.__phVerdict`.** The browser's structured verdict, exported for a
+   QA harness to compare against the offline `--validate` result. With four
+   backends, cross-checking browser against validator is the only way to know the
+   two agree.
+
+6. **`release.sh`, including the stale-`data/` git check.** The whole file. It is
+   68 lines and it is the best artifact in either repo.
+
+   ```bash
+   git diff --quiet -- data/ && echo "   data/ matches content/" || {
+     echo "   data/ is out of date; commit the rebuilt JSON with your content change"; fail=1; }
+   ```
+
+7. **The five `--validate` rules**, especially rules 3 and 4:
+
+   > 3. the starter **fails its own hidden tests**, otherwise the exercise is
+   >    already solved and nobody would notice;
+   > 4. a `silent` starter fails with `AssertionError` specifically, not by
+   >    crashing;
+
+   Rule 3 is what stops content rotting silently over 122 units. Nothing else in
+   either project comes close in value per line.
+
+8. **The bidirectional diagnose invariant.** Every `@expect` has prose, *and*
+   every code a backend actually emits has prose. Rust only checks the first
+   direction and it is the weaker book for it.
+
+9. **The renderer-capability check.** Refuse markdown the browser renderer cannot
+   draw, with a named reason per pattern. Extend the `unsupported` dict with
+   whatever the hardware book's renderer will not support.
+
+10. **`.btn:hover { filter: brightness(1.06); }`** and the file-header rule it
+    serves: "Every colour in this file lives in the two `:root` blocks below and
+    nowhere else." That single line is the fix for the Rust `#ff7a35` bug and it
+    is accent-proof and theme-proof by construction.
+
+11. **The CSS structural decisions**, all of which are correct and all of which
+    carry their reason in a comment: `overflow-x: clip` not `hidden`; nine fluid
+    `clamp()` sizes with no `font-size` inside a media query; `16px` editor font
+    for iOS; `@media (pointer: coarse)` for touch targets; global
+    `prefers-reduced-motion`; media queries last in the file.
+
+12. **`execCommand("insertText")` for every scripted editor edit**, to keep the
+    native undo stack. And `reset()` closing over the *starter*, not the mounted
+    value.
+
+13. **The tokenizer round-trip test.** Six words of assertion that catch any
+    dropped or duplicated character for any input:
+
+    ```js
+    const back = hl(src).replace(/<[^>]+>/g, "").replace(/&amp;/g, "&")...;
+    assert.equal(back, src, "tokenizer lost or duplicated characters");
+    ```
+
+14. **The prose conventions**, all of them, plus the em-dash discipline that is
+    practised but not written down. Add it to the rules list explicitly.
+
+15. **The diagnose four-move shape**: what happened, why the system does that,
+    what the general rule is, what to do instead. And the convention that a
+    "ran clean and is still wrong" reading opens by stating the absence.
+
+### Adapt
+
+1. **The key space.** Python's lesson is: *find a stable structured key, never
+   normalise message text.* For four hardware backends the equivalents are
+   probably signal numbers, exit codes, an emulator's fault or trap name, an
+   assembler's or synthesiser's own diagnostic id, a simulator's assertion label.
+   Enumerate them per backend before writing a single exercise. If any backend
+   genuinely has nothing but prose, that backend gets a normalisation function
+   living next to `build.py`'s validator so both sides normalise identically —
+   and it must be tested, because it is the one place the two sides can silently
+   diverge.
+
+2. **`@expect judge:code` becomes `@expect backend:code`.** Keep the closed set
+   (`if judge not in VERDICTS: die(...)`), keep multiple-per-exercise, and keep
+   the rule that **the backend travels with the declaration** rather than being
+   inferred from the key's shape. Four backends multiply the collision risk that
+   bit `B006`.
+
+3. **The `silent` verdict.** Python's fourth state is "every judge is happy and
+   the code is still wrong". Hardware's equivalent is richer and worth naming
+   deliberately: it ran, it produced output, and the output is wrong; or it ran
+   and was too slow; or it ran on the simulator and would not on real silicon.
+   Decide the verdict vocabulary before writing content, because `VERDICTS`,
+   `JUDGE_GROUP`, the `#/errors` grouping and the reading headings all key off it.
+
+4. **The vocabulary gate.** This is the most transferable idea for a 122-unit
+   book, and it needs the most adaptation. Python detects features by walking a
+   Python AST. Hardware has no single AST. Options, in order of laziness: a
+   keyword/instruction/register table per backend; a regex table with the same
+   `_check_feature_tables()` consistency proof; or a real parser only if a
+   backend already ships one. **Whatever the detector, copy
+   `_check_feature_tables()` unchanged in spirit** — a gate that gates nothing is
+   worse than no gate, and at 122 units nobody will notice by hand.
+
+5. **The `INTRODUCES` table.** 39 entries is already at the edge of readable; 122
+   will not fit in a dict literal in `build.py`. Move it into the unit's own front
+   matter (`introduces: [x, y, z]`) and have `build.py` collect it. Keep the
+   "introduced by more than one unit" check.
+
+6. **`_ph_import`.** The idea generalises: give the hidden tests a hook that
+   re-runs the learner's artifact under a different condition (a different clock
+   rate, a different endianness, a cold cache, a reset line asserted). Python's
+   version is four lines because it needed one alternative condition; hardware
+   probably needs a small named set.
+
+7. **The loading-cost story.** Python's is its weakest area: roughly 20 MB across
+   Pyodide, ruff-wasm and mypy, with no budget check and no warning to the
+   learner. Four hardware backends will be worse. Adapt by **adding what Python
+   lacks**: a declared size per backend in `backends.json`, a build-time assertion
+   that the total is under budget, and a visible "this downloads N MB the first
+   time" before the first run. Do not copy the silence.
+
+8. **The diagnostic cache.** Take Rust's `cache_key`/`carry`/`cache_split`, not
+   Python's absence of one. Python can afford to re-validate everything because
+   ruff and mypy are fast; four hardware backends over 122 units × 8 exercises ×
+   3 snippets will not be.
+
+9. **`@diagnose` as a multi-line sink.** Take Rust's version (prose until the next
+   directive, fenced code allowed) with Python's mandatory-prose check. Hardware
+   readings will want a register dump, a timing diagram or a memory map, and
+   Python's single-line form cannot hold one.
+
+10. **Testing.** Python's `release.sh` + `--validate` **plus** Rust's
+    `test_views.mjs` stubbed-DOM smoke test. Not either. The paste bug in §4
+    shipped precisely into the gap where `test_views.mjs` used to be.
+
+### Avoid
+
+1. **Do not ship solutions to the browser.** Python fixed this on its last commit;
+   Rust still has not. Filter the key at build time:
+
+   ```python
+   shipped = [{k: v for k, v in e.items() if k != "solution"} for e in ex]
+   ```
+
+2. **Do not let an unknown `@directive` pass.** Rust swallows it silently; Python
+   leaks it into the prompt. Neither is right. Match `^@(\w+)` and `die()` on any
+   name not in the known set. Four backends means more directives and more chances
+   to typo one.
+
+3. **Do not write output before validating.** Parse and validate everything, then
+   write. Rust's word-count-after-write leaves `data/` half-updated on a failed
+   build.
+
+4. **Do not infer metadata from the shape of a value.** Carry it explicitly. `B006`
+   looked like an exception name; with four backends something will look like
+   something else.
+
+5. **Do not duplicate a renderer, an escaper or a tokenizer.** Python's one-line
+   comment is the whole argument: "One definition: a second copy drifts." Use ES
+   modules and import by name; the Rust IIFE-global exists only to work around
+   plain `<script>` redeclaration and no build step is needed either way.
+
+6. **Do not paste blocks into the middle of functions.** The bug in §4 is trivially
+   caught by any of: a linter, a formatter, `test_views.mjs`, or a second look.
+   The repo has none of those on `app.js`. Add one.
+
+7. **Do not document a prose rule you do not enforce.** "No simply, no just" is in
+   `AUTHORING.md` and violated 18 times. Either check it in `build.py` or drop it
+   from the document. The vocabulary gate is the same lesson at a larger scale and
+   the repo learned it the hard way.
+
+8. **Do not let `INTRODUCES`-style tables grow unchecked in `build.py`.** At 39
+   units the manifest constants (`TRACK`, `PROJECTS`, `INTRODUCES`) are already
+   ~130 lines of the 948. At 122 units across 19 parts they would be most of the
+   file. Move per-unit metadata into front matter and keep `build.py` as the
+   pipeline, not the database.
+
+### Flagged as undetermined
+
+- **No measured size or timing figures exist anywhere in the repository** for the
+  Pyodide/ruff/mypy downloads. My figures in §1 come from knowledge of those
+  artifacts, not from this project. If the new handbook needs a budget, measure
+  it rather than trusting either number.
+- **Projects are entirely unwritten.** `PROJECTS` lists 15 with tiers, domains,
+  stage counts and minutes, `parse_project()` exists, and `content/projects/` does
+  not. So the project pipeline is **declared but never exercised**, and
+  `viewProject()` renders only a "not written yet" stub. Whatever the Rust repo
+  does for projects is the only working reference.
+- **`test_vim.mjs` is a near-verbatim port** (38 diff lines, mostly comment
+  syntax and the storage key) plus five new tests for sticky `$`. I did not audit
+  `vim.js` itself beyond confirming that difference; if the new handbook wants
+  vim mode, treat `vim.js` as a third-party file to copy rather than as a design
+  reference.
+- **`assets/app.css` has uncommitted local modifications** (`git status` shows
+  ` M assets/app.css`). Everything in §4 and §6 describes the working-tree state,
+  which is what I read. Committed HEAD may differ slightly.

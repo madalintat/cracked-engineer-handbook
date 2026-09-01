@@ -17,11 +17,27 @@ Design notes worth knowing before you edit this:
   implementation this is modelled on raises after writing, which leaves stale
   JSON on disk after a failed build.
 
-* There are no stable error codes here. Rust has E0382 forever; gcc, clang and
-  nvcc give you prose. So `@expect` is a regex over a normalised message and
-  `@diagnose` is an ordered list, first match wins. That makes --validate
-  load-bearing rather than a nicety: if a compiler changes its wording, a
-  starter silently stops teaching what its explanation claims.
+* Verdicts are structured keys first and regexes only as a fallback. Rust has
+  E0382 forever; gcc, clang and nvcc give you prose. But every backend still
+  exposes SOME stable structured key, and matching on those beats matching on
+  wording that a compiler release can change underneath you:
+
+      sim      verdicts the checker itself emits, so they are exact
+      godbolt  exit codes, signals, warning flags, sanitizer report kinds
+      yosys    inference warnings, SAT results, cell counts
+      modal    exit codes, CUDA error names, compute-sanitizer report kinds
+
+  So `@expect` always names its judge: `verdict`, `match`, or `silent`. The
+  judge travels with the declaration and is never inferred from the key's
+  shape, because a key can look like more than one kind of thing.
+
+* `silent` is a first-class verdict: every judge happy and the answer still
+  wrong. An exercise whose starter is meant to compile cleanly and produce the
+  wrong number declares `@expect silent`, and --validate checks that its
+  starter really does fail on the tests rather than on the toolchain.
+
+* The solution never reaches the browser. The reference implementation ships it
+  in the JSON and simply does not render it, which is not the same thing.
 
 * An unknown @directive is an error. Not a warning, not silence.
 """
@@ -48,6 +64,35 @@ N_DRILLS = 15
 DIRECTIVES = {
     "kind", "concept", "expect", "hint", "diagnose", "after",
     "backend", "gpu", "flags",
+}
+
+JUDGES = ("verdict", "match", "silent")
+
+# The stable structured keys each backend can emit. Matching on these beats
+# matching on wording a toolchain release can change. Anything not listed here
+# has to go through `match` with a regex, and --validate then carries the weight
+# of noticing when the wording drifts.
+VERDICTS = {
+    "sim": {
+        "table-mismatch",     # output disagreed with the specification
+        "non-nand-part",      # referenced a gate that is not built from nand
+        "cycle",              # combinational loop, illegal without a clock
+        "floating-input",     # a gate input was never connected
+        "gate-budget",        # over the allowed gate count
+        "ok",
+    },
+    "godbolt": {
+        "compile-error", "link-error", "timeout", "signal", "nonzero-exit",
+        "warning", "sanitizer", "assert-failed", "ok",
+    },
+    "yosys": {
+        "syntax-error", "latch-inferred", "multi-driver", "sat-fail",
+        "cell-budget", "ok",
+    },
+    "modal": {
+        "compile-error", "launch-error", "cuda-error", "sanitizer",
+        "assert-failed", "timeout", "no-endpoint", "ok",
+    },
 }
 
 
@@ -202,6 +247,21 @@ def word_count(html_text):
 
 # ------------------------------------------------------------------ exercises
 
+def _parse_expect(arg):
+    """`verdict <key>` | `match /regex/` | `silent`.
+
+    The judge is always written out. Inferring it from the key's shape is how
+    the Python handbook broke on a lint code that looked like an exception
+    name, and the same trap exists here: `warning` is a godbolt verdict and
+    also a plausible regex.
+    """
+    arg = (arg or "").strip()
+    if arg == "silent":
+        return {"judge": "silent", "key": ""}
+    judge, _, key = arg.partition(" ")
+    return {"judge": judge.strip(), "key": key.strip()}
+
+
 def parse_exercises(text, where, default_backend):
     """One file, N exercises, separated by a level-2 heading.
 
@@ -271,14 +331,14 @@ def parse_exercises(text, where, default_backend):
                     ex[name] = arg
                     sink[0] = "brief"
                 elif name == "expect":
-                    ex["expect"].append(arg)
+                    ex["expect"].append(_parse_expect(arg))
                     sink[0] = "brief"
                 elif name == "hint":
                     ex["hints"].append(arg)
                     sink[0] = "brief"
                 elif name == "diagnose":
                     did, _, pat = arg.partition(" ")
-                    dbuf = {"id": did, "match": pat.strip(), "prose": []}
+                    dbuf = {"id": did, **_parse_expect(pat.strip()), "prose": []}
                     ex["diagnose"].append(dbuf)
                     sink[0] = "diagnose"
                 elif name == "after":
@@ -324,16 +384,10 @@ def _check_exercise_shape(ex, w):
         p.append(f"{w}: no hints")
     if not ex["concept"]:
         p.append(f"{w}: no @concept")
-    if ex["kind"] == "compile-error" and not ex["expect"]:
-        p.append(f"{w}: kind is compile-error but no @expect regex")
-    for pat in ex["expect"]:
-        if not (pat.startswith("/") and pat.endswith("/") and len(pat) > 2):
-            p.append(f"{w}: @expect must be a /regex/, got {pat!r}")
-        else:
-            try:
-                re.compile(pat[1:-1])
-            except re.error as e:
-                p.append(f"{w}: @expect regex does not compile: {e}")
+    if not ex["expect"]:
+        p.append(f"{w}: no @expect; say how the starter is meant to fail")
+    for e in ex["expect"]:
+        p += _check_judged(e, ex["backend"], f"{w} @expect")
     seen = set()
     for d in ex["diagnose"]:
         if not d["id"]:
@@ -341,17 +395,17 @@ def _check_exercise_shape(ex, w):
         if d["id"] in seen:
             p.append(f"{w}: duplicate @diagnose id {d['id']!r}")
         seen.add(d["id"])
-        if not d["match"]:
-            p.append(f"{w}: @diagnose {d['id']!r} has no /regex/")
-        elif not (d["match"].startswith("/") and d["match"].endswith("/")):
-            p.append(f"{w}: @diagnose {d['id']!r} match must be a /regex/")
-        else:
-            try:
-                re.compile(d["match"][1:-1])
-            except re.error as e:
-                p.append(f"{w}: @diagnose {d['id']!r} regex does not compile: {e}")
+        p += _check_judged(d, ex["backend"], f"{w} @diagnose {d['id']!r}")
         if not d["prose"].strip():
             p.append(f"{w}: @diagnose {d['id']!r} has no explanation")
+
+    # Every expectation must have prose to show for it, or the reader hits a
+    # failure the handbook has nothing to say about.
+    covered = {(d["judge"], d["key"]) for d in ex["diagnose"]}
+    for e in ex["expect"]:
+        if (e["judge"], e["key"]) not in covered:
+            p.append(f"{w}: @expect {e['judge']} {e['key']!r} has no matching "
+                     f"@diagnose, so the reader gets the error with no explanation")
     p += prose.lint(re.sub(r"<[^>]+>", " ", ex["brief"]), f"{w} brief")
     for h in ex["hints"]:
         p += prose.lint(h, f"{w} hint")
@@ -359,6 +413,34 @@ def _check_exercise_shape(ex, w):
 
 
 # --------------------------------------------------------------------- drills
+
+def _check_judged(e, backend, w):
+    """One @expect or @diagnose, checked against its backend's vocabulary."""
+    p = []
+    judge, key = e.get("judge", ""), e.get("key", "")
+    if judge not in JUDGES:
+        p.append(f"{w}: judge must be one of {', '.join(JUDGES)}, got {judge!r}")
+        return p
+    if judge == "silent":
+        if key:
+            p.append(f"{w}: silent takes no key, got {key!r}")
+        return p
+    if judge == "verdict":
+        known = VERDICTS.get(backend, set())
+        if key not in known:
+            p.append(f"{w}: {key!r} is not a {backend} verdict. "
+                     f"Known: {', '.join(sorted(known))}")
+        return p
+    # judge == "match"
+    if not (key.startswith("/") and key.endswith("/") and len(key) > 2):
+        p.append(f"{w}: match takes a /regex/, got {key!r}")
+    else:
+        try:
+            re.compile(key[1:-1])
+        except re.error as err:
+            p.append(f"{w}: regex does not compile: {err}")
+    return p
+
 
 def parse_drills(text, where):
     problems, drills = [], []
@@ -469,8 +551,15 @@ def build(strict=True):
               {k: u[k] for k in ("slug", "num", "title", "blurb", "part",
                                  "partRoman", "partTitle", "accent", "backend",
                                  "meta", "html", "headings", "words")})
+        # The solution never leaves the build. The reference implementation
+        # ships it and declines to render it, which is not the same thing.
+        # `tests` must ship: a static site has to run the check in the browser,
+        # so write tests worth not cheating on rather than pretending they are
+        # hidden.
+        public = [{k: v for k, v in e.items() if k != "solution"}
+                  for e in u["exercises"]]
         write(DATA / "ex" / f"{slug}.json",
-              {"slug": slug, "backend": u["backend"], "exercises": u["exercises"]})
+              {"slug": slug, "backend": u["backend"], "exercises": public})
         write(DATA / "drills" / f"{slug}.json",
               {"slug": slug, "drills": u["drills"]})
 
