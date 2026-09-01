@@ -1,0 +1,128 @@
+{
+  "id": "float-formats",
+  "order": 30,
+  "title": "Floating point formats",
+  "blurb": "Every format a modern accelerator will multiply for you, and what each one gives up.",
+  "note": "Exponent bits buy range and mantissa bits buy precision, and every format here is a different answer to which of the two you can afford to lose. Energy per multiply falls roughly with the square of the mantissa width, which is why the list keeps getting shorter.",
+  "checked": "2026-09-01",
+  "sources": [
+    {
+      "title": "IEEE 754-2019",
+      "url": "https://standards.ieee.org/ieee/754/6210/"
+    },
+    {
+      "title": "FP8 Formats for Deep Learning, arXiv 2209.05433",
+      "url": "https://arxiv.org/abs/2209.05433"
+    },
+    {
+      "title": "OCP Microscaling Formats specification",
+      "url": "https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf"
+    }
+  ],
+  "columns": [
+    {
+      "key": "name",
+      "label": "Format",
+      "mono": true
+    },
+    {
+      "key": "bits",
+      "label": "Bits"
+    },
+    {
+      "key": "exp",
+      "label": "Exponent"
+    },
+    {
+      "key": "man",
+      "label": "Mantissa"
+    },
+    {
+      "key": "max",
+      "label": "Largest finite",
+      "mono": true
+    },
+    {
+      "key": "use",
+      "label": "What it is for"
+    }
+  ],
+  "rows": [
+    {
+      "name": "fp64",
+      "bits": "64",
+      "exp": "11",
+      "man": "52",
+      "max": "1.8e308",
+      "use": "Scientific work where the answer must survive the arithmetic"
+    },
+    {
+      "name": "fp32",
+      "bits": "32",
+      "exp": "8",
+      "man": "23",
+      "max": "3.4e38",
+      "use": "The default everywhere until accelerators changed the economics"
+    },
+    {
+      "name": "tf32",
+      "bits": "19 in 32",
+      "exp": "8",
+      "man": "10",
+      "max": "3.4e38",
+      "use": "fp32's range with fp16's precision, on tensor cores",
+      "detail": {
+        "summary": "Not a storage format. It is what a tensor core does to fp32 inputs."
+      }
+    },
+    {
+      "name": "bf16",
+      "bits": "16",
+      "exp": "8",
+      "man": "7",
+      "max": "3.4e38",
+      "use": "Training, because keeping fp32's range matters more than precision",
+      "detail": {
+        "summary": "Chops fp32's mantissa and keeps its exponent, so conversion is a truncation."
+      }
+    },
+    {
+      "name": "fp16",
+      "bits": "16",
+      "exp": "5",
+      "man": "10",
+      "max": "65504",
+      "use": "Inference and older training, with loss scaling to avoid underflow"
+    },
+    {
+      "name": "fp8 E4M3",
+      "bits": "8",
+      "exp": "4",
+      "man": "3",
+      "max": "448",
+      "use": "Weights and activations",
+      "detail": {
+        "summary": "No infinities, which is how it reaches 448 rather than 240."
+      }
+    },
+    {
+      "name": "fp8 E5M2",
+      "bits": "8",
+      "exp": "5",
+      "man": "2",
+      "max": "57344",
+      "use": "Gradients, where range matters more than precision"
+    },
+    {
+      "name": "fp4 E2M1",
+      "bits": "4",
+      "exp": "2",
+      "man": "1",
+      "max": "6",
+      "use": "Blackwell tensor cores, with a shared scale per block",
+      "detail": {
+        "summary": "Sixteen values in total, and 3.6 binades of range. It only works with block scaling."
+      }
+    }
+  ]
+}

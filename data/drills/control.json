@@ -1,0 +1,185 @@
+{
+ "slug": "control",
+ "drills": [
+  {
+   "n": 1,
+   "q": "How many clock cycles does one instruction take on the machine in this unit?",
+   "options": [
+    "Several, because fetching and executing cannot both settle in one edge",
+    "One, that is what a clock edge is for",
+    "One per gate on the longest path",
+    "It depends on the opcode alone"
+   ],
+   "correct": 0,
+   "why": "<p>An edge means everything has settled. A value cannot be read out of memory and then used in the same settling, so the fetch is its own step and the work that follows is another.</p>"
+  },
+  {
+   "n": 2,
+   "q": "Which steps are identical in every instruction?",
+   "options": [
+    "The first two, which are always the fetch",
+    "None, every opcode is its own sequence",
+    "The last two, which are always the writeback",
+    "All of them except the one the opcode names"
+   ],
+   "correct": 0,
+   "why": "<p>Put the counter's value on the address lines and read that location into the instruction register. Every instruction pays for it, which is what the caches in Part V are trying to hide.</p>"
+  },
+  {
+   "n": 3,
+   "q": "What is the stepper made of?",
+   "options": [
+    "The same storage bits as a register, arranged to walk a single 1",
+    "A dedicated sequencer cell that has no equivalent elsewhere",
+    "A read-only memory addressed by the opcode",
+    "A shift register clocked at a multiple of the system clock"
+   ],
+   "correct": 0,
+   "why": "<p>Scott is worth quoting on this: nothing new is added to the machine. The bits are the same bits, and the arrangement is what makes them a series of steps rather than a value.</p>"
+  },
+  {
+   "n": 4,
+   "q": "In the stepper you built, where does step 0 come from?",
+   "options": [
+    "It is high when no other step is",
+    "It is stored in its own flip-flop like the others",
+    "It is the inverse of the last step",
+    "It is driven by the reset line"
+   ],
+   "correct": 0,
+   "why": "<p>That is what makes the ring self-starting. Every flop comes up holding 0, so if step 0 were stored it would come up low as well, and nothing would ever be high enough to start the walk.</p>"
+  },
+  {
+   "n": 5,
+   "q": "What is Eater's control unit physically made of?",
+   "options": [
+    "Two read-only memories holding the control words",
+    "A tree of gates decoding the opcode",
+    "A programmable logic array",
+    "A small processor running microcode"
+   ],
+   "correct": 0,
+   "why": "<p>The address lines are the flags, the opcode, the step and a byte select. The data lines are the sixteen control bits. No gates decode instructions: you look up the control word.</p>"
+  },
+  {
+   "n": 6,
+   "q": "If the decoder is a memory, what is the instruction set?",
+   "options": [
+    "The contents of that memory, which can be rewritten",
+    "A property of the wiring, fixed once the board is soldered",
+    "A convention the assembler enforces and the hardware ignores",
+    "The set of opcodes the stepper has enough steps for"
+   ],
+   "correct": 0,
+   "why": "<p>Adding an instruction is writing new rows into the table. Reflashing it with a different table makes it a different computer with the same wires, which is the argument for microcoded control in one demonstration.</p>"
+  },
+  {
+   "n": 7,
+   "q": "Why does the word firmware exist?",
+   "options": [
+    "Something can be data and still behave like wiring",
+    "Software stored in a place the user cannot reach counts as hardware",
+    "It names the layer between the driver and the kernel",
+    "Early machines shipped their software in the same box as the hardware"
+   ],
+   "correct": 0,
+   "why": "<p>A table of control words is exactly that: contents rather than copper, but read by the machine at the rate copper is read and changed about as often.</p>"
+  },
+  {
+   "n": 8,
+   "q": "In a control word, how many of the bits that put something on the bus may be set at once?",
+   "options": [
+    "Exactly one",
+    "Any number, the bus takes the or of them",
+    "Any number, the last one to settle wins",
+    "At most two, and only if they agree"
+   ],
+   "correct": 0,
+   "why": "<p>Two outputs driving one wire to different voltages is a short circuit through the output transistors of both. This is the constraint the tri-state buffer exists to enforce.</p>"
+  },
+  {
+   "n": 9,
+   "q": "How many of the bits that capture from the bus may be set at once?",
+   "options": [
+    "Any number, because reading a wire costs the wire nothing",
+    "Exactly one, for the same reason as the drivers",
+    "One per clock domain",
+    "None during a fetch"
+   ],
+   "correct": 0,
+   "why": "<p>Loading the same value into two registers in one step is legal and occasionally useful. The asymmetry with the driver bits is electrical, not logical.</p>"
+  },
+  {
+   "n": 10,
+   "q": "What happens when a control table sets two driver bits in the same step?",
+   "options": [
+    "The bus reads as something and that reading is a fight",
+    "The simulation halts with a bus contention error",
+    "The higher-priority driver wins deterministically",
+    "The bus floats and reads as neither value"
+   ],
+   "correct": 0,
+   "why": "<p>Nothing obviously fails, which is what makes it hard. The check has to live in whatever writes the table, because on the wire the fault is heat.</p>"
+  },
+  {
+   "n": 11,
+   "q": "How is a conditional branch built in this machine?",
+   "options": [
+    "The flags address the control memory, so the table has four copies and a few cells differ",
+    "A comparator drives a dedicated branch unit",
+    "The stepper skips ahead by a number of steps the flags select",
+    "The counter is loaded and then rolled back if the condition fails"
+   ],
+   "correct": 0,
+   "why": "<p>Not a comparator and not a branch unit. Two more address lines, four copies of the same table, and the load-the-counter bit set in the copies where the branch should be taken.</p>"
+  },
+  {
+   "n": 12,
+   "q": "Why is a machine without a data-dependent branch not a computer?",
+   "options": [
+    "It can only run a fixed sequence, so it cannot loop for as long as the data says",
+    "It cannot address memory beyond the instruction stream",
+    "It has no way to return from a subroutine",
+    "It cannot be programmed, only configured"
+   ],
+   "correct": 0,
+   "why": "<p>Loading, adding and printing in a fixed order is a calculator. The moment the next instruction can depend on a value, the machine is general.</p>"
+  },
+  {
+   "n": 13,
+   "q": "When are the flags captured?",
+   "options": [
+    "Only during the step where the arithmetic happens",
+    "On every clock edge, so they always show the adder",
+    "At the end of each instruction",
+    "Whenever the control word asks the adder for a result"
+   ],
+   "correct": 0,
+   "why": "<p>By the time a conditional jump executes, the arithmetic that produced its flags is several steps in the past and the adder's inputs have changed. If the flags were not stored they would be gone.</p>"
+  },
+  {
+   "n": 14,
+   "q": "What goes wrong without a way to clear the flags?",
+   "options": [
+    "A carry left over from an earlier instruction feeds the next addition",
+    "The flags saturate and stop responding to the adder",
+    "A branch taken once is taken every time afterwards",
+    "The stepper cannot return to step 0"
+   ],
+   "correct": 0,
+   "why": "<p>Scott's one-line summary of the bug is the best one: you might add two and two and get five. Nothing reports a fault, because nothing has failed.</p>"
+  },
+  {
+   "n": 15,
+   "q": "Do NAND gates know what they are doing?",
+   "options": [
+    "No, and a million of them together know no more than one",
+    "Individually no, but the decoder is where knowing begins",
+    "Yes, in the sense that they implement a decision",
+    "The question is not answerable from inside the machine"
+   ],
+   "correct": 0,
+   "why": "<p>A computer remembers, decides and understands in exactly the sense that a river decides which way to go around a rock. There is nothing wrong with the vocabulary as long as you know what is under it.</p>"
+  }
+ ]
+}

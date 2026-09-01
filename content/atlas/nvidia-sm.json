@@ -1,5 +1,6 @@
 {
   "id": "nvidia-sm",
+  "order": 40,
   "title": "NVIDIA compute capabilities",
   "blurb": "Every sm_XX target, the architecture behind it, and the cards that report it. This is the table that decides whether your kernel runs.",
   "note": "Architecture names are a marketing artefact and sm_XX is the thing that is real. Ada Lovelace and Hopper share a tensor core generation number and have completely different programming models: Ada added no new programming model at all, and has the same per-SM resources as sm_86. The suffix matters too. An `a` means architecture-specific: that capability and nothing else, ever, so sm_90a code does not run on Blackwell. And 10.x and 12.x are different majors with no cubin crossing between them, which is why a $3.03/hr sm_120 card cannot run the FP4 material a $6.25/hr sm_100a card can.",

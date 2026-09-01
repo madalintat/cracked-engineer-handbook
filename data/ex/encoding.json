@@ -1,0 +1,1340 @@
+{
+ "slug": "encoding",
+ "backend": "sim",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Cutting the fields out",
+   "brief": "<p>Build <code>Fields</code>, which splits a four-bit instruction into a two-bit opcode and a two-bit register number. The outputs are, in order, the two opcode bits and the two register bits.</p>",
+   "kind": "property",
+   "concept": "A field is a wire. Extracting one costs nothing, which is the whole reason a layout is chosen the way it is.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "No gates are needed. The bits are already in the right order."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>The instruction bits go straight through: <code>i3</code> and <code>i2</code> are the opcode and <code>i1</code> and <code>i0</code> are the register. A design that inverts or combines them is doing work that a correct layout means nobody has to do.</p>"
+    }
+   ],
+   "after": "<p>Zero gates. Every field in every fixed-layout instruction set costs exactly this, which is why keeping a field in the same place across instructions is worth designing around.</p>",
+   "starter": "chip Fields(i3, i2, i1, i0) -> op1, op0, r1, r0 {\n  op1 = nand(i3, i3)\n  op0 = i2\n  r1 = i1\n  r0 = i0\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Fields",
+    "inputs": [
+     "i3",
+     "i2",
+     "i1",
+     "i0"
+    ],
+    "outputs": [
+     "op1",
+     "op0",
+     "r1",
+     "r0"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      0,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      1,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 2
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 2,
+   "title": "One bit chooses a half",
+   "brief": "<p>Build <code>SplitKind</code>. When <code>kind</code> is 1 the instruction is arithmetic, so <code>arith</code> follows <code>a</code> and <code>other</code> is 0. When <code>kind</code> is 0 it is the other family, so <code>other</code> follows <code>a</code> and <code>arith</code> is 0.</p>",
+   "kind": "property",
+   "concept": "One bit separating two families means neither half needs to examine the other's fields, which is most of what makes decoding cheap.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Each output is the shared signal gated by the kind bit in one polarity."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Both outputs cannot be high at once, whatever <code>a</code> is, because the instruction is one kind or the other. If a row has both high, the gating is missing on one of them.</p>"
+    }
+   ],
+   "after": "<p>Nothing else needs examining to know which half of the machine is involved. That is the trick, and it costs two gates.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Dec2(s1, s0) -> o0, o1, o2, o3 {\n  n1 = Not(s1)\n  n0 = Not(s0)\n  o0 = And(n1, n0)\n  o1 = And(n1, s0)\n  o2 = And(s1, n0)\n  o3 = And(s1, s0)\n}\nchip SplitKind(kind, a, b) -> arith, other {\n  arith = And(kind, a)\n  other = And(kind, a)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "SplitKind",
+    "inputs": [
+     "kind",
+     "a",
+     "b"
+    ],
+    "outputs": [
+     "arith",
+     "other"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      0
+     ]
+    ],
+    "maxGates": 8
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 3,
+   "title": "The decoder in the other half",
+   "brief": "<p>Build <code>OpDecode</code>, which raises exactly one of four lines from a two-bit opcode, but only when <code>kind</code> is 0. When <code>kind</code> is 1 every line is low.</p>",
+   "kind": "property",
+   "concept": "The decoder is an ordinary one from unit 006 with its outputs gated by the family bit. There is no lookup and no interpretation.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "A decoder, and then one gate per line."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>When <code>kind</code> is 1 all four outputs are 0, because this half of the machine is not the one being asked. A design that leaves the decoder ungated raises a line for an arithmetic instruction, which then does two things at once.</p>"
+    }
+   ],
+   "after": "<p>Three bits into a small decoder is the entire non-arithmetic decode in Scott's machine. Not a lookup table, not an interpreter.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Dec2(s1, s0) -> o0, o1, o2, o3 {\n  n1 = Not(s1)\n  n0 = Not(s0)\n  o0 = And(n1, n0)\n  o1 = And(n1, s0)\n  o2 = And(s1, n0)\n  o3 = And(s1, s0)\n}\nchip OpDecode(kind, o1, o0) -> d0, d1, d2, d3 {\n  d0, d1, d2, d3 = Dec2(o1, o0)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "OpDecode",
+    "inputs": [
+     "kind",
+     "o1",
+     "o0"
+    ],
+    "outputs": [
+     "d0",
+     "d1",
+     "d2",
+     "d3"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0
+     ]
+    ],
+    "maxGates": 30
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 4,
+   "title": "The destination field becomes write enables",
+   "brief": "<p>Build <code>WriteEnable</code>, which turns the two-bit destination field into four write lines, all low unless <code>w</code> is high.</p>",
+   "kind": "property",
+   "concept": "The destination field goes straight onto a decoder's select inputs, and the write flag gates the result. That is the whole write path.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "You built this in unit 010. The field is the address."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>With <code>w</code> low nothing is written, so all four are 0 whatever the destination says. Naming a register is not the same as writing to it.</p>"
+    }
+   ],
+   "after": "<p>The field is not a name for a register. It is the number that lights that register's line, which is the same statement as unit 006 arriving in an instruction set.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Dec2(s1, s0) -> o0, o1, o2, o3 {\n  n1 = Not(s1)\n  n0 = Not(s0)\n  o0 = And(n1, n0)\n  o1 = And(n1, s0)\n  o2 = And(s1, n0)\n  o3 = And(s1, s0)\n}\nchip WriteEnable(d1, d0, w) -> w0, w1, w2, w3 {\n  w0, w1, w2, w3 = Dec2(d1, d0)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "WriteEnable",
+    "inputs": [
+     "d1",
+     "d0",
+     "w"
+    ],
+    "outputs": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1
+     ]
+    ],
+    "maxGates": 30
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 5,
+   "title": "The operation field is the control word",
+   "brief": "<p>Build <code>Control</code>, which turns a two-bit operation field and an immediate flag into three control wires: <code>sub</code> is the low operation bit, <code>wide</code> is high when the high operation bit is set, and <code>useimm</code> passes the immediate flag through.</p>",
+   "kind": "property",
+   "concept": "The instruction does not name an operation from a list. It sets switches, and the field in the instruction is the control word.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Two of these are wires and one is a comparison against 1, which for a single bit is also a wire."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Every output here is one of the inputs. If a design needs gates it is deciding something the encoding already decided, which is the cost that a circuit-matched encoding exists to avoid.</p>"
+    }
+   ],
+   "after": "<p>Unit 007's adder had one control bit that gave both add and subtract. This is that bit arriving from an instruction, and there is nothing between the two.</p>",
+   "starter": "chip Control(op1, op0, imm) -> sub, wide, useimm {\n  sub = op1\n  wide = op0\n  useimm = imm\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Control",
+    "inputs": [
+     "op1",
+     "op0",
+     "imm"
+    ],
+    "outputs": [
+     "sub",
+     "wide",
+     "useimm"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 2
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 6,
+   "title": "A field in two places costs gates",
+   "brief": "<p>Build <code>MovedField</code>, where the destination register number lives in bits 3 and 2 for one instruction kind and in bits 1 and 0 for the other. Output the two destination bits.</p>",
+   "kind": "property",
+   "concept": "A layout that moves a field needs a multiplexer to find it, and that cost repeats for every field and every instruction.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Two multiplexers, selected by the kind bit."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Read the kind bit on the failing row. One kind reads the high pair and the other reads the low pair, and a design that always reads one of them passes exactly half the table.</p>"
+    }
+   ],
+   "after": "<p>Four gates that a consistent layout would not have needed, for one field. Multiply by every field in every instruction and that is why fixed layouts exist.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Dec2(s1, s0) -> o0, o1, o2, o3 {\n  n1 = Not(s1)\n  n0 = Not(s0)\n  o0 = And(n1, n0)\n  o1 = And(n1, s0)\n  o2 = And(s1, n0)\n  o3 = And(s1, s0)\n}\nchip MovedField(kind, i3, i2, i1, i0) -> d1, d0 {\n  d1 = i3\n  d0 = i2\n}",
+   "tests": "",
+   "spec": {
+    "chip": "MovedField",
+    "inputs": [
+     "kind",
+     "i3",
+     "i2",
+     "i1",
+     "i0"
+    ],
+    "outputs": [
+     "d1",
+     "d0"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      1,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 12
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 7,
+   "title": "Is this instruction a jump",
+   "brief": "<p>Build <code>IsJump</code>, which is high when the instruction is in the non-arithmetic family and its opcode is 3.</p>",
+   "kind": "property",
+   "concept": "Recognising one instruction is an AND of the bits that identify it, and nothing looks anything up.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "The family bit low, and both opcode bits high."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Exactly one row of eight wants a 1. If two rows are high, one of the three conditions is missing from the AND.</p>"
+    }
+   ],
+   "after": "<p>Every instruction in the machine is recognised by a gate of this shape. The control unit is a collection of them, which is why the next unit calls it the least clever component in the design.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Dec2(s1, s0) -> o0, o1, o2, o3 {\n  n1 = Not(s1)\n  n0 = Not(s0)\n  o0 = And(n1, n0)\n  o1 = And(n1, s0)\n  o2 = And(s1, n0)\n  o3 = And(s1, s0)\n}\nchip IsJump(kind, o1, o0) -> out {\n  out = And(o1, o0)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "IsJump",
+    "inputs": [
+     "kind",
+     "o1",
+     "o0"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      0
+     ]
+    ],
+    "maxGates": 10
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 8,
+   "title": "The same bits mean different things",
+   "brief": "<p>Build <code>TwoReaders</code>, which takes one four-bit pattern and produces both what a register decoder would make of its low two bits and what an arithmetic unit would make of its high two bits, at the same time.</p>",
+   "kind": "property",
+   "concept": "Nothing in a pattern says what it is. Two parts of the machine read the same bits differently because they are wired differently.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Two independent readings of the same input, with no interaction between them."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>The two halves do not affect each other. If changing the high bits moves a register line, the two readings are sharing a wire they should not.</p>"
+    }
+   ],
+   "after": "<p>The same byte is a letter to a printer, a jump to an instruction register and a number to an adder. Nothing in the byte says which, and each part was built with a code in mind that is no longer anywhere in the machine.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Dec2(s1, s0) -> o0, o1, o2, o3 {\n  n1 = Not(s1)\n  n0 = Not(s0)\n  o0 = And(n1, n0)\n  o1 = And(n1, s0)\n  o2 = And(s1, n0)\n  o3 = And(s1, s0)\n}\nchip TwoReaders(i3, i2, i1, i0) -> r0, r1, r2, r3, sub, wide {\n  r0, r1, r2, r3 = Dec2(i3, i2)\n  sub = i1\n  wide = i0\n}",
+   "tests": "",
+   "spec": {
+    "chip": "TwoReaders",
+    "inputs": [
+     "i3",
+     "i2",
+     "i1",
+     "i0"
+    ],
+    "outputs": [
+     "r0",
+     "r1",
+     "r2",
+     "r3",
+     "sub",
+     "wide"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 20
+   },
+   "lang": "netlist"
+  }
+ ]
+}

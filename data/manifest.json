@@ -1,5 +1,4 @@
 {
- "hero": "<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 336 516\" class=\"fig-svg\" style=\"max-width:487px\" role=\"img\" aria-label=\"A chain of five consequences: leakage current forces a frequency wall, the wall forces multiple cores, multiple cores force GPUs, and GPUs force four-bit arithmetic.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><line x1=\"154\" y1=\"68\" x2=\"154\" y2=\"103\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"154\" y1=\"172\" x2=\"154\" y2=\"207\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"154\" y1=\"275\" x2=\"154\" y2=\"310\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"154\" y1=\"378\" x2=\"154\" y2=\"414\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><rect x=\"0.0\" y=\"0.0\" width=\"308.0\" height=\"68.2\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--gold-ink, var(--accent));stroke:var(--gold-ink, var(--accent))\"/><text x=\"154.0\" y=\"33.1\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">Leakage</text><text x=\"154.0\" y=\"49.1\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">a switch costs energy to flip</text><rect x=\"0.0\" y=\"103.4\" width=\"308.0\" height=\"68.2\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--copper-ink, var(--accent));stroke:var(--copper-ink, var(--accent))\"/><text x=\"154.0\" y=\"136.5\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">The wall</text><text x=\"154.0\" y=\"152.5\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">voltage stopped falling in 2005</text><rect x=\"0.0\" y=\"206.8\" width=\"308.0\" height=\"68.2\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--clay-ink, var(--accent));stroke:var(--clay-ink, var(--accent))\"/><text x=\"154.0\" y=\"239.9\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">More cores</text><text x=\"154.0\" y=\"255.9\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">the only remaining direction</text><rect x=\"0.0\" y=\"310.2\" width=\"308.0\" height=\"68.2\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"154.0\" y=\"343.3\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">The GPU</text><text x=\"154.0\" y=\"359.3\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">many slow cores beat a few fast ones</text><rect x=\"0.0\" y=\"413.6\" width=\"308.0\" height=\"68.2\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"154.0\" y=\"446.7\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">Four-bit arithmetic</text><text x=\"154.0\" y=\"462.7\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">because moving bytes is the cost</text></svg><figcaption>Each of these forced the next. The track follows the same order.</figcaption></figure>",
  "phases": [
   {
    "id": "build",
@@ -529,7 +528,9 @@
     "feedback",
     "clock-bus"
    ],
-   "neededBy": []
+   "neededBy": [
+    "encoding"
+   ]
   },
   {
    "slug": "encoding",
@@ -542,12 +543,16 @@
    "phase": "build",
    "accent": "gold",
    "backend": "sim",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1400,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "memory"
+   ],
+   "neededBy": [
+    "control"
+   ]
   },
   {
    "slug": "control",
@@ -560,11 +565,13 @@
    "phase": "build",
    "accent": "gold",
    "backend": "sim",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
+   "ready": true,
+   "words": 1477,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "encoding"
+   ],
    "neededBy": []
   },
   {
@@ -2576,15 +2583,15 @@
   "modal"
  ],
  "counts": {
-  "atlas": 1,
+  "atlas": 4,
   "glossary": 28,
   "errors": 30,
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 14,
-  "words": 21826,
-  "exercises": 112,
-  "drills": 210
+  "ready": 16,
+  "words": 24703,
+  "exercises": 128,
+  "drills": 240
  }
 }

@@ -1,0 +1,137 @@
+{
+  "id": "x86-registers",
+  "order": 10,
+  "title": "The sixteen registers",
+  "blurb": "Every general-purpose register on x86-64, what the calling convention does with it, and who has to restore it.",
+  "note": "The names are inherited from the 8086 and almost none of them still means what it says. What is real is the column about who saves it, because that is a contract nothing in the processor enforces.",
+  "checked": "2026-09-01",
+  "sources": [
+    {
+      "title": "System V Application Binary Interface, AMD64 Processor Supplement",
+      "url": "https://gitlab.com/x86-psABIs/x86-64-ABI"
+    }
+  ],
+  "columns": [
+    {
+      "key": "reg",
+      "label": "Register",
+      "mono": true
+    },
+    {
+      "key": "role",
+      "label": "Convention"
+    },
+    {
+      "key": "saved",
+      "label": "Saved by"
+    },
+    {
+      "key": "was",
+      "label": "Originally"
+    }
+  ],
+  "rows": [
+    {
+      "reg": "rax",
+      "role": "Return value; syscall number",
+      "saved": "Caller",
+      "was": "Accumulator"
+    },
+    {
+      "reg": "rbx",
+      "role": "General",
+      "saved": "Callee",
+      "was": "Base"
+    },
+    {
+      "reg": "rcx",
+      "role": "Fourth argument; clobbered by syscall",
+      "saved": "Caller",
+      "was": "Counter",
+      "detail": {
+        "summary": "The syscall instruction overwrites it with the return address, so the kernel uses r10 instead."
+      }
+    },
+    {
+      "reg": "rdx",
+      "role": "Third argument",
+      "saved": "Caller",
+      "was": "Data"
+    },
+    {
+      "reg": "rsi",
+      "role": "Second argument",
+      "saved": "Caller",
+      "was": "Source index"
+    },
+    {
+      "reg": "rdi",
+      "role": "First argument",
+      "saved": "Caller",
+      "was": "Destination index"
+    },
+    {
+      "reg": "rbp",
+      "role": "Frame pointer, or general if omitted",
+      "saved": "Callee",
+      "was": "Base pointer"
+    },
+    {
+      "reg": "rsp",
+      "role": "Stack pointer, used by the hardware",
+      "saved": "Callee",
+      "was": "Stack pointer",
+      "detail": {
+        "summary": "The one register the processor itself reads and writes."
+      }
+    },
+    {
+      "reg": "r8",
+      "role": "Fifth argument",
+      "saved": "Caller",
+      "was": "Added by AMD64"
+    },
+    {
+      "reg": "r9",
+      "role": "Sixth argument",
+      "saved": "Caller",
+      "was": "Added by AMD64"
+    },
+    {
+      "reg": "r10",
+      "role": "General; fourth syscall argument",
+      "saved": "Caller",
+      "was": "Added by AMD64"
+    },
+    {
+      "reg": "r11",
+      "role": "General; clobbered by syscall",
+      "saved": "Caller",
+      "was": "Added by AMD64"
+    },
+    {
+      "reg": "r12",
+      "role": "General",
+      "saved": "Callee",
+      "was": "Added by AMD64"
+    },
+    {
+      "reg": "r13",
+      "role": "General",
+      "saved": "Callee",
+      "was": "Added by AMD64"
+    },
+    {
+      "reg": "r14",
+      "role": "General",
+      "saved": "Callee",
+      "was": "Added by AMD64"
+    },
+    {
+      "reg": "r15",
+      "role": "General",
+      "saved": "Callee",
+      "was": "Added by AMD64"
+    }
+  ]
+}

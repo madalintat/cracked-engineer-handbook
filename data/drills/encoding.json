@@ -1,0 +1,185 @@
+{
+ "slug": "encoding",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What is an instruction, physically?",
+   "options": [
+    "A bit pattern whose fields are the values particular wires need",
+    "A command the processor looks up and interprets",
+    "A name the decoder translates into operations",
+    "A sequence of microcode addresses"
+   ],
+   "correct": 0,
+   "why": "<p>The fields are not descriptions of what to do. They are laid out so the wires can be cut straight from the instruction register with no logic between.</p>"
+  },
+  {
+   "n": 2,
+   "q": "Where does a destination register field go?",
+   "options": [
+    "Onto the select inputs of the decoder that produces the write enables",
+    "Into a table that maps numbers to registers",
+    "Into a comparator against each register's identifier",
+    "Into the arithmetic unit"
+   ],
+   "correct": 0,
+   "why": "<p>The field is not a name for a register, it is the number that lights that register's line. That is unit 006 arriving inside an instruction set.</p>"
+  },
+  {
+   "n": 3,
+   "q": "Why does keeping a field in the same place across instructions matter?",
+   "options": [
+    "It makes the field a wire; moving it needs a multiplexer to find it",
+    "It makes the instructions easier to read",
+    "Assemblers require it",
+    "It has no cost either way"
+   ],
+   "correct": 0,
+   "why": "<p>And the cost repeats for every field and every instruction, which is why fixed layouts exist and why the machines designed when decoding cost most have the most regular ones.</p>"
+  },
+  {
+   "n": 4,
+   "q": "What pressure pushes against a fixed, regular layout?",
+   "options": [
+    "Code size, since variable-length instructions let common operations be",
+    "Clock frequency",
+    "The number of registers",
+    "Power consumption in the decoder"
+   ],
+   "correct": 0,
+   "why": "<p>It mattered enormously when memory was small and matters again now, because instruction bytes travel through the same caches as everything else.</p>"
+  },
+  {
+   "n": 5,
+   "q": "What does one bit splitting the instruction set into families buy?",
+   "options": [
+    "Neither half needs to examine the other's fields",
+    "Twice as many instructions",
+    "A shorter instruction word",
+    "Backwards compatibility"
+   ],
+   "correct": 0,
+   "why": "<p>Nothing else needs examining to know which half of the machine is involved, and it costs about two gates.</p>"
+  },
+  {
+   "n": 6,
+   "q": "The decoder for the non-arithmetic half is:",
+   "options": [
+    "A small ordinary decoder, gated by the family bit",
+    "A lookup table in memory",
+    "A state machine",
+    "A microcode sequencer"
+   ],
+   "correct": 0,
+   "why": "<p>Three bits into a decoder is the entire non-arithmetic decode in Scott's machine. Not a lookup, not an interpretation.</p>"
+  },
+  {
+   "n": 7,
+   "q": "In a machine whose arithmetic unit has six control bits, the operation field is:",
+   "options": [
+    "Those six bits, set directly by the instruction",
+    "An index into a table of eighteen operations",
+    "A name the decoder resolves",
+    "A pointer to microcode"
+   ],
+   "correct": 0,
+   "why": "<p>The instruction sets switches rather than naming an operation. The encoding and the circuit were designed together, and the field <em>is</em> the control word.</p>"
+  },
+  {
+   "n": 8,
+   "q": "What does putting a small memory between instruction bits and control wires buy?",
+   "options": [
+    "The instruction set becomes data, so adding an instruction is reflashing",
+    "Faster decoding",
+    "Smaller instructions",
+    "Fewer control wires"
+   ],
+   "correct": 0,
+   "why": "<p>It costs a lookup. Wiring the bits straight through is cheaper and fixes the instruction set in copper, and which you choose decides what changing the machine means.</p>"
+  },
+  {
+   "n": 9,
+   "q": "Why can a sixteen-bit instruction not carry a fifteen-bit address and an opcode?",
+   "options": [
+    "There is one bit left, which is not enough to say what to do with the",
+    "Addresses must be aligned",
+    "The instruction register is only fifteen bits",
+    "It can, using a prefix byte"
+   ],
+   "correct": 0,
+   "why": "<p>nand2tetris splits instructions into two kinds decided by the top bit, so addressing a location and operating on it are two instructions. That is why its assembly reads oddly.</p>"
+  },
+  {
+   "n": 10,
+   "q": "In <code>D=D+M</code>, the plus sign is:",
+   "options": [
+    "Part of a single mnemonic that the assembler looks up in a table",
+    "An operator the assembler evaluates",
+    "A separator between operands",
+    "A hint to the optimiser"
+   ],
+   "correct": 0,
+   "why": "<p>Which is why such an assembler rejects <code>M+D</code>. It means the same thing arithmetically and is not in the table.</p>"
+  },
+  {
+   "n": 11,
+   "q": "Assembly language is closest to:",
+   "options": [
+    "A list of names for bit patterns",
+    "A programming language with expressions",
+    "A description of what the hardware should do",
+    "Machine code with the numbers written differently"
+   ],
+   "correct": 0,
+   "why": "<p>The last one is nearly right and misses the point: the names exist for people, and there is no expression parser and no evaluation anywhere.</p>"
+  },
+  {
+   "n": 12,
+   "q": "The same byte reaching a printer, an instruction register and an adder means:",
+   "options": [
+    "A letter, a jump and a number, and nothing in the byte says which",
+    "Three things the byte encodes at once",
+    "Whatever a type tag alongside it says",
+    "The same thing in three notations"
+   ],
+   "correct": 0,
+   "why": "<p>Each part was built with a code in mind, and once it was built the mind was gone and the code with it.</p>"
+  },
+  {
+   "n": 13,
+   "q": "Where is the table that maps byte values to letters?",
+   "options": [
+    "Nowhere in the machine. It is an agreement held by people",
+    "In the printer's firmware",
+    "In the operating system",
+    "In a read-only memory on the processor"
+   ],
+   "correct": 0,
+   "why": "<p>There is a printer wired so certain patterns move certain parts. Calling those patterns letters is something we do, not something it does.</p>"
+  },
+  {
+   "n": 14,
+   "q": "Recognising one particular instruction costs:",
+   "options": [
+    "An AND of the bits that identify it",
+    "A comparison against a stored opcode",
+    "A lookup in the decode table",
+    "A dedicated comparator per instruction"
+   ],
+   "correct": 0,
+   "why": "<p>The control unit is a collection of those gates, which is why the next unit calls it the least clever component in the machine.</p>"
+  },
+  {
+   "n": 15,
+   "q": "Two parts of a machine reading the same bits differently happens because:",
+   "options": [
+    "They are wired differently, and nothing in the bits distinguishes them",
+    "A tag bit tells each part what to expect",
+    "The decoder routes the bits to one part at a time",
+    "Only one part is powered at once"
+   ],
+   "correct": 0,
+   "why": "<p>Both readings happen at once, all the time, on the same wires. What makes one of them matter is which result gets captured.</p>"
+  }
+ ]
+}

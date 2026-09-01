@@ -1043,41 +1043,47 @@ async function viewAtlas(id) {
     return `<tr>${cells}</tr>`;
   }).join('');
 
+  /* The table is what the reader came for, so the table is what is above the
+   * fold. Everything that qualifies it, what to know, what could not be
+   * verified, where it came from, sits beside it on a wide screen and after
+   * it on a narrow one. An earlier version put all three ahead of the table
+   * and pushed the data itself off the bottom of the screen. */
   return `
   <div class="wrap" style="padding:48px 0" data-accent="slate">
-    <h1>Atlas</h1>
-    <p class="prose" style="max-width:var(--measure)">Reference tables. The
-      units teach the depth; these hold the map. Every table says where it came
-      from, when it was checked, and what could not be verified.</p>
+    <p class="eyebrow">Atlas</p>
+    <h1>${esc(t.title)}</h1>
+    <p class="lede" style="max-width:var(--measure)">${esc(t.blurb)}</p>
 
     ${tables.length > 1 ? `<nav class="atlastabs">${tabs}</nav>` : ''}
 
-    <h2 style="margin-top:32px">${esc(t.title)}</h2>
-    <p class="prose" style="max-width:var(--measure)">${esc(t.blurb)}</p>
-    ${t.note ? `<p class="idea" style="max-width:var(--measure)">
-      <span class="lbl">Worth knowing</span>${esc(t.note)}</p>` : ''}
+    <div class="atlasgrid">
+      <div class="atlasmain">
+        <div class="wbbar">
+          <input class="filter" id="atlasq" type="search" spellcheck="false"
+                 placeholder="filter ${t.rows.length} rows"
+                 aria-label="Filter rows">
+          <span class="note" id="atlascount"></span>
+        </div>
+        <div class="tw">
+          <table id="atlastable"><thead><tr>${head}</tr></thead>
+          <tbody>${body}</tbody></table>
+        </div>
+      </div>
 
-    <div class="wbbar" style="margin-top:18px">
-      <input class="filter" id="atlasq" type="search" spellcheck="false"
-             placeholder="filter ${t.rows.length} rows" aria-label="Filter rows">
-      <span class="note" id="atlascount"></span>
-    </div>
-
-    <div class="tw" style="margin-top:12px">
-      <table id="atlastable"><thead><tr>${head}</tr></thead>
-      <tbody>${body}</tbody></table>
-    </div>
-
-    ${t.unverified && t.unverified.length ? `
-      <div class="unverified">
-        <h3>Not verified</h3>
-        <ul>${t.unverified.map(u => `<li>${esc(u)}</li>`).join('')}</ul>
-      </div>` : ''}
-
-    <div class="sources">
-      <h3>Sources</h3>
-      <ul>${t.sources.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
-      <p>Checked ${esc(t.checked)}.</p>
+      <aside class="atlasside">
+        ${t.note ? `<section><h3>Worth knowing</h3>
+          <p>${esc(t.note)}</p></section>` : ''}
+        ${t.unverified && t.unverified.length ? `
+          <section class="atlasside-warn"><h3>Not verified</h3>
+            <ul>${t.unverified.map(u => `<li>${esc(u)}</li>`).join('')}</ul>
+          </section>` : ''}
+        <section><h3>Sources</h3>
+          <ul>${t.sources.map(x => `<li>${x.url
+            ? `<a href="${esc(x.url)}" rel="noopener">${esc(x.title)}</a>`
+            : esc(x.title)}</li>`).join('')}</ul>
+          <p class="note">Checked ${esc(t.checked)}.</p>
+        </section>
+      </aside>
     </div>
   </div>`;
 }

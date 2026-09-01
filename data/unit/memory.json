@@ -75,5 +75,7 @@
   "feedback",
   "clock-bus"
  ],
- "neededBy": []
+ "neededBy": [
+  "encoding"
+ ]
 }

@@ -1,0 +1,844 @@
+{
+ "slug": "control",
+ "backend": "sim",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "A ring that starts itself",
+   "brief": "<p>Build <code>Ring</code>, a two-step stepper. <code>s0</code> is high on even cycles and <code>s1</code> on odd ones, and while <code>clear</code> is high the ring holds at step 0 instead of advancing.</p>\n<p>Only one flip-flop is allowed. The second step is stored; the first is worked out from it.</p>",
+   "kind": "property",
+   "concept": "Step 0 is not stored. It is the condition that no other step is active, which is what makes the ring start from a cold reset.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Every flop comes up holding 0, so ask what <code>s0</code> has to be when the stored step is 0."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Both outputs sit at 0 for the whole trace, which means the ring never started. A flop that comes up at 0 can only be driven high by something that was already high, and on the first cycle nothing is. That is why <code>s0</code> has to be derived from the absence of <code>s1</code> rather than copied from it.</p>"
+    }
+   ],
+   "after": "<p>Four gates and one flop. A real stepper is the same idea with more positions, and the self-starting property is why a control unit needs no reset circuit of its own.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = nand(n, n)\n}\nchip Or(a, b) -> out {\n  na = nand(a, a)\n  nb = nand(b, b)\n  out = nand(na, nb)\n}\nchip Nor(a, b) -> out {\n  o = Or(a, b)\n  out = Not(o)\n}\nchip Xor(a, b) -> out {\n  n = nand(a, b)\n  x = nand(a, n)\n  y = nand(b, n)\n  out = nand(x, y)\n}\nchip Mux(s, a, b) -> out {\n  ns = Not(s)\n  ka = And(ns, a)\n  kb = And(s, b)\n  out = Or(ka, kb)\n}\nchip Ring(clear) -> s0, s1 {\n  nc = Not(clear)\n  keep = And(s0, nc)\n  s1 = dff(keep)\n  s0 = s1\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Ring",
+    "inputs": [
+     "clear"
+    ],
+    "outputs": [
+     "s0",
+     "s1"
+    ],
+    "trace": [
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      0
+     ]
+    ],
+    "maxGates": 7
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 2,
+   "title": "Three steps, one of them at a time",
+   "brief": "<p>Build <code>Stepper</code>, which walks a single 1 across <code>s0</code>, <code>s1</code> and <code>s2</code> and then returns to <code>s0</code>. While <code>reset</code> is high the walk is cut short and the next cycle is step 0 again.</p>\n<p>Two flip-flops. As before, step 0 is what is left over.</p>",
+   "kind": "property",
+   "concept": "One hot means one, and the cost of getting it wrong is two steps driving the control wires in the same cycle.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Step 0 has to be low whenever any other step is high, not just when the next one is."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Look at the cycle where <code>s2</code> is high. If <code>s0</code> is high in that same cycle then two steps are active at once, and a control table addressed by the step number would be reading two rows and getting the bitwise or of both. Step 0 has to exclude every other step.</p>"
+    }
+   ],
+   "after": "<p>Nine gates. Extending it to five steps costs one flop and one more input on the gate that computes step 0, which is why Eater's stepper is a handful of parts rather than a design problem.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = nand(n, n)\n}\nchip Or(a, b) -> out {\n  na = nand(a, a)\n  nb = nand(b, b)\n  out = nand(na, nb)\n}\nchip Nor(a, b) -> out {\n  o = Or(a, b)\n  out = Not(o)\n}\nchip Xor(a, b) -> out {\n  n = nand(a, b)\n  x = nand(a, n)\n  y = nand(b, n)\n  out = nand(x, y)\n}\nchip Mux(s, a, b) -> out {\n  ns = Not(s)\n  ka = And(ns, a)\n  kb = And(s, b)\n  out = Or(ka, kb)\n}\nchip Stepper(reset) -> s0, s1, s2 {\n  nr = Not(reset)\n  d1 = And(s0, nr)\n  d2 = And(s1, nr)\n  s1 = dff(d1)\n  s2 = dff(d2)\n  s0 = Not(s1)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Stepper",
+    "inputs": [
+     "reset"
+    ],
+    "outputs": [
+     "s0",
+     "s1",
+     "s2"
+    ],
+    "trace": [
+     [
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1
+     ]
+    ],
+    "maxGates": 15
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 3,
+   "title": "Two things driving one wire",
+   "brief": "<p>Build <code>Drive</code>. The bus carries <code>a</code> while <code>e0</code> is asserted, and <code>b</code> while <code>e1</code> is. <code>conflict</code> goes high exactly when both enables are set at once.</p>\n<p><code>conflict</code> is not a signal any real machine has. It exists here so you can see the case that a real bus cannot report.</p>",
+   "kind": "property",
+   "concept": "A bus with two drivers is a short circuit, and the wire reports a voltage either way, so nothing about the reading says the fault happened.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "A conflict needs both enables, not either of them."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>A single driver is the normal case and it is not a fault. If <code>conflict</code> goes high whenever anything at all is driving the bus, the check is an or where it should be an and, and it would condemn every correct control word in the table.</p>"
+    }
+   ],
+   "after": "<p>In silicon this is what the tri-state buffer enforces, and it enforces it by being the only thing connected. The check has to live in whatever writes the control table, because by the time the fault is on the wire it is heat.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = nand(n, n)\n}\nchip Or(a, b) -> out {\n  na = nand(a, a)\n  nb = nand(b, b)\n  out = nand(na, nb)\n}\nchip Nor(a, b) -> out {\n  o = Or(a, b)\n  out = Not(o)\n}\nchip Xor(a, b) -> out {\n  n = nand(a, b)\n  x = nand(a, n)\n  y = nand(b, n)\n  out = nand(x, y)\n}\nchip Mux(s, a, b) -> out {\n  ns = Not(s)\n  ka = And(ns, a)\n  kb = And(s, b)\n  out = Or(ka, kb)\n}\nchip Drive(e0, e1, a, b) -> out, conflict {\n  ga = And(e0, a)\n  gb = And(e1, b)\n  out = Or(ga, gb)\n  conflict = Or(e0, e1)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Drive",
+    "inputs": [
+     "e0",
+     "e1",
+     "a",
+     "b"
+    ],
+    "outputs": [
+     "out",
+     "conflict"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 15
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 4,
+   "title": "The control word, as a table",
+   "brief": "<p>Build <code>Control</code>. The two opcode bits and the step number decide three control wires.</p>\n<p>Step 0 is the fetch and it is the same for every instruction: read memory, load nothing. Step 1 is the instruction itself. Opcode 00 does nothing, 01 loads A from memory, 10 loads B from memory, and 11 swaps A and B without touching memory.</p>",
+   "kind": "property",
+   "concept": "Decoding an instruction is looking up a row. The gates here are one way to build that lookup; a small memory is the other, and it is the one real machines use.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Three of the eight rows are the fetch, and the fetch does not care what the opcode is."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Check the rows where <code>step</code> is 0. Every one of them is a fetch and every fetch reads memory, whatever the opcode says. A design that only asserts <code>memOut</code> during execution has a machine that never gets its instruction, so nothing at all runs.</p>"
+    }
+   ],
+   "after": "<p>Twenty seven gates for four instructions and two steps. Eater's machine has sixteen control bits, sixteen instructions and five steps, and building that from gates is why he uses a pair of memories instead.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = nand(n, n)\n}\nchip Or(a, b) -> out {\n  na = nand(a, a)\n  nb = nand(b, b)\n  out = nand(na, nb)\n}\nchip Nor(a, b) -> out {\n  o = Or(a, b)\n  out = Not(o)\n}\nchip Xor(a, b) -> out {\n  n = nand(a, b)\n  x = nand(a, n)\n  y = nand(b, n)\n  out = nand(x, y)\n}\nchip Mux(s, a, b) -> out {\n  ns = Not(s)\n  ka = And(ns, a)\n  kb = And(s, b)\n  out = Or(ka, kb)\n}\nchip Control(op1, op0, step) -> memOut, aLoad, bLoad {\n  n1 = Not(op1)\n  n0 = Not(op0)\n  lda = And(n1, op0)\n  ldb = And(op1, n0)\n  swp = And(op1, op0)\n  reads = Or(lda, ldb)\n  memOut = And(step, reads)\n  wa = Or(lda, swp)\n  wb = Or(ldb, swp)\n  aLoad = And(step, wa)\n  bLoad = And(step, wb)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Control",
+    "inputs": [
+     "op1",
+     "op0",
+     "step"
+    ],
+    "outputs": [
+     "memOut",
+     "aLoad",
+     "bLoad"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 44
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 5,
+   "title": "A flag has to be held",
+   "brief": "<p>Build <code>Flag</code>. When <code>capture</code> is high the flag takes whatever <code>carry</code> is showing. Otherwise it keeps what it had, however long that is.</p>\n<p>The trace runs eight cycles and <code>carry</code> moves several times while <code>capture</code> is low. None of that may reach the flag.</p>",
+   "kind": "property",
+   "concept": "The arithmetic that sets a flag is over by the time a conditional jump reads it, so the flag is storage rather than a wire.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "The flop's input is a choice between the old value and the new one."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Find the cycle where <code>carry</code> is high and <code>capture</code> is low. The flag follows it, which means the design is wired straight to the adder and has no memory of its own. Two instructions later, when a jump wants to know what the subtraction decided, this flag is showing whatever the last unrelated addition happened to produce.</p>"
+    }
+   ],
+   "after": "<p>Eight gates and one flop. The same shape as the load-enabled bit from unit 009, which is not a coincidence: a flag register is a register.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = nand(n, n)\n}\nchip Or(a, b) -> out {\n  na = nand(a, a)\n  nb = nand(b, b)\n  out = nand(na, nb)\n}\nchip Nor(a, b) -> out {\n  o = Or(a, b)\n  out = Not(o)\n}\nchip Xor(a, b) -> out {\n  n = nand(a, b)\n  x = nand(a, n)\n  y = nand(b, n)\n  out = nand(x, y)\n}\nchip Mux(s, a, b) -> out {\n  ns = Not(s)\n  ka = And(ns, a)\n  kb = And(s, b)\n  out = Or(ka, kb)\n}\nchip Flag(carry, capture) -> held {\n  held = dff(carry)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Flag",
+    "inputs": [
+     "carry",
+     "capture"
+    ],
+    "outputs": [
+     "held"
+    ],
+    "trace": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      0,
+      0
+     ]
+    ],
+    "maxGates": 13
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 6,
+   "title": "A branch, with no branch hardware",
+   "brief": "<p>Build <code>JumpIf</code>. <code>pcLoad</code> is high when a jump-if-zero instruction meets a set zero flag, and when a jump-if-not-zero meets a clear one.</p>\n<p>There is no comparator here and there is not one in the machine either. The flag is an address line on the control memory, and this chip is the four copies of one cell that the flag selects between.</p>",
+   "kind": "property",
+   "concept": "Branching costs a wire into the table's address, and the table holds the decision in the copies that flag selects.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Each instruction bit is gated by the flag in one polarity."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>The chip loads the counter whenever a jump instruction is present, regardless of the flag. That is an unconditional jump, and a machine with only unconditional jumps loops the same number of times forever, whatever the data says.</p>"
+    }
+   ],
+   "after": "<p>Eight gates. This is the entire difference between a calculator and a computer, and in Eater's design it is not even gates: it is the same table stored four times with a few cells changed.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = nand(n, n)\n}\nchip Or(a, b) -> out {\n  na = nand(a, a)\n  nb = nand(b, b)\n  out = nand(na, nb)\n}\nchip Nor(a, b) -> out {\n  o = Or(a, b)\n  out = Not(o)\n}\nchip Xor(a, b) -> out {\n  n = nand(a, b)\n  x = nand(a, n)\n  y = nand(b, n)\n  out = nand(x, y)\n}\nchip Mux(s, a, b) -> out {\n  ns = Not(s)\n  ka = And(ns, a)\n  kb = And(s, b)\n  out = Or(ka, kb)\n}\nchip JumpIf(zero, isJZ, isJNZ) -> pcLoad {\n  pcLoad = Or(isJZ, isJNZ)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "JumpIf",
+    "inputs": [
+     "zero",
+     "isJZ",
+     "isJNZ"
+    ],
+    "outputs": [
+     "pcLoad"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 13
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 7,
+   "title": "Two and two makes five",
+   "brief": "<p>Build <code>FlagClear</code>, which is the flag from the previous exercise with one more input. <code>clear</code> forces the flag to 0 at the end of the cycle, whatever <code>carry</code> and <code>capture</code> are doing.</p>\n<p>An addition that reads a carry left over from an earlier instruction is off by one and reports no error at all.</p>",
+   "kind": "property",
+   "concept": "State that survives the instruction that set it is the point of a flag, and also the bug, so something has to be able to throw it away.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Clearing beats both keeping and capturing."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Follow the cycle where <code>clear</code> is high. The flag holds its old value through it, so the carry from an earlier instruction is still there when the next addition begins. Scott's description of the symptom is the whole exercise: two and two makes five, and nothing anywhere reports a fault.</p>"
+    }
+   ],
+   "after": "<p>Eleven gates. Every instruction set that exposes flags also exposes a way to clear them, and this is why.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = nand(n, n)\n}\nchip Or(a, b) -> out {\n  na = nand(a, a)\n  nb = nand(b, b)\n  out = nand(na, nb)\n}\nchip Nor(a, b) -> out {\n  o = Or(a, b)\n  out = Not(o)\n}\nchip Xor(a, b) -> out {\n  n = nand(a, b)\n  x = nand(a, n)\n  y = nand(b, n)\n  out = nand(x, y)\n}\nchip Mux(s, a, b) -> out {\n  ns = Not(s)\n  ka = And(ns, a)\n  kb = And(s, b)\n  out = Or(ka, kb)\n}\nchip FlagClear(carry, capture, clear) -> held {\n  nc = Not(capture)\n  keep = And(held, nc)\n  take = And(carry, capture)\n  d = Or(keep, take)\n  held = dff(d)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "FlagClear",
+    "inputs": [
+     "carry",
+     "capture",
+     "clear"
+    ],
+    "outputs": [
+     "held"
+    ],
+    "trace": [
+     [
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      0,
+      0
+     ]
+    ],
+    "maxGates": 18
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 8,
+   "title": "Count, or be told where to go",
+   "brief": "<p>Build <code>PC</code>, a two-bit program counter. It counts up by one every cycle and wraps from 3 back to 0. When <code>load</code> is high it takes <code>v1</code> and <code>v0</code> instead, and carries on counting from there.</p>\n<p><code>p1</code> is the high bit. The loaded value appears on the cycle after <code>load</code>, not during it.</p>",
+   "kind": "property",
+   "concept": "The counter and the jump are the same component. A jump is the counter being loaded rather than incremented.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Work out the incremented value and the loaded value separately, then choose between them."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>The low bit behaves and the high bit does not, which means the selection was applied to one of them and not the other. Both bits of the next value have to pass through the same choice, or a jump moves half the counter and leaves the other half counting.</p>"
+    }
+   ],
+   "after": "<p>Twenty one gates and two flops. Widen it to sixteen bits and this is the component the fetch reads from and the branch writes to, which makes it the only register in the machine that both halves of the loop touch.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = nand(n, n)\n}\nchip Or(a, b) -> out {\n  na = nand(a, a)\n  nb = nand(b, b)\n  out = nand(na, nb)\n}\nchip Nor(a, b) -> out {\n  o = Or(a, b)\n  out = Not(o)\n}\nchip Xor(a, b) -> out {\n  n = nand(a, b)\n  x = nand(a, n)\n  y = nand(b, n)\n  out = nand(x, y)\n}\nchip Mux(s, a, b) -> out {\n  ns = Not(s)\n  ka = And(ns, a)\n  kb = And(s, b)\n  out = Or(ka, kb)\n}\nchip PC(v1, v0, load) -> p1, p0 {\n  i0 = Not(p0)\n  i1 = Xor(p1, p0)\n  n0 = Mux(load, i0, v0)\n  n1 = Mux(load, i1, v1)\n  p0 = dff(n0)\n  p1 = dff(i1)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "PC",
+    "inputs": [
+     "v1",
+     "v0",
+     "load"
+    ],
+    "outputs": [
+     "p1",
+     "p0"
+    ],
+    "trace": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      0
+     ]
+    ],
+    "maxGates": 34
+   },
+   "lang": "netlist"
+  }
+ ]
+}

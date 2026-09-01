@@ -3351,6 +3351,526 @@
  },
  {
   "t": "section",
+  "slug": "encoding",
+  "anchor": "what-has-to-be-decided",
+  "title": "What has to be decided",
+  "text": "Take a small machine with four registers and an arithmetic unit that can add or subtract. To do one operation you need to say which operation, which two registers to read, and which register to write. That is a handful of small numbers, and an instruction is those numbers written side by side in a fixed layout. Eight bits, four fields. Nothing here is a name: each field is a number that goes directly onto the select inputs of a multiplexer or a decoder. Now look at where each field goes. The destination number is two bits, and it goes onto the select inputs of the decoder that produces the write enables. The two source numbers go onto the select inputs of the two multiplexers that read the register file. The opcode goes to whatever picks the operation. The fields are not descriptions of what to do. They are the values those wires need, laid out so that the wires can be cut straight from the instruction register with no logic in between.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "encoding",
+  "anchor": "choosing-a-layout-is-choosing-a-circuit",
+  "title": "Choosing a layout is choosing a circuit",
+  "text": "That is why the layout matters and why it is not arbitrary. Put the destination field in a different place for different instructions and the decoder needs a multiplexer in front of it to find the right bits. Keep it in the same place for every instruction and it is a wire. The saving is real and it repeats for every field. So an instruction set with a consistent layout is cheaper to build than one without, and you can see that in real designs: the machines with fixed-width instructions and fields in the same places are the ones that were designed when the cost of decoding mattered most. The opposite pressure is code size. Variable-length instructions let common operations be short, which mattered enormously when memory was small and matters again now for a different reason, since instruction bytes travel through the same caches as everything else. Part V has that argument in full. Here the point is only that the two pressures are real and pull against each other.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "encoding",
+  "anchor": "the-bit-that-splits-the-world",
+  "title": "The bit that splits the world",
+  "text": "One trick worth seeing, because it is what makes decoding cheap. Choose the encoding so that one bit separates two whole families of instruction. In Scott's machine, bit 0 alone says whether this is an arithmetic instruction or one of the others. Nothing else needs examining to know which half of the machine is involved. When that bit says \"not arithmetic\", three more bits go into an ordinary decoder, one line per instruction. When it says \"arithmetic\", the operation bits go to the arithmetic unit's controls. Register selection is two more small decoders on two more fields. That is the whole decoder. Not a lookup, not an interpreter: a bit that chooses a half, and a small decoder in each half.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "encoding",
+  "anchor": "the-half-address-problem",
+  "title": "The half-address problem",
+  "text": "A constraint worth meeting now because it explains why some instruction sets look so strange. Suppose instructions are sixteen bits and addresses are fifteen. An instruction that carries an address has one bit left for everything else, which is not enough to say what to do with it. nand2tetris resolves that by splitting instructions into two kinds, decided by the top bit. One kind is nothing but an address, which loads a register. The other kind is a computation that uses whatever that register is holding. So addressing a location and operating on it are two instructions, and assembly for that machine reads oddly for exactly this reason. Every architecture has some version of this fight. There are never enough bits, and the resolutions people choose are why one instruction set looks nothing like another while doing the same work.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "encoding",
+  "anchor": "where-the-operation-bits-actually-go",
+  "title": "Where the operation bits actually go",
+  "text": "It is worth being concrete about the arithmetic half, because it is the clearest case of an encoding chosen to match a circuit. Unit 007 built an adder with a control bit that inverts one operand and feeds the carry, giving add and subtract from one circuit. That control bit is a wire. An instruction that says \"subtract\" does not select a subtractor; it puts a 1 on that wire. Extend the idea and the pattern is the whole design. Give the arithmetic unit several control bits, each of which changes what the operands look like on the way in or what the result looks like on the way out, and the operation field of the instruction is those bits directly. That is why nand2tetris's arithmetic unit has six control bits reaching eighteen useful functions: the instruction does not name an operation from a list, it sets six switches. The encoding and the circuit were designed together, and the field in the instruction is the control word. There is a real trade here that the next unit picks up. Wiring instruction bits straight to control wires is the cheapest possible decoding and it fixes the instruction set in copper. Putting a small memory between them, so the instruction is an address into a",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "encoding",
+  "anchor": "assembly-is-not-arithmetic",
+  "title": "Assembly is not arithmetic",
+  "text": "A misconception worth killing here rather than in Part V. In that machine an instruction is written , and it looks like an expression a compiler would parse. It is not. The three characters are a single mnemonic, one entry in a table, and the plus sign plays no algebraic role. There is no expression parser and no evaluation: the assembler looks up that exact string and emits the bits it corresponds to. That is why an assembler for such a machine rejects , which means the same thing arithmetically and is not in the table. Assembly looks like a language with syntax and is closer to a list of names for bit patterns.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "encoding",
+  "anchor": "what-the-machine-understands",
+  "title": "What the machine understands",
+  "text": "The last thing to carry out of this unit, and it is the answer to the question Scott's book is named for. The same byte is a letter to a printer, a jump to the instruction register, an address to the memory, a number to the adder, and three lit pixels to a screen. Nothing in the byte says which. Each part of the machine was built with a code in mind, and once it was built, the mind was gone and the code with it. There is no table of letters anywhere inside a computer. There is a printer wired so that certain patterns move certain parts, and an agreement, held entirely by people, that those patterns are letters.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "encoding",
+  "anchor": "what-to-carry-into-the-next-unit",
+  "title": "What to carry into the next unit",
+  "text": "An instruction is a bit pattern laid out so its fields are already where the wires need them. A consistent layout is cheaper to decode than a clever one. One bit can split the instruction set into halves that share almost no decoding. And nothing in the machine knows what any of it means. The next unit is the last in this part, and it is the loop that ties everything together: fetch the instruction at the counter, put its fields onto the wires, let the machine settle, capture the results, advance the counter, repeat. That loop is the computer, and the component that drives it turns out to be the least clever thing in the design.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "encoding",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These exercises are field extraction and decoding, which in this simulator means routing particular input bits to particular outputs and building small decoders from them. Read a failing row as an instruction rather than as a list of bits. If a design is wrong for exactly the rows where one field is nonzero, that field is wired to the wrong place, and that is a more useful thing to know than which row failed.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "encoding",
+  "n": 1,
+  "title": "Cutting the fields out",
+  "text": "A field is a wire. Extracting one costs nothing, which is the whole reason a layout is chosen the way it is. Build , which splits a four-bit instruction into a two-bit opcode and a two-bit register number. The outputs are, in order, the two opcode bits and the two register bits.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "encoding",
+  "n": 2,
+  "title": "One bit chooses a half",
+  "text": "One bit separating two families means neither half needs to examine the other's fields, which is most of what makes decoding cheap. Build . When is 1 the instruction is arithmetic, so follows and is 0. When is 0 it is the other family, so follows and is 0.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "encoding",
+  "n": 3,
+  "title": "The decoder in the other half",
+  "text": "The decoder is an ordinary one from unit 006 with its outputs gated by the family bit. There is no lookup and no interpretation. Build , which raises exactly one of four lines from a two-bit opcode, but only when is 0. When is 1 every line is low.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "encoding",
+  "n": 4,
+  "title": "The destination field becomes write enables",
+  "text": "The destination field goes straight onto a decoder's select inputs, and the write flag gates the result. That is the whole write path. Build , which turns the two-bit destination field into four write lines, all low unless is high.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "encoding",
+  "n": 5,
+  "title": "The operation field is the control word",
+  "text": "The instruction does not name an operation from a list. It sets switches, and the field in the instruction is the control word. Build , which turns a two-bit operation field and an immediate flag into three control wires: is the low operation bit, is high when the high operation bit is set, and passes the immediate flag through.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "encoding",
+  "n": 6,
+  "title": "A field in two places costs gates",
+  "text": "A layout that moves a field needs a multiplexer to find it, and that cost repeats for every field and every instruction. Build , where the destination register number lives in bits 3 and 2 for one instruction kind and in bits 1 and 0 for the other. Output the two destination bits.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "encoding",
+  "n": 7,
+  "title": "Is this instruction a jump",
+  "text": "Recognising one instruction is an AND of the bits that identify it, and nothing looks anything up. Build , which is high when the instruction is in the non-arithmetic family and its opcode is 3.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "encoding",
+  "n": 8,
+  "title": "The same bits mean different things",
+  "text": "Nothing in a pattern says what it is. Two parts of the machine read the same bits differently because they are wired differently. Build , which takes one four-bit pattern and produces both what a register decoder would make of its low two bits and what an arithmetic unit would make of its high two bits, at the same time.",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "encoding",
+  "n": 1,
+  "title": "What is an instruction, physically?",
+  "text": " The fields are not descriptions of what to do. They are laid out so the wires can be cut straight from the instruction register with no logic between. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "encoding",
+  "n": 2,
+  "title": "Where does a destination register field go?",
+  "text": " The field is not a name for a register, it is the number that lights that register's line. That is unit 006 arriving inside an instruction set. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "encoding",
+  "n": 3,
+  "title": "Why does keeping a field in the same place across instructions matter?",
+  "text": " And the cost repeats for every field and every instruction, which is why fixed layouts exist and why the machines designed when decoding cost most have the most regular ones. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "encoding",
+  "n": 4,
+  "title": "What pressure pushes against a fixed, regular layout?",
+  "text": " It mattered enormously when memory was small and matters again now, because instruction bytes travel through the same caches as everything else. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "encoding",
+  "n": 5,
+  "title": "What does one bit splitting the instruction set into families buy?",
+  "text": " Nothing else needs examining to know which half of the machine is involved, and it costs about two gates. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "encoding",
+  "n": 6,
+  "title": "The decoder for the non-arithmetic half is:",
+  "text": " Three bits into a decoder is the entire non-arithmetic decode in Scott's machine. Not a lookup, not an interpretation. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "encoding",
+  "n": 7,
+  "title": "In a machine whose arithmetic unit has six control bits, the operation field is:",
+  "text": " The instruction sets switches rather than naming an operation. The encoding and the circuit were designed together, and the field  is  the control word. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "encoding",
+  "n": 8,
+  "title": "What does putting a small memory between instruction bits and control wires buy?",
+  "text": " It costs a lookup. Wiring the bits straight through is cheaper and fixes the instruction set in copper, and which you choose decides what changing the machine means. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "encoding",
+  "n": 9,
+  "title": "Why can a sixteen-bit instruction not carry a fifteen-bit address and an opcode?",
+  "text": " nand2tetris splits instructions into two kinds decided by the top bit, so addressing a location and operating on it are two instructions. That is why its assembly reads oddly. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "encoding",
+  "n": 10,
+  "title": "In <code>D=D+M</code>, the plus sign is:",
+  "text": " Which is why such an assembler rejects  M+D . It means the same thing arithmetically and is not in the table. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "encoding",
+  "n": 11,
+  "title": "Assembly language is closest to:",
+  "text": " The last one is nearly right and misses the point: the names exist for people, and there is no expression parser and no evaluation anywhere. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "encoding",
+  "n": 12,
+  "title": "The same byte reaching a printer, an instruction register and an adder means:",
+  "text": " Each part was built with a code in mind, and once it was built the mind was gone and the code with it. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "encoding",
+  "n": 13,
+  "title": "Where is the table that maps byte values to letters?",
+  "text": " There is a printer wired so certain patterns move certain parts. Calling those patterns letters is something we do, not something it does. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "encoding",
+  "n": 14,
+  "title": "Recognising one particular instruction costs:",
+  "text": " The control unit is a collection of those gates, which is why the next unit calls it the least clever component in the machine. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "encoding",
+  "n": 15,
+  "title": "Two parts of a machine reading the same bits differently happens because:",
+  "text": " Both readings happen at once, all the time, on the same wires. What makes one of them matter is which result gets captured. ",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "control",
+  "anchor": "an-instruction-is-not-one-thing-that-happens",
+  "title": "An instruction is not one thing that happens",
+  "text": "The first correction. An instruction does not happen in a clock tick. Fetching it is a memory read, which takes a cycle. Getting its operands out of registers is another. Doing the arithmetic and capturing the result is another. Nothing in the machine can do all of that at one edge, because the whole point of an edge is that everything must have settled by then, and a value cannot be read out of memory and used in the same settling. So an instruction is several steps, and the machine needs something that walks through them. Eater's machine has five steps per instruction, with the first two identical in every single instruction: put the counter's value on the address lines, and read that location into the instruction register while advancing the counter. Every instruction pays for the fetch. That is not a design flaw, it is what fetching means, and it is the constant cost that everything in Part V is trying to hide.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "control",
+  "anchor": "the-thing-that-walks",
+  "title": "The thing that walks",
+  "text": "The stepper is a counter, and its output is a set of one-hot lines: step 0, step 1, step 2, and so on. You built the counter in unit 008 and the decoder in unit 006. Scott is worth quoting on what it is made of: the same memory bits as the registers, \"arranged very differently... We are not going to store anything in these bits, we are going to use them to create a series of steps.\" Nothing new is added. A ring of storage with an arrangement that walks a single 1 along it. At the end of an instruction the stepper resets to zero and the next fetch begins. That is the loop. The whole computer. Everything else in Part II is a box in this picture, and the loop is what makes the pile of parts into a machine that runs a program.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "control",
+  "anchor": "the-decoder-is-a-lookup-table",
+  "title": "The decoder is a lookup table",
+  "text": "Now the part that disappoints people, and it should. The control unit's job is: given the instruction and the step, produce the value of every control wire. That is a function from a small number of bits to a wider number of bits, and the cheapest way to build such a function is a memory. Eater's control unit is two read-only memories. The address lines are the flags, the opcode, the step number and a byte select. The data lines are the sixteen control bits. No gates decode instructions. You look up the control word. That is the entire component. It is a table, and the table is the machine's behaviour. Which leads somewhere that matters more than it first appears.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "control",
+  "anchor": "what-is-actually-in-a-control-word",
+  "title": "What is actually in a control word",
+  "text": "The sixteen bits are not arbitrary. Most of them fall into two groups, and the groups have opposite rules. One group says what goes onto the bus. Exactly one of those bits may be set at a time, and the reason is electrical rather than logical: two outputs driving the same wire to different voltages is a short circuit through the output transistors of both. This is the whole purpose of the tri-state buffer from unit 007, and the constraint it enforces is the one a control table can violate silently. The bus reads as something, so nothing obviously fails, and what it reads is a fight. The other group says what captures from the bus. Any number of those may be set, because reading a wire costs the wire nothing. Loading the same value into two registers in one step is legal and occasionally useful. The rest are single-purpose: which operation the arithmetic unit performs, and whether the flags are captured this step. So a control word is one selection and a set of loads, and almost every bug in a handwritten table is one of two shapes. Two drivers in one step, which is the short. Or a load bit set one step early, which captures the bus before the value it wanted has arrived on it.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "control",
+  "anchor": "the-instruction-set-is-data",
+  "title": "The instruction set is data",
+  "text": "If the decoder is a memory, then the instruction set is the contents of a memory, and contents can be changed. Adding an instruction to that machine is writing new rows into the table. Reflashing it with a different table makes it a different computer with the same wires. Eater does exactly this on camera, and it is the argument for microcoded control over hardwired control in one demonstration: hardwired is faster and fixed in copper, microcoded is slower and is data. That trade has been made both ways repeatedly, and it is why the word firmware exists. Something between hardware and software, which is exactly what a table of control words is.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "control",
+  "anchor": "a-conditional-branch-with-no-branch-hardware",
+  "title": "A conditional branch, with no branch hardware",
+  "text": "Watch how little it takes. The flags from the arithmetic unit become two more address lines on the control memory. The table now has four copies of itself, one per flag combination, and in exactly the copies where the branch should be taken, the cells for the jump instruction have the load-the-counter bit set. That is the whole mechanism. Not a comparator, not a branch unit: four copies of a table with a handful of cells different. And it is why a machine without a data-dependent branch is not a computer. Loading, adding and printing in a fixed order is a calculator. The moment the next instruction can depend on a value, the machine can loop for as long as the data says, and that is the line that makes it general.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "control",
+  "anchor": "when-flags-may-be-read",
+  "title": "When flags may be read",
+  "text": "A timing detail with real consequences, and it is the reading-before-writing rule again. The flags are captured only during the step where the arithmetic happens. By the time a conditional jump executes, the arithmetic that produced its flags is several steps in the past and the adder's inputs have long since changed. If the flags were not stored, they would be gone. And there is a matching problem in the other direction: a stale carry left over from a previous instruction feeding into the next addition. Scott's machine has an explicit clear-flags operation for exactly this, and his description of what happens without it is the best one-line summary of the bug: you might add two and two and get five.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "control",
+  "anchor": "what-this-machine-is-not",
+  "title": "What this machine is not",
+  "text": "Worth stating plainly at the end of a part that has built a computer from a single gate. Nobody has built this exact machine. Real ones have wider registers, barrel shifters, hardware multipliers, many more registers, and a state machine where this has a stepper. The pieces here are the real pieces, simplified until they fit in a book. And the answer to the question this part has been circling. NAND gates do not know what they are doing. If one gate knows nothing, a million of them know nothing. A computer remembers, decides and understands in exactly the sense that a river decides which way to go around a rock. There is nothing wrong with the vocabulary as long as you know what is under it, and now you do: a switch that leaks, a gate that inverts, a loop with a clock in it, an address that is a position, and a table of control words being read one row at a time.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "control",
+  "anchor": "what-to-carry-into-part-iii",
+  "title": "What to carry into Part III",
+  "text": "You built a computer from one gate, and the last component was a counter and a lookup. Part III does the same work in a language a synthesiser understands, and finds out what a clock period actually buys you. The parts will be the same and the questions will be different: not what does this compute, but how fast can it be clocked, how much area does it take, and can it be proved equivalent to a reference rather than merely tested against one.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "control",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These exercises build the stepper, a control lookup, and the branch mechanism. Several are traces, and the interesting cycle is usually the one after a control signal changes rather than the one during it. The control-word exercises are truth tables that look like documentation, and that is the point: a control unit is a table, so an exercise about one is a table too. If a row disagrees, read the instruction and the step it names and ask what should be on the wires at that moment.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "control",
+  "n": 1,
+  "title": "A ring that starts itself",
+  "text": "Step 0 is not stored. It is the condition that no other step is active, which is what makes the ring start from a cold reset. Build , a two-step stepper. is high on even cycles and on odd ones, and while is high the ring holds at step 0 instead of advancing. Only one flip-flop is allowed. The second step is stored; the first is worked out from it.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "control",
+  "n": 2,
+  "title": "Three steps, one of them at a time",
+  "text": "One hot means one, and the cost of getting it wrong is two steps driving the control wires in the same cycle. Build , which walks a single 1 across , and and then returns to . While is high the walk is cut short and the next cycle is step 0 again. Two flip-flops. As before, step 0 is what is left over.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "control",
+  "n": 3,
+  "title": "Two things driving one wire",
+  "text": "A bus with two drivers is a short circuit, and the wire reports a voltage either way, so nothing about the reading says the fault happened. Build . The bus carries while is asserted, and while is. goes high exactly when both enables are set at once. is not a signal any real machine has. It exists here so you can see the case that a real bus cannot report.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "control",
+  "n": 4,
+  "title": "The control word, as a table",
+  "text": "Decoding an instruction is looking up a row. The gates here are one way to build that lookup; a small memory is the other, and it is the one real machines use. Build . The two opcode bits and the step number decide three control wires. Step 0 is the fetch and it is the same for every instruction: read memory, load nothing. Step 1 is the instruction itself. Opcode 00 does nothing, 01 loads A from memory, 10 loads B from memory, and 11 swaps A and B without touching memory.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "control",
+  "n": 5,
+  "title": "A flag has to be held",
+  "text": "The arithmetic that sets a flag is over by the time a conditional jump reads it, so the flag is storage rather than a wire. Build . When is high the flag takes whatever is showing. Otherwise it keeps what it had, however long that is. The trace runs eight cycles and moves several times while is low. None of that may reach the flag.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "control",
+  "n": 6,
+  "title": "A branch, with no branch hardware",
+  "text": "Branching costs a wire into the table's address, and the table holds the decision in the copies that flag selects. Build . is high when a jump-if-zero instruction meets a set zero flag, and when a jump-if-not-zero meets a clear one. There is no comparator here and there is not one in the machine either. The flag is an address line on the control memory, and this chip is the four copies of one cell that the flag selects between.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "control",
+  "n": 7,
+  "title": "Two and two makes five",
+  "text": "State that survives the instruction that set it is the point of a flag, and also the bug, so something has to be able to throw it away. Build , which is the flag from the previous exercise with one more input. forces the flag to 0 at the end of the cycle, whatever and are doing. An addition that reads a carry left over from an earlier instruction is off by one and reports no error at all.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "control",
+  "n": 8,
+  "title": "Count, or be told where to go",
+  "text": "The counter and the jump are the same component. A jump is the counter being loaded rather than incremented. Build , a two-bit program counter. It counts up by one every cycle and wraps from 3 back to 0. When is high it takes and instead, and carries on counting from there. is the high bit. The loaded value appears on the cycle after , not during it.",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "control",
+  "n": 1,
+  "title": "How many clock cycles does one instruction take on the machine in this unit?",
+  "text": " An edge means everything has settled. A value cannot be read out of memory and then used in the same settling, so the fetch is its own step and the work that follows is another. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "control",
+  "n": 2,
+  "title": "Which steps are identical in every instruction?",
+  "text": " Put the counter's value on the address lines and read that location into the instruction register. Every instruction pays for it, which is what the caches in Part V are trying to hide. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "control",
+  "n": 3,
+  "title": "What is the stepper made of?",
+  "text": " Scott is worth quoting on this: nothing new is added to the machine. The bits are the same bits, and the arrangement is what makes them a series of steps rather than a value. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "control",
+  "n": 4,
+  "title": "In the stepper you built, where does step 0 come from?",
+  "text": " That is what makes the ring self-starting. Every flop comes up holding 0, so if step 0 were stored it would come up low as well, and nothing would ever be high enough to start the walk. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "control",
+  "n": 5,
+  "title": "What is Eater's control unit physically made of?",
+  "text": " The address lines are the flags, the opcode, the step and a byte select. The data lines are the sixteen control bits. No gates decode instructions: you look up the control word. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "control",
+  "n": 6,
+  "title": "If the decoder is a memory, what is the instruction set?",
+  "text": " Adding an instruction is writing new rows into the table. Reflashing it with a different table makes it a different computer with the same wires, which is the argument for microcoded control in one demonstration. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "control",
+  "n": 7,
+  "title": "Why does the word firmware exist?",
+  "text": " A table of control words is exactly that: contents rather than copper, but read by the machine at the rate copper is read and changed about as often. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "control",
+  "n": 8,
+  "title": "In a control word, how many of the bits that put something on the bus may be set at once?",
+  "text": " Two outputs driving one wire to different voltages is a short circuit through the output transistors of both. This is the constraint the tri-state buffer exists to enforce. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "control",
+  "n": 9,
+  "title": "How many of the bits that capture from the bus may be set at once?",
+  "text": " Loading the same value into two registers in one step is legal and occasionally useful. The asymmetry with the driver bits is electrical, not logical. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "control",
+  "n": 10,
+  "title": "What happens when a control table sets two driver bits in the same step?",
+  "text": " Nothing obviously fails, which is what makes it hard. The check has to live in whatever writes the table, because on the wire the fault is heat. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "control",
+  "n": 11,
+  "title": "How is a conditional branch built in this machine?",
+  "text": " Not a comparator and not a branch unit. Two more address lines, four copies of the same table, and the load-the-counter bit set in the copies where the branch should be taken. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "control",
+  "n": 12,
+  "title": "Why is a machine without a data-dependent branch not a computer?",
+  "text": " Loading, adding and printing in a fixed order is a calculator. The moment the next instruction can depend on a value, the machine is general. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "control",
+  "n": 13,
+  "title": "When are the flags captured?",
+  "text": " By the time a conditional jump executes, the arithmetic that produced its flags is several steps in the past and the adder's inputs have changed. If the flags were not stored they would be gone. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "control",
+  "n": 14,
+  "title": "What goes wrong without a way to clear the flags?",
+  "text": " Scott's one-line summary of the bug is the best one: you might add two and two and get five. Nothing reports a fault, because nothing has failed. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "control",
+  "n": 15,
+  "title": "Do NAND gates know what they are doing?",
+  "text": " A computer remembers, decides and understands in exactly the sense that a river decides which way to go around a rock. There is nothing wrong with the vocabulary as long as you know what is under it. ",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
   "slug": "clock-edge",
   "anchor": "two-kinds-of-logic-and-only-two",
   "title": "Two kinds of logic, and only two",

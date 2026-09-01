@@ -937,18 +937,6 @@ def build(strict=True):
     for sub in ("unit", "ex", "drills"):
         (DATA / sub).mkdir(exist_ok=True)
 
-    # The home page argues that each of these forced the next. Drawing it is
-    # the one place a figure earns its keep before the reader has read
-    # anything, and the hero was otherwise half a page of empty column.
-    hero_p = CONTENT / "hero.json"
-    if not hero_p.exists():
-        raise BuildError("content/hero.json is missing, so the home page has "
-                         "nothing in its second column")
-    try:
-        hero = figures.render(hero_p.read_text(), "hero.json")
-    except figures.FigureError as e:
-        raise BuildError(str(e)) from e
-
     atlas = build_atlas()
     glossary = build_glossary(units)
     errors = build_errors()
@@ -968,7 +956,6 @@ def build(strict=True):
     phases = [{"id": ph[0], "title": ph[1], "blurb": ph[2], "accent": ph[3],
                "parts": list(ph[4])} for ph in track.PHASES]
     write(DATA / "manifest.json", {
-        "hero": hero,
         "phases": phases, "parts": parts, "units": manifest,
         "backends": list(track.BACKENDS),
         "counts": {
@@ -1336,11 +1323,42 @@ def build_atlas():
                                 f"or the table renders shifted.")
         if not isinstance(t["sources"], list) or not t["sources"]:
             problems.append(f"{w}: sources must be a non-empty list")
+        else:
+            # A source may be a bare title or a title with a link. Both are
+            # normalised here so the renderer has one shape to draw, and a
+            # link the reader can follow is always better than one they have
+            # to search for.
+            norm = []
+            for i, src in enumerate(t["sources"]):
+                if isinstance(src, str):
+                    norm.append({"title": src})
+                elif isinstance(src, dict) and src.get("title"):
+                    if src.get("url", "").startswith(("http://", "https://")) \
+                            or "url" not in src:
+                        norm.append({k: src[k] for k in ("title", "url")
+                                     if k in src})
+                    else:
+                        problems.append(f"{w}: source {i} has a url that is "
+                                        f"not http or https")
+                else:
+                    problems.append(f"{w}: source {i} is neither a title nor "
+                                    f"an object with a title")
+            t["sources"] = norm
         problems += prose.check_blurb(t["blurb"], f"{w} blurb")
         if t.get("note"):
             problems += prose.lint(t["note"], f"{w} note")
+        if not isinstance(t.get("order"), int):
+            problems.append(f"{w}: needs an integer 'order'. Tab order is a "
+                            f"pedagogical choice, and alphabetical is not one.")
         tables.append({**t, "rowCount": len(t["rows"])})
     fail(problems)
+    seen_order = {}
+    for t in tables:
+        if t["order"] in seen_order:
+            fail([f"atlas: {t['id']} and {seen_order[t['order']]} both claim "
+                  f"order {t['order']}"])
+        seen_order[t["order"]] = t["id"]
+    tables.sort(key=lambda t: t["order"])
     for t in tables:
         for row in t["rows"]:
             if row.get("detail"):
@@ -1370,9 +1388,38 @@ def atlas_card(row, table):
     handbook inlines its glossary definitions: the card is already in the
     document when the pointer arrives, so there is no fetch, no spinner and
     nothing to get wrong on a slow connection.
+
+    Every table gets the same card: an eyebrow naming the row, the summary,
+    then the columns the table itself declares. A row that also carries a
+    `tensor` block gets the two things only a GPU row can have, the format
+    strip and what it costs to rent. Nothing else in the atlas has to know
+    that GPUs exist.
     """
     det = row["detail"]
-    t = det.get("tensor") or {}
+    name = str(row.get(table["columns"][0]["key"]) or "")
+    strip, rent_html = "", ""
+    if det.get("tensor"):
+        strip, rent_html = _tensor_card_parts(row, det["tensor"], name)
+
+    rows_html = "".join(
+        f"<dt>{html.escape(c['label'])}</dt>"
+        f"<dd{' class=\"mono\"' if c.get('mono') else ''}>"
+        f"{html.escape(str(row.get(c['key']) or '')) or '&mdash;'}</dd>"
+        for c in table["columns"][1:])
+
+    note = det["tensor"].get("note") if det.get("tensor") else None
+    note_html = (f'<p class="acard-note">{inline(note)}</p>' if note else "")
+
+    return (f'<div class="acard">'
+            f'<p class="eyebrow">{html.escape(name)}</p>'
+            f'<p class="acard-sum">{inline(det["summary"])}</p>'
+            f'{strip}'
+            f'<dl class="acard-dl">{rows_html}{rent_html}</dl>'
+            f'{note_html}</div>')
+
+
+def _tensor_card_parts(row, t, name):
+    """The format strip and the rental line, for a row that describes a GPU."""
     gen = int(t.get("gen", 0))
     fmts = set(t.get("formats") or [])
 
@@ -1381,12 +1428,12 @@ def atlas_card(row, table):
              for f in TENSOR_FORMATS]
     strip = figures.render(json.dumps({
         "kind": "strip",
-        "alt": (f"Numeric formats the tensor cores of {row['sm']} support: "
+        "alt": (f"Numeric formats the tensor cores of {name} support: "
                 + (", ".join(sorted(fmts)) if fmts
                    else "none, this generation has no tensor cores")),
         "caption": GEN_LABEL.get(gen, ""),
         "cells": cells,
-    }), f"atlas card {row['sm']}")
+    }), f"atlas card {name}")
 
     # What a learner can actually rent, joined from the Modal catalogue, so the
     # card answers "can I run this" rather than only "does it exist".
@@ -1412,22 +1459,7 @@ def atlas_card(row, table):
     else:
         rent_html = ("<dt>To rent</dt><dd class=\"none\">Not offered by the "
                      "GPU runner this handbook uses.</dd>")
-
-    rows_html = "".join(
-        f"<dt>{html.escape(c['label'])}</dt>"
-        f"<dd{' class=\"mono\"' if c.get('mono') else ''}>"
-        f"{html.escape(str(row.get(c['key']) or '')) or '&mdash;'}</dd>"
-        for c in table["columns"] if c["key"] != "sm")
-
-    note = det["tensor"].get("note") if det.get("tensor") else None
-    note_html = (f'<p class="acard-note">{inline(note)}</p>' if note else "")
-
-    return (f'<div class="acard">'
-            f'<p class="eyebrow">{html.escape(row["sm"])}</p>'
-            f'<p class="acard-sum">{inline(det["summary"])}</p>'
-            f'{strip}'
-            f'<dl class="acard-dl">{rows_html}{rent_html}</dl>'
-            f'{note_html}</div>')
+    return strip, rent_html
 
 
 def load_gpu_catalog():

@@ -1,0 +1,105 @@
+{
+  "id": "latency",
+  "order": 20,
+  "title": "Latency, in numbers you can hold",
+  "blurb": "What it costs to reach a value, from a register to another continent, on one scale.",
+  "note": "These are order-of-magnitude figures for a modern server, not measurements of your machine. The ratios are the point and they have been stable for years even as the absolute numbers moved.",
+  "checked": "2026-09-01",
+  "sources": [
+    {
+      "title": "Latency numbers every programmer should know",
+      "url": "https://gist.github.com/jboner/2841832"
+    },
+    {
+      "title": "Intel 64 and IA-32 Architectures Optimization Reference Manual",
+      "url": "https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html"
+    }
+  ],
+  "columns": [
+    {
+      "key": "what",
+      "label": "What"
+    },
+    {
+      "key": "ns",
+      "label": "Nanoseconds",
+      "mono": true
+    },
+    {
+      "key": "scaled",
+      "label": "If a cycle were a second"
+    },
+    {
+      "key": "note",
+      "label": "Why"
+    }
+  ],
+  "rows": [
+    {
+      "what": "Register",
+      "ns": "0.3",
+      "scaled": "1 second",
+      "note": "Already inside the core, no address to compute",
+      "detail": {
+        "summary": "The only storage with no address at all."
+      }
+    },
+    {
+      "what": "L1 cache hit",
+      "ns": "1",
+      "scaled": "3 seconds",
+      "note": "A few kilobytes, physically next to the core"
+    },
+    {
+      "what": "L2 cache hit",
+      "ns": "4",
+      "scaled": "13 seconds",
+      "note": "Bigger, and further away on the die"
+    },
+    {
+      "what": "L3 cache hit",
+      "ns": "30",
+      "scaled": "1.5 minutes",
+      "note": "Shared between cores, so it is also contended"
+    },
+    {
+      "what": "Main memory",
+      "ns": "80",
+      "scaled": "4 minutes",
+      "note": "Off the die, through a controller, into DRAM",
+      "detail": {
+        "summary": "Two hundred times a cache hit, which is why cache misses dominate real programs."
+      }
+    },
+    {
+      "what": "NVMe read",
+      "ns": "20000",
+      "scaled": "18 hours",
+      "note": "Flash, over PCIe, with a queue"
+    },
+    {
+      "what": "Same-datacenter round trip",
+      "ns": "500000",
+      "scaled": "19 days",
+      "note": "Speed of light plus switches plus software"
+    },
+    {
+      "what": "Spinning disk seek",
+      "ns": "8000000",
+      "scaled": "10 months",
+      "note": "A physical arm moving to a physical place"
+    },
+    {
+      "what": "London to New York round trip",
+      "ns": "70000000",
+      "scaled": "7 years",
+      "note": "Fibre, and light is not negotiable",
+      "detail": {
+        "summary": "The only row here that no engineering will ever improve."
+      }
+    }
+  ],
+  "unverified": [
+    "Figures vary by several times between parts and workloads. Treat them as the shape of the hierarchy rather than as a specification."
+  ]
+}

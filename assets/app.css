@@ -1166,24 +1166,50 @@ nav.tabs { display: none; }
 
 #atlastable td.mono { font-family: var(--mono); color: var(--accent-ink); font-weight: 500; }
 #atlastable tbody tr:hover { background: var(--raised); }
+/* The first column is the row's name, and a name that wraps mid-token reads
+ * as two rows. Everything else may wrap. */
+#atlastable td:first-child { white-space: nowrap; }
+/* A button inherits centred text from the user agent, which indents the label
+ * away from the plain cells beside it. */
+.acard-open { text-align: left; }
 
-.sources, .unverified {
-  margin-top: 32px;
-  max-width: var(--measure);
+/* Table first, qualifications beside it. The side column is deliberately
+ * narrow: it holds the notes a careful reader wants and never competes with
+ * the data for the top of the screen. Below 1000px it stacks under the
+ * table, which is the same priority expressed vertically. */
+.atlasgrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 34px;
+  align-items: start;
+  margin-top: 22px;
+}
+.atlasmain { min-width: 0; }
+.atlasside {
   font-size: var(--t-sm);
   color: var(--ink-3);
+  position: sticky;
+  top: 78px;
 }
-.sources h3, .unverified h3 {
+.atlasside section + section { margin-top: 22px; }
+.atlasside h3 {
   font: 700 var(--t-micro)/1 var(--mono);
   color: var(--ink-4);
   text-transform: uppercase;
   letter-spacing: .1em;
-  margin-bottom: 10px;
+  margin: 0 0 8px;
 }
-.unverified { border-left: 2px solid var(--warn); padding-left: 14px; }
-.unverified h3 { color: var(--warn-ink); }
-.sources ul, .unverified ul { margin: 0; padding-left: 18px; }
-.sources li, .unverified li { margin-bottom: 5px; }
+.atlasside p { margin: 0; line-height: 1.6; }
+.atlasside ul { margin: 0; padding-left: 17px; }
+.atlasside li { margin-bottom: 6px; line-height: 1.55; }
+.atlasside .note { margin-top: 8px; color: var(--ink-4); font-size: var(--t-micro); }
+.atlasside-warn { border-left: 2px solid var(--warn); padding-left: 13px; }
+.atlasside-warn h3 { color: var(--warn-ink); }
+
+@media (max-width: 1000px) {
+  .atlasgrid { grid-template-columns: 1fr; gap: 30px; }
+  .atlasside { position: static; max-width: var(--measure); }
+}
 
 /* -------------------------------------------------------------- glossary */
 
@@ -1553,19 +1579,18 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
   /* The headline sets the first column: it carries an explicit line break and
    * must not wrap again, so the copy gets the room and the other two share
    * what is left. */
-  grid-template-columns: minmax(0, 1.5fr) auto minmax(0, 0.9fr);
-  gap: 24px;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+  gap: 40px;
   align-items: center;
   padding: 56px 0 44px;
 }
-/* He sits between the words and the diagram, which is where he would be if he
- * were reading one and drawing the other. Decorative, so no alt text: the page
- * says everything he does. */
-.hero-mascot {
-  width: 150px;
+/* The second column is the mascot and nothing else. Decorative, so no alt
+ * text: the page says everything he does. */
+.hero-art img {
+  display: block;
+  width: min(100%, 360px);
   height: auto;
-  align-self: end;
-  margin-bottom: -6px;
+  margin-left: auto;
 }
 .hero-copy { max-width: 60ch; }
 .hero h1 { margin: 12px 0 0; }
@@ -1584,19 +1609,7 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
 }
 .hero-art { min-width: 0; }
 .hero-art .fig { margin: 0; max-width: none; }
-/* The chain is tall and narrow, so height is what constrains it here, not
- * width. Left to width:100% in a 530px column it drew 800px tall and pushed
- * the whole hero past the fold. preserveAspectRatio does the letterboxing. */
-.hero-art .fig-svg {
-  max-width: none !important;
-  max-height: min(58vh, 460px);
-  width: 100%;
-  background: transparent;
-  border-color: transparent;
-  padding: 0;
-}
-.hero-art figcaption { text-align: center; border-left: 0; padding-left: 0;
-                       margin-top: 12px; }
+
 .hero-art figcaption { font-size: var(--t-tiny); }
 
 /* The eyebrow. One rule for every small-caps label in the app, because seven
@@ -1617,6 +1630,7 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
 }
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; gap: 28px; padding: 40px 0 32px; }
+  .hero-art img { margin: 0; width: min(60%, 240px); }
   /* The art goes first on a narrow screen only if it earns the space; it does
    * not, so it goes last and stays. Hiding it entirely would lose the one
    * thing that shows what the book is about before any prose is read. */
