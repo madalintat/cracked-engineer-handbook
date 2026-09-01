@@ -1,0 +1,185 @@
+{
+ "slug": "clock-bus",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What happens if two ordinary gate outputs drive the same wire?",
+   "options": [
+    "If they disagree, there is a path from the supply to ground through both",
+    "The stronger one wins",
+    "The wire settles to an average voltage",
+    "Nothing, as long as they are never read at once"
+   ],
+   "correct": 0,
+   "why": "<p>That is the crowbar current from Part I, and it destroys the parts. A shared wire needs something an ordinary gate cannot do.</p>"
+  },
+  {
+   "n": 2,
+   "q": "What is the third state of a tri-state buffer?",
+   "options": [
+    "Disconnected, with both networks off and the output attached to nothing",
+    "A voltage halfway between high and low",
+    "Logic 0 with a weak pull-down",
+    "An error state the hardware reports"
+   ],
+   "correct": 0,
+   "why": "<p>High impedance is not a value. A wire at high impedance is electrically absent, which is exactly what lets something else drive it.</p>"
+  },
+  {
+   "n": 3,
+   "q": "High impedance is the same as logic 0.",
+   "options": [
+    "True",
+    "False, and confusing the two is the classic bus mistake",
+    "True only while the clock is low",
+    "True for NMOS outputs"
+   ],
+   "correct": 1,
+   "why": "<p>A wire that is absent lets another driver take it. A wire held at 0 fights anything trying to drive it high, which is the short this whole arrangement exists to avoid.</p>"
+  },
+  {
+   "n": 4,
+   "q": "What makes a bus safe?",
+   "options": [
+    "A rule that exactly one output is enabled at a time",
+    "A resistor in series with each driver",
+    "The clock, which separates the drivers in time",
+    "Buffers that detect and back off from a conflict"
+   ],
+   "correct": 0,
+   "why": "<p>The wire is just a wire. A bus is a discipline rather than a component, and the correctness lives entirely in the rule about who may drive it.</p>"
+  },
+  {
+   "n": 5,
+   "q": "Inside a chip, a shared wire is usually built as:",
+   "options": [
+    "A multiplexer, because wires are cheap and a short is fatal",
+    "A tri-state bus, as on a board",
+    "An open-drain wire with a pull-up",
+    "A crossbar of transmission gates"
+   ],
+   "correct": 0,
+   "why": "<p>There is nowhere for a second driver to connect, so there is no rule to get wrong. Between chips on a board, where you cannot run one wire per source, tri-state is the answer instead.</p>"
+  },
+  {
+   "n": 6,
+   "q": "In a bus transfer, the correct ordering is:",
+   "options": [
+    "The source drives, the wire settles, the destination captures, then the",
+    "The destination captures, then the source drives",
+    "Both happen on the same edge",
+    "The order does not matter if the clock is slow enough"
+   ],
+   "correct": 0,
+   "why": "<p>If the destination is still capturing when the source lets go, it captures whatever the wire drifted to. The requirement comes before the mechanism.</p>"
+  },
+  {
+   "n": 7,
+   "q": "The shape of the two windows is:",
+   "options": [
+    "A narrow capture window nested inside a wider driving window",
+    "Two windows of equal width, offset by half a cycle",
+    "A wide capture window inside a narrow driving window",
+    "Two windows that do not overlap"
+   ],
+   "correct": 0,
+   "why": "<p>Every bus transfer in every machine has that shape, and the usual mechanism is two derived clocks, one nested inside the other.</p>"
+  },
+  {
+   "n": 8,
+   "q": "A clock cycle is best described as:",
+   "options": [
+    "A contract about when signals are allowed to be garbage",
+    "The time one instruction takes",
+    "The rate at which gates switch",
+    "A signal that steps the machine forward"
+   ],
+   "correct": 0,
+   "why": "<p>Between edges every wire is free to be wrong. At the edge, everything being captured must have settled. Choosing the length is choosing how much wrongness you are willing to wait out.</p>"
+  },
+  {
+   "n": 9,
+   "q": "The clock period must exceed:",
+   "options": [
+    "The longest path from any flip-flop output, through logic, to any",
+    "The delay of the slowest single gate",
+    "The time the slowest instruction takes",
+    "The propagation delay across the whole chip"
+   ],
+   "correct": 0,
+   "why": "<p>Part III has a tool that measures exactly that path and refuses to sign off a design whose clock is too fast for it.</p>"
+  },
+  {
+   "n": 10,
+   "q": "Why does every operation cost the same in a simple machine?",
+   "options": [
+    "They all wait for the same edge, so they all cost what the slowest path",
+    "Because the instruction set is designed that way",
+    "Because memory access dominates",
+    "They do not; simple machines have variable-length instructions"
+   ],
+   "correct": 0,
+   "why": "<p>Adding a faster operation buys nothing unless the slow path gets shorter too, which is why making a machine faster means attacking that path.</p>"
+  },
+  {
+   "n": 11,
+   "q": "Pipelining makes a machine faster by:",
+   "options": [
+    "Cutting the longest path into shorter pieces with flip-flops between them",
+    "Making each operation do less work",
+    "Running several clocks at once",
+    "Executing instructions out of order"
+   ],
+   "correct": 0,
+   "why": "<p>It does not make the work smaller. It shortens the path that sets the clock, which is a different thing and the reason it works at all.</p>"
+  },
+  {
+   "n": 12,
+   "q": "What is an oscillator, structurally?",
+   "options": [
+    "A circuit with no stable state, such as an odd number of inversions in a",
+    "A circuit with two stable states",
+    "A counter driven by a crystal",
+    "An amplifier with positive feedback and a filter"
+   ],
+   "correct": 0,
+   "why": "<p>Two stable states describes a latch. One stable state describes a one-shot. A ring of an odd number of inverters never agrees with itself, and that is the cheapest clock there is.</p>"
+  },
+  {
+   "n": 13,
+   "q": "Why is a ring oscillator built deliberately onto real chips?",
+   "options": [
+    "Its frequency reveals how fast that particular silicon turned out",
+    "It is the main system clock",
+    "It generates a reset pulse at power-on",
+    "It is a manufacturing artefact rather than a choice"
+   ],
+   "correct": 0,
+   "why": "<p>A circuit whose whole purpose is to be unstable used as a ruler. The system clock comes from a crystal, because a ring drifts with temperature and process.</p>"
+  },
+  {
+   "n": 14,
+   "q": "Why does a pushbutton need a one-shot between it and the logic?",
+   "options": [
+    "The contacts bounce for milliseconds, giving a burst of edges per press",
+    "The voltage is too low without one",
+    "To convert the level into an edge",
+    "To protect the logic from static"
+   ],
+   "correct": 0,
+   "why": "<p>A processor stepped directly by a button would run several instructions per press and look haunted. Every physical button attached to logic has something doing that job.</p>"
+  },
+  {
+   "n": 15,
+   "q": "A design that guarantees one enable by construction beats one that promises it because:",
+   "options": [
+    "The guarantee cannot be violated by a later change, where a promise can",
+    "It uses fewer gates",
+    "It is faster",
+    "Promises are not checkable"
+   ],
+   "correct": 0,
+   "why": "<p>Priority logic makes the bad state unreachable rather than merely forbidden. Every arbiter and interrupt controller is that shape with more inputs.</p>"
+  }
+ ]
+}

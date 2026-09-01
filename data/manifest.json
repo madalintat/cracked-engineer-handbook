@@ -479,6 +479,7 @@
     "arithmetic"
    ],
    "neededBy": [
+    "clock-bus",
     "clock-edge"
    ]
   },
@@ -493,11 +494,13 @@
    "phase": "build",
    "accent": "gold",
    "backend": "sim",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
+   "ready": true,
+   "words": 1447,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "feedback"
+   ],
    "neededBy": [
     "clock-edge",
     "registers"
@@ -2572,9 +2575,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 12,
-  "words": 18908,
-  "exercises": 96,
-  "drills": 180
+  "ready": 13,
+  "words": 20355,
+  "exercises": 104,
+  "drills": 195
  }
 }

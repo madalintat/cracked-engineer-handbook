@@ -2847,6 +2847,254 @@
  },
  {
   "t": "section",
+  "slug": "clock-bus",
+  "anchor": "the-wiring-that-shorts",
+  "title": "The wiring that shorts",
+  "text": "Take two registers and connect both of their outputs to the same wire, so that either can send a value to whatever is listening. It looks reasonable and it is a short circuit. Each output is a CMOS gate from unit 002, which means a pull-up network to the supply and a pull-down network to ground, with exactly one of them conducting. If one register is driving high and the other is driving low, the wire now has a path from the supply straight to ground through two gates. That is the crowbar current from Part I, and it destroys the parts. So a shared wire needs something the gate from unit 002 cannot do: a way to be connected to neither rail.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "clock-bus",
+  "anchor": "the-third-state",
+  "title": "The third state",
+  "text": "A tri-state buffer has a data input, an output, and an enable. When the enable is high it passes its input through as an ordinary gate would. When the enable is low it disconnects: both networks off, output attached to nothing. That state has a name, high impedance, and what matters about it is the thing people assume wrongly. It is not logic 0. A wire at high impedance is not low, it is electrically absent, and something else on the wire is free to drive it without a fight. Now several devices can share one wire, and the whole design rests on one rule. Exactly one output is ever enabled at once. Not usually one. Not one in the normal case. If two are ever enabled at the same moment, even briefly during a transition, the wire is a short. Ben Eater's machine has one enable bit per module in its control word, and the thing that makes it safe is that the control sequence never sets two of them. That is why a bus is a discipline rather than a component. The wire is just a wire, and the correctness lives in the rule about who is allowed to drive it.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "clock-bus",
+  "anchor": "what-you-can-build-without-it",
+  "title": "What you can build without it",
+  "text": "The simulator in this part has no tri-state, because it has no concept of a wire being absent: every wire has a value. So the exercises build the other arrangement, which is what you would use inside a chip anyway. A multiplexer with as many inputs as there are sources does the same job. Each source is wired to one input, the select lines choose which one reaches the output, and there is no possibility of two drivers because there is only ever one wire being read. The same job twice. On a board, three drivers and a rule that only one may be on. Inside a chip, a multiplexer, where the rule is enforced by there being nowhere for a second driver to connect. Both are real and they are used in different places. Between chips on a board, where the wire is long and you cannot run one per source, tri-state. Inside a chip, where wires are cheap and a short is fatal, a multiplexer. Modern chips use multiplexers almost everywhere for exactly that reason.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "clock-bus",
+  "anchor": "the-other-rule-about-time",
+  "title": "The other rule, about time",
+  "text": "Enabling one register onto a bus and loading another from it is a transfer, and the order of two events in that transfer is not optional. The source is enabled, the wire settles to its value, the destination captures it, and then the source stops driving. Getting that order wrong is the second classic bus fault: if the destination is still capturing while the source has already let go, it captures whatever the wire drifted to. Scott states the requirement before giving the mechanism, which is the right way round: the destination's capture must finish before the source's enable goes away. The mechanism is two derived clocks, one narrow pulse nested inside a wider one, so that the capture window sits strictly inside the driving window. You do not need the derivation to take the point. The enable is wide and the capture is narrow, and the narrow one lives inside the wide one. Every bus transfer in every machine has that shape.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "clock-bus",
+  "anchor": "where-the-clock-comes-from",
+  "title": "Where the clock comes from",
+  "text": "One aside, because the clock has been treated as given for two units and it is worth knowing what produces it. A clock is an oscillator, and the cheap way to build one is a circuit with no stable state: an arrangement that, whatever it settles to, immediately has to leave. An odd number of inverters in a ring does it. Each one flips its neighbour, the loop never agrees with itself, and the output oscillates at a frequency set by the propagation delay round the ring. That is a real construction and it is used on real chips to measure how fast a process is running, which is a nice inversion: a circuit whose whole purpose is to be unstable is used as a ruler. For a machine you want a frequency that does not drift with temperature, so the clock comes from a crystal instead. The relevant point for this part is that the same physical component can be arranged three ways: as an oscillator with no stable state, as a one-shot that emits a single pulse when poked, and as a latch with two stable states. Ben Eater's clock module builds all three from one chip, and the middle one exists for a reason worth knowing. A pushbutton does not produce one clean edge. The contacts bounce, mechanically, ",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "clock-bus",
+  "anchor": "what-a-clock-cycle-actually-promises",
+  "title": "What a clock cycle actually promises",
+  "text": "Now the sentence this unit is named for. A clock cycle is a contract about when signals are allowed to be garbage. Between edges, every wire in the machine is free to be wrong: carries are rippling, multiplexers are switching, and a bus is settling. None of it means anything yet. At the edge, everything that is going to be captured must have settled, and after the edge it may go back to being wrong. Choosing the cycle length is choosing how much wrongness you are willing to wait out. It has to exceed the longest path from any flip-flop's output, through whatever logic, to any flip-flop's input. That path has a name in Part III, where a tool measures it for you and refuses to sign off a design whose clock is too fast for it. Two consequences worth carrying. Every operation costs the same, because every operation waits for the slowest one. Adding a faster instruction to a machine buys nothing unless the slow path gets shorter too. And a machine can be made faster by shortening the longest path rather than by adding anything. That is what pipelining does, five parts from here: it does not make the work smaller, it cuts the path into shorter pieces with flip-flops between them.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "clock-bus",
+  "anchor": "what-to-carry-into-the-next-unit",
+  "title": "What to carry into the next unit",
+  "text": "One wire can serve every module, and it works because of a rule rather than a mechanism: exactly one driver at a time, with the capture window nested inside the driving window. A clock cycle is permission to be wrong in between, and its length is set by the worst path in the design. The next unit puts storage behind an address. You have registers, you have a way to move values between them, and you have a decoder from unit 006. A memory is those three things arranged so that one of many registers is selected by a number, and the counter you already built becomes a program counter as soon as you give it a way to be loaded rather than incremented.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "clock-bus",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "Several of these are traces again, and the interesting cycles are the ones where a control signal changes. Read what the design held coming into the cycle, then what the controls said during it, then what it holds on the next one. One exercise asks you to build a checker rather than a circuit that does work, and its output is 1 when the design is safe. That is not a strange thing to build: a real design has assertions exactly like it, and Part III runs them during synthesis rather than during simulation.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-bus",
+  "n": 1,
+  "title": "Two drivers is a short",
+  "text": "A bus is a rule rather than a component, and the rule is that exactly one output drives it at a time. Build , which outputs 1 when more than one of three enable signals is high. This is a fault detector: its job is to notice the wiring that destroys the parts.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-bus",
+  "n": 2,
+  "title": "Exactly one, not at least one",
+  "text": "\"At least one\" and \"exactly one\" are different circuits, and a bus needs the second. Build , which outputs 1 when exactly one of the three enables is high.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-bus",
+  "n": 3,
+  "title": "The bus you can actually build here",
+  "text": "Inside a chip a shared wire is a multiplexer, because there is nowhere for a second driver to connect and therefore no rule to get wrong. Build , which puts one of three sources onto a single output, chosen by two select bits. A select of 3 reads the first source again, because three sources do not fill four combinations.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-bus",
+  "n": 4,
+  "title": "The capture inside the drive",
+  "text": "The capture window sits strictly inside the driving window, so the destination has finished before the source lets go. Build , a register that captures its input only when both and are high. The output shows what it held coming into the cycle.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-bus",
+  "n": 5,
+  "title": "Moving a value between two registers",
+  "text": "A transfer is a source enabled onto a wire and a destination capturing from it, and both halves are ordinary parts you have already built. Build . Register A loads when is high. The bus carries A when is 0 and when is 1. Register B loads the bus when is high. Outputs are A, B and the bus, all as of the start of the cycle.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-bus",
+  "n": 6,
+  "title": "An enable that is never two",
+  "text": "Priority is how a design guarantees one driver without needing anyone to promise it. Build , which takes two requests and produces two enables, with the first request winning if both arrive at once.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-bus",
+  "n": 7,
+  "title": "A clock you can build from nothing stable",
+  "text": "An oscillator is a circuit with no stable state, and the cheapest one is an odd number of inversions in a loop. Build , three inverters in a ring, and observe that it never settles. The specification traces what the simulator computes, which is one flip per cycle because the loop is broken by a flip-flop.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-bus",
+  "n": 8,
+  "title": "What the longest path costs",
+  "text": "The clock period must exceed the longest path between flip-flops, and that path is measured in gates rather than in operations. Build , a chain of four inversions from input to output, and notice that its answer is its input while its depth is four gates.",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-bus",
+  "n": 1,
+  "title": "What happens if two ordinary gate outputs drive the same wire?",
+  "text": " That is the crowbar current from Part I, and it destroys the parts. A shared wire needs something an ordinary gate cannot do. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-bus",
+  "n": 2,
+  "title": "What is the third state of a tri-state buffer?",
+  "text": " High impedance is not a value. A wire at high impedance is electrically absent, which is exactly what lets something else drive it. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-bus",
+  "n": 3,
+  "title": "High impedance is the same as logic 0.",
+  "text": " A wire that is absent lets another driver take it. A wire held at 0 fights anything trying to drive it high, which is the short this whole arrangement exists to avoid. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-bus",
+  "n": 4,
+  "title": "What makes a bus safe?",
+  "text": " The wire is just a wire. A bus is a discipline rather than a component, and the correctness lives entirely in the rule about who may drive it. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-bus",
+  "n": 5,
+  "title": "Inside a chip, a shared wire is usually built as:",
+  "text": " There is nowhere for a second driver to connect, so there is no rule to get wrong. Between chips on a board, where you cannot run one wire per source, tri-state is the answer instead. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-bus",
+  "n": 6,
+  "title": "In a bus transfer, the correct ordering is:",
+  "text": " If the destination is still capturing when the source lets go, it captures whatever the wire drifted to. The requirement comes before the mechanism. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-bus",
+  "n": 7,
+  "title": "The shape of the two windows is:",
+  "text": " Every bus transfer in every machine has that shape, and the usual mechanism is two derived clocks, one nested inside the other. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-bus",
+  "n": 8,
+  "title": "A clock cycle is best described as:",
+  "text": " Between edges every wire is free to be wrong. At the edge, everything being captured must have settled. Choosing the length is choosing how much wrongness you are willing to wait out. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-bus",
+  "n": 9,
+  "title": "The clock period must exceed:",
+  "text": " Part III has a tool that measures exactly that path and refuses to sign off a design whose clock is too fast for it. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-bus",
+  "n": 10,
+  "title": "Why does every operation cost the same in a simple machine?",
+  "text": " Adding a faster operation buys nothing unless the slow path gets shorter too, which is why making a machine faster means attacking that path. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-bus",
+  "n": 11,
+  "title": "Pipelining makes a machine faster by:",
+  "text": " It does not make the work smaller. It shortens the path that sets the clock, which is a different thing and the reason it works at all. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-bus",
+  "n": 12,
+  "title": "What is an oscillator, structurally?",
+  "text": " Two stable states describes a latch. One stable state describes a one-shot. A ring of an odd number of inverters never agrees with itself, and that is the cheapest clock there is. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-bus",
+  "n": 13,
+  "title": "Why is a ring oscillator built deliberately onto real chips?",
+  "text": " A circuit whose whole purpose is to be unstable used as a ruler. The system clock comes from a crystal, because a ring drifts with temperature and process. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-bus",
+  "n": 14,
+  "title": "Why does a pushbutton need a one-shot between it and the logic?",
+  "text": " A processor stepped directly by a button would run several instructions per press and look haunted. Every physical button attached to logic has something doing that job. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-bus",
+  "n": 15,
+  "title": "A design that guarantees one enable by construction beats one that promises it because:",
+  "text": " Priority logic makes the bad state unreachable rather than merely forbidden. Every arbiter and interrupt controller is that shape with more inputs. ",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
   "slug": "clock-edge",
   "anchor": "two-kinds-of-logic-and-only-two",
   "title": "Two kinds of logic, and only two",

@@ -1,0 +1,74 @@
+{
+ "slug": "clock-bus",
+ "num": 8,
+ "title": "The clock and the shared bus",
+ "blurb": "A clock cycle is a contract about when signals are allowed to be garbage. One wire can then serve every module.",
+ "part": "logic",
+ "partRoman": "II",
+ "partTitle": "Logic",
+ "phase": "build",
+ "accent": "gold",
+ "backend": "sim",
+ "meta": {
+  "needs": [
+   "feedback"
+  ],
+  "minutes": "50",
+  "one_idea": "A bus works because exactly one thing drives it at a time, and a clock cycle is the agreement about when that is true.",
+  "sources": [
+   "nand2tetris-eater-scott",
+   "digital-design-hdl-fpga"
+  ]
+ },
+ "html": "<p>You have registers. A machine needs several of them talking to each other, and the obvious way to wire that is the way that does not work.</p>\n<h2 id=\"the-wiring-that-shorts\">The wiring that shorts</h2>\n<p>Take two registers and connect both of their outputs to the same wire, so that either can send a value to whatever is listening. It looks reasonable and it is a short circuit.</p>\n<p>Each output is a CMOS gate from unit 002, which means a pull-up network to the supply and a pull-down network to ground, with exactly one of them conducting. If one register is driving high and the other is driving low, the wire now has a path from the supply straight to ground through two gates. That is the crowbar current from Part I, and it destroys the parts.</p>\n<p>So a shared wire needs something the gate from unit 002 cannot do: a way to be connected to neither rail.</p>\n<h2 id=\"the-third-state\">The third state</h2>\n<p>A tri-state buffer has a data input, an output, and an enable. When the enable is high it passes its input through as an ordinary gate would. When the enable is low it disconnects: both networks off, output attached to nothing.</p>\n<p>That state has a name, high impedance, and what matters about it is the thing people assume wrongly. <strong>It is not logic 0.</strong> A wire at high impedance is not low, it is electrically absent, and something else on the wire is free to drive it without a fight.</p>\n<p>Now several devices can share one wire, and the whole design rests on one rule.</p>\n<p><strong>Exactly one output is ever enabled at once.</strong></p>\n<p>Not usually one. Not one in the normal case. If two are ever enabled at the same moment, even briefly during a transition, the wire is a short. Ben Eater's machine has one enable bit per module in its control word, and the thing that makes it safe is that the control sequence never sets two of them.</p>\n<p>That is why a bus is a discipline rather than a component. The wire is just a wire, and the correctness lives in the rule about who is allowed to drive it.</p>\n<h2 id=\"what-you-can-build-without-it\">What you can build without it</h2>\n<p>The simulator in this part has no tri-state, because it has no concept of a wire being absent: every wire has a value. So the exercises build the other arrangement, which is what you would use inside a chip anyway.</p>\n<p>A multiplexer with as many inputs as there are sources does the same job. Each source is wired to one input, the select lines choose which one reaches the output, and there is no possibility of two drivers because there is only ever one wire being read.</p>\n<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 618 192\" class=\"fig-svg\" style=\"max-width:896px\" role=\"img\" aria-label=\"Two ways to share one wire: three tri-state buffers driving a common line with one enable each, and a three-way multiplexer selecting between the same three sources.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><line x1=\"53\" y1=\"44\" x2=\"211\" y2=\"57\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"106\" y1=\"79\" x2=\"158\" y2=\"79\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"53\" y1=\"114\" x2=\"211\" y2=\"101\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"378\" y1=\"44\" x2=\"537\" y2=\"57\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"431\" y1=\"79\" x2=\"484\" y2=\"79\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"378\" y1=\"114\" x2=\"537\" y2=\"101\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><rect x=\"0.0\" y=\"0.0\" width=\"105.6\" height=\"44.0\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"52.8\" y=\"26.0\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">reg A</text><rect x=\"0.0\" y=\"57.2\" width=\"105.6\" height=\"44.0\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"52.8\" y=\"83.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">reg B</text><rect x=\"0.0\" y=\"114.4\" width=\"105.6\" height=\"44.0\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"52.8\" y=\"140.4\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">reg C</text><rect x=\"158.4\" y=\"57.2\" width=\"105.6\" height=\"44.0\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--clay-ink, var(--accent));stroke:var(--clay-ink, var(--accent))\"/><text x=\"211.2\" y=\"78.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">one wire</text><text x=\"211.2\" y=\"94.2\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">one enable at a time</text><rect x=\"325.6\" y=\"0.0\" width=\"105.6\" height=\"44.0\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"378.4\" y=\"26.0\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">reg A</text><rect x=\"325.6\" y=\"57.2\" width=\"105.6\" height=\"44.0\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"378.4\" y=\"83.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">reg B</text><rect x=\"325.6\" y=\"114.4\" width=\"105.6\" height=\"44.0\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"378.4\" y=\"140.4\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">reg C</text><rect x=\"484.0\" y=\"57.2\" width=\"105.6\" height=\"44.0\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"536.8\" y=\"78.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">mux</text><text x=\"536.8\" y=\"94.2\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">select chooses</text></svg><figcaption>The same job twice. On a board, three drivers and a rule that only one may be on. Inside a chip, a multiplexer, where the rule is enforced by there being nowhere for a second driver to connect.</figcaption></figure>\n<p>Both are real and they are used in different places. Between chips on a board, where the wire is long and you cannot run one per source, tri-state. Inside a chip, where wires are cheap and a short is fatal, a multiplexer. Modern chips use multiplexers almost everywhere for exactly that reason.</p>\n<h2 id=\"the-other-rule-about-time\">The other rule, about time</h2>\n<p>Enabling one register onto a bus and loading another from it is a transfer, and the order of two events in that transfer is not optional.</p>\n<p>The source is enabled, the wire settles to its value, the destination captures it, and then the source stops driving. Getting that order wrong is the second classic bus fault: if the destination is still capturing while the source has already let go, it captures whatever the wire drifted to.</p>\n<p>Scott states the requirement before giving the mechanism, which is the right way round: the destination's capture must finish before the source's enable goes away. The mechanism is two derived clocks, one narrow pulse nested inside a wider one, so that the capture window sits strictly inside the driving window.</p>\n<p>You do not need the derivation to take the point. <strong>The enable is wide and the capture is narrow, and the narrow one lives inside the wide one.</strong> Every bus transfer in every machine has that shape.</p>\n<h2 id=\"where-the-clock-comes-from\">Where the clock comes from</h2>\n<p>One aside, because the clock has been treated as given for two units and it is worth knowing what produces it.</p>\n<p>A clock is an oscillator, and the cheap way to build one is a circuit with no stable state: an arrangement that, whatever it settles to, immediately has to leave. An odd number of inverters in a ring does it. Each one flips its neighbour, the loop never agrees with itself, and the output oscillates at a frequency set by the propagation delay round the ring.</p>\n<p>That is a real construction and it is used on real chips to measure how fast a process is running, which is a nice inversion: a circuit whose whole purpose is to be unstable is used as a ruler.</p>\n<p>For a machine you want a frequency that does not drift with temperature, so the clock comes from a crystal instead. The relevant point for this part is that the same physical component can be arranged three ways: as an oscillator with no stable state, as a one-shot that emits a single pulse when poked, and as a latch with two stable states. Ben Eater's clock module builds all three from one chip, and the middle one exists for a reason worth knowing.</p>\n<p>A pushbutton does not produce one clean edge. The contacts bounce, mechanically, for a few milliseconds, and a naive wiring gives a burst of edges per press. A processor stepped by that button would run several instructions for one press and look haunted. The one-shot is there to turn a messy press into a single pulse, and every physical button attached to logic anywhere has something doing that job.</p>\n<h2 id=\"what-a-clock-cycle-actually-promises\">What a clock cycle actually promises</h2>\n<p>Now the sentence this unit is named for.</p>\n<p>A clock cycle is a contract about when signals are allowed to be garbage. Between edges, every wire in the machine is free to be wrong: carries are rippling, multiplexers are switching, and a bus is settling. None of it means anything yet. At the edge, everything that is going to be captured must have settled, and after the edge it may go back to being wrong.</p>\n<p>Choosing the cycle length is choosing how much wrongness you are willing to wait out. It has to exceed the longest path from any flip-flop's output, through whatever logic, to any flip-flop's input. That path has a name in Part III, where a tool measures it for you and refuses to sign off a design whose clock is too fast for it.</p>\n<p>Two consequences worth carrying.</p>\n<p>Every operation costs the same, because every operation waits for the slowest one. Adding a faster instruction to a machine buys nothing unless the slow path gets shorter too.</p>\n<p>And a machine can be made faster by shortening the longest path rather than by adding anything. That is what pipelining does, five parts from here: it does not make the work smaller, it cuts the path into shorter pieces with flip-flops between them.</p>\n<h2 id=\"what-to-carry-into-the-next-unit\">What to carry into the next unit</h2>\n<p>One wire can serve every module, and it works because of a rule rather than a mechanism: exactly one driver at a time, with the capture window nested inside the driving window.</p>\n<p>A clock cycle is permission to be wrong in between, and its length is set by the worst path in the design.</p>\n<p>The next unit puts storage behind an address. You have registers, you have a way to move values between them, and you have a decoder from unit 006. A memory is those three things arranged so that one of many registers is selected by a number, and the counter you already built becomes a program counter as soon as you give it a way to be loaded rather than incremented.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>Several of these are traces again, and the interesting cycles are the ones where a control signal changes. Read what the design held coming into the cycle, then what the controls said during it, then what it holds on the next one.</p>\n<p>One exercise asks you to build a checker rather than a circuit that does work, and its output is 1 when the design is safe. That is not a strange thing to build: a real design has assertions exactly like it, and Part III runs them during synthesis rather than during simulation.</p>",
+ "headings": [
+  {
+   "id": "the-wiring-that-shorts",
+   "text": "The wiring that shorts",
+   "level": 2
+  },
+  {
+   "id": "the-third-state",
+   "text": "The third state",
+   "level": 2
+  },
+  {
+   "id": "what-you-can-build-without-it",
+   "text": "What you can build without it",
+   "level": 2
+  },
+  {
+   "id": "the-other-rule-about-time",
+   "text": "The other rule, about time",
+   "level": 2
+  },
+  {
+   "id": "where-the-clock-comes-from",
+   "text": "Where the clock comes from",
+   "level": 2
+  },
+  {
+   "id": "what-a-clock-cycle-actually-promises",
+   "text": "What a clock cycle actually promises",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-into-the-next-unit",
+   "text": "What to carry into the next unit",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1447,
+ "needs": [
+  "feedback"
+ ],
+ "neededBy": [
+  "clock-edge",
+  "registers"
+ ]
+}
