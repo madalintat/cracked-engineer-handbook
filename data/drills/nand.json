@@ -159,11 +159,11 @@
   },
   {
    "n": 14,
-   "q": "Reading a NAND-only design, you find a part named `xor`. What has gone wrong?",
+   "q": "Reading a NAND-only design, you find a part named <code>xor</code>. What has gone wrong?",
    "options": [
     "Nothing, as long as its truth table is correct",
     "It is a gate that was not built from NAND, so the design assumes",
-    "`xor` is a reserved name in the netlist language",
+    "<code>xor</code> is a reserved name in the netlist language",
     "XOR cannot be expressed in a netlist at all"
    ],
    "correct": 1,

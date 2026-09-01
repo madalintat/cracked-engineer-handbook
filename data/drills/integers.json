@@ -27,7 +27,7 @@
   },
   {
    "n": 3,
-   "q": "Why has `-INT_MIN` no correct answer?",
+   "q": "Why has <code>-INT_MIN</code> no correct answer?",
    "options": [
     "There is one more negative value than positive, so its negation is out of",
     "Negation is undefined for all values in C",
@@ -75,10 +75,10 @@
   },
   {
    "n": 7,
-   "q": "`int a = -1; unsigned b = 1;` What does `a < b` evaluate to, and why?",
+   "q": "<code>int a = -1; unsigned b = 1;</code> What does <code>a &lt; b</code> evaluate to, and why?",
    "options": [
     "1, because -1 is less than 1",
-    "0, because `a` converts to unsigned first and becomes 4294967295",
+    "0, because <code>a</code> converts to unsigned first and becomes 4294967295",
     "It is undefined behaviour",
     "It depends on the optimisation level"
    ],
@@ -87,10 +87,10 @@
   },
   {
    "n": 8,
-   "q": "Why does `for (size_t i = n - 1; i >= 0; i--)` never terminate?",
+   "q": "Why does <code>for (size_t i = n - 1; i &gt;= 0; i--)</code> never terminate?",
    "options": [
-    "`n - 1` overflows when `n` is zero",
-    "`i >= 0` is always true for an unsigned type, and decrementing 0 wraps to",
+    "<code>n - 1</code> overflows when <code>n</code> is zero",
+    "<code>i &gt;= 0</code> is always true for an unsigned type, and decrementing 0 wraps to",
     "The compiler removes the condition as undefined behaviour",
     "It terminates, but only after 2^64 iterations"
    ],
@@ -99,7 +99,7 @@
   },
   {
    "n": 9,
-   "q": "Running with `-fsanitize=undefined` but without `-fno-sanitize-recover=all`, a program overflows. What happens?",
+   "q": "Running with <code>-fsanitize=undefined</code> but without <code>-fno-sanitize-recover=all</code>, a program overflows. What happens?",
    "options": [
     "The program aborts immediately",
     "The sanitizer prints a runtime error and the program continues and exits 0",
@@ -113,17 +113,17 @@
    "n": 10,
    "q": "Which overflow test is well defined?",
    "options": [
-    "`if (a + b < 0)`",
-    "`if (b > 0 && a > INT_MAX - b)`",
-    "`if ((long)(a + b) > INT_MAX)`",
-    "`if (a + b < a)`"
+    "<code>if (a + b &lt; 0)</code>",
+    "<code>if (b &gt; 0 &amp;&amp; a &gt; INT_MAX - b)</code>",
+    "<code>if ((long)(a + b) &gt; INT_MAX)</code>",
+    "<code>if (a + b &lt; a)</code>"
    ],
    "correct": 1,
    "why": "<p>The others all perform the addition first and then examine a value the standard says does not exist, so the compiler may conclude the test is never true and delete it. Checking the operands asks a question the standard answers.</p>"
   },
   {
    "n": 11,
-   "q": "What does `__builtin_add_overflow(a, b, &out)` return?",
+   "q": "What does <code>__builtin_add_overflow(a, b, &amp;out)</code> return?",
    "options": [
     "The sum, or zero if it overflowed",
     "True when the operation overflowed, having written the wrapped result to",
@@ -135,7 +135,7 @@
   },
   {
    "n": 12,
-   "q": "Why is `mov eax, eax` not a no-op on x86-64?",
+   "q": "Why is <code>mov eax, eax</code> not a no-op on x86-64?",
    "options": [
     "Writing a 32-bit register zeroes the upper 32 bits of the 64-bit register",
     "It flushes the instruction pipeline",
@@ -147,7 +147,7 @@
   },
   {
    "n": 13,
-   "q": "Reading one byte through a `char*` on a target where `char` is signed, what does the byte 0xFF become as an `int`?",
+   "q": "Reading one byte through a <code>char*</code> on a target where <code>char</code> is signed, what does the byte 0xFF become as an <code>int</code>?",
    "options": [
     "255",
     "-1, because the value sign-extends",
@@ -159,10 +159,10 @@
   },
   {
    "n": 14,
-   "q": "`mid(2, -1)` gives 0 for `(a + b) / 2` and 1 for `a + (b - a) / 2`. Why?",
+   "q": "<code>mid(2, -1)</code> gives 0 for <code>(a + b) / 2</code> and 1 for <code>a + (b - a) / 2</code>. Why?",
    "options": [
     "The second form overflows",
-    "Integer division truncates toward zero, so `(-3) / 2` is -1 rather than -2",
+    "Integer division truncates toward zero, so <code>(-3) / 2</code> is -1 rather than -2",
     "The first form has undefined behaviour for negative operands",
     "They are the same function and the difference is a rounding mode"
    ],

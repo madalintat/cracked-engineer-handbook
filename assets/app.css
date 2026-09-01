@@ -38,9 +38,12 @@
 
   /* four inks */
   --ink:   #14181a;
-  --ink-2: #3d4649;
-  --ink-3: #6a7479;
-  --ink-4: #98a1a6;
+  /* Four steps, all of which clear 4.5:1 on --bg. The originals were
+   * #3d4649 / #6a7479 / #98a1a6, which measured 7.4 / 4.0 / 2.2, so two of the
+   * four inks could not legally carry body text on the ground they sit on. */
+  --ink-2: #363e41;   /* 9.1:1 */
+  --ink-3: #50585d;   /* 6.0:1 */
+  --ink-4: #606970;   /* 4.6:1 */
 
   --code-bg:   #dfe3e6;
   --code-ink:  #1b2124;
@@ -55,23 +58,44 @@
   --slate: #5b6a72;
   --accent: var(--phos);
 
+  /* Text-safe accents. An accent that reads well as a 2px rule or a 7px dot
+   * does not necessarily carry 12px type: measured on the light ground, phos
+   * as body text is 2.9:1. So decoration keeps --accent and anything that is
+   * read keeps --accent-ink, which is the same hue darkened until it passes.
+   * In dark mode the two are the same colour, because there they both pass. */
+  --phos-ink:  #187943;
+  --amber-ink: #965d0e;
+  --rust-ink:  #a2542f;
+  --moss-ink:  #487445;
+  --steel-ink: #2f6e9d;
+  --plum-ink:  #7a4f9c;
+  --slate-ink: #5b6a72;
+  --accent-ink: var(--phos-ink);
+
   /* semantic. ok is cyan on purpose: see note 2 above. */
   --ok:   #0f7c8c;
   --warn: #9a6a05;
   --bad:  #b03434;
 
+  --ok-ink:   #0c616e;   /* 4.8:1 on its own 16% tint, the darkest ground it sits on */
+  --warn-ink: #8e6105;
+  --bad-ink:  #a02f2f;   /* 4.8:1 on its own 14% tint */
+
   --btn-ink:    #f6f7f8;
   --btn-shadow: #0d5c33;
 
-  /* syntax. tokenised so a theme swap reaches them. */
+  /* syntax. tokenised so a theme swap reaches them, and every one of them
+   * measured against --code-bg rather than against the page: five of these
+   * eight cleared 4.5:1 on the page and failed on the panel they actually
+   * sit on, comments and preprocessor lines worst at 3.7. */
   --tok-kw:   #7a4f9c;
-  --tok-str:  #1f7a4a;
-  --tok-num:  #a2542f;
-  --tok-com:  #6a7479;
-  --tok-fn:   #2f6f9e;
-  --tok-type: #0f6f7c;
+  --tok-str:  #1d7044;
+  --tok-num:  #974e2c;
+  --tok-com:  #5b6368;
+  --tok-fn:   #2b6792;
+  --tok-type: #0f6c79;
   --tok-punc: #3d4649;
-  --tok-pre:  #9a6a05;
+  --tok-pre:  #835a04;
 
   /* type: nine fluid steps, no font size ever inside a media query */
   --t-micro: clamp(10.5px, 0.1vw + 10.2px, 11.5px);
@@ -112,8 +136,21 @@
 
   --ink:   #f2f5f6;
   --ink-2: #b3bdc2;
-  --ink-3: #86929a;
-  --ink-4: #5d686e;
+  --ink-3: #949fa6;   /* 7.0:1 on --bg */
+  --ink-4: #7f8c92;   /* 5.5:1 on --bg. was #5d686e, which measured 3.3 */
+
+  --phos-ink:  var(--phos);
+  --amber-ink: var(--amber);
+  --rust-ink:  var(--rust);
+  --moss-ink:  var(--moss);
+  --steel-ink: var(--steel);
+  --plum-ink:  var(--plum);
+  --slate-ink: var(--slate);
+  --accent-ink: var(--phos-ink);
+
+  --ok-ink:   var(--ok);
+  --warn-ink: var(--warn);
+  --bad-ink:  var(--bad);
 
   --code-bg:  #12161a;
   --code-ink: #e6ebed;
@@ -136,7 +173,7 @@
   --tok-kw:   #c39bea;
   --tok-str:  #7fd6a2;
   --tok-num:  #e0855c;
-  --tok-com:  #6d787e;
+  --tok-com:  #77848a;
   --tok-fn:   #6fb6ea;
   --tok-type: #58d0c8;
   --tok-punc: #b3bdc2;
@@ -151,13 +188,13 @@
   --slow: 380ms;
 }
 
-[data-accent="phos"]  { --accent: var(--phos);  --btn-shadow: #1d7a45; }
-[data-accent="amber"] { --accent: var(--amber); --btn-shadow: #7a4c08; }
-[data-accent="rust"]  { --accent: var(--rust);  --btn-shadow: #6f3820; }
-[data-accent="moss"]  { --accent: var(--moss);  --btn-shadow: #38562f; }
-[data-accent="steel"] { --accent: var(--steel); --btn-shadow: #1e4c6d; }
-[data-accent="plum"]  { --accent: var(--plum);  --btn-shadow: #533670; }
-[data-accent="slate"] { --accent: var(--slate); --btn-shadow: #3d484e; }
+[data-accent="phos"]  { --accent: var(--phos); --accent-ink: var(--phos-ink);  --btn-shadow: #1d7a45; }
+[data-accent="amber"] { --accent: var(--amber); --accent-ink: var(--amber-ink); --btn-shadow: #7a4c08; }
+[data-accent="rust"]  { --accent: var(--rust); --accent-ink: var(--rust-ink);  --btn-shadow: #6f3820; }
+[data-accent="moss"]  { --accent: var(--moss); --accent-ink: var(--moss-ink);  --btn-shadow: #38562f; }
+[data-accent="steel"] { --accent: var(--steel); --accent-ink: var(--steel-ink); --btn-shadow: #1e4c6d; }
+[data-accent="plum"]  { --accent: var(--plum); --accent-ink: var(--plum-ink);  --btn-shadow: #533670; }
+[data-accent="slate"] { --accent: var(--slate); --accent-ink: var(--slate-ink); --btn-shadow: #3d484e; }
 
 /* ----------------------------------------------------------------- reset */
 
@@ -195,7 +232,7 @@ h2 { font-size: var(--t-h2); letter-spacing: -0.024em; }
 h3 { font-size: var(--t-h3); letter-spacing: -0.014em; }
 h4 { font-size: var(--t-lede); letter-spacing: -0.008em; }
 
-a { color: var(--accent); text-decoration: none; }
+a { color: var(--accent-ink); text-decoration: none; }
 a:hover { text-decoration: underline; text-underline-offset: 2px; }
 
 :focus-visible {
@@ -289,7 +326,7 @@ nav.main a {
               background-color var(--fast) var(--ease);
 }
 nav.main a:hover { color: var(--ink); background: var(--raised); text-decoration: none; }
-nav.main a[aria-current="page"] { color: var(--accent); background: var(--raised); }
+nav.main a[aria-current="page"] { color: var(--accent-ink); background: var(--raised); }
 
 /* -------------------------------------------------------------- buttons */
 
@@ -299,7 +336,8 @@ nav.main a[aria-current="page"] { color: var(--accent); background: var(--raised
   gap: 8px;
   font: 700 var(--t-sm)/1 var(--sans);
   color: var(--btn-ink);
-  background: var(--accent);
+  /* the darkened accent, so the label on it clears 4.5:1 on the light ground */
+  background: var(--accent-ink);
   border: 0;
   border-radius: var(--r-2);
   padding: 11px 16px;
@@ -361,10 +399,7 @@ nav.main a[aria-current="page"] { color: var(--accent); background: var(--raised
   text-transform: uppercase;
   letter-spacing: .08em;
 }
-.card .meta .n { color: var(--accent); }
-
-.card.stub { opacity: .55; }
-.card.stub:hover { transform: none; border-color: var(--border-soft); }
+.card .meta .n { color: var(--accent-ink); }
 
 .badge {
   display: inline-flex;
@@ -374,12 +409,12 @@ nav.main a[aria-current="page"] { color: var(--accent); background: var(--raised
   padding: 4px 7px;
   border-radius: var(--r-1);
   background: var(--raised);
-  color: var(--ink-3);
+  color: var(--ink-2);
   text-transform: uppercase;
   letter-spacing: .06em;
 }
-.badge.ok  { color: var(--ok);  background: color-mix(in srgb, var(--ok) 14%, transparent); }
-.badge.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+.badge.ok  { color: var(--ok-ink);  background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.badge.bad { color: var(--bad-ink); background: color-mix(in srgb, var(--bad) 14%, transparent); }
 
 /* ----------------------------------------------------------------- prose */
 
@@ -446,7 +481,7 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
   letter-spacing: .08em;
   margin-bottom: 12px;
 }
-.unit .kicker .n { color: var(--accent); }
+.unit .kicker .n { color: var(--accent-ink); }
 
 .idea {
   margin: 18px 0 0;
@@ -462,7 +497,7 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
 .idea .lbl {
   display: block;
   font: 700 var(--t-micro)/1 var(--mono);
-  color: var(--accent);
+  color: var(--accent-ink);
   text-transform: uppercase;
   letter-spacing: .1em;
   margin-bottom: 7px;
@@ -658,7 +693,7 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
   color: var(--ink-4); text-transform: uppercase; letter-spacing: .08em;
   margin-bottom: 10px;
 }
-.exhead .kicker .n { color: var(--accent); }
+.exhead .kicker .n { color: var(--accent-ink); }
 
 .exnav { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 18px; }
 .exnav a {
@@ -671,8 +706,8 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
   transition: border-color var(--fast) var(--ease), color var(--fast) var(--ease);
 }
 .exnav a:hover { border-color: var(--accent); color: var(--ink); text-decoration: none; }
-.exnav a[aria-current="page"] { border-color: var(--accent); color: var(--accent); }
-.exnav a.done { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); border-color: transparent; }
+.exnav a[aria-current="page"] { border-color: var(--accent); color: var(--accent-ink); }
+.exnav a.done { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok-ink); border-color: transparent; }
 
 /* the editor: two layers that must agree on every metric below */
 
@@ -760,7 +795,7 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
   background: none; border: 1px solid var(--border-soft);
   border-radius: var(--r-2); padding: 7px 9px; cursor: pointer;
 }
-.wbbar .tog[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.wbbar .tog[aria-pressed="true"] { color: var(--accent-ink); border-color: var(--accent); }
 
 /* verdict rows: one per judge, named, so the reader knows which tool spoke */
 
@@ -791,13 +826,16 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
   color: var(--code-ink);
 }
 .vrow[data-state="ok"]      { border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
-.vrow[data-state="ok"] .who { color: var(--ok); }
+.vrow[data-state="ok"] .who { color: var(--ok-ink); }
 .vrow[data-state="bad"]      { border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
-.vrow[data-state="bad"] .who { color: var(--bad); }
-.vrow[data-state="warn"] .who { color: var(--warn); }
+.vrow[data-state="bad"] .who { color: var(--bad-ink); }
+.vrow[data-state="warn"] .who { color: var(--warn-ink); }
 /* Not available is not the same as failed, and must not look like it. */
-.vrow[data-state="unavailable"] { opacity: .62; border-style: dashed; }
-.vrow[data-state="running"] .who { color: var(--accent); }
+/* Dashed border says "not run yet". Fading the row said it a second time and
+ * put a 78 MB download prompt at 2.5:1, which is the one row a reader has to
+ * be able to read before they can do anything at all. */
+.vrow[data-state="unavailable"] { border-style: dashed; background: var(--bg); }
+.vrow[data-state="running"] .who { color: var(--accent-ink); }
 
 .diagnosis {
   margin-top: 14px;
@@ -811,7 +849,7 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
 .diagnosis .lbl {
   display: block;
   font: 700 var(--t-micro)/1 var(--mono);
-  color: var(--accent);
+  color: var(--accent-ink);
   text-transform: uppercase; letter-spacing: .1em;
   margin-bottom: 8px;
 }
@@ -819,7 +857,7 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
 .stamp {
   display: inline-flex; align-items: center; gap: 7px;
   font: 700 var(--t-sm)/1 var(--sans);
-  color: var(--ok);
+  color: var(--ok-ink);
   animation: hh-verdict-in var(--med) var(--ease);
 }
 
@@ -835,7 +873,7 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
 
 .truth { width: auto; font: 500 var(--t-tiny)/1.5 var(--mono); }
 .truth td, .truth th { padding: 4px 10px; }
-.truth tr.bad td { color: var(--bad); }
+.truth tr.bad td { color: var(--bad-ink); }
 .truth tr.bad td:last-child::after { content: " <-"; }
 
 /* ------------------------------------------------------------ motion */
@@ -944,7 +982,7 @@ nav.tabs { display: none; }
   }
   nav.tabs a:hover { text-decoration: none; }
   nav.tabs a .ti { font-size: 17px; line-height: 1; }
-  nav.tabs a[aria-current="page"] { color: var(--accent); }
+  nav.tabs a[aria-current="page"] { color: var(--accent-ink); }
 }
 
 /* ------------------------------------------------------------- settings */
@@ -1027,8 +1065,8 @@ nav.tabs { display: none; }
 }
 .opt:hover { background: var(--raised); }
 .opt input { margin-top: 3px; accent-color: var(--accent); }
-.opt[data-mark="right"]  { color: var(--ok); font-weight: 600; }
-.opt[data-mark="chosen"] { color: var(--bad); text-decoration: line-through; }
+.opt[data-mark="right"]  { color: var(--ok-ink); font-weight: 600; }
+.opt[data-mark="chosen"] { color: var(--bad-ink); text-decoration: line-through; }
 
 .drill .why {
   margin-top: 10px;
@@ -1054,7 +1092,7 @@ nav.tabs { display: none; }
   border-radius: var(--r-2);
 }
 .atlastabs a:hover { color: var(--ink); border-color: var(--border); text-decoration: none; }
-.atlastabs a.on { color: var(--accent); border-color: var(--accent); }
+.atlastabs a.on { color: var(--accent-ink); border-color: var(--accent); }
 
 .filter {
   font: 500 var(--t-sm)/1.4 var(--mono);
@@ -1067,7 +1105,7 @@ nav.tabs { display: none; }
 }
 .wbbar .note { font-size: var(--t-micro); color: var(--ink-4); }
 
-#atlastable td.mono { font-family: var(--mono); color: var(--accent); font-weight: 500; }
+#atlastable td.mono { font-family: var(--mono); color: var(--accent-ink); font-weight: 500; }
 #atlastable tbody tr:hover { background: var(--raised); }
 
 .sources, .unverified {
@@ -1084,7 +1122,7 @@ nav.tabs { display: none; }
   margin-bottom: 10px;
 }
 .unverified { border-left: 2px solid var(--warn); padding-left: 14px; }
-.unverified h3 { color: var(--warn); }
+.unverified h3 { color: var(--warn-ink); }
 .sources ul, .unverified ul { margin: 0; padding-left: 18px; }
 .sources li, .unverified li { margin-bottom: 5px; }
 
@@ -1115,7 +1153,7 @@ nav.tabs { display: none; }
 .term h3 code {
   font: 700 var(--t-sm)/1.4 var(--mono);
   background: none;
-  color: var(--accent);
+  color: var(--accent-ink);
   padding: 0;
 }
 .term .see, .term .usedby {
@@ -1128,8 +1166,194 @@ a.gl {
   border-bottom: 1px dotted var(--accent);
   color: inherit;
 }
-a.gl:hover { color: var(--accent); text-decoration: none; }
+a.gl:hover { color: var(--accent-ink); text-decoration: none; }
 
 /* A section reached by fragment must clear the sticky header, the same way a
    heading does. */
 .gsec, section[id], .term { scroll-margin-top: 76px; }
+
+/* ------------------------------------------------------------- the track */
+/* Three levels: phase, part, unit. The unit is a row rather than a card,
+ * because 122 cards is a wall and 122 rows is a table of contents. */
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+
+.track .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 24px 0 4px;
+}
+.track .chip {
+  font: 600 var(--t-tiny)/1 var(--sans);
+  padding: 7px 11px;
+  border-radius: 100px;
+  border: 1px solid var(--border-soft);
+  color: var(--ink-2);
+  text-decoration: none;
+  background: var(--surface);
+}
+.track .chip::before {
+  content: "";
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 7px;
+  vertical-align: 1px;
+}
+.track .chip:hover { border-color: var(--accent); color: var(--ink); }
+
+.track .tfilter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 8px;
+  position: sticky;
+  top: 60px;
+  z-index: 3;
+  background: var(--bg);
+  padding: 10px 0;
+}
+.track .tfilter input {
+  flex: 1 1 auto;
+  max-width: 420px;
+  font: 400 var(--t-sm)/1.2 var(--sans);
+  padding: 10px 12px;
+  border-radius: var(--r-2);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+.track .tfilter input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+.track .tfilter .count {
+  font: 600 var(--t-micro)/1 var(--mono);
+  color: var(--ink-4);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+.track .phase { margin-top: 56px; }
+.track .ph-head {
+  border-top: 2px solid var(--accent);
+  padding-top: 14px;
+  max-width: var(--measure);
+}
+.track .ph-head h2 { margin: 0; }
+.track .ph-head p { color: var(--ink-3); font-size: var(--t-sm); margin: 6px 0 0; }
+.track .ph-head .ph-count {
+  font: 600 var(--t-micro)/1 var(--mono);
+  color: var(--ink-4);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-top: 10px;
+}
+
+.track .part { margin-top: 34px; }
+.track .part h3 {
+  font: 700 var(--t-h3)/1.2 var(--sans);
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.track .part .roman {
+  font: 700 var(--t-sm)/1 var(--mono);
+  color: var(--accent-ink);
+}
+.track .part .pb {
+  color: var(--ink-3);
+  font-size: var(--t-sm);
+  max-width: var(--measure);
+  margin: 6px 0 14px;
+}
+
+.track ol.units { list-style: none; margin: 0; padding: 0; }
+.track li.u + li.u { border-top: 1px solid var(--border-soft); }
+.track li.u > a {
+  display: grid;
+  grid-template-columns: 3.4rem 1fr auto;
+  gap: 14px;
+  align-items: baseline;
+  padding: 11px 10px;
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--r-2);
+}
+.track li.u > a:hover { background: var(--surface); }
+.track li.u .n {
+  font: 600 var(--t-micro)/1.6 var(--mono);
+  color: var(--ink-4);
+}
+.track li.u .t { font: 600 var(--t-body)/1.35 var(--sans); color: var(--ink); }
+.track li.u .b {
+  display: block;
+  font: 400 var(--t-sm)/1.45 var(--sans);
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+.track li.u .tags {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.track li.u.started .n { color: var(--accent-ink); }
+/* A planned unit is dimmed by one step of ink, not by opacity. Fading the
+ * whole row put its blurb at 2.8:1, and 118 of 122 units are planned, so that
+ * made most of the track unreadable to say something the badge already says. */
+.track li.u.stub > a { cursor: default; }
+.track li.u.stub > a:hover { background: none; }
+.track li.u.stub .t { color: var(--ink-2); font-weight: 500; }
+.badge.muted { color: var(--ink-3); background: var(--raised); }
+
+.track .empty {
+  max-width: var(--measure);
+  color: var(--ink-3);
+  font-size: var(--t-sm);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-3);
+  padding: 16px 18px;
+  margin: 12px 0 0;
+}
+
+@media (max-width: 640px) {
+  .track li.u > a { grid-template-columns: 2.8rem 1fr; }
+  .track li.u .tags { grid-column: 2; justify-content: flex-start; margin-top: 6px; }
+  .track .tfilter { position: static; }
+}
+
+/* Dependency edges on a unit. Both directions, because the reverse edge is
+ * the one no other view can answer. */
+.edges { margin-top: 20px; max-width: var(--measure); }
+.edges h2 {
+  font: 600 var(--t-micro)/1 var(--mono);
+  color: var(--ink-4);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin: 0 0 8px;
+}
+.edges ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.edges li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: var(--t-sm);
+}
+.edges li a { color: var(--ink); text-decoration-color: var(--border); }
+.edges li a:hover { text-decoration-color: var(--accent); }
+.edges li .planned { color: var(--ink-4); }
+.edges.feeds { margin-top: 16px; }
+
+/* Dimming by opacity is how text ends up below 4.5:1 without anyone choosing
+ * it: the colour still says --ink-2 in devtools. Dim by ink instead. */
+.dim { color: var(--ink-4); }

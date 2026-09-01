@@ -5,9 +5,9 @@
   {
    "n": 1,
    "title": "One character, one flip-flop",
-   "brief": "<p>The starter is a two-stage shift register with the wrong assignment operator. Synthesise it and read the cell count, then change the one character that fixes it.</p>\n<p>shifts instead of collapsing. same value and removed one.</p>",
+   "brief": "<p>The starter is a two-stage shift register with the wrong assignment operator. Synthesise it and read the cell count, then change the one character that fixes it.</p>",
    "kind": "property",
-   "concept": "Non-blocking assignment reads pre-edge values, so a chain of flops",
+   "concept": "Non-blocking assignment reads pre-edge values, so a chain of flops shifts instead of collapsing.",
    "backend": "yosys",
    "gpu": null,
    "flags": "",
@@ -18,7 +18,7 @@
     }
    ],
    "hints": [
-    "The synthesiser is not confused. It noticed both flops always hold the"
+    "The synthesiser is not confused. It noticed both flops always hold the same value and removed one."
    ],
    "diagnose": [
     {
@@ -54,9 +54,9 @@
   {
    "n": 2,
    "title": "The hole that becomes storage",
-   "brief": "<p>This block is meant to be combinational. Synthesise it and the tool will tell you what it actually built.</p>\n<p>keeping a value requires storage.</p>",
+   "brief": "<p>This block is meant to be combinational. Synthesise it and the tool will tell you what it actually built.</p>",
    "kind": "property",
-   "concept": "A signal left unassigned on some path keeps its previous value, and",
+   "concept": "A signal left unassigned on some path keeps its previous value, and keeping a value requires storage.",
    "backend": "yosys",
    "gpu": null,
    "flags": "",
@@ -67,7 +67,7 @@
     }
    ],
    "hints": [
-    "What is `y` when `a` is 0? The block does not say."
+    "What is <code>y</code> when <code>a</code> is 0? The block does not say."
    ],
    "diagnose": [
     {
@@ -99,9 +99,9 @@
   {
    "n": 3,
    "title": "The same hole, in a case statement",
-   "brief": "<p>A two-bit selector with four possible values, and a <code>case</code> that handles two of them. Count the latches before you run it, then check your count.</p>\n<p>output bit becomes its own latch.</p>",
+   "brief": "<p>A two-bit selector with four possible values, and a <code>case</code> that handles two of them. Count the latches before you run it, then check your count.</p>",
    "kind": "property",
-   "concept": "An unhandled case value is an unassigned path, and every unassigned",
+   "concept": "An unhandled case value is an unassigned path, and every unassigned output bit becomes its own latch.",
    "backend": "yosys",
    "gpu": null,
    "flags": "",
@@ -144,9 +144,9 @@
   {
    "n": 4,
    "title": "Which flop did you ask for",
-   "brief": "<p>Both of these counters are correct designs, and they synthesise to different devices. The starter uses a synchronous reset. The specification wants the asynchronous one.</p>\n<p>flop or a separate pin on a different flop.</p>",
+   "brief": "<p>Both of these counters are correct designs, and they synthesise to different devices. The starter uses a synchronous reset. The specification wants the asynchronous one.</p>",
    "kind": "property",
-   "concept": "Where you check the reset decides whether it is one more input on the",
+   "concept": "Where you check the reset decides whether it is one more input on the flop or a separate pin on a different flop.",
    "backend": "yosys",
    "gpu": null,
    "flags": "",
@@ -188,9 +188,9 @@
   {
    "n": 5,
    "title": "Two drivers, one wire",
-   "brief": "<p>In software, assigning to a variable twice is fine and the second wins. Here it is not, and the reason is physical.</p>\n<p>devices fighting over the same voltage. the module is supposed to do.</p>",
+   "brief": "<p>In software, assigning to a variable twice is fine and the second wins. Here it is not, and the reason is physical.</p>",
    "kind": "property",
-   "concept": "A wire is a piece of metal, and two outputs connected to it are two",
+   "concept": "A wire is a piece of metal, and two outputs connected to it are two devices fighting over the same voltage.",
    "backend": "yosys",
    "gpu": null,
    "flags": "",
@@ -201,7 +201,7 @@
     }
    ],
    "hints": [
-    "Only one of the two assignments should exist. Which one depends on what"
+    "Only one of the two assignments should exist. Which one depends on what the module is supposed to do."
    ],
    "diagnose": [
     {
@@ -229,9 +229,9 @@
   {
    "n": 6,
    "title": "Prove it, do not test it",
-   "brief": "<p>Write a multiplexer using only AND, OR and NOT. The checker does not run test vectors against it. It proves that your design and the reference compute the same function for every possible input.</p>\n<p>tool that does it ships in the same package as the synthesiser. starter selects.</p>",
+   "brief": "<p>Write a multiplexer using only AND, OR and NOT. The checker does not run test vectors against it. It proves that your design and the reference compute the same function for every possible input.</p>",
    "kind": "property",
-   "concept": "For hardware you can sometimes replace testing with proof, and the",
+   "concept": "For hardware you can sometimes replace testing with proof, and the tool that does it ships in the same package as the synthesiser.",
    "backend": "yosys",
    "gpu": null,
    "flags": "",
@@ -242,7 +242,7 @@
     }
    ],
    "hints": [
-    "When `s` is 1 the output should follow `b`. Check which input your"
+    "When <code>s</code> is 1 the output should follow <code>b</code>. Check which input your starter selects."
    ],
    "diagnose": [
     {
@@ -270,7 +270,7 @@
   {
    "n": 7,
    "title": "An adder, proved against the operator",
-   "brief": "<p>Same idea at a width where testing every case would be tedious. Build a 4-bit adder with a carry out, and the checker proves it against <code>a + b</code>.</p>\n<p>added, or the carry has nowhere to go.</p>",
+   "brief": "<p>Same idea at a width where testing every case would be tedious. Build a 4-bit adder with a carry out, and the checker proves it against <code>a + b</code>.</p>",
    "kind": "property",
    "concept": "A proof over all 256 input pairs costs the same as a proof over one.",
    "backend": "yosys",
@@ -283,7 +283,7 @@
     }
    ],
    "hints": [
-    "The sum is five bits wide. Both operands need widening before they are"
+    "The sum is five bits wide. Both operands need widening before they are added, or the carry has nowhere to go."
    ],
    "diagnose": [
     {
@@ -311,9 +311,9 @@
   {
    "n": 8,
    "title": "The gate you already built, in Verilog",
-   "brief": "<p>Part II had you build XOR from NAND gates. Write it here in Verilog, structurally, using only NAND primitives, and the checker proves it against the <code>^</code> operator.</p>\n<p>produces are the same kind of object. of the next two gates.</p>",
+   "brief": "<p>Part II had you build XOR from NAND gates. Write it here in Verilog, structurally, using only NAND primitives, and the checker proves it against the <code>^</code> operator.</p>",
    "kind": "property",
-   "concept": "The netlist you drew by hand in Part II and the netlist the synthesiser",
+   "concept": "The netlist you drew by hand in Part II and the netlist the synthesiser produces are the same kind of object.",
    "backend": "yosys",
    "gpu": null,
    "flags": "",
@@ -324,7 +324,7 @@
     }
    ],
    "hints": [
-    "The four-gate solution starts with `n1 = ~(a & b)` and feeds `n1` to both"
+    "The four-gate solution starts with <code>n1 = ~(a &amp; b)</code> and feeds <code>n1</code> to both of the next two gates."
    ],
    "diagnose": [
     {

@@ -61,14 +61,17 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
       backend configuration that `--validate` never checked
 - [x] Label the verdict row per backend rather than badging the exercise; badge
       only Modal, because it is the one with a cost
-- [ ] Track view will not survive 122 units as a flat list: two-level index,
-      live filter, and stop loading the whole manifest at boot
-- [ ] Accent should be a property of the phase, not a 7-colour rotation across
-      19 parts, where it stops meaning anything
-- [ ] Render the dependency edges. Every handbook in the family computes a
-      dependency order at build time and throws it away. At 122 units "each
-      unit depends on the ones before it" stops being true, and `needs:` is
-      already in the front matter
+- [x] Track view will not survive 122 units as a flat list: three levels now
+      (phase, part, unit), units are rows rather than cards, live filter that
+      hides emptied parts and phases. Not splitting the manifest: it is 11.8 KB
+      gzipped, and search, progress and prev/next all need all of it
+- [x] Accent is a property of the phase. 19 parts in 7 phases, one accent each,
+      and a part cannot write its own accent because the tuple has no slot for
+      one. Validated: the phases must list the parts in track order
+- [x] Render the dependency edges, both directions. `needs:` is validated
+      (unknown slug or a forward edge is a build error) and the reverse edge is
+      computed, so a planned unit can say which written units already build on
+      it. Shown on written units and on stubs
 - [x] Non-binary pass state: "Correct, and not clean"
 - [ ] Empty states worth reading, which is the family's weakest copy
 

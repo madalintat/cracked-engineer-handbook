@@ -8,7 +8,7 @@
     "32",
     "64",
     "16",
-    "Whatever `blockDim.x` is set to"
+    "Whatever <code>blockDim.x</code> is set to"
    ],
    "correct": 0,
    "why": "<p>Thirty-two is a fixed property of the hardware, not something you configure. It comes from graphics: the SM controller grouped eight 2x2 pixel quads into one warp, and eight quads of four pixels is 32.</p>"
@@ -39,10 +39,10 @@
   },
   {
    "n": 4,
-   "q": "Why prefer `warpSize` over writing the literal 32?",
+   "q": "Why prefer <code>warpSize</code> over writing the literal 32?",
    "options": [
     "The compiler cannot fold the literal",
-    "`warpSize` is a runtime value, and the same concept is 64 wide on other",
+    "<code>warpSize</code> is a runtime value, and the same concept is 64 wide on other",
     "The literal is undefined inside device code",
     "It has no effect either way, so it is only a style preference"
    ],
@@ -89,7 +89,7 @@
    "n": 8,
    "q": "Two blocks in the same kernel need to exchange a value. What should you do?",
    "options": [
-    "Use `__syncthreads()` between them",
+    "Use <code>__syncthreads()</code> between them",
     "Put the value in shared memory",
     "Split the work into two kernel launches",
     "Spin on a flag in global memory until the other block writes it"
@@ -111,7 +111,7 @@
   },
   {
    "n": 10,
-   "q": "Putting `__syncthreads()` inside a branch that only some threads take is:",
+   "q": "Putting <code>__syncthreads()</code> inside a branch that only some threads take is:",
    "options": [
     "Fine, as long as the branch is uniform within each warp",
     "Undefined behaviour, and in practice hangs",
@@ -159,7 +159,7 @@
   },
   {
    "n": 14,
-   "q": "`__shfl_down_sync` lets lanes exchange values using:",
+   "q": "<code>__shfl_down_sync</code> lets lanes exchange values using:",
    "options": [
     "Shared memory and a barrier",
     "Global memory",

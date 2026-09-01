@@ -108,39 +108,167 @@ function viewHome() {
   </div>`;
 }
 
+/* The track at 122 units.
+ *
+ * A flat grid of 122 cards is a wall. Three levels instead: phase, part, unit,
+ * where the unit is a row rather than a card so a whole part fits on screen and
+ * can be scanned. The filter is the fast path; the spine is the slow one.
+ */
 function viewTrack() {
   const byPart = new Map();
   HH.manifest.units.forEach(u => {
     if (!byPart.has(u.part)) byPart.set(u.part, []);
     byPart.get(u.part).push(u);
   });
+  const partById = new Map(HH.manifest.parts.map(p => [p.id, p]));
 
-  const sections = HH.manifest.parts.map(p => {
-    const units = byPart.get(p.id) || [];
-    const cards = units.map(u => `
-      <a class="card ${u.ready ? '' : 'stub'}"
-         href="${u.ready ? `#/unit/${esc(u.slug)}` : '#/track'}"
-         ${u.ready ? '' : 'aria-disabled="true"'}>
-        <div class="meta">
-          <span class="n">${String(u.num).padStart(3, '0')}</span>
-          <span>${esc(u.backend)}</span>
-          ${u.ready ? '' : '<span>planned</span>'}
-        </div>
-        <h3>${esc(u.title)}</h3>
-        <p>${esc(u.blurb)}</p>
-      </a>`).join('');
+  const row = u => {
+    const started = Store.get(`read.${u.slug}`, -1) >= 0;
+    const needs = (u.needs || []).length;
     return `
-      <section id="${esc(p.id)}" data-accent="${esc(p.accent)}" style="margin-top:48px">
-        <div style="display:flex;align-items:baseline;gap:12px">
-          <span style="font:700 var(--t-sm)/1 var(--mono);color:var(--accent)">${esc(p.roman)}</span>
-          <h2>${esc(p.title)}</h2>
-        </div>
-        <p style="color:var(--ink-3);max-width:var(--measure);margin:8px 0 18px">${esc(p.blurb)}</p>
-        <div class="grid">${cards}</div>
+    <li class="u${u.ready ? '' : ' stub'}${started ? ' started' : ''}"
+        data-hay="${esc([u.title, u.blurb, u.backend].join(' ').toLowerCase())}">
+      <a href="${u.ready ? `#/unit/${esc(u.slug)}` : '#/track'}"
+         ${u.ready ? '' : 'aria-disabled="true"'}>
+        <span class="n">${String(u.num + 1).padStart(3, '0')}</span>
+        <span class="t">${esc(u.title)}
+          <span class="b">${esc(u.blurb)}</span></span>
+        <span class="tags">
+          ${started ? '<span class="badge ok">started</span>' : ''}
+          ${needs ? `<span class="badge" title="${needs} prerequisite${
+            needs === 1 ? '' : 's'}">${needs} before</span>` : ''}
+          <span class="badge">${esc(u.backend)}</span>
+          ${u.ready ? '' : '<span class="badge muted">planned</span>'}
+        </span>
+      </a>
+    </li>`;
+  };
+
+  const phases = HH.manifest.phases.map(ph => {
+    const units = ph.parts.flatMap(pid => byPart.get(pid) || []);
+    const written = units.filter(u => u.ready).length;
+    const parts = ph.parts.map(pid => {
+      const p = partById.get(pid);
+      const us = byPart.get(pid) || [];
+      return `
+      <section class="part" id="${esc(p.id)}" data-part="${esc(p.id)}">
+        <h3><span class="roman">${esc(p.roman)}</span> ${esc(p.title)}</h3>
+        <p class="pb">${esc(p.blurb)}</p>
+        <ol class="units">${us.map(row).join('')}</ol>
       </section>`;
+    }).join('');
+    return `
+    <section class="phase" id="phase-${esc(ph.id)}" data-accent="${esc(ph.accent)}"
+             data-phase="${esc(ph.id)}">
+      <header class="ph-head">
+        <h2>${esc(ph.title)}</h2>
+        <p>${esc(ph.blurb)}</p>
+        <p class="ph-count">${units.length} units${
+          written ? `, ${written} written` : ''}</p>
+      </header>
+      ${parts}
+    </section>`;
   }).join('');
 
-  return `<div class="wrap"><h1 style="padding-top:48px">The track</h1>${sections}</div>`;
+  const chips = HH.manifest.phases.map(ph =>
+    `<a class="chip" data-accent="${esc(ph.accent)}" href="#/track#phase-${esc(ph.id)}"
+     >${esc(ph.title)}</a>`).join('');
+
+  const c = HH.manifest.counts;
+  return `<div class="wrap track">
+    <h1 style="padding-top:48px">The track</h1>
+    <p class="prose">${c.units} units in ${c.parts} parts, grouped into
+      ${c.phases} phases. The colour is the phase, so a unit's colour tells you
+      which stage of the machine you are standing in.</p>
+    <nav class="chips" aria-label="Phases">${chips}</nav>
+    <div class="tfilter">
+      <label class="sr-only" for="tf">Filter units</label>
+      <input id="tf" type="search" placeholder="Filter by title, idea or backend"
+             autocomplete="off" spellcheck="false">
+      <span id="tfc" class="count" aria-live="polite"></span>
+    </div>
+    <p id="tfnone" class="empty" hidden>
+      Nothing matches that. The filter reads unit titles, their one-line
+      summaries and the backend each one runs on, so try a tool name like
+      <code>yosys</code>, or an idea like <code>cache</code>.</p>
+    ${phases}
+  </div>`;
+}
+
+function wireTrack() {
+  const input = el('#tf');
+  if (!input) return;
+  const count = el('#tfc');
+  const none = el('#tfnone');
+  const rows = [...document.querySelectorAll('.track li.u')];
+  const parts = [...document.querySelectorAll('.track .part')];
+  const phases = [...document.querySelectorAll('.track .phase')];
+  const chips = el('.track .chips');
+
+  const apply = () => {
+    const q = input.value.trim().toLowerCase();
+    let shown = 0;
+    rows.forEach(li => {
+      const hit = !q || li.dataset.hay.includes(q);
+      li.hidden = !hit;
+      if (hit) shown++;
+    });
+    // A part or phase with nothing left in it is noise, so it goes too.
+    parts.forEach(sec => {
+      sec.hidden = ![...sec.querySelectorAll('li.u')].some(li => !li.hidden);
+    });
+    phases.forEach(sec => {
+      sec.hidden = ![...sec.querySelectorAll('.part')].some(p => !p.hidden);
+    });
+    count.textContent = q
+      ? `${shown} of ${rows.length}` : `${rows.length} units`;
+    none.hidden = !(q && shown === 0);
+    if (chips) chips.hidden = !!q;   // jumping to a hidden phase does nothing
+  };
+
+  input.addEventListener('input', apply);
+  // Escape clears rather than merely blurring, which is what a search input
+  // that has already filtered the page should do.
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && input.value) {
+      e.stopPropagation();
+      input.value = '';
+      apply();
+    }
+  });
+  apply();
+  HH.teardown.push(() => { input.value = ''; });
+}
+
+/* The dependency edges, rendered rather than computed and discarded.
+ * `needs` answers "what must I have read", and the reverse edge answers
+ * "where does this go next", which nothing else on the site can tell you:
+ * the next unit in the track is often not the one that uses this one.
+ * Reading state is shown against each prerequisite, because an unread
+ * prerequisite is the only actionable thing on this list. */
+const edgeList = (slugs, kind) => {
+  if (!slugs || !slugs.length) return '';
+  const items = slugs.map(sl => {
+    const m = HH.manifest.units.find(x => x.slug === sl);
+    if (!m) return '';
+    const started = Store.get(`read.${sl}`, -1) >= 0;
+    const state = kind === 'needs'
+      ? (started ? '<span class="badge ok">read</span>'
+                 : m.ready ? '<span class="badge">not yet</span>'
+                           : '<span class="badge muted">planned</span>')
+      : (m.ready ? '' : '<span class="badge muted">planned</span>');
+    return `<li>${m.ready
+      ? `<a href="#/unit/${esc(sl)}">${esc(m.title)}</a>`
+      : `<span class="planned">${esc(m.title)}</span>`}${state}</li>`;
+  }).join('');
+  const label = kind === 'needs'
+    ? 'Read these first'
+    : 'Units that build on this one';
+  return `<div class="edges ${kind}"><h2>${label}</h2><ul>${items}</ul></div>`;
+};
+
+function unitEdges(u) {
+  return edgeList(u.needs, 'needs') + edgeList(u.neededBy, 'feeds');
 }
 
 async function viewUnit(slug) {
@@ -154,7 +282,8 @@ async function viewUnit(slug) {
       <p class="prose">${esc(meta.blurb)}</p>
       <p class="prose" style="color:var(--ink-4)">This unit is planned but not
         written yet. It is in the track so the whole spine is visible.</p>
-      <p><a class="btn ghost" href="#/track">Back to the track</a></p>
+      ${unitEdges(meta)}
+      <p style="margin-top:24px"><a class="btn ghost" href="#/track">Back to the track</a></p>
     </div>`;
   }
 
@@ -179,9 +308,10 @@ async function viewUnit(slug) {
     ['Backend', u.backend],
     ['Words', u.words],
     u.meta.minutes ? ['Minutes', u.meta.minutes] : null,
-    u.meta.needs ? ['Needs', [].concat(u.meta.needs).join(', ')] : null,
   ].filter(Boolean).map(([k, v]) =>
     `<span class="badge">${esc(k)}: ${v}</span>`).join('');
+
+  const edges = unitEdges(u);
 
   const navLink = (unit, dir) => unit
     ? `<a class="${dir}" href="#/unit/${esc(unit.slug)}">
@@ -201,6 +331,7 @@ async function viewUnit(slug) {
       ${u.meta.one_idea ? `<p class="idea">
         <span class="lbl">The one idea</span>${esc(u.meta.one_idea)}</p>` : ''}
       <div class="facts">${facts}</div>
+      ${edges}
     </header>
     <article class="body prose">${u.html}</article>
     <p class="head" style="grid-column:2;margin-top:28px">
@@ -470,12 +601,12 @@ async function viewWork(slug, nRaw) {
     <aside class="pane">
       <div class="card" style="position:sticky;top:76px">
         <div class="meta"><span>What this is about</span></div>
-        <p style="color:var(--ink-2);font-size:var(--t-sm)">${esc(ex.concept)}</p>
+        <p style="color:var(--ink-2);font-size:var(--t-sm)">${ex.concept}</p>
         <div class="hintbox" id="hints">
           <div id="hintlist"></div>
           ${ex.hints.length
             ? `<button class="btn ghost" id="hintbtn">Hint
-                 <span style="opacity:.6">1 of ${ex.hints.length}</span></button>`
+                 <span class="dim">1 of ${ex.hints.length}</span></button>`
             : ''}
         </div>
         <p style="margin-top:14px;color:var(--ink-4);font-size:var(--t-micro)">
@@ -531,10 +662,10 @@ function wireWork() {
     shown = Store.get(`hints.${slug}.${n}`, 0);
     const paintHints = () => {
       el('#hintlist').innerHTML = ex.hints.slice(0, shown)
-        .map(h => `<div class="hint">${esc(h)}</div>`).join('');
+        .map(h => `<div class="hint">${h}</div>`).join('');
       if (shown >= ex.hints.length) hintBtn.remove();
       else hintBtn.innerHTML =
-        `Hint <span style="opacity:.6">${shown + 1} of ${ex.hints.length}</span>`;
+        `Hint <span class="dim">${shown + 1} of ${ex.hints.length}</span>`;
     };
     paintHints();
     hintBtn.onclick = () => {
@@ -888,11 +1019,11 @@ async function viewDrills(slug) {
 function drillCard(d) {
   return `
     <fieldset class="drill" data-n="${d.n}">
-      <legend>${d.n}. ${esc(d.q)}</legend>
+      <legend>${d.n}. ${d.q}</legend>
       ${d.options.map((o, i) => `
         <label class="opt">
           <input type="radio" name="q${d.n}" value="${i}">
-          <span>${esc(o)}</span>
+          <span>${o}</span>
         </label>`).join('')}
       <div class="why" hidden>${d.why}</div>
     </fieldset>`;
@@ -1291,6 +1422,7 @@ async function render() {
     if (route === 'drills') wireDrills();
     if (route === 'progress') wireProgress();
     if (route === 'search') wireSearch();
+    if (route === 'track') wireTrack();
     if (route === 'atlas') wireAtlas();
     if (route === 'glossary') wireGlossary();
   } catch (err) {

@@ -6,7 +6,8 @@
  "part": "gpu",
  "partRoman": "XVI",
  "partTitle": "Graphics and the GPU",
- "accent": "phos",
+ "phase": "parallel",
+ "accent": "moss",
  "backend": "modal",
  "meta": {
   "needs": [
@@ -64,5 +65,10 @@
    "level": 2
   }
  ],
- "words": 1555
+ "words": 1555,
+ "needs": [
+  "sm-shape",
+  "throughput"
+ ],
+ "neededBy": []
 }

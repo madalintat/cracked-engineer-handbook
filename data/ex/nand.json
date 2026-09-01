@@ -147,7 +147,7 @@
     }
    ],
    "hints": [
-    "The starter inverts `a` and never inverts `b`."
+    "The starter inverts <code>a</code> and never inverts <code>b</code>."
    ],
    "diagnose": [
     {
@@ -218,7 +218,7 @@
     }
    ],
    "hints": [
-    "Follow `x` backwards. What has to be known before it can be computed?"
+    "Follow <code>x</code> backwards. What has to be known before it can be computed?"
    ],
    "diagnose": [
     {
@@ -263,9 +263,9 @@
   {
    "n": 5,
    "title": "Exclusive or",
-   "brief": "<p>True when the inputs differ. Build it however you can get it working first, then look at the gate count the checker reports.</p>\n<p>The obvious route is to write out the sum of products and translate it gate by gate. That works and it costs five or six. A four-gate solution exists.</p>\n<p>separates them.</p>",
+   "brief": "<p>True when the inputs differ. Build it however you can get it working first, then look at the gate count the checker reports.</p>\n<p>The obvious route is to write out the sum of products and translate it gate by gate. That works and it costs five or six. A four-gate solution exists.</p>",
    "kind": "property",
-   "concept": "Correctness and efficiency are separate questions, and this unit",
+   "concept": "Correctness and efficiency are separate questions, and this unit separates them.",
    "backend": "sim",
    "gpu": null,
    "flags": "",
@@ -333,9 +333,9 @@
   {
    "n": 6,
    "title": "Exclusive or, in four",
-   "brief": "<p>Same function, and now there is a budget. Five gates will be rejected.</p>\n<p>The trick is that the sum-of-products route computes <code>nand(a, b)</code> twice without noticing. Compute it once and feed it to both branches.</p>\n<p>gates the difference between them is the whole game.</p>",
+   "brief": "<p>Same function, and now there is a budget. Five gates will be rejected.</p>\n<p>The trick is that the sum-of-products route computes <code>nand(a, b)</code> twice without noticing. Compute it once and feed it to both branches.</p>",
    "kind": "property",
-   "concept": "The same function has many circuits, and on a chip with billions of",
+   "concept": "The same function has many circuits, and on a chip with billions of gates the difference between them is the whole game.",
    "backend": "sim",
    "gpu": null,
    "flags": "",
@@ -346,7 +346,7 @@
     }
    ],
    "hints": [
-    "Start with `n1 = nand(a, b)`. Then ask what `nand(a, n1)` gives you."
+    "Start with <code>n1 = nand(a, b)</code>. Then ask what <code>nand(a, n1)</code> gives you."
    ],
    "diagnose": [
     {
@@ -404,9 +404,9 @@
   {
    "n": 7,
    "title": "Choosing between two wires",
-   "brief": "<p>A multiplexer passes one of its data inputs through, chosen by a third. When <code>sel</code> is 0 the output follows <code>a</code>; when it is 1 it follows <code>b</code>.</p>\n<p>This is the first circuit whose behaviour depends on a control signal rather than only on data, and there is no difference in the hardware between the two. A control wire is an ordinary wire routed into selector logic.</p>\n<p>somewhere that changes what the rest of the circuit does.</p>",
+   "brief": "<p>A multiplexer passes one of its data inputs through, chosen by a third. When <code>sel</code> is 0 the output follows <code>a</code>; when it is 1 it follows <code>b</code>.</p>\n<p>This is the first circuit whose behaviour depends on a control signal rather than only on data, and there is no difference in the hardware between the two. A control wire is an ordinary wire routed into selector logic.</p>",
    "kind": "property",
-   "concept": "Control is data. A control signal is an ordinary input, routed",
+   "concept": "Control is data. A control signal is an ordinary input, routed somewhere that changes what the rest of the circuit does.",
    "backend": "sim",
    "gpu": null,
    "flags": "",
@@ -417,7 +417,7 @@
     }
    ],
    "hints": [
-    "Gate each input with `sel` in the polarity you want, then combine the two."
+    "Gate each input with <code>sel</code> in the polarity you want, then combine the two."
    ],
    "diagnose": [
     {
@@ -504,9 +504,9 @@
   {
    "n": 8,
    "title": "The last of the sixteen",
-   "brief": "<p>There are exactly sixteen functions of two bits. You have built five of them. This one is true when the inputs agree, which makes it the inverse of the one you built two exercises ago.</p>\n<p>You may use any chip you have already defined in this file. Define it above and call it by name, and the checker counts the nands inside it.</p>\n<p>have the machinery to reach any of them.</p>",
+   "brief": "<p>There are exactly sixteen functions of two bits. You have built five of them. This one is true when the inputs agree, which makes it the inverse of the one you built two exercises ago.</p>\n<p>You may use any chip you have already defined in this file. Define it above and call it by name, and the checker counts the nands inside it.</p>",
    "kind": "property",
-   "concept": "Every one of the sixteen two-input functions is reachable, and you now",
+   "concept": "Every one of the sixteen two-input functions is reachable, and you now have the machinery to reach any of them.",
    "backend": "sim",
    "gpu": null,
    "flags": "",

@@ -6,6 +6,7 @@
  "part": "numbers",
  "partRoman": "VI",
  "partTitle": "Numbers and text",
+ "phase": "understand",
  "accent": "amber",
  "backend": "godbolt",
  "meta": {
@@ -63,5 +64,10 @@
    "level": 2
   }
  ],
- "words": 1702
+ "words": 1702,
+ "needs": [
+  "cmos-gate",
+  "arithmetic"
+ ],
+ "neededBy": []
 }

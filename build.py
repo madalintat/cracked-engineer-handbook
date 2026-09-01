@@ -50,6 +50,7 @@ import re
 import sys
 from pathlib import Path
 
+import contrast
 import prose
 import track
 
@@ -436,15 +437,21 @@ def parse_exercises(text, where, default_backend):
                     problems.append(f"{w}: unknown directive @{name}")
                     i += 1
                     continue
-                if name in ("kind", "concept", "backend", "gpu", "flags", "lang"):
+                if name in ("kind", "backend", "gpu", "flags", "lang"):
                     ex[name] = arg
-                    sink[0] = "brief"
+                    sink[0] = "machine"
+                elif name == "concept":
+                    # Prose, so it may wrap. Before this it could not, and a
+                    # wrapped @concept silently dropped its second line into
+                    # the exercise description.
+                    ex[name] = arg
+                    sink[0] = "concept"
                 elif name == "expect":
                     ex["expect"].append(_parse_expect(arg))
-                    sink[0] = "brief"
+                    sink[0] = "machine"
                 elif name == "hint":
                     ex["hints"].append(arg)
-                    sink[0] = "brief"
+                    sink[0] = "hint"
                 elif name == "diagnose":
                     did, _, pat = arg.partition(" ")
                     dbuf = {"id": did, **_parse_expect(pat.strip()), "prose": []}
@@ -461,10 +468,26 @@ def parse_exercises(text, where, default_backend):
                 dbuf["prose"].append(line)
             elif sink[0] == "after":
                 after.append(line)
-            else:
+            elif sink[0] == "concept" and line.strip():
+                ex["concept"] += " " + line.strip()
+            elif sink[0] == "hint" and line.strip():
+                ex["hints"][-1] += " " + line.strip()
+            elif sink[0] in ("concept", "hint") and not line.strip():
+                sink[0] = "loose"       # a blank line ends the continuation
+            elif sink[0] == "brief":
                 brief.append(line)
+            elif line.strip():
+                # Prose that belongs to nothing. Before this it was appended to
+                # the description, where a wrapped directive looked like an
+                # extra sentence the author had written on purpose.
+                problems.append(
+                    f"{w}: {line.strip()[:48]!r} follows a directive but is "
+                    f"attached to nothing. Put it on the directive's line, or "
+                    f"move it above the directives.")
             i += 1
 
+        ex["concept"] = inline(ex["concept"])
+        ex["hints"] = [inline(h) for h in ex["hints"]]
         ex["brief"], _ = render("\n".join(brief).strip())
         ex["after"], _ = render("\n".join(after).strip())
         for d in ex["diagnose"]:
@@ -714,7 +737,10 @@ def parse_drills(text, where):
         for o in opts:
             problems += prose.lint(o, f"{w} option")
         drills.append({
-            "n": n, "q": q.strip(), "options": opts, "correct": correct,
+            # `why` has always rendered markdown. The question and its options
+            # did not, so every `identifier` in them showed its backticks.
+            "n": n, "q": inline(q.strip()),
+            "options": [inline(o) for o in opts], "correct": correct,
             "why": render("\n".join(why).strip())[0],
         })
     if len(drills) != N_DRILLS:
@@ -727,14 +753,17 @@ def parse_drills(text, where):
 
 def build(strict=True):
     track.validate()
-    problems, units, manifest = [], {}, []
+    # The palette is content too. A grey nudged to taste can put body text
+    # under the legal floor, and nothing else in the pipeline would notice.
+    problems, units, manifest = contrast.check("light") + contrast.check("dark"), {}, []
 
     for num, (slug, part, title, blurb, backend) in enumerate(track.TRACK):
         pid = track.PART_BY_ID[part]
         entry = {
             "slug": slug, "num": num, "title": title, "blurb": blurb,
             "part": part, "partRoman": pid[1], "partTitle": pid[2],
-            "accent": pid[4], "backend": backend, "ready": False,
+            "phase": track.PHASE_OF[part],
+            "accent": track.accent_of(part), "backend": backend, "ready": False,
             "words": 0, "exercises": 0, "drills": 0,
         }
         note_p = CONTENT / "units" / f"{slug}.md"
@@ -770,6 +799,40 @@ def build(strict=True):
                 problems.append(str(e))
         manifest.append(entry)
 
+    # The dependency edges. Every handbook in this family writes `needs:` into
+    # the front matter, computes an ordering from it at build time and throws
+    # the graph away. At 122 units "each unit depends on the ones before it"
+    # stops being true, so the graph is the only honest answer to "what do I
+    # have to have read first", and its reverse is the only answer to "where
+    # does this go next" -- which nothing else in the site can tell you.
+    by_slug = {e["slug"]: e for e in manifest}
+    order = {e["slug"]: e["num"] for e in manifest}
+    for slug, u in units.items():
+        needs = list(u["meta"].get("needs") or [])
+        clean = []
+        for n in needs:
+            if n not in by_slug:
+                problems.append(
+                    f"units/{slug}: needs {n!r}, which is not a unit in the "
+                    f"track")
+            elif order[n] >= order[slug]:
+                problems.append(
+                    f"units/{slug}: needs {n!r}, which comes later in the "
+                    f"track ({order[n]} vs {order[slug]})")
+            else:
+                clean.append(n)
+        clean.sort(key=lambda sl: order[sl])   # read them in track order
+        by_slug[slug]["needs"] = clean
+        u["needs"] = clean
+
+    for e in manifest:
+        e.setdefault("needs", [])
+        e["neededBy"] = sorted(
+            (o["slug"] for o in manifest if e["slug"] in o.get("needs", [])),
+            key=lambda sl: order[sl])
+    for slug, u in units.items():
+        u["neededBy"] = by_slug[slug]["neededBy"]
+
     fail(problems)   # nothing is written until every check has passed
 
     DATA.mkdir(exist_ok=True)
@@ -780,12 +843,16 @@ def build(strict=True):
     glossary = build_glossary(units)
 
     parts = [{"id": p[0], "roman": p[1], "title": p[2], "blurb": p[3],
-              "accent": p[4], "reports": p[5]} for p in track.PARTS]
+              "phase": track.PHASE_OF[p[0]], "accent": track.accent_of(p[0]),
+              "reports": p[4]} for p in track.PARTS]
+    phases = [{"id": ph[0], "title": ph[1], "blurb": ph[2], "accent": ph[3],
+               "parts": list(ph[4])} for ph in track.PHASES]
     write(DATA / "manifest.json", {
-        "parts": parts, "units": manifest,
+        "phases": phases, "parts": parts, "units": manifest,
         "backends": list(track.BACKENDS),
         "counts": {
             "atlas": len(atlas), "glossary": len(glossary),
+            "phases": len(phases),
             "parts": len(parts), "units": len(manifest),
             "ready": sum(1 for u in manifest if u["ready"]),
             "words": sum(u["words"] for u in manifest),
@@ -797,8 +864,9 @@ def build(strict=True):
     for slug, u in units.items():
         write(DATA / "unit" / f"{slug}.json",
               {k: u[k] for k in ("slug", "num", "title", "blurb", "part",
-                                 "partRoman", "partTitle", "accent", "backend",
-                                 "meta", "html", "headings", "words")})
+                                 "partRoman", "partTitle", "phase", "accent",
+                                 "backend", "meta", "html", "headings",
+                                 "words", "needs", "neededBy")})
         # The solution never leaves the build. The reference implementation
         # ships it and declines to render it, which is not the same thing.
         # `tests` must ship: a static site has to run the check in the browser,

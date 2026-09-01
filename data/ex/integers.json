@@ -5,9 +5,9 @@
   {
    "n": 1,
    "title": "The value that has no negative",
-   "brief": "<p>Write <code>negate</code>. The checks include <code>INT_MIN</code>, and one of them asserts something that will look like a typo until you work out why it is not.</p>\n<p>input has no representable negation.</p>",
+   "brief": "<p>Write <code>negate</code>. The checks include <code>INT_MIN</code>, and one of them asserts something that will look like a typo until you work out why it is not.</p>",
    "kind": "output",
-   "concept": "Two's complement has one more negative value than positive, so one",
+   "concept": "Two's complement has one more negative value than positive, so one input has no representable negation.",
    "backend": "godbolt",
    "gpu": null,
    "flags": "-O2 -Wall -Wextra",
@@ -43,9 +43,9 @@
   {
    "n": 2,
    "title": "A comparison that is not a comparison",
-   "brief": "<p>The starter looks obviously true and prints nothing. Compile it with the warnings on and the compiler will tell you what it is really doing.</p>\n<p>signed one converts to unsigned before anything is compared.</p>",
+   "brief": "<p>The starter looks obviously true and prints nothing. Compile it with the warnings on and the compiler will tell you what it is really doing.</p>",
    "kind": "property",
-   "concept": "When a signed and an unsigned operand of the same rank meet, the",
+   "concept": "When a signed and an unsigned operand of the same rank meet, the signed one converts to unsigned before anything is compared.",
    "backend": "godbolt",
    "gpu": null,
    "flags": "-O2 -Wall -Wextra",
@@ -56,7 +56,7 @@
     }
    ],
    "hints": [
-    "What is `-1` as a 32-bit unsigned value?"
+    "What is <code>-1</code> as a 32-bit unsigned value?"
    ],
    "diagnose": [
     {
@@ -81,9 +81,9 @@
   {
    "n": 3,
    "title": "Make the sanitizer speak",
-   "brief": "<p>The flags here turn undefined behaviour from silent into loud. Write an <code>add</code> that overflows and watch what the sanitizer says about it.</p>\n<p>and names the file and line.</p>",
+   "brief": "<p>The flags here turn undefined behaviour from silent into loud. Write an <code>add</code> that overflows and watch what the sanitizer says about it.</p>",
    "kind": "output",
-   "concept": "`-fsanitize=undefined` catches the overflow at the moment it happens",
+   "concept": "<code>-fsanitize=undefined</code> catches the overflow at the moment it happens and names the file and line.",
    "backend": "godbolt",
    "gpu": null,
    "flags": "-O1 -fsanitize=undefined -fno-sanitize-recover=all",
@@ -94,7 +94,7 @@
     }
    ],
    "hints": [
-    "The checks pass `INT_MAX` and `1`."
+    "The checks pass <code>INT_MAX</code> and <code>1</code>."
    ],
    "diagnose": [
     {
@@ -119,9 +119,9 @@
   {
    "n": 4,
    "title": "Two midpoints that disagree",
-   "brief": "<p>Both of these compute a midpoint. Both compile cleanly with every warning enabled. They do not agree, and the input that separates them does not overflow anything.</p>\n<p>would not have thought to try. a negative number?</p>",
+   "brief": "<p>Both of these compute a midpoint. Both compile cleanly with every warning enabled. They do not agree, and the input that separates them does not overflow anything.</p>",
    "kind": "output",
-   "concept": "Nothing complained, and one of them is still wrong for an input you",
+   "concept": "Nothing complained, and one of them is still wrong for an input you would not have thought to try.",
    "backend": "godbolt",
    "gpu": null,
    "flags": "-O2 -Wall -Wextra",
@@ -132,7 +132,7 @@
     }
    ],
    "hints": [
-    "The failing input has a negative operand. What does C do when it divides"
+    "The failing input has a negative operand. What does C do when it divides a negative number?"
    ],
    "diagnose": [
     {
@@ -157,9 +157,9 @@
   {
    "n": 5,
    "title": "Ask before you add",
-   "brief": "<p>Write <code>safe_add</code> so it reports whether the addition was representable, and writes the result only when it was.</p>\n<p>did not choose.</p>",
+   "brief": "<p>Write <code>safe_add</code> so it reports whether the addition was representable, and writes the result only when it was.</p>",
    "kind": "output",
-   "concept": "The checked builtins are the honest way to do arithmetic on input you",
+   "concept": "The checked builtins are the honest way to do arithmetic on input you did not choose.",
    "backend": "godbolt",
    "gpu": null,
    "flags": "-O2 -Wall -Wextra",
@@ -170,7 +170,7 @@
     }
    ],
    "hints": [
-    "`__builtin_add_overflow(a, b, &out)` returns true when it overflowed."
+    "<code>__builtin_add_overflow(a, b, &amp;out)</code> returns true when it overflowed."
    ],
    "diagnose": [
     {
@@ -195,9 +195,9 @@
   {
    "n": 6,
    "title": "The loop that never ends",
-   "brief": "<p>Count down from <code>n - 1</code> to <code>0</code> and sum the array. The starter uses the type everyone reaches for, and it does not terminate.</p>\n<p>fires.</p>",
+   "brief": "<p>Count down from <code>n - 1</code> to <code>0</code> and sum the array. The starter uses the type everyone reaches for, and it does not terminate.</p>",
    "kind": "output",
-   "concept": "An unsigned counter cannot go below zero, so a test for that never",
+   "concept": "An unsigned counter cannot go below zero, so a test for that never fires.",
    "backend": "godbolt",
    "gpu": null,
    "flags": "-O2 -Wall -Wextra",
@@ -208,7 +208,7 @@
     }
    ],
    "hints": [
-    "What is the smallest value a `size_t` can hold?"
+    "What is the smallest value a <code>size_t</code> can hold?"
    ],
    "diagnose": [
     {
@@ -239,9 +239,9 @@
   {
    "n": 7,
    "title": "Widening is an instruction",
-   "brief": "<p><code>load</code> reads one byte and returns it as an <code>int</code>. The checks include a byte whose top bit is set, and the answer depends on a single character in the declaration.</p>\n<p>by the type, and it becomes a different instruction.</p>",
+   "brief": "<p><code>load</code> reads one byte and returns it as an <code>int</code>. The checks include a byte whose top bit is set, and the answer depends on a single character in the declaration.</p>",
    "kind": "output",
-   "concept": "Whether the high bits are copies of the sign bit or zeros is decided",
+   "concept": "Whether the high bits are copies of the sign bit or zeros is decided by the type, and it becomes a different instruction.",
    "backend": "godbolt",
    "gpu": null,
    "flags": "-O2 -Wall -Wextra",
@@ -252,7 +252,7 @@
     }
    ],
    "hints": [
-    "`0xFF` as a `signed char` is `-1`. As an `unsigned char` it is 255."
+    "<code>0xFF</code> as a <code>signed char</code> is <code>-1</code>. As an <code>unsigned char</code> it is 255."
    ],
    "diagnose": [
     {
@@ -277,7 +277,7 @@
   {
    "n": 8,
    "title": "Say what you mean instead",
-   "brief": "<p>Rewrite the overflow check so it asks a question the standard answers. The starter tests the result of an operation the standard says does not happen.</p>\n<p>well defined.</p>",
+   "brief": "<p>Rewrite the overflow check so it asks a question the standard answers. The starter tests the result of an operation the standard says does not happen.</p>",
    "kind": "output",
    "concept": "Check the operands before the operation, not the result after it.",
    "backend": "godbolt",
@@ -290,7 +290,7 @@
     }
    ],
    "hints": [
-    "`a + b` overflows exactly when `b > INT_MAX - a`, and that comparison is"
+    "<code>a + b</code> overflows exactly when <code>b &gt; INT_MAX - a</code>, and that comparison is well defined."
    ],
    "diagnose": [
     {

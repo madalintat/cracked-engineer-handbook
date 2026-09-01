@@ -5,9 +5,9 @@
   {
    "n": 1,
    "title": "Which lane am I",
-   "brief": "<p>Fill in <code>lane</code> and <code>warp</code> from the thread index. The checks run one block of 96 threads and verify every thread agrees with the hardware about which warp it is in.</p>\n<p>the thread index rather than anything the runtime tells you.</p>",
+   "brief": "<p>Fill in <code>lane</code> and <code>warp</code> from the thread index. The checks run one block of 96 threads and verify every thread agrees with the hardware about which warp it is in.</p>",
    "kind": "output",
-   "concept": "A warp is 32 consecutive threads, and the boundary is arithmetic on",
+   "concept": "A warp is 32 consecutive threads, and the boundary is arithmetic on the thread index rather than anything the runtime tells you.",
    "backend": "modal",
    "gpu": "sm_75",
    "flags": "-O2",
@@ -18,7 +18,7 @@
     }
    ],
    "hints": [
-    "`warpSize` is available inside a kernel. Use it rather than writing 32."
+    "<code>warpSize</code> is available inside a kernel. Use it rather than writing 32."
    ],
    "diagnose": [
     {
@@ -43,9 +43,9 @@
   {
    "n": 2,
    "title": "Both sides of the branch",
-   "brief": "<p>Each thread increments one of two counters depending on its lane. Count how many times each side of the branch actually ran, by having every thread record whether it executed a given side.</p>\n<p>both paths cost their full time. takes.</p>",
+   "brief": "<p>Each thread increments one of two counters depending on its lane. Count how many times each side of the branch actually ran, by having every thread record whether it executed a given side.</p>",
    "kind": "output",
-   "concept": "A warp runs both sides of a divergent branch, masking lanes off, so",
+   "concept": "A warp runs both sides of a divergent branch, masking lanes off, so both paths cost their full time.",
    "backend": "modal",
    "gpu": "sm_75",
    "flags": "-O2",
@@ -56,7 +56,7 @@
     }
    ],
    "hints": [
-    "Every thread must write to both arrays, not only to the one its branch"
+    "Every thread must write to both arrays, not only to the one its branch takes."
    ],
    "diagnose": [
     {
@@ -81,9 +81,9 @@
   {
    "n": 3,
    "title": "The guard is not optional",
-   "brief": "<p>A vector add over 1000 elements, launched with a whole number of 256-thread blocks. The starter writes past the end of the data. Nothing crashes.</p>\n<p>exactly there are threads past the end of the data.</p>",
+   "brief": "<p>A vector add over 1000 elements, launched with a whole number of 256-thread blocks. The starter writes past the end of the data. Nothing crashes.</p>",
    "kind": "output",
-   "concept": "Your grid is a whole number of blocks, so unless the size divides",
+   "concept": "Your grid is a whole number of blocks, so unless the size divides exactly there are threads past the end of the data.",
    "backend": "modal",
    "gpu": "sm_75",
    "flags": "-O2 -lineinfo",
@@ -125,9 +125,9 @@
   {
    "n": 4,
    "title": "One launch for any size",
-   "brief": "<p>Rewrite the same addition as a grid-stride loop, so the kernel is correct for any <code>n</code> and any grid. The checks launch it three times with deliberately silly configurations.</p>\n<p>touching correctness.</p>",
+   "brief": "<p>Rewrite the same addition as a grid-stride loop, so the kernel is correct for any <code>n</code> and any grid. The checks launch it three times with deliberately silly configurations.</p>",
    "kind": "output",
-   "concept": "Decoupling the grid from the problem lets you tune occupancy without",
+   "concept": "Decoupling the grid from the problem lets you tune occupancy without touching correctness.",
    "backend": "modal",
    "gpu": "sm_75",
    "flags": "-O2",
@@ -163,9 +163,9 @@
   {
    "n": 5,
    "title": "Summing a warp without memory",
-   "brief": "<p>Reduce 32 values to one using register exchange only. No shared memory, no atomics, no loop over global memory.</p>\n<p>steps and no memory at all.</p>",
+   "brief": "<p>Reduce 32 values to one using register exchange only. No shared memory, no atomics, no loop over global memory.</p>",
    "kind": "output",
-   "concept": "Lanes in a warp can exchange registers directly, which costs log2(32)",
+   "concept": "Lanes in a warp can exchange registers directly, which costs log2(32) steps and no memory at all.",
    "backend": "modal",
    "gpu": "sm_75",
    "flags": "-O2",
@@ -207,9 +207,9 @@
   {
    "n": 6,
    "title": "The barrier you left out",
-   "brief": "<p>This kernel reverses an array through shared memory. Every thread writes one element and then reads a different one, and the starter does not wait in between.</p>\n<p>visible to another until they have both reached a barrier.</p>",
+   "brief": "<p>This kernel reverses an array through shared memory. Every thread writes one element and then reads a different one, and the starter does not wait in between.</p>",
    "kind": "output",
-   "concept": "Threads in a block run concurrently, so a write by one thread is not",
+   "concept": "Threads in a block run concurrently, so a write by one thread is not visible to another until they have both reached a barrier.",
    "backend": "modal",
    "gpu": "sm_75",
    "flags": "-O2",
@@ -245,9 +245,9 @@
   {
    "n": 7,
    "title": "Blocks in any order",
-   "brief": "<p>This kernel sums an array with one partial per block. The starter assumes block 0 finishes first, which nothing guarantees.</p>\n<p>blocks, including strictly one at a time in any order.</p>",
+   "brief": "<p>This kernel sums an array with one partial per block. The starter assumes block 0 finishes first, which nothing guarantees.</p>",
    "kind": "output",
-   "concept": "A correct kernel gives the right answer for every interleaving of its",
+   "concept": "A correct kernel gives the right answer for every interleaving of its blocks, including strictly one at a time in any order.",
    "backend": "modal",
    "gpu": "sm_75",
    "flags": "-O2",
@@ -283,9 +283,9 @@
   {
    "n": 8,
    "title": "Uniform is free",
-   "brief": "<p>Two kernels do the same amount of arithmetic. One divides work by lane, the other by warp. Make the second one branch on the warp rather than the lane, and the checks confirm both produce identical results.</p>\n<p>the same fraction of threads costs nothing.</p>",
+   "brief": "<p>Two kernels do the same amount of arithmetic. One divides work by lane, the other by warp. Make the second one branch on the warp rather than the lane, and the checks confirm both produce identical results.</p>",
    "kind": "output",
-   "concept": "A branch that splits on a warp boundary does not diverge at all, so",
+   "concept": "A branch that splits on a warp boundary does not diverge at all, so the same fraction of threads costs nothing.",
    "backend": "modal",
    "gpu": "sm_75",
    "flags": "-O2",

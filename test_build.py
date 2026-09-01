@@ -8,6 +8,7 @@ import re
 import sys
 
 import build
+import contrast
 import prose
 import track
 
@@ -537,10 +538,127 @@ def t_track_is_clean():
     assert track.validate()
 
 
+def t_author_markdown_reaches_the_browser_as_html():
+    """A hint saying `INT_MAX` must arrive as code, not as backticks."""
+    body = GOOD.replace("@concept Moving out of a value leaves nothing behind.",
+                        "@concept The `move` leaves nothing behind.")
+    body = body.replace("@hint The compiler is telling you where the value went.",
+                        "@hint The checks pass `INT_MAX`.")
+    ex = build.parse_exercises(ex_file(body), "t", "godbolt")
+    assert "<code>move</code>" in ex[0]["concept"], ex[0]["concept"]
+    assert "<code>INT_MAX</code>" in ex[0]["hints"][0], ex[0]["hints"]
+
+
+def t_inline_markup_still_escapes_html():
+    """The browser inserts these without escaping, so the build must escape."""
+    one = ("## Does `a <= b` hold, and <script>?\n\n- [x] yes <b>\n- [ ] no\n"
+           "- [ ] maybe\n@why Because it does, for the reason given here.\n")
+    filler = ("## Filler question {i} that ends in a question mark?\n\n"
+              "- [x] the right one\n- [ ] a wrong one\n- [ ] another wrong one\n"
+              "@why Because that is how it works, as explained here.\n")
+    d = build.parse_drills(
+        one + "".join(filler.replace("{i}", str(i))
+                      for i in range(2, build.N_DRILLS + 1)), "t")
+    assert "&lt;script&gt;" in d[0]["q"], d[0]["q"]
+    assert "&lt;=" in d[0]["q"]
+    assert "<script>" not in d[0]["q"]
+    assert "&lt;b&gt;" in d[0]["options"][0]
+
+
+def t_a_wrapped_prose_directive_keeps_its_second_line():
+    body = GOOD.replace("@concept Moving out of a value leaves nothing behind.",
+                        "@concept Moving out of a value\nleaves nothing behind.")
+    ex = build.parse_exercises(ex_file(body), "t", "godbolt")
+    assert ex[0]["concept"] == "Moving out of a value leaves nothing behind.", \
+        ex[0]["concept"]
+    assert "leaves nothing behind" not in ex[0]["brief"], ex[0]["brief"]
+
+
+def t_prose_attached_to_nothing_is_an_error():
+    """It used to be appended to the description, silently."""
+    body = GOOD.replace("@flags -O2 -Wall",
+                        "@flags -O2 -Wall\n\nan orphan sentence")
+    try:
+        build.parse_exercises(ex_file(body), "t", "godbolt")
+    except build.BuildError as e:
+        assert "attached to nothing" in str(e), str(e)
+    else:
+        assert False, "orphan prose after a directive was accepted"
+
+
+def t_the_palette_clears_wcag_aa():
+    problems = contrast.check("light") + contrast.check("dark")
+    assert not problems, "\n  " + "\n  ".join(problems)
+
+
+def t_the_contrast_check_can_actually_fail():
+    """A check that cannot fail is decoration."""
+    saved = contrast.PAIRS
+    try:
+        contrast.PAIRS = [("--ink-4", "--bg", 99.0)]
+        assert contrast.check("light"), "the contrast check passed an impossible bar"
+    finally:
+        contrast.PAIRS = saved
+
+
 def t_every_part_has_units_and_a_report():
     for p in track.PARTS:
         assert any(u[1] == p[0] for u in track.TRACK), f"part {p[0]} has no units"
-        assert p[5], f"part {p[0]} cites no research"
+        assert p[4], f"part {p[0]} cites no research"
+
+
+def t_accent_comes_from_the_phase_and_nowhere_else():
+    """A part must not carry its own colour, or the two can disagree."""
+    for p in track.PARTS:
+        assert len(p) == 5 and isinstance(p[4], list), (
+            f"part {p[0]} has an extra field; an accent slot would let a part "
+            f"disagree with its phase")
+        assert track.accent_of(p[0]) in track.ACCENTS
+
+
+def t_phases_cover_the_parts_exactly_once_in_track_order():
+    listed = [pid for ph in track.PHASES for pid in ph[4]]
+    assert listed == [p[0] for p in track.PARTS], (
+        "the phases must list the parts in track order")
+    assert len({ph[3] for ph in track.PHASES}) == len(track.PHASES), (
+        "two phases share an accent")
+
+
+def t_a_part_in_two_phases_is_an_error():
+    saved = track.PHASES
+    try:
+        first, second, *rest = saved
+        track.PHASES = [first,
+                        (second[0], second[1], second[2], second[3],
+                         second[4] + (first[4][0],))] + rest
+        try:
+            track.validate()
+        except ValueError as e:
+            assert "more than one phase" in str(e)
+        else:
+            assert False, "a part in two phases was accepted"
+    finally:
+        track.PHASES = saved
+
+
+def t_needs_must_point_backwards():
+    """A prerequisite that comes later is a broken track, not a hint."""
+    manifest, _ = build.build(strict=False)
+    order = {u["slug"]: u["num"] for u in manifest}
+    for u in manifest:
+        for n in u.get("needs", []):
+            assert order[n] < u["num"], f"{u['slug']} needs later unit {n}"
+
+
+def t_reverse_edges_match_forward_edges():
+    manifest, _ = build.build(strict=False)
+    fwd = {u["slug"]: set(u.get("needs", [])) for u in manifest}
+    for u in manifest:
+        for dep in u["neededBy"]:
+            assert u["slug"] in fwd[dep], (
+                f"{dep} is listed as needing {u['slug']} but does not")
+        expected = {s for s, ns in fwd.items() if u["slug"] in ns}
+        assert set(u["neededBy"]) == expected
 
 
 def t_build_emits_a_stub_for_every_track_entry():

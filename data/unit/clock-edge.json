@@ -6,7 +6,8 @@
  "part": "silicon",
  "partRoman": "III",
  "partTitle": "Silicon",
- "accent": "rust",
+ "phase": "build",
+ "accent": "phos",
  "backend": "yosys",
  "meta": {
   "needs": [
@@ -64,5 +65,11 @@
    "level": 2
   }
  ],
- "words": 1433
+ "words": 1433,
+ "needs": [
+  "feedback",
+  "clock-bus",
+  "structure"
+ ],
+ "neededBy": []
 }

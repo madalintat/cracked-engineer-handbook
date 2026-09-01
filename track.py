@@ -8,116 +8,158 @@ emitted as a `ready: false` stub so the whole spine is visible from day one.
 Backed by 36 research reports in .research/. Each part names the report(s) it
 draws on so a unit author knows where to look.
 
-Accents rotate so consecutive parts never look alike. Seven accents:
-    phos   phosphor green   the brand accent
-    amber  warm            energy, power, thermal
-    rust   earth           physical things, motors, silicon
-    moss   green-grey      systems, storage
-    steel  cool blue       machines, networks
-    plum   purple          theory, abstraction
-    slate  neutral         reference and meta
+A part's accent is not written on the part. It comes from the phase the part
+belongs to, so the colour names a stage of the track rather than decorating it.
+Nineteen parts rotating through seven colours is a rotation; seven phases each
+holding one colour is a legend the reader can learn:
+
+    phos   phosphor green   building a computer
+    amber  warm             understanding what one is
+    rust   earth            the system it runs
+    steel  cool blue        programs that scale
+    plum   purple           signal, meaning, secrecy
+    moss   green-grey       parallel hardware
+    slate  neutral          the world outside, and the end of the road
 """
 
 import re
 
+PHASES = [
+    # (id, title, one-line, accent, part ids in order)
+    ("build", "Build a computer",
+     "A switch, then a gate, then a machine that runs a program you wrote.",
+     "phos", ("physics", "logic", "silicon")),
+
+    ("understand", "Understand what one is",
+     "What it can compute at all, the instruction set it really speaks, and "
+     "how it writes down a number.",
+     "amber", ("theory", "machine", "numbers")),
+
+    ("system", "The system it runs",
+     "The kernel underneath your process, the disk underneath your file, and "
+     "the compiler that got you here.",
+     "rust", ("systems", "storage", "tools")),
+
+    ("scale", "Programs that scale",
+     "What costs what as the input grows, what breaks when two things run at "
+     "once, and what happens when the machine is far away.",
+     "steel", ("algorithms", "concurrency", "networks")),
+
+    ("meaning", "Signal, meaning, secrecy",
+     "Turning a voltage into a number, a number into information, and "
+     "information into something only one person can read.",
+     "plum", ("signals", "information", "security")),
+
+    ("parallel", "Parallel hardware",
+     "The other processor in your machine, and the arithmetic that made it "
+     "the one that matters.",
+     "moss", ("gpu", "kernels")),
+
+    ("world", "The world outside",
+     "Computers that move things, and the physical floor none of them get "
+     "under.",
+     "slate", ("embodied", "limits")),
+]
+
 PARTS = [
-    # (id, roman, title, one-line, accent, research reports)
+    # (id, roman, title, one-line, research reports)
+    # No accent here on purpose: it belongs to the phase, see PHASES.
     ("physics", "I", "Physics",
      "What a switch is, what it costs to flip, and why that cost ended the "
      "free lunch in 2005.",
-     "amber", ["transistors-cmos-fabrication"]),
+     ["transistors-cmos-fabrication"]),
 
     ("logic", "II", "Logic",
      "One primitive, repeated, until it becomes a machine that runs a program "
      "you wrote.",
-     "phos", ["nand2tetris-eater-scott"]),
+     ["nand2tetris-eater-scott"]),
 
     ("silicon", "III", "Silicon",
      "The same design in a language a synthesiser understands, and what a "
      "clock period actually buys you.",
-     "rust", ["digital-design-hdl-fpga"]),
+     ["digital-design-hdl-fpga"]),
 
     ("theory", "IV", "Theory",
      "What a computer can compute at all, and the negative results that "
      "explain why your linter has false positives.",
-     "plum", ["theory-of-computation"]),
+     ["theory-of-computation"]),
 
     ("machine", "V", "The machine",
      "A real instruction set, a real stack, and the microarchitecture that "
      "decides whether your loop is fast.",
-     "steel", ["x86-64-assembly", "cpu-architectures"]),
+     ["x86-64-assembly", "cpu-architectures"]),
 
     ("numbers", "VI", "Numbers and text",
      "Two's complement, IEEE-754 and UTF-8. Everything else you write is "
      "written in one of them.",
-     "amber", ["numbers-text-numerics"]),
+     ["numbers-text-numerics"]),
 
     ("systems", "VII", "Systems",
      "C++ down to its object model, Linux down to its syscalls, and the ABI "
      "boundary between them.",
-     "moss", ["cpp-linux-systems", "os-and-platforms"]),
+     ["cpp-linux-systems", "os-and-platforms"]),
 
     ("storage", "VIII", "Storage",
      "Where the bytes live when the power is off, and why the device's physics "
      "picks your data structure.",
-     "rust", ["storage-filesystems-engines"]),
+     ["storage-filesystems-engines"]),
 
     ("tools", "IX", "Tools",
      "The compiler, the interpreter, the terminal, the build and the "
      "debugger: the machinery between you and the machine.",
-     "plum", ["compilers-interpreters-terminals-unix", "build-systems-toolchains",
+     ["compilers-interpreters-terminals-unix", "build-systems-toolchains",
               "debugging-and-measurement", "testing-fuzzing-verification"]),
 
     ("algorithms", "X", "Algorithms",
      "Where Big-O lies, and the linear algebra that decides what a GPU is even "
      "for.",
-     "steel", ["algorithms-on-real-hardware", "numerical-linear-algebra"]),
+     ["algorithms-on-real-hardware", "numerical-linear-algebra"]),
 
     ("concurrency", "XI", "Concurrency",
      "Memory models, lock-free structures, and a coroutine as a frame that "
      "outlives its call.",
-     "moss", ["concurrency-theory-coroutines"]),
+     ["concurrency-theory-coroutines"]),
 
     ("networks", "XII", "Networks",
      "From an ethernet frame to a TLS handshake to 512 GPUs running an "
      "all-reduce.",
-     "steel", ["networking-and-internet"]),
+     ["networking-and-internet"]),
 
     ("signals", "XIII", "Signals",
      "The analog boundary, the FFT, and the filters that turn a noisy sensor "
      "into a number you can use.",
-     "amber", ["signals-and-dsp"]),
+     ["signals-and-dsp"]),
 
     ("information", "XIV", "Information",
      "Entropy as a floor, compression as modelling, and error correction as "
      "the same maths run backwards.",
-     "plum", ["information-theory-coding", "cryptography"]),
+     ["information-theory-coding", "cryptography"]),
 
     ("security", "XV", "Security",
      "The proof that microarchitecture is real: you can read it with a timer.",
-     "rust", ["hardware-security"]),
+     ["hardware-security"]),
 
     ("gpu", "XVI", "Graphics and the GPU",
      "A rasteriser that got general enough to do arithmetic, and the execution "
      "model that fell out of it.",
-     "phos", ["graphics-pipeline", "modal-gpu-glossary", "cuda-programming-tuning",
+     ["graphics-pipeline", "modal-gpu-glossary", "cuda-programming-tuning",
               "nvidia-architectures", "amd-and-other-accelerators"]),
 
     ("kernels", "XVII", "Kernels and AI",
      "Tiled GEMM to block-scaled FP4, and the systems arithmetic of training a "
      "model that does not fit on one chip.",
-     "phos", ["fp4-fp8-blackwell", "numpy-pytorch-internals",
+     ["fp4-fp8-blackwell", "numpy-pytorch-internals",
               "ai-systems-distributed-training"]),
 
     ("embodied", "XVIII", "Embodied",
      "A chip with no operating system, a control loop with a deadline, and a "
      "policy that moves matter.",
-     "rust", ["embedded-and-sbc", "robotics-control-embodied-ai"]),
+     ["embedded-and-sbc", "robotics-control-embodied-ai"]),
 
     ("limits", "XIX", "Limits",
      "The thermodynamic floor, the walls we are hitting, and what else a "
      "computer could be made of.",
-     "slate", ["limits-of-computation"]),
+     ["limits-of-computation"]),
 ]
 
 # (slug, part, title, blurb, backend)
@@ -538,6 +580,15 @@ ACCENTS = ["phos", "amber", "rust", "moss", "steel", "plum", "slate"]
 
 PART_BY_ID = {p[0]: p for p in PARTS}
 
+# Derived, never written twice. A part's colour is its phase's colour.
+PHASE_OF = {pid: ph[0] for ph in PHASES for pid in ph[4]}
+ACCENT_OF = {pid: ph[3] for ph in PHASES for pid in ph[4]}
+
+
+def accent_of(part_id):
+    """The accent a part inherits from its phase."""
+    return ACCENT_OF[part_id]
+
 
 def validate():
     """Fail loudly on a malformed track. Called by build.py before anything."""
@@ -559,12 +610,10 @@ def validate():
         problems += prose.check_title(title, f"unit {slug} title")
 
     part_ids = set()
-    for pid, roman, title, blurb, accent, reports in PARTS:
+    for pid, roman, title, blurb, reports in PARTS:
         if pid in part_ids:
             problems.append(f"duplicate part id: {pid}")
         part_ids.add(pid)
-        if accent not in ACCENTS:
-            problems.append(f"part {pid!r} names unknown accent {accent!r}")
         if not reports:
             problems.append(f"part {pid!r} cites no research report")
         problems += prose.check_blurb(blurb, f"part {pid}")
@@ -572,6 +621,39 @@ def validate():
     for pid in part_ids:
         if not any(u[1] == pid for u in TRACK):
             problems.append(f"part {pid!r} has no units")
+
+    # Every part belongs to exactly one phase, and the phases cover the track
+    # in its own order. Without this the two lists drift apart silently and a
+    # part loses its colour.
+    phase_ids, claimed = set(), []
+    for phid, ptitle, pblurb, accent, members in PHASES:
+        if phid in phase_ids:
+            problems.append(f"duplicate phase id: {phid}")
+        phase_ids.add(phid)
+        if accent not in ACCENTS:
+            problems.append(f"phase {phid!r} names unknown accent {accent!r}")
+        problems += prose.check_blurb(pblurb, f"phase {phid}")
+        problems += prose.check_title(ptitle, f"phase {phid} title")
+        for pid in members:
+            if pid not in part_ids:
+                problems.append(f"phase {phid!r} names unknown part {pid!r}")
+            elif pid in claimed:
+                problems.append(f"part {pid!r} is in more than one phase")
+            claimed.append(pid)
+
+    for pid in part_ids:
+        if pid not in claimed:
+            problems.append(f"part {pid!r} belongs to no phase, so it has no "
+                            f"accent")
+
+    order = [p[0] for p in PARTS]
+    if [c for c in claimed if c in part_ids] != order:
+        problems.append("the phases do not list the parts in track order, so "
+                        "the two-level index would disagree with the spine")
+
+    if len({ph[3] for ph in PHASES}) != len(PHASES):
+        problems.append("two phases share an accent, which defeats the point "
+                        "of tying colour to phase")
 
     if problems:
         raise ValueError(
@@ -586,7 +668,10 @@ if __name__ == "__main__":
     for slug, part, *_ in TRACK:
         by_part.setdefault(part, []).append(slug)
     print(f"{len(PARTS)} parts, {len(TRACK)} units written so far\n")
-    for pid, roman, title, blurb, accent, reports in PARTS:
-        n = len(by_part.get(pid, []))
-        mark = f"{n} units" if n else "-- not yet enumerated"
-        print(f"  {roman:<5} {title:<22} {accent:<6} {mark}")
+    for phid, ptitle, pblurb, accent, members in PHASES:
+        print(f"\n  {ptitle}  [{accent}]")
+        for pid in members:
+            _, roman, title, *_ = PART_BY_ID[pid]
+            n = len(by_part.get(pid, []))
+            mark = f"{n} units" if n else "-- not yet enumerated"
+            print(f"    {roman:<5} {title:<24} {mark}")

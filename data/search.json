@@ -946,7 +946,7 @@
   "slug": "nand",
   "n": 5,
   "title": "Exclusive or",
-  "text": "Correctness and efficiency are separate questions, and this unit True when the inputs differ. Build it however you can get it working first, then look at the gate count the checker reports. The obvious route is to write out the sum of products and translate it gate by gate. That works and it costs five or six. A four-gate solution exists. separates them.",
+  "text": "Correctness and efficiency are separate questions, and this unit separates them. True when the inputs differ. Build it however you can get it working first, then look at the gate count the checker reports. The obvious route is to write out the sum of products and translate it gate by gate. That works and it costs five or six. A four-gate solution exists.",
   "part": "Logic"
  },
  {
@@ -954,7 +954,7 @@
   "slug": "nand",
   "n": 6,
   "title": "Exclusive or, in four",
-  "text": "The same function has many circuits, and on a chip with billions of Same function, and now there is a budget. Five gates will be rejected. The trick is that the sum-of-products route computes twice without noticing. Compute it once and feed it to both branches. gates the difference between them is the whole game.",
+  "text": "The same function has many circuits, and on a chip with billions of gates the difference between them is the whole game. Same function, and now there is a budget. Five gates will be rejected. The trick is that the sum-of-products route computes twice without noticing. Compute it once and feed it to both branches.",
   "part": "Logic"
  },
  {
@@ -962,7 +962,7 @@
   "slug": "nand",
   "n": 7,
   "title": "Choosing between two wires",
-  "text": "Control is data. A control signal is an ordinary input, routed A multiplexer passes one of its data inputs through, chosen by a third. When is 0 the output follows ; when it is 1 it follows . This is the first circuit whose behaviour depends on a control signal rather than only on data, and there is no difference in the hardware between the two. A control wire is an ordinary wire routed into selector logic. somewhere that changes what the rest of the circuit does.",
+  "text": "Control is data. A control signal is an ordinary input, routed somewhere that changes what the rest of the circuit does. A multiplexer passes one of its data inputs through, chosen by a third. When is 0 the output follows ; when it is 1 it follows . This is the first circuit whose behaviour depends on a control signal rather than only on data, and there is no difference in the hardware between the two. A control wire is an ordinary wire routed into selector logic.",
   "part": "Logic"
  },
  {
@@ -970,7 +970,7 @@
   "slug": "nand",
   "n": 8,
   "title": "The last of the sixteen",
-  "text": "Every one of the sixteen two-input functions is reachable, and you now There are exactly sixteen functions of two bits. You have built five of them. This one is true when the inputs agree, which makes it the inverse of the one you built two exercises ago. You may use any chip you have already defined in this file. Define it above and call it by name, and the checker counts the nands inside it. have the machinery to reach any of them.",
+  "text": "Every one of the sixteen two-input functions is reachable, and you now have the machinery to reach any of them. There are exactly sixteen functions of two bits. You have built five of them. This one is true when the inputs agree, which makes it the inverse of the one you built two exercises ago. You may use any chip you have already defined in this file. Define it above and call it by name, and the checker counts the nands inside it.",
   "part": "Logic"
  },
  {
@@ -1081,7 +1081,7 @@
   "t": "drill",
   "slug": "nand",
   "n": 14,
-  "title": "Reading a NAND-only design, you find a part named `xor`. What has gone wrong?",
+  "title": "Reading a NAND-only design, you find a part named <code>xor</code>. What has gone wrong?",
   "text": " The checker walks the design to its leaves and accepts only  nand . Building XOR out of a built-in XOR would leave the central claim untested, which is the one thing this unit exists to demonstrate. ",
   "part": "Logic"
  },
@@ -1162,7 +1162,7 @@
   "slug": "clock-edge",
   "n": 1,
   "title": "One character, one flip-flop",
-  "text": "Non-blocking assignment reads pre-edge values, so a chain of flops The starter is a two-stage shift register with the wrong assignment operator. Synthesise it and read the cell count, then change the one character that fixes it. shifts instead of collapsing. same value and removed one.",
+  "text": "Non-blocking assignment reads pre-edge values, so a chain of flops shifts instead of collapsing. The starter is a two-stage shift register with the wrong assignment operator. Synthesise it and read the cell count, then change the one character that fixes it.",
   "part": "Silicon"
  },
  {
@@ -1170,7 +1170,7 @@
   "slug": "clock-edge",
   "n": 2,
   "title": "The hole that becomes storage",
-  "text": "A signal left unassigned on some path keeps its previous value, and This block is meant to be combinational. Synthesise it and the tool will tell you what it actually built. keeping a value requires storage.",
+  "text": "A signal left unassigned on some path keeps its previous value, and keeping a value requires storage. This block is meant to be combinational. Synthesise it and the tool will tell you what it actually built.",
   "part": "Silicon"
  },
  {
@@ -1178,7 +1178,7 @@
   "slug": "clock-edge",
   "n": 3,
   "title": "The same hole, in a case statement",
-  "text": "An unhandled case value is an unassigned path, and every unassigned A two-bit selector with four possible values, and a that handles two of them. Count the latches before you run it, then check your count. output bit becomes its own latch.",
+  "text": "An unhandled case value is an unassigned path, and every unassigned output bit becomes its own latch. A two-bit selector with four possible values, and a that handles two of them. Count the latches before you run it, then check your count.",
   "part": "Silicon"
  },
  {
@@ -1186,7 +1186,7 @@
   "slug": "clock-edge",
   "n": 4,
   "title": "Which flop did you ask for",
-  "text": "Where you check the reset decides whether it is one more input on the Both of these counters are correct designs, and they synthesise to different devices. The starter uses a synchronous reset. The specification wants the asynchronous one. flop or a separate pin on a different flop.",
+  "text": "Where you check the reset decides whether it is one more input on the flop or a separate pin on a different flop. Both of these counters are correct designs, and they synthesise to different devices. The starter uses a synchronous reset. The specification wants the asynchronous one.",
   "part": "Silicon"
  },
  {
@@ -1194,7 +1194,7 @@
   "slug": "clock-edge",
   "n": 5,
   "title": "Two drivers, one wire",
-  "text": "A wire is a piece of metal, and two outputs connected to it are two In software, assigning to a variable twice is fine and the second wins. Here it is not, and the reason is physical. devices fighting over the same voltage. the module is supposed to do.",
+  "text": "A wire is a piece of metal, and two outputs connected to it are two devices fighting over the same voltage. In software, assigning to a variable twice is fine and the second wins. Here it is not, and the reason is physical.",
   "part": "Silicon"
  },
  {
@@ -1202,7 +1202,7 @@
   "slug": "clock-edge",
   "n": 6,
   "title": "Prove it, do not test it",
-  "text": "For hardware you can sometimes replace testing with proof, and the Write a multiplexer using only AND, OR and NOT. The checker does not run test vectors against it. It proves that your design and the reference compute the same function for every possible input. tool that does it ships in the same package as the synthesiser. starter selects.",
+  "text": "For hardware you can sometimes replace testing with proof, and the tool that does it ships in the same package as the synthesiser. Write a multiplexer using only AND, OR and NOT. The checker does not run test vectors against it. It proves that your design and the reference compute the same function for every possible input.",
   "part": "Silicon"
  },
  {
@@ -1210,7 +1210,7 @@
   "slug": "clock-edge",
   "n": 7,
   "title": "An adder, proved against the operator",
-  "text": "A proof over all 256 input pairs costs the same as a proof over one. Same idea at a width where testing every case would be tedious. Build a 4-bit adder with a carry out, and the checker proves it against . added, or the carry has nowhere to go.",
+  "text": "A proof over all 256 input pairs costs the same as a proof over one. Same idea at a width where testing every case would be tedious. Build a 4-bit adder with a carry out, and the checker proves it against .",
   "part": "Silicon"
  },
  {
@@ -1218,14 +1218,14 @@
   "slug": "clock-edge",
   "n": 8,
   "title": "The gate you already built, in Verilog",
-  "text": "The netlist you drew by hand in Part II and the netlist the synthesiser Part II had you build XOR from NAND gates. Write it here in Verilog, structurally, using only NAND primitives, and the checker proves it against the operator. produces are the same kind of object. of the next two gates.",
+  "text": "The netlist you drew by hand in Part II and the netlist the synthesiser produces are the same kind of object. Part II had you build XOR from NAND gates. Write it here in Verilog, structurally, using only NAND primitives, and the checker proves it against the operator.",
   "part": "Silicon"
  },
  {
   "t": "drill",
   "slug": "clock-edge",
   "n": 1,
-  "title": "Two flops in one clocked block, assigned with `<=`. What do you get?",
+  "title": "Two flops in one clocked block, assigned with <code>&lt;=</code>. What do you get?",
   "text": " Non-blocking assignment evaluates every right side before writing any left side, so both read pre-edge values. That models real flops, which all sample at the edge and drive shortly after. ",
   "part": "Silicon"
  },
@@ -1233,7 +1233,7 @@
   "t": "drill",
   "slug": "clock-edge",
   "n": 2,
-  "title": "The same block written with `=` instead synthesises to how many flip-flops?",
+  "title": "The same block written with <code>=</code> instead synthesises to how many flip-flops?",
   "text": " Measured: two  $_DFF_P_  with  &lt;=  and one with  = . Blocking assignment writes immediately, so the second statement reads the value just written rather than the value held before the edge. ",
   "part": "Silicon"
  },
@@ -1257,7 +1257,7 @@
   "t": "drill",
   "slug": "clock-edge",
   "n": 5,
-  "title": "An `always @(*)` block assigns a four-bit output, and a `case` leaves two of its four selector values unhandled. What does yosys report?",
+  "title": "An <code>always @(*)</code> block assigns a four-bit output, and a <code>case</code> leaves two of its four selector values unhandled. What does yosys report?",
   "text": " Measured: two  $_DLATCH_N_  cells for that design. Latches are inferred per signal, not per block, and the warning names each one. ",
   "part": "Silicon"
  },
@@ -1273,7 +1273,7 @@
   "t": "drill",
   "slug": "clock-edge",
   "n": 7,
-  "title": "What does `always_comb` buy you over `always @(*)`?",
+  "title": "What does <code>always_comb</code> buy you over <code>always @(*)</code>?",
   "text": " Both derive the sensitivity list. The difference is that  always_comb  declares the block is meant to be combinational, which gives the tool something to check against. ",
   "part": "Silicon"
  },
@@ -1281,7 +1281,7 @@
   "t": "drill",
   "slug": "clock-edge",
   "n": 8,
-  "title": "`if (rst) q <= 0;` inside `always @(posedge clk)` synthesises to which cell?",
+  "title": "<code>if (rst) q &lt;= 0;</code> inside <code>always @(posedge clk)</code> synthesises to which cell?",
   "text": " A reset checked inside a block that wakes only on the clock is ordinary data, so it becomes a reset input on the same flop. Measured. ",
   "part": "Silicon"
  },
@@ -1289,7 +1289,7 @@
   "t": "drill",
   "slug": "clock-edge",
   "n": 9,
-  "title": "Moving the reset into the sensitivity list, as `always @(posedge clk or posedge rst)`, changes what?",
+  "title": "Moving the reset into the sensitivity list, as <code>always @(posedge clk or posedge rst)</code>, changes what?",
   "text": " Measured, and it is the point of the exercise: two correct designs that synthesise to different devices. You cannot tell them apart by behaviour in a simulator; you can tell instantly by reading the cell. ",
   "part": "Silicon"
  },
@@ -1305,7 +1305,7 @@
   "t": "drill",
   "slug": "clock-edge",
   "n": 11,
-  "title": "`always @(a) y = a & b;` What is the disagreement?",
+  "title": "<code>always @(a) y = a &amp; b;</code> What is the disagreement?",
   "text": " Measured: it synthesises to a single  $_AND_ . The hardware is right and the simulation is wrong, which produces the worst class of bug: it worked in simulation and failed on the board. ",
   "part": "Silicon"
  },
@@ -1321,7 +1321,7 @@
   "t": "drill",
   "slug": "clock-edge",
   "n": 13,
-  "title": "`equiv_simple` proves a design matches a reference. Over what?",
+  "title": "<code>equiv_simple</code> proves a design matches a reference. Over what?",
   "text": " It is a satisfiability question, not a simulation. The solver looks for any assignment that makes the two disagree, and failing to find one is a proof that none exists. ",
   "part": "Silicon"
  },
@@ -1410,7 +1410,7 @@
   "slug": "integers",
   "n": 1,
   "title": "The value that has no negative",
-  "text": "Two's complement has one more negative value than positive, so one Write . The checks include , and one of them asserts something that will look like a typo until you work out why it is not. input has no representable negation.",
+  "text": "Two's complement has one more negative value than positive, so one input has no representable negation. Write . The checks include , and one of them asserts something that will look like a typo until you work out why it is not.",
   "part": "Numbers and text"
  },
  {
@@ -1418,7 +1418,7 @@
   "slug": "integers",
   "n": 2,
   "title": "A comparison that is not a comparison",
-  "text": "When a signed and an unsigned operand of the same rank meet, the The starter looks obviously true and prints nothing. Compile it with the warnings on and the compiler will tell you what it is really doing. signed one converts to unsigned before anything is compared.",
+  "text": "When a signed and an unsigned operand of the same rank meet, the signed one converts to unsigned before anything is compared. The starter looks obviously true and prints nothing. Compile it with the warnings on and the compiler will tell you what it is really doing.",
   "part": "Numbers and text"
  },
  {
@@ -1426,7 +1426,7 @@
   "slug": "integers",
   "n": 3,
   "title": "Make the sanitizer speak",
-  "text": "`-fsanitize=undefined` catches the overflow at the moment it happens The flags here turn undefined behaviour from silent into loud. Write an that overflows and watch what the sanitizer says about it. and names the file and line.",
+  "text": "<code>-fsanitize=undefined</code> catches the overflow at the moment it happens and names the file and line. The flags here turn undefined behaviour from silent into loud. Write an that overflows and watch what the sanitizer says about it.",
   "part": "Numbers and text"
  },
  {
@@ -1434,7 +1434,7 @@
   "slug": "integers",
   "n": 4,
   "title": "Two midpoints that disagree",
-  "text": "Nothing complained, and one of them is still wrong for an input you Both of these compute a midpoint. Both compile cleanly with every warning enabled. They do not agree, and the input that separates them does not overflow anything. would not have thought to try. a negative number?",
+  "text": "Nothing complained, and one of them is still wrong for an input you would not have thought to try. Both of these compute a midpoint. Both compile cleanly with every warning enabled. They do not agree, and the input that separates them does not overflow anything.",
   "part": "Numbers and text"
  },
  {
@@ -1442,7 +1442,7 @@
   "slug": "integers",
   "n": 5,
   "title": "Ask before you add",
-  "text": "The checked builtins are the honest way to do arithmetic on input you Write so it reports whether the addition was representable, and writes the result only when it was. did not choose.",
+  "text": "The checked builtins are the honest way to do arithmetic on input you did not choose. Write so it reports whether the addition was representable, and writes the result only when it was.",
   "part": "Numbers and text"
  },
  {
@@ -1450,7 +1450,7 @@
   "slug": "integers",
   "n": 6,
   "title": "The loop that never ends",
-  "text": "An unsigned counter cannot go below zero, so a test for that never Count down from to and sum the array. The starter uses the type everyone reaches for, and it does not terminate. fires.",
+  "text": "An unsigned counter cannot go below zero, so a test for that never fires. Count down from to and sum the array. The starter uses the type everyone reaches for, and it does not terminate.",
   "part": "Numbers and text"
  },
  {
@@ -1458,7 +1458,7 @@
   "slug": "integers",
   "n": 7,
   "title": "Widening is an instruction",
-  "text": "Whether the high bits are copies of the sign bit or zeros is decided reads one byte and returns it as an . The checks include a byte whose top bit is set, and the answer depends on a single character in the declaration. by the type, and it becomes a different instruction.",
+  "text": "Whether the high bits are copies of the sign bit or zeros is decided by the type, and it becomes a different instruction. reads one byte and returns it as an . The checks include a byte whose top bit is set, and the answer depends on a single character in the declaration.",
   "part": "Numbers and text"
  },
  {
@@ -1466,7 +1466,7 @@
   "slug": "integers",
   "n": 8,
   "title": "Say what you mean instead",
-  "text": "Check the operands before the operation, not the result after it. Rewrite the overflow check so it asks a question the standard answers. The starter tests the result of an operation the standard says does not happen. well defined.",
+  "text": "Check the operands before the operation, not the result after it. Rewrite the overflow check so it asks a question the standard answers. The starter tests the result of an operation the standard says does not happen.",
   "part": "Numbers and text"
  },
  {
@@ -1489,7 +1489,7 @@
   "t": "drill",
   "slug": "integers",
   "n": 3,
-  "title": "Why has `-INT_MIN` no correct answer?",
+  "title": "Why has <code>-INT_MIN</code> no correct answer?",
   "text": " 32 bits give 2147483648 negative values and 2147483647 positive ones. The asymmetry is the price of having exactly one zero, and it is why  abs(INT_MIN)  is negative everywhere. ",
   "part": "Numbers and text"
  },
@@ -1521,7 +1521,7 @@
   "t": "drill",
   "slug": "integers",
   "n": 7,
-  "title": "`int a = -1; unsigned b = 1;` What does `a < b` evaluate to, and why?",
+  "title": "<code>int a = -1; unsigned b = 1;</code> What does <code>a &lt; b</code> evaluate to, and why?",
   "text": " The usual arithmetic conversions turn the signed operand unsigned when both have the same rank. The comparison is well defined and it does not mean what it appears to say.  -Wsign-compare , from  -Wextra , names it. ",
   "part": "Numbers and text"
  },
@@ -1529,7 +1529,7 @@
   "t": "drill",
   "slug": "integers",
   "n": 8,
-  "title": "Why does `for (size_t i = n - 1; i >= 0; i--)` never terminate?",
+  "title": "Why does <code>for (size_t i = n - 1; i &gt;= 0; i--)</code> never terminate?",
   "text": " An unsigned value has no negative range for the test to detect. Loop from  n  down to 1 and index with  i - 1 , which keeps the index type matching the container's. ",
   "part": "Numbers and text"
  },
@@ -1537,7 +1537,7 @@
   "t": "drill",
   "slug": "integers",
   "n": 9,
-  "title": "Running with `-fsanitize=undefined` but without `-fno-sanitize-recover=all`, a program overflows. What happens?",
+  "title": "Running with <code>-fsanitize=undefined</code> but without <code>-fno-sanitize-recover=all</code>, a program overflows. What happens?",
   "text": " Measured: the diagnostic appears on stderr and the exit status is still 0, so a test suite reports a pass over a program that has already broken its contract. The recover flag is not optional in a checking harness. ",
   "part": "Numbers and text"
  },
@@ -1553,7 +1553,7 @@
   "t": "drill",
   "slug": "integers",
   "n": 11,
-  "title": "What does `__builtin_add_overflow(a, b, &out)` return?",
+  "title": "What does <code>__builtin_add_overflow(a, b, &amp;out)</code> return?",
   "text": " It reports the overflow rather than the success, which is the opposite of what most people guess and the reason a wrapper usually negates it. C23 standardises the same family as  ckd_add . ",
   "part": "Numbers and text"
  },
@@ -1561,7 +1561,7 @@
   "t": "drill",
   "slug": "integers",
   "n": 12,
-  "title": "Why is `mov eax, eax` not a no-op on x86-64?",
+  "title": "Why is <code>mov eax, eax</code> not a no-op on x86-64?",
   "text": " Writes to 32-bit registers zero-extend; writes to 16-bit and 8-bit ones do not. AMD chose that when extending the architecture because it breaks the dependency on the register's previous value, which lets the renamer avoid serialising. ",
   "part": "Numbers and text"
  },
@@ -1569,7 +1569,7 @@
   "t": "drill",
   "slug": "integers",
   "n": 13,
-  "title": "Reading one byte through a `char*` on a target where `char` is signed, what does the byte 0xFF become as an `int`?",
+  "title": "Reading one byte through a <code>char*</code> on a target where <code>char</code> is signed, what does the byte 0xFF become as an <code>int</code>?",
   "text": " Plain  char  is signed here, so the compiler emits  movsx  and copies the top bit into the new high bits. Reading through  unsigned char*  emits  movzx  instead. This is why  char  is the wrong type for a byte of data. ",
   "part": "Numbers and text"
  },
@@ -1577,7 +1577,7 @@
   "t": "drill",
   "slug": "integers",
   "n": 14,
-  "title": "`mid(2, -1)` gives 0 for `(a + b) / 2` and 1 for `a + (b - a) / 2`. Why?",
+  "title": "<code>mid(2, -1)</code> gives 0 for <code>(a + b) / 2</code> and 1 for <code>a + (b - a) / 2</code>. Why?",
   "text": " No overflow is involved at these values. The two expressions are genuinely different functions on negative inputs, and the overflow-safe form is not simply a more careful way of writing the same thing. ",
   "part": "Numbers and text"
  },
@@ -1658,7 +1658,7 @@
   "slug": "execution-model",
   "n": 1,
   "title": "Which lane am I",
-  "text": "A warp is 32 consecutive threads, and the boundary is arithmetic on Fill in and from the thread index. The checks run one block of 96 threads and verify every thread agrees with the hardware about which warp it is in. the thread index rather than anything the runtime tells you.",
+  "text": "A warp is 32 consecutive threads, and the boundary is arithmetic on the thread index rather than anything the runtime tells you. Fill in and from the thread index. The checks run one block of 96 threads and verify every thread agrees with the hardware about which warp it is in.",
   "part": "Graphics and the GPU"
  },
  {
@@ -1666,7 +1666,7 @@
   "slug": "execution-model",
   "n": 2,
   "title": "Both sides of the branch",
-  "text": "A warp runs both sides of a divergent branch, masking lanes off, so Each thread increments one of two counters depending on its lane. Count how many times each side of the branch actually ran, by having every thread record whether it executed a given side. both paths cost their full time. takes.",
+  "text": "A warp runs both sides of a divergent branch, masking lanes off, so both paths cost their full time. Each thread increments one of two counters depending on its lane. Count how many times each side of the branch actually ran, by having every thread record whether it executed a given side.",
   "part": "Graphics and the GPU"
  },
  {
@@ -1674,7 +1674,7 @@
   "slug": "execution-model",
   "n": 3,
   "title": "The guard is not optional",
-  "text": "Your grid is a whole number of blocks, so unless the size divides A vector add over 1000 elements, launched with a whole number of 256-thread blocks. The starter writes past the end of the data. Nothing crashes. exactly there are threads past the end of the data.",
+  "text": "Your grid is a whole number of blocks, so unless the size divides exactly there are threads past the end of the data. A vector add over 1000 elements, launched with a whole number of 256-thread blocks. The starter writes past the end of the data. Nothing crashes.",
   "part": "Graphics and the GPU"
  },
  {
@@ -1682,7 +1682,7 @@
   "slug": "execution-model",
   "n": 4,
   "title": "One launch for any size",
-  "text": "Decoupling the grid from the problem lets you tune occupancy without Rewrite the same addition as a grid-stride loop, so the kernel is correct for any and any grid. The checks launch it three times with deliberately silly configurations. touching correctness.",
+  "text": "Decoupling the grid from the problem lets you tune occupancy without touching correctness. Rewrite the same addition as a grid-stride loop, so the kernel is correct for any and any grid. The checks launch it three times with deliberately silly configurations.",
   "part": "Graphics and the GPU"
  },
  {
@@ -1690,7 +1690,7 @@
   "slug": "execution-model",
   "n": 5,
   "title": "Summing a warp without memory",
-  "text": "Lanes in a warp can exchange registers directly, which costs log2(32) Reduce 32 values to one using register exchange only. No shared memory, no atomics, no loop over global memory. steps and no memory at all.",
+  "text": "Lanes in a warp can exchange registers directly, which costs log2(32) steps and no memory at all. Reduce 32 values to one using register exchange only. No shared memory, no atomics, no loop over global memory.",
   "part": "Graphics and the GPU"
  },
  {
@@ -1698,7 +1698,7 @@
   "slug": "execution-model",
   "n": 6,
   "title": "The barrier you left out",
-  "text": "Threads in a block run concurrently, so a write by one thread is not This kernel reverses an array through shared memory. Every thread writes one element and then reads a different one, and the starter does not wait in between. visible to another until they have both reached a barrier.",
+  "text": "Threads in a block run concurrently, so a write by one thread is not visible to another until they have both reached a barrier. This kernel reverses an array through shared memory. Every thread writes one element and then reads a different one, and the starter does not wait in between.",
   "part": "Graphics and the GPU"
  },
  {
@@ -1706,7 +1706,7 @@
   "slug": "execution-model",
   "n": 7,
   "title": "Blocks in any order",
-  "text": "A correct kernel gives the right answer for every interleaving of its This kernel sums an array with one partial per block. The starter assumes block 0 finishes first, which nothing guarantees. blocks, including strictly one at a time in any order.",
+  "text": "A correct kernel gives the right answer for every interleaving of its blocks, including strictly one at a time in any order. This kernel sums an array with one partial per block. The starter assumes block 0 finishes first, which nothing guarantees.",
   "part": "Graphics and the GPU"
  },
  {
@@ -1714,7 +1714,7 @@
   "slug": "execution-model",
   "n": 8,
   "title": "Uniform is free",
-  "text": "A branch that splits on a warp boundary does not diverge at all, so Two kernels do the same amount of arithmetic. One divides work by lane, the other by warp. Make the second one branch on the warp rather than the lane, and the checks confirm both produce identical results. the same fraction of threads costs nothing.",
+  "text": "A branch that splits on a warp boundary does not diverge at all, so the same fraction of threads costs nothing. Two kernels do the same amount of arithmetic. One divides work by lane, the other by warp. Make the second one branch on the warp rather than the lane, and the checks confirm both produce identical results.",
   "part": "Graphics and the GPU"
  },
  {
@@ -1745,7 +1745,7 @@
   "t": "drill",
   "slug": "execution-model",
   "n": 4,
-  "title": "Why prefer `warpSize` over writing the literal 32?",
+  "title": "Why prefer <code>warpSize</code> over writing the literal 32?",
   "text": " Writing 32 works today on NVIDIA hardware and gives the wrong answer the moment the same idea is read against a vendor whose warp is wider. Reading  warpSize  says what you meant rather than what happened to be true. ",
   "part": "Graphics and the GPU"
  },
@@ -1793,7 +1793,7 @@
   "t": "drill",
   "slug": "execution-model",
   "n": 10,
-  "title": "Putting `__syncthreads()` inside a branch that only some threads take is:",
+  "title": "Putting <code>__syncthreads()</code> inside a branch that only some threads take is:",
   "text": " Every thread in the block has to reach the barrier. The threads that skipped it never arrive, and the ones that did wait forever. ",
   "part": "Graphics and the GPU"
  },
@@ -1825,7 +1825,7 @@
   "t": "drill",
   "slug": "execution-model",
   "n": 14,
-  "title": "`__shfl_down_sync` lets lanes exchange values using:",
+  "title": "<code>__shfl_down_sync</code> lets lanes exchange values using:",
   "text": " Because a warp executes together, lanes can hand each other register contents. Five shuffle steps reduce 32 values to one in lane 0, which is log2(32). ",
   "part": "Graphics and the GPU"
  },

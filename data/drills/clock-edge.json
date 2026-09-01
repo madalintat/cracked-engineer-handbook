@@ -3,7 +3,7 @@
  "drills": [
   {
    "n": 1,
-   "q": "Two flops in one clocked block, assigned with `<=`. What do you get?",
+   "q": "Two flops in one clocked block, assigned with <code>&lt;=</code>. What do you get?",
    "options": [
     "A shift register: the second flop takes the value the first held before",
     "One flop, because the optimiser merges them",
@@ -15,7 +15,7 @@
   },
   {
    "n": 2,
-   "q": "The same block written with `=` instead synthesises to how many flip-flops?",
+   "q": "The same block written with <code>=</code> instead synthesises to how many flip-flops?",
    "options": [
     "Two, since the code describes two registers",
     "One, because both would always hold the same value and the optimiser",
@@ -41,7 +41,7 @@
    "n": 4,
    "q": "What makes an inferred latch appear?",
    "options": [
-    "Using `always @(*)` instead of `always_comb`",
+    "Using <code>always @(*)</code> instead of <code>always_comb</code>",
     "A signal that some path through a combinational block leaves unassigned",
     "Assigning the same signal in two places",
     "Reading a signal before it is assigned"
@@ -51,12 +51,12 @@
   },
   {
    "n": 5,
-   "q": "An `always @(*)` block assigns a four-bit output, and a `case` leaves two of its four selector values unhandled. What does yosys report?",
+   "q": "An <code>always @(*)</code> block assigns a four-bit output, and a <code>case</code> leaves two of its four selector values unhandled. What does yosys report?",
    "options": [
     "One latch for the whole vector",
     "A latch for each output bit that needed one, named individually",
     "A syntax error",
-    "Nothing, because `case` has an implicit default"
+    "Nothing, because <code>case</code> has an implicit default"
    ],
    "correct": 1,
    "why": "<p>Measured: two <code>$_DLATCH_N_</code> cells for that design. Latches are inferred per signal, not per block, and the warning names each one.</p>"
@@ -75,10 +75,10 @@
   },
   {
    "n": 7,
-   "q": "What does `always_comb` buy you over `always @(*)`?",
+   "q": "What does <code>always_comb</code> buy you over <code>always @(*)</code>?",
    "options": [
     "It generates faster logic",
-    "It derives the sensitivity list, which `always @(*)` does not",
+    "It derives the sensitivity list, which <code>always @(*)</code> does not",
     "It states your intent, so a latch inferred inside it is an error rather",
     "It allows non-blocking assignment in combinational logic"
    ],
@@ -87,22 +87,22 @@
   },
   {
    "n": 8,
-   "q": "`if (rst) q <= 0;` inside `always @(posedge clk)` synthesises to which cell?",
+   "q": "<code>if (rst) q &lt;= 0;</code> inside <code>always @(posedge clk)</code> synthesises to which cell?",
    "options": [
-    "`$_DFF_P_` with extra logic on the data input",
-    "`$_SDFF_PP0_`, a flop with a synchronous reset input",
-    "`$_DFF_PP0_`, a flop with an asynchronous reset pin",
-    "`$_DLATCH_P_`"
+    "<code>$_DFF_P_</code> with extra logic on the data input",
+    "<code>$_SDFF_PP0_</code>, a flop with a synchronous reset input",
+    "<code>$_DFF_PP0_</code>, a flop with an asynchronous reset pin",
+    "<code>$_DLATCH_P_</code>"
    ],
    "correct": 1,
    "why": "<p>A reset checked inside a block that wakes only on the clock is ordinary data, so it becomes a reset input on the same flop. Measured.</p>"
   },
   {
    "n": 9,
-   "q": "Moving the reset into the sensitivity list, as `always @(posedge clk or posedge rst)`, changes what?",
+   "q": "Moving the reset into the sensitivity list, as <code>always @(posedge clk or posedge rst)</code>, changes what?",
    "options": [
     "Nothing, the two are equivalent",
-    "The flop itself: it becomes `$_DFF_PP0_`, a physically different device",
+    "The flop itself: it becomes <code>$_DFF_PP0_</code>, a physically different device",
     "Only the simulation behaviour",
     "It introduces a latch"
    ],
@@ -123,12 +123,12 @@
   },
   {
    "n": 11,
-   "q": "`always @(a) y = a & b;` What is the disagreement?",
+   "q": "<code>always @(a) y = a &amp; b;</code> What is the disagreement?",
    "options": [
     "The simulator and the synthesiser both build an AND gate",
-    "Simulation leaves `y` stale when only `b` changes; synthesis ignores the",
+    "Simulation leaves <code>y</code> stale when only <code>b</code> changes; synthesis ignores the",
     "Synthesis reports an error",
-    "A latch is inferred for `y`"
+    "A latch is inferred for <code>y</code>"
    ],
    "correct": 1,
    "why": "<p>Measured: it synthesises to a single <code>$_AND_</code>. The hardware is right and the simulation is wrong, which produces the worst class of bug: it worked in simulation and failed on the board.</p>"
@@ -147,7 +147,7 @@
   },
   {
    "n": 13,
-   "q": "`equiv_simple` proves a design matches a reference. Over what?",
+   "q": "<code>equiv_simple</code> proves a design matches a reference. Over what?",
    "options": [
     "The test vectors you supply",
     "A random sample of the input space",

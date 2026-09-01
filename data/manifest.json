@@ -1,11 +1,89 @@
 {
+ "phases": [
+  {
+   "id": "build",
+   "title": "Build a computer",
+   "blurb": "A switch, then a gate, then a machine that runs a program you wrote.",
+   "accent": "phos",
+   "parts": [
+    "physics",
+    "logic",
+    "silicon"
+   ]
+  },
+  {
+   "id": "understand",
+   "title": "Understand what one is",
+   "blurb": "What it can compute at all, the instruction set it really speaks, and how it writes down a number.",
+   "accent": "amber",
+   "parts": [
+    "theory",
+    "machine",
+    "numbers"
+   ]
+  },
+  {
+   "id": "system",
+   "title": "The system it runs",
+   "blurb": "The kernel underneath your process, the disk underneath your file, and the compiler that got you here.",
+   "accent": "rust",
+   "parts": [
+    "systems",
+    "storage",
+    "tools"
+   ]
+  },
+  {
+   "id": "scale",
+   "title": "Programs that scale",
+   "blurb": "What costs what as the input grows, what breaks when two things run at once, and what happens when the machine is far away.",
+   "accent": "steel",
+   "parts": [
+    "algorithms",
+    "concurrency",
+    "networks"
+   ]
+  },
+  {
+   "id": "meaning",
+   "title": "Signal, meaning, secrecy",
+   "blurb": "Turning a voltage into a number, a number into information, and information into something only one person can read.",
+   "accent": "plum",
+   "parts": [
+    "signals",
+    "information",
+    "security"
+   ]
+  },
+  {
+   "id": "parallel",
+   "title": "Parallel hardware",
+   "blurb": "The other processor in your machine, and the arithmetic that made it the one that matters.",
+   "accent": "moss",
+   "parts": [
+    "gpu",
+    "kernels"
+   ]
+  },
+  {
+   "id": "world",
+   "title": "The world outside",
+   "blurb": "Computers that move things, and the physical floor none of them get under.",
+   "accent": "slate",
+   "parts": [
+    "embodied",
+    "limits"
+   ]
+  }
+ ],
  "parts": [
   {
    "id": "physics",
    "roman": "I",
    "title": "Physics",
    "blurb": "What a switch is, what it costs to flip, and why that cost ended the free lunch in 2005.",
-   "accent": "amber",
+   "phase": "build",
+   "accent": "phos",
    "reports": [
     "transistors-cmos-fabrication"
    ]
@@ -15,6 +93,7 @@
    "roman": "II",
    "title": "Logic",
    "blurb": "One primitive, repeated, until it becomes a machine that runs a program you wrote.",
+   "phase": "build",
    "accent": "phos",
    "reports": [
     "nand2tetris-eater-scott"
@@ -25,7 +104,8 @@
    "roman": "III",
    "title": "Silicon",
    "blurb": "The same design in a language a synthesiser understands, and what a clock period actually buys you.",
-   "accent": "rust",
+   "phase": "build",
+   "accent": "phos",
    "reports": [
     "digital-design-hdl-fpga"
    ]
@@ -35,7 +115,8 @@
    "roman": "IV",
    "title": "Theory",
    "blurb": "What a computer can compute at all, and the negative results that explain why your linter has false positives.",
-   "accent": "plum",
+   "phase": "understand",
+   "accent": "amber",
    "reports": [
     "theory-of-computation"
    ]
@@ -45,7 +126,8 @@
    "roman": "V",
    "title": "The machine",
    "blurb": "A real instruction set, a real stack, and the microarchitecture that decides whether your loop is fast.",
-   "accent": "steel",
+   "phase": "understand",
+   "accent": "amber",
    "reports": [
     "x86-64-assembly",
     "cpu-architectures"
@@ -56,6 +138,7 @@
    "roman": "VI",
    "title": "Numbers and text",
    "blurb": "Two's complement, IEEE-754 and UTF-8. Everything else you write is written in one of them.",
+   "phase": "understand",
    "accent": "amber",
    "reports": [
     "numbers-text-numerics"
@@ -66,7 +149,8 @@
    "roman": "VII",
    "title": "Systems",
    "blurb": "C++ down to its object model, Linux down to its syscalls, and the ABI boundary between them.",
-   "accent": "moss",
+   "phase": "system",
+   "accent": "rust",
    "reports": [
     "cpp-linux-systems",
     "os-and-platforms"
@@ -77,6 +161,7 @@
    "roman": "VIII",
    "title": "Storage",
    "blurb": "Where the bytes live when the power is off, and why the device's physics picks your data structure.",
+   "phase": "system",
    "accent": "rust",
    "reports": [
     "storage-filesystems-engines"
@@ -87,7 +172,8 @@
    "roman": "IX",
    "title": "Tools",
    "blurb": "The compiler, the interpreter, the terminal, the build and the debugger: the machinery between you and the machine.",
-   "accent": "plum",
+   "phase": "system",
+   "accent": "rust",
    "reports": [
     "compilers-interpreters-terminals-unix",
     "build-systems-toolchains",
@@ -100,6 +186,7 @@
    "roman": "X",
    "title": "Algorithms",
    "blurb": "Where Big-O lies, and the linear algebra that decides what a GPU is even for.",
+   "phase": "scale",
    "accent": "steel",
    "reports": [
     "algorithms-on-real-hardware",
@@ -111,7 +198,8 @@
    "roman": "XI",
    "title": "Concurrency",
    "blurb": "Memory models, lock-free structures, and a coroutine as a frame that outlives its call.",
-   "accent": "moss",
+   "phase": "scale",
+   "accent": "steel",
    "reports": [
     "concurrency-theory-coroutines"
    ]
@@ -121,6 +209,7 @@
    "roman": "XII",
    "title": "Networks",
    "blurb": "From an ethernet frame to a TLS handshake to 512 GPUs running an all-reduce.",
+   "phase": "scale",
    "accent": "steel",
    "reports": [
     "networking-and-internet"
@@ -131,7 +220,8 @@
    "roman": "XIII",
    "title": "Signals",
    "blurb": "The analog boundary, the FFT, and the filters that turn a noisy sensor into a number you can use.",
-   "accent": "amber",
+   "phase": "meaning",
+   "accent": "plum",
    "reports": [
     "signals-and-dsp"
    ]
@@ -141,6 +231,7 @@
    "roman": "XIV",
    "title": "Information",
    "blurb": "Entropy as a floor, compression as modelling, and error correction as the same maths run backwards.",
+   "phase": "meaning",
    "accent": "plum",
    "reports": [
     "information-theory-coding",
@@ -152,7 +243,8 @@
    "roman": "XV",
    "title": "Security",
    "blurb": "The proof that microarchitecture is real: you can read it with a timer.",
-   "accent": "rust",
+   "phase": "meaning",
+   "accent": "plum",
    "reports": [
     "hardware-security"
    ]
@@ -162,7 +254,8 @@
    "roman": "XVI",
    "title": "Graphics and the GPU",
    "blurb": "A rasteriser that got general enough to do arithmetic, and the execution model that fell out of it.",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "reports": [
     "graphics-pipeline",
     "modal-gpu-glossary",
@@ -176,7 +269,8 @@
    "roman": "XVII",
    "title": "Kernels and AI",
    "blurb": "Tiled GEMM to block-scaled FP4, and the systems arithmetic of training a model that does not fit on one chip.",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "reports": [
     "fp4-fp8-blackwell",
     "numpy-pytorch-internals",
@@ -188,7 +282,8 @@
    "roman": "XVIII",
    "title": "Embodied",
    "blurb": "A chip with no operating system, a control loop with a deadline, and a policy that moves matter.",
-   "accent": "rust",
+   "phase": "world",
+   "accent": "slate",
    "reports": [
     "embedded-and-sbc",
     "robotics-control-embodied-ai"
@@ -199,6 +294,7 @@
    "roman": "XIX",
    "title": "Limits",
    "blurb": "The thermodynamic floor, the walls we are hitting, and what else a computer could be made of.",
+   "phase": "world",
    "accent": "slate",
    "reports": [
     "limits-of-computation"
@@ -214,12 +310,15 @@
    "part": "physics",
    "partRoman": "I",
    "partTitle": "Physics",
-   "accent": "amber",
+   "phase": "build",
+   "accent": "phos",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "cmos-gate",
@@ -229,12 +328,18 @@
    "part": "physics",
    "partRoman": "I",
    "partTitle": "Physics",
-   "accent": "amber",
+   "phase": "build",
+   "accent": "phos",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": [
+    "nand",
+    "integers"
+   ]
   },
   {
    "slug": "power",
@@ -244,12 +349,15 @@
    "part": "physics",
    "partRoman": "I",
    "partTitle": "Physics",
-   "accent": "amber",
+   "phase": "build",
+   "accent": "phos",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "fabrication",
@@ -259,12 +367,15 @@
    "part": "physics",
    "partRoman": "I",
    "partTitle": "Physics",
-   "accent": "amber",
+   "phase": "build",
+   "accent": "phos",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "nand",
@@ -274,12 +385,17 @@
    "part": "logic",
    "partRoman": "II",
    "partTitle": "Logic",
+   "phase": "build",
    "accent": "phos",
    "backend": "sim",
    "ready": true,
    "words": 1541,
    "exercises": 8,
-   "drills": 15
+   "drills": 15,
+   "needs": [
+    "cmos-gate"
+   ],
+   "neededBy": []
   },
   {
    "slug": "selection",
@@ -289,12 +405,15 @@
    "part": "logic",
    "partRoman": "II",
    "partTitle": "Logic",
+   "phase": "build",
    "accent": "phos",
    "backend": "sim",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "arithmetic",
@@ -304,12 +423,17 @@
    "part": "logic",
    "partRoman": "II",
    "partTitle": "Logic",
+   "phase": "build",
    "accent": "phos",
    "backend": "sim",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": [
+    "integers"
+   ]
   },
   {
    "slug": "feedback",
@@ -319,12 +443,17 @@
    "part": "logic",
    "partRoman": "II",
    "partTitle": "Logic",
+   "phase": "build",
    "accent": "phos",
    "backend": "sim",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": [
+    "clock-edge"
+   ]
   },
   {
    "slug": "clock-bus",
@@ -334,12 +463,17 @@
    "part": "logic",
    "partRoman": "II",
    "partTitle": "Logic",
+   "phase": "build",
    "accent": "phos",
    "backend": "sim",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": [
+    "clock-edge"
+   ]
   },
   {
    "slug": "memory",
@@ -349,12 +483,15 @@
    "part": "logic",
    "partRoman": "II",
    "partTitle": "Logic",
+   "phase": "build",
    "accent": "phos",
    "backend": "sim",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "encoding",
@@ -364,12 +501,15 @@
    "part": "logic",
    "partRoman": "II",
    "partTitle": "Logic",
+   "phase": "build",
    "accent": "phos",
    "backend": "sim",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "control",
@@ -379,12 +519,15 @@
    "part": "logic",
    "partRoman": "II",
    "partTitle": "Logic",
+   "phase": "build",
    "accent": "phos",
    "backend": "sim",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "structure",
@@ -394,12 +537,17 @@
    "part": "silicon",
    "partRoman": "III",
    "partTitle": "Silicon",
-   "accent": "rust",
+   "phase": "build",
+   "accent": "phos",
    "backend": "yosys",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": [
+    "clock-edge"
+   ]
   },
   {
    "slug": "clock-edge",
@@ -409,12 +557,19 @@
    "part": "silicon",
    "partRoman": "III",
    "partTitle": "Silicon",
-   "accent": "rust",
+   "phase": "build",
+   "accent": "phos",
    "backend": "yosys",
    "ready": true,
    "words": 1433,
    "exercises": 8,
-   "drills": 15
+   "drills": 15,
+   "needs": [
+    "feedback",
+    "clock-bus",
+    "structure"
+   ],
+   "neededBy": []
   },
   {
    "slug": "proving",
@@ -424,12 +579,15 @@
    "part": "silicon",
    "partRoman": "III",
    "partTitle": "Silicon",
-   "accent": "rust",
+   "phase": "build",
+   "accent": "phos",
    "backend": "yosys",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "timing",
@@ -439,12 +597,15 @@
    "part": "silicon",
    "partRoman": "III",
    "partTitle": "Silicon",
-   "accent": "rust",
+   "phase": "build",
+   "accent": "phos",
    "backend": "yosys",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "universal",
@@ -454,12 +615,15 @@
    "part": "theory",
    "partRoman": "IV",
    "partTitle": "Theory",
-   "accent": "plum",
+   "phase": "understand",
+   "accent": "amber",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "languages",
@@ -469,12 +633,15 @@
    "part": "theory",
    "partRoman": "IV",
    "partTitle": "Theory",
-   "accent": "plum",
+   "phase": "understand",
+   "accent": "amber",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "computability",
@@ -484,12 +651,15 @@
    "part": "theory",
    "partRoman": "IV",
    "partTitle": "Theory",
-   "accent": "plum",
+   "phase": "understand",
+   "accent": "amber",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "complexity",
@@ -499,12 +669,15 @@
    "part": "theory",
    "partRoman": "IV",
    "partTitle": "Theory",
-   "accent": "plum",
+   "phase": "understand",
+   "accent": "amber",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "registers",
@@ -514,12 +687,15 @@
    "part": "machine",
    "partRoman": "V",
    "partTitle": "The machine",
-   "accent": "steel",
+   "phase": "understand",
+   "accent": "amber",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "addressing",
@@ -529,12 +705,15 @@
    "part": "machine",
    "partRoman": "V",
    "partTitle": "The machine",
-   "accent": "steel",
+   "phase": "understand",
+   "accent": "amber",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "syscalls",
@@ -544,12 +723,15 @@
    "part": "machine",
    "partRoman": "V",
    "partTitle": "The machine",
-   "accent": "steel",
+   "phase": "understand",
+   "accent": "amber",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "elf",
@@ -559,12 +741,15 @@
    "part": "machine",
    "partRoman": "V",
    "partTitle": "The machine",
-   "accent": "steel",
+   "phase": "understand",
+   "accent": "amber",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "cache",
@@ -574,12 +759,15 @@
    "part": "machine",
    "partRoman": "V",
    "partTitle": "The machine",
-   "accent": "steel",
+   "phase": "understand",
+   "accent": "amber",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "pipeline",
@@ -589,12 +777,15 @@
    "part": "machine",
    "partRoman": "V",
    "partTitle": "The machine",
-   "accent": "steel",
+   "phase": "understand",
+   "accent": "amber",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "atomics",
@@ -604,12 +795,15 @@
    "part": "machine",
    "partRoman": "V",
    "partTitle": "The machine",
-   "accent": "steel",
+   "phase": "understand",
+   "accent": "amber",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "integers",
@@ -619,12 +813,18 @@
    "part": "numbers",
    "partRoman": "VI",
    "partTitle": "Numbers and text",
+   "phase": "understand",
    "accent": "amber",
    "backend": "godbolt",
    "ready": true,
    "words": 1702,
    "exercises": 8,
-   "drills": 15
+   "drills": 15,
+   "needs": [
+    "cmos-gate",
+    "arithmetic"
+   ],
+   "neededBy": []
   },
   {
    "slug": "floats",
@@ -634,12 +834,15 @@
    "part": "numbers",
    "partRoman": "VI",
    "partTitle": "Numbers and text",
+   "phase": "understand",
    "accent": "amber",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "stability",
@@ -649,12 +852,15 @@
    "part": "numbers",
    "partRoman": "VI",
    "partTitle": "Numbers and text",
+   "phase": "understand",
    "accent": "amber",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "text",
@@ -664,12 +870,15 @@
    "part": "numbers",
    "partRoman": "VI",
    "partTitle": "Numbers and text",
+   "phase": "understand",
    "accent": "amber",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "object-model",
@@ -679,12 +888,15 @@
    "part": "systems",
    "partRoman": "VII",
    "partTitle": "Systems",
-   "accent": "moss",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "raii",
@@ -694,12 +906,15 @@
    "part": "systems",
    "partRoman": "VII",
    "partTitle": "Systems",
-   "accent": "moss",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "compile-time",
@@ -709,12 +924,15 @@
    "part": "systems",
    "partRoman": "VII",
    "partTitle": "Systems",
-   "accent": "moss",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "processes",
@@ -724,12 +942,15 @@
    "part": "systems",
    "partRoman": "VII",
    "partTitle": "Systems",
-   "accent": "moss",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "virtual-memory",
@@ -739,12 +960,15 @@
    "part": "systems",
    "partRoman": "VII",
    "partTitle": "Systems",
-   "accent": "moss",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "scheduling",
@@ -754,12 +978,15 @@
    "part": "systems",
    "partRoman": "VII",
    "partTitle": "Systems",
-   "accent": "moss",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "abi",
@@ -769,12 +996,15 @@
    "part": "systems",
    "partRoman": "VII",
    "partTitle": "Systems",
-   "accent": "moss",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "linking",
@@ -784,12 +1014,15 @@
    "part": "systems",
    "partRoman": "VII",
    "partTitle": "Systems",
-   "accent": "moss",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "flash",
@@ -799,12 +1032,15 @@
    "part": "storage",
    "partRoman": "VIII",
    "partTitle": "Storage",
+   "phase": "system",
    "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "nvme",
@@ -814,12 +1050,15 @@
    "part": "storage",
    "partRoman": "VIII",
    "partTitle": "Storage",
+   "phase": "system",
    "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "page-cache",
@@ -829,12 +1068,15 @@
    "part": "storage",
    "partRoman": "VIII",
    "partTitle": "Storage",
+   "phase": "system",
    "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "filesystems",
@@ -844,12 +1086,15 @@
    "part": "storage",
    "partRoman": "VIII",
    "partTitle": "Storage",
+   "phase": "system",
    "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "storage-engines",
@@ -859,12 +1104,15 @@
    "part": "storage",
    "partRoman": "VIII",
    "partTitle": "Storage",
+   "phase": "system",
    "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "terminal",
@@ -874,12 +1122,15 @@
    "part": "tools",
    "partRoman": "IX",
    "partTitle": "Tools",
-   "accent": "plum",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "shell",
@@ -889,12 +1140,15 @@
    "part": "tools",
    "partRoman": "IX",
    "partTitle": "Tools",
-   "accent": "plum",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "parsing",
@@ -904,12 +1158,15 @@
    "part": "tools",
    "partRoman": "IX",
    "partTitle": "Tools",
-   "accent": "plum",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "ssa",
@@ -919,12 +1176,15 @@
    "part": "tools",
    "partRoman": "IX",
    "partTitle": "Tools",
-   "accent": "plum",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "codegen",
@@ -934,12 +1194,15 @@
    "part": "tools",
    "partRoman": "IX",
    "partTitle": "Tools",
-   "accent": "plum",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "interpreters",
@@ -949,12 +1212,15 @@
    "part": "tools",
    "partRoman": "IX",
    "partTitle": "Tools",
-   "accent": "plum",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "build",
@@ -964,12 +1230,15 @@
    "part": "tools",
    "partRoman": "IX",
    "partTitle": "Tools",
-   "accent": "plum",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "debugger",
@@ -979,12 +1248,15 @@
    "part": "tools",
    "partRoman": "IX",
    "partTitle": "Tools",
-   "accent": "plum",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "measurement",
@@ -994,12 +1266,15 @@
    "part": "tools",
    "partRoman": "IX",
    "partTitle": "Tools",
-   "accent": "plum",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "testing",
@@ -1009,12 +1284,15 @@
    "part": "tools",
    "partRoman": "IX",
    "partTitle": "Tools",
-   "accent": "plum",
+   "phase": "system",
+   "accent": "rust",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "cost-model",
@@ -1024,12 +1302,15 @@
    "part": "algorithms",
    "partRoman": "X",
    "partTitle": "Algorithms",
+   "phase": "scale",
    "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "layout",
@@ -1039,12 +1320,15 @@
    "part": "algorithms",
    "partRoman": "X",
    "partTitle": "Algorithms",
+   "phase": "scale",
    "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "branches",
@@ -1054,12 +1338,15 @@
    "part": "algorithms",
    "partRoman": "X",
    "partTitle": "Algorithms",
+   "phase": "scale",
    "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "scan",
@@ -1069,12 +1356,15 @@
    "part": "algorithms",
    "partRoman": "X",
    "partTitle": "Algorithms",
+   "phase": "scale",
    "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "blas",
@@ -1084,12 +1374,15 @@
    "part": "algorithms",
    "partRoman": "X",
    "partTitle": "Algorithms",
+   "phase": "scale",
    "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "gemm",
@@ -1099,12 +1392,15 @@
    "part": "algorithms",
    "partRoman": "X",
    "partTitle": "Algorithms",
+   "phase": "scale",
    "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "decompositions",
@@ -1114,12 +1410,15 @@
    "part": "algorithms",
    "partRoman": "X",
    "partTitle": "Algorithms",
+   "phase": "scale",
    "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "sparse",
@@ -1129,12 +1428,15 @@
    "part": "algorithms",
    "partRoman": "X",
    "partTitle": "Algorithms",
+   "phase": "scale",
    "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "memory-model",
@@ -1144,12 +1446,15 @@
    "part": "concurrency",
    "partRoman": "XI",
    "partTitle": "Concurrency",
-   "accent": "moss",
+   "phase": "scale",
+   "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "lock-free",
@@ -1159,12 +1464,15 @@
    "part": "concurrency",
    "partRoman": "XI",
    "partTitle": "Concurrency",
-   "accent": "moss",
+   "phase": "scale",
+   "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "parallel-theory",
@@ -1174,12 +1482,15 @@
    "part": "concurrency",
    "partRoman": "XI",
    "partTitle": "Concurrency",
-   "accent": "moss",
+   "phase": "scale",
+   "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "coroutines",
@@ -1189,12 +1500,15 @@
    "part": "concurrency",
    "partRoman": "XI",
    "partTitle": "Concurrency",
-   "accent": "moss",
+   "phase": "scale",
+   "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "frames",
@@ -1204,12 +1518,15 @@
    "part": "networks",
    "partRoman": "XII",
    "partTitle": "Networks",
+   "phase": "scale",
    "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "routing",
@@ -1219,12 +1536,15 @@
    "part": "networks",
    "partRoman": "XII",
    "partTitle": "Networks",
+   "phase": "scale",
    "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "tcp",
@@ -1234,12 +1554,15 @@
    "part": "networks",
    "partRoman": "XII",
    "partTitle": "Networks",
+   "phase": "scale",
    "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "sockets",
@@ -1249,12 +1572,15 @@
    "part": "networks",
    "partRoman": "XII",
    "partTitle": "Networks",
+   "phase": "scale",
    "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "web",
@@ -1264,12 +1590,15 @@
    "part": "networks",
    "partRoman": "XII",
    "partTitle": "Networks",
+   "phase": "scale",
    "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "collectives",
@@ -1279,12 +1608,15 @@
    "part": "networks",
    "partRoman": "XII",
    "partTitle": "Networks",
+   "phase": "scale",
    "accent": "steel",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "sampling",
@@ -1294,12 +1626,15 @@
    "part": "signals",
    "partRoman": "XIII",
    "partTitle": "Signals",
-   "accent": "amber",
+   "phase": "meaning",
+   "accent": "plum",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "fourier",
@@ -1309,12 +1644,15 @@
    "part": "signals",
    "partRoman": "XIII",
    "partTitle": "Signals",
-   "accent": "amber",
+   "phase": "meaning",
+   "accent": "plum",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "filters",
@@ -1324,12 +1662,15 @@
    "part": "signals",
    "partRoman": "XIII",
    "partTitle": "Signals",
-   "accent": "amber",
+   "phase": "meaning",
+   "accent": "plum",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "entropy",
@@ -1339,12 +1680,15 @@
    "part": "information",
    "partRoman": "XIV",
    "partTitle": "Information",
+   "phase": "meaning",
    "accent": "plum",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "compression",
@@ -1354,12 +1698,15 @@
    "part": "information",
    "partRoman": "XIV",
    "partTitle": "Information",
+   "phase": "meaning",
    "accent": "plum",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "ecc",
@@ -1369,12 +1716,15 @@
    "part": "information",
    "partRoman": "XIV",
    "partTitle": "Information",
+   "phase": "meaning",
    "accent": "plum",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "symmetric",
@@ -1384,12 +1734,15 @@
    "part": "information",
    "partRoman": "XIV",
    "partTitle": "Information",
+   "phase": "meaning",
    "accent": "plum",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "asymmetric",
@@ -1399,12 +1752,15 @@
    "part": "information",
    "partRoman": "XIV",
    "partTitle": "Information",
+   "phase": "meaning",
    "accent": "plum",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "crypto-hardware",
@@ -1414,12 +1770,15 @@
    "part": "information",
    "partRoman": "XIV",
    "partTitle": "Information",
+   "phase": "meaning",
    "accent": "plum",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "cache-channel",
@@ -1429,12 +1788,15 @@
    "part": "security",
    "partRoman": "XV",
    "partTitle": "Security",
-   "accent": "rust",
+   "phase": "meaning",
+   "accent": "plum",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "speculation",
@@ -1444,12 +1806,15 @@
    "part": "security",
    "partRoman": "XV",
    "partTitle": "Security",
-   "accent": "rust",
+   "phase": "meaning",
+   "accent": "plum",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "mitigations",
@@ -1459,12 +1824,15 @@
    "part": "security",
    "partRoman": "XV",
    "partTitle": "Security",
-   "accent": "rust",
+   "phase": "meaning",
+   "accent": "plum",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "constant-time",
@@ -1474,12 +1842,15 @@
    "part": "security",
    "partRoman": "XV",
    "partTitle": "Security",
-   "accent": "rust",
+   "phase": "meaning",
+   "accent": "plum",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "frame-budget",
@@ -1489,12 +1860,15 @@
    "part": "gpu",
    "partRoman": "XVI",
    "partTitle": "Graphics and the GPU",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "rasteriser",
@@ -1504,12 +1878,15 @@
    "part": "gpu",
    "partRoman": "XVI",
    "partTitle": "Graphics and the GPU",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "sm-shape",
@@ -1519,12 +1896,17 @@
    "part": "gpu",
    "partRoman": "XVI",
    "partTitle": "Graphics and the GPU",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": [
+    "execution-model"
+   ]
   },
   {
    "slug": "throughput",
@@ -1534,12 +1916,17 @@
    "part": "gpu",
    "partRoman": "XVI",
    "partTitle": "Graphics and the GPU",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": [
+    "execution-model"
+   ]
   },
   {
    "slug": "execution-model",
@@ -1549,12 +1936,18 @@
    "part": "gpu",
    "partRoman": "XVI",
    "partTitle": "Graphics and the GPU",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": true,
    "words": 1555,
    "exercises": 8,
-   "drills": 15
+   "drills": 15,
+   "needs": [
+    "sm-shape",
+    "throughput"
+   ],
+   "neededBy": []
   },
   {
    "slug": "gpu-memory",
@@ -1564,12 +1957,15 @@
    "part": "gpu",
    "partRoman": "XVI",
    "partTitle": "Graphics and the GPU",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "coalescing",
@@ -1579,12 +1975,15 @@
    "part": "gpu",
    "partRoman": "XVI",
    "partTitle": "Graphics and the GPU",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "shared-memory",
@@ -1594,12 +1993,15 @@
    "part": "gpu",
    "partRoman": "XVI",
    "partTitle": "Graphics and the GPU",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "occupancy",
@@ -1609,12 +2011,15 @@
    "part": "gpu",
    "partRoman": "XVI",
    "partTitle": "Graphics and the GPU",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "latency-hiding",
@@ -1624,12 +2029,15 @@
    "part": "gpu",
    "partRoman": "XVI",
    "partTitle": "Graphics and the GPU",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "roofline",
@@ -1639,12 +2047,15 @@
    "part": "gpu",
    "partRoman": "XVI",
    "partTitle": "Graphics and the GPU",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "strides",
@@ -1654,12 +2065,15 @@
    "part": "kernels",
    "partRoman": "XVII",
    "partTitle": "Kernels and AI",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "autograd",
@@ -1669,12 +2083,15 @@
    "part": "kernels",
    "partRoman": "XVII",
    "partTitle": "Kernels and AI",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "tiled-gemm",
@@ -1684,12 +2101,15 @@
    "part": "kernels",
    "partRoman": "XVII",
    "partTitle": "Kernels and AI",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "cute",
@@ -1699,12 +2119,15 @@
    "part": "kernels",
    "partRoman": "XVII",
    "partTitle": "Kernels and AI",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "formats",
@@ -1714,12 +2137,15 @@
    "part": "kernels",
    "partRoman": "XVII",
    "partTitle": "Kernels and AI",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "block-scaling",
@@ -1729,12 +2155,15 @@
    "part": "kernels",
    "partRoman": "XVII",
    "partTitle": "Kernels and AI",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "stochastic-rounding",
@@ -1744,12 +2173,15 @@
    "part": "kernels",
    "partRoman": "XVII",
    "partTitle": "Kernels and AI",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "transformer-arithmetic",
@@ -1759,12 +2191,15 @@
    "part": "kernels",
    "partRoman": "XVII",
    "partTitle": "Kernels and AI",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "flash-attention",
@@ -1774,12 +2209,15 @@
    "part": "kernels",
    "partRoman": "XVII",
    "partTitle": "Kernels and AI",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "inference",
@@ -1789,12 +2227,15 @@
    "part": "kernels",
    "partRoman": "XVII",
    "partTitle": "Kernels and AI",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "parallelism",
@@ -1804,12 +2245,15 @@
    "part": "kernels",
    "partRoman": "XVII",
    "partTitle": "Kernels and AI",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "training-run",
@@ -1819,12 +2263,15 @@
    "part": "kernels",
    "partRoman": "XVII",
    "partTitle": "Kernels and AI",
-   "accent": "phos",
+   "phase": "parallel",
+   "accent": "moss",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "no-os",
@@ -1834,12 +2281,15 @@
    "part": "embodied",
    "partRoman": "XVIII",
    "partTitle": "Embodied",
-   "accent": "rust",
+   "phase": "world",
+   "accent": "slate",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "abstraction-cost",
@@ -1849,12 +2299,15 @@
    "part": "embodied",
    "partRoman": "XVIII",
    "partTitle": "Embodied",
-   "accent": "rust",
+   "phase": "world",
+   "accent": "slate",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "volatile",
@@ -1864,12 +2317,15 @@
    "part": "embodied",
    "partRoman": "XVIII",
    "partTitle": "Embodied",
-   "accent": "rust",
+   "phase": "world",
+   "accent": "slate",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "cortex-m",
@@ -1879,12 +2335,15 @@
    "part": "embodied",
    "partRoman": "XVIII",
    "partTitle": "Embodied",
-   "accent": "rust",
+   "phase": "world",
+   "accent": "slate",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "determinism",
@@ -1894,12 +2353,15 @@
    "part": "embodied",
    "partRoman": "XVIII",
    "partTitle": "Embodied",
-   "accent": "rust",
+   "phase": "world",
+   "accent": "slate",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "actuators",
@@ -1909,12 +2371,15 @@
    "part": "embodied",
    "partRoman": "XVIII",
    "partTitle": "Embodied",
-   "accent": "rust",
+   "phase": "world",
+   "accent": "slate",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "control-loops",
@@ -1924,12 +2389,15 @@
    "part": "embodied",
    "partRoman": "XVIII",
    "partTitle": "Embodied",
-   "accent": "rust",
+   "phase": "world",
+   "accent": "slate",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "estimation",
@@ -1939,12 +2407,15 @@
    "part": "embodied",
    "partRoman": "XVIII",
    "partTitle": "Embodied",
-   "accent": "rust",
+   "phase": "world",
+   "accent": "slate",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "kinematics",
@@ -1954,12 +2425,15 @@
    "part": "embodied",
    "partRoman": "XVIII",
    "partTitle": "Embodied",
-   "accent": "rust",
+   "phase": "world",
+   "accent": "slate",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "planning",
@@ -1969,12 +2443,15 @@
    "part": "embodied",
    "partRoman": "XVIII",
    "partTitle": "Embodied",
-   "accent": "rust",
+   "phase": "world",
+   "accent": "slate",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "policies",
@@ -1984,12 +2461,15 @@
    "part": "embodied",
    "partRoman": "XVIII",
    "partTitle": "Embodied",
-   "accent": "rust",
+   "phase": "world",
+   "accent": "slate",
    "backend": "modal",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "landauer",
@@ -1999,12 +2479,15 @@
    "part": "limits",
    "partRoman": "XIX",
    "partTitle": "Limits",
+   "phase": "world",
    "accent": "slate",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "walls",
@@ -2014,12 +2497,15 @@
    "part": "limits",
    "partRoman": "XIX",
    "partTitle": "Limits",
+   "phase": "world",
    "accent": "slate",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   },
   {
    "slug": "alternatives",
@@ -2029,12 +2515,15 @@
    "part": "limits",
    "partRoman": "XIX",
    "partTitle": "Limits",
+   "phase": "world",
    "accent": "slate",
    "backend": "godbolt",
    "ready": false,
    "words": 0,
    "exercises": 0,
-   "drills": 0
+   "drills": 0,
+   "needs": [],
+   "neededBy": []
   }
  ],
  "backends": [
@@ -2046,6 +2535,7 @@
  "counts": {
   "atlas": 1,
   "glossary": 12,
+  "phases": 7,
   "parts": 19,
   "units": 122,
   "ready": 4,
