@@ -17,6 +17,7 @@ const HH = {
   manifest: null,
   cache: new Map(),
   KEY: 'hh-v1',
+  teardown: [],      // listeners the current view owns; run on navigate away
 };
 
 /* ------------------------------------------------------------------ store */
@@ -142,6 +143,201 @@ function viewTrack() {
   return `<div class="wrap"><h1 style="padding-top:48px">The track</h1>${sections}</div>`;
 }
 
+async function viewUnit(slug) {
+  const meta = HH.manifest.units.find(u => u.slug === slug);
+  if (!meta) return viewNotFound(`#/unit/${slug}`);
+  if (!meta.ready) {
+    return `<div class="wrap" style="padding:80px 0" data-accent="${esc(meta.accent)}">
+      <div class="kicker" style="font:600 var(--t-micro)/1 var(--mono);color:var(--ink-4)">
+        ${esc(meta.partRoman)} &middot; ${esc(meta.partTitle)}</div>
+      <h1>${esc(meta.title)}</h1>
+      <p class="prose">${esc(meta.blurb)}</p>
+      <p class="prose" style="color:var(--ink-4)">This unit is planned but not
+        written yet. It is in the track so the whole spine is visible.</p>
+      <p><a class="btn ghost" href="#/track">Back to the track</a></p>
+    </div>`;
+  }
+
+  const u = await getJSON(`data/unit/${slug}.json`);
+  const sibs = HH.manifest.units;
+  const prev = sibs[u.num - 1];
+  const next = sibs[u.num + 1];
+
+  const railItems = u.headings.map((h, i) => `
+    <li class="lvl${h.level}" data-i="${i}" id="rail-${esc(h.id)}">
+      <a href="#/unit/${esc(slug)}/${esc(h.id)}" data-h="${esc(h.id)}">${esc(h.text)}</a>
+    </li>`).join('');
+
+  const rail = `
+    <nav class="rail" aria-label="Contents">
+      <h2>Contents</h2>
+      <ol>${railItems}</ol>
+    </nav>`;
+
+  const facts = [
+    ['Part', `${u.partRoman} &middot; ${u.partTitle}`],
+    ['Backend', u.backend],
+    ['Words', u.words],
+    u.meta.minutes ? ['Minutes', u.meta.minutes] : null,
+    u.meta.needs ? ['Needs', [].concat(u.meta.needs).join(', ')] : null,
+  ].filter(Boolean).map(([k, v]) =>
+    `<span class="badge">${esc(k)}: ${v}</span>`).join('');
+
+  const navLink = (unit, dir) => unit
+    ? `<a class="${dir}" href="#/unit/${esc(unit.slug)}">
+         <span class="dir">${dir === 'prev' ? 'Previous' : 'Next'}</span>
+         <span class="ttl">${esc(unit.title)}</span></a>`
+    : `<span class="${dir} placeholder"></span>`;
+
+  return `
+  <div class="wrap unit" data-accent="${esc(u.accent)}" data-slug="${esc(slug)}">
+    ${rail}
+    <header class="head">
+      <div class="kicker">
+        <span class="n">${String(u.num).padStart(3, '0')}</span>
+        <span>${esc(u.partRoman)} &middot; ${esc(u.partTitle)}</span>
+      </div>
+      <h1>${esc(u.title)}</h1>
+      ${u.meta.one_idea ? `<p class="idea">
+        <span class="lbl">The one idea</span>${esc(u.meta.one_idea)}</p>` : ''}
+      <div class="facts">${facts}</div>
+    </header>
+    <article class="body prose">${u.html}</article>
+    <nav class="unitnav" aria-label="Adjacent units">
+      ${navLink(prev, 'prev')}${navLink(next, 'next')}
+    </nav>
+  </div>
+  <button class="btn" id="sheetBtn" aria-expanded="false" aria-controls="sheet">
+    Contents
+  </button>
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Contents"
+       data-open="false"></div>`;
+}
+
+/* The rail. Two jobs, one layout read, throttled to a frame.
+ *
+ * The spine fills by read progress and the dots LATCH: once passed, a heading
+ * stays marked, and the furthest point is persisted. The reference
+ * implementation recomputes both from the current scroll position, so its dots
+ * un-fill when you scroll back up, which makes it a scroll indicator wearing a
+ * progress indicator's clothes. */
+function wireUnit(slug) {
+  const unit = el('.unit');
+  if (!unit) return;
+  const rail = el('.rail');
+  const items = [...document.querySelectorAll('.rail li')];
+  const heads = [...document.querySelectorAll('.body h2, .body h3')];
+  if (!rail || !items.length) return;
+
+  const key = `read.${slug}`;              // no backend in the key, ever
+  let furthest = Store.get(key, -1);
+
+  const paint = () => {
+    for (let i = 0; i <= furthest && i < items.length; i++) items[i].classList.add('read');
+    rail.querySelector('ol').style.setProperty(
+      '--read', items.length ? (furthest + 1) / items.length : 0);
+  };
+  paint();
+
+  let queued = false;
+  const onScroll = () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      let current = -1;
+      for (let i = 0; i < heads.length; i++) {
+        if (heads[i].getBoundingClientRect().top < 140) current = i;
+        else break;
+      }
+      // reaching the bottom counts as reading the last section
+      const atEnd = innerHeight + scrollY >= document.body.scrollHeight - 4;
+      if (atEnd) current = heads.length - 1;
+
+      items.forEach((li, i) =>
+        li.querySelector('a').setAttribute('aria-current', i === current ? 'true' : 'false'));
+
+      if (current > furthest) {
+        furthest = current;
+        Store.set(key, furthest);
+        paint();
+      }
+    });
+  };
+  addEventListener('scroll', onScroll, { passive: true });
+  HH.teardown.push(() => removeEventListener('scroll', onScroll));
+  onScroll();
+
+  // anchor clicks scroll rather than navigate
+  rail.addEventListener('click', ev => {
+    const a = ev.target.closest('a[data-h]');
+    if (!a) return;
+    ev.preventDefault();
+    const t = document.getElementById(a.dataset.h);
+    if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    closeSheet();
+  });
+
+  wireSheet(rail);
+}
+
+/* The sheet, with the focus trap the reference declares and does not have. */
+let sheetReturn = null;
+
+function openSheet() {
+  const sheet = el('#sheet'), scrim = el('#scrim'), btn = el('#sheetBtn');
+  if (!sheet) return;
+  sheetReturn = document.activeElement;
+  sheet.dataset.open = 'true';
+  scrim.dataset.open = 'true';
+  btn.setAttribute('aria-expanded', 'true');
+  document.body.style.overflow = 'hidden';
+  const first = sheet.querySelector('a, button');
+  if (first) first.focus();
+  announce('Contents opened');
+}
+
+function closeSheet() {
+  const sheet = el('#sheet'), scrim = el('#scrim'), btn = el('#sheetBtn');
+  if (!sheet || sheet.dataset.open !== 'true') return;
+  sheet.dataset.open = 'false';
+  scrim.dataset.open = 'false';
+  btn.setAttribute('aria-expanded', 'false');
+  document.body.style.overflow = '';
+  if (sheetReturn && sheetReturn.isConnected) sheetReturn.focus();
+  sheetReturn = null;
+}
+
+function wireSheet(rail) {
+  const sheet = el('#sheet'), btn = el('#sheetBtn'), scrim = el('#scrim');
+  if (!sheet || !btn) return;
+
+  btn.onclick = () => {
+    if (sheet.dataset.open === 'true') return closeSheet();
+    // Move the live rail into the sheet so there is one source of truth for
+    // read state rather than two copies that can disagree.
+    rail.classList.add('in-sheet');
+    sheet.appendChild(rail);
+    openSheet();
+  };
+  scrim.onclick = closeSheet;
+
+  const onKey = ev => {
+    if (sheet.dataset.open !== 'true') return;
+    if (ev.key === 'Escape') { ev.preventDefault(); return closeSheet(); }
+    if (ev.key !== 'Tab') return;
+    const f = [...sheet.querySelectorAll('a[href], button:not([disabled])')]
+      .filter(n => n.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
+    else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+  };
+  addEventListener('keydown', onKey);
+  HH.teardown.push(() => { removeEventListener('keydown', onKey); closeSheet(); });
+}
+
 function viewNotFound(hash) {
   return `<div class="wrap" style="padding:80px 0">
     <h1>No such page</h1>
@@ -170,6 +366,7 @@ function viewSoon(title) {
 const ROUTES = {
   '': viewHome,
   'track': viewTrack,
+  'unit': viewUnit,
   'atlas': () => viewSoon('Atlas'),
   'progress': () => viewSoon('Progress'),
   'glossary': () => viewSoon('Glossary'),
@@ -178,8 +375,10 @@ const ROUTES = {
 
 async function render() {
   const raw = location.hash.replace(/^#\/?/, '');
-  const [route] = raw.split('/');
+  const [route, a, b] = raw.split('/');
   const main = el('#main');
+
+  HH.teardown.splice(0).forEach(fn => { try { fn(); } catch {} });
 
   document.querySelectorAll('nav.main a, nav.tabs a').forEach(a => {
     if (a.dataset.route === route) a.setAttribute('aria-current', 'page');
@@ -188,7 +387,8 @@ async function render() {
 
   try {
     const fn = ROUTES[route];
-    main.innerHTML = fn ? await fn() : viewNotFound(location.hash || '#/');
+    main.innerHTML = fn ? await fn(a, b) : viewNotFound(location.hash || '#/');
+    if (route === 'unit' && a) wireUnit(a);
   } catch (err) {
     console.error(err);
     main.innerHTML = viewError(err);
@@ -200,7 +400,13 @@ async function render() {
   // rather than back at the top of the document.
   const h = main.querySelector('h1');
   if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
-  window.scrollTo({ top: 0, behavior: 'instant' });
+  if (route === 'unit' && b) {
+    const t = document.getElementById(b);
+    if (t) t.scrollIntoView({ block: 'start', behavior: 'instant' });
+    else window.scrollTo({ top: 0, behavior: 'instant' });
+  } else {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
   announce(h ? h.textContent.trim() : 'Page changed');
 }
 

@@ -22,11 +22,14 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 
 ## 2. The unit view
 
-- [ ] `#/unit/<slug>` route, note rendering, front matter
-- [ ] Contents rail: sticky spine, per-section dots that latch on furthest read
-- [ ] Read state persisted, unlike the reference which loses it on scroll-up
-- [ ] Prev/next within a part, and across parts
-- [ ] Mobile: rail collapses to a bottom sheet with a real focus trap
+- [x] `#/unit/<slug>` route, note rendering, front matter
+- [x] Contents rail: sticky spine, per-section dots that latch on furthest read
+- [x] Read state persisted, unlike the reference which loses it on scroll-up
+- [x] Prev/next within a part, and across parts
+- [x] Mobile: rail collapses to a bottom sheet with a real focus trap
+- [x] Deep link to a heading: `#/unit/<slug>/<heading>`
+- [x] Teardown registry so view listeners do not leak across navigations
+- [x] Stub view for a planned unit, so all 122 are reachable
 
 ## 3. The workbench
 
@@ -43,7 +46,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 
 ## 4. Content
 
-- [ ] Unit `nand` complete: note, 8 exercises, 15 drills (proves `sim`)
+- [~] Unit `nand`: note written (1541 words, lint clean); exercises and drills next
 - [ ] Unit `registers` complete (proves `godbolt`)
 - [ ] Unit `clock-edge` complete (proves `yosys`)
 - [ ] Unit `execution-model` complete (proves `modal`)

@@ -417,6 +417,207 @@ table { border-collapse: collapse; width: 100%; font-size: var(--t-sm); }
 th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border-soft); }
 th { color: var(--ink); font-weight: 700; white-space: nowrap; }
 
+/* ------------------------------------------------------------ unit view */
+
+.unit {
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+  padding-top: 40px;
+}
+
+.unit .head { grid-column: 2; }
+.unit .body { grid-column: 2; }
+
+.unit .kicker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 600 var(--t-micro)/1 var(--mono);
+  color: var(--ink-4);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 12px;
+}
+.unit .kicker .n { color: var(--accent); }
+
+.unit .idea {
+  margin: 18px 0 0;
+  padding: 14px 16px;
+  border-left: 2px solid var(--accent);
+  background: var(--surface);
+  border-radius: 0 var(--r-2) var(--r-2) 0;
+  color: var(--ink);
+  font-size: var(--t-lede);
+  line-height: 1.45;
+  max-width: var(--measure);
+}
+.unit .idea .lbl {
+  display: block;
+  font: 700 var(--t-micro)/1 var(--mono);
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  margin-bottom: 7px;
+}
+
+.unit .facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* the contents rail */
+
+.rail {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  position: sticky;
+  top: 76px;
+  align-self: start;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.rail h2 {
+  font: 700 var(--t-micro)/1 var(--mono);
+  color: var(--ink-4);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  margin-bottom: 14px;
+}
+
+.rail ol {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 18px;
+  position: relative;
+}
+
+/* the spine: a track with a fill scaled by read progress */
+.rail ol::before,
+.rail ol::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 1px;
+}
+.rail ol::before { background: var(--border-soft); }
+.rail ol::after {
+  background: var(--accent);
+  transform-origin: top;
+  transform: scaleY(var(--read, 0));
+  transition: transform var(--med) var(--ease);
+}
+
+.rail li { position: relative; }
+
+.rail a {
+  display: block;
+  padding: 6px 0 6px 4px;
+  color: var(--ink-3);
+  font-size: var(--t-sm);
+  line-height: 1.35;
+  transition: color var(--fast) var(--ease);
+}
+.rail a:hover { color: var(--ink); text-decoration: none; }
+.rail a[aria-current="true"] { color: var(--ink); font-weight: 600; }
+
+.rail li::before {
+  content: "";
+  position: absolute;
+  left: -18px;
+  top: 12px;
+  width: 8px;
+  height: 8px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  transition: background-color var(--med) var(--ease),
+              border-color var(--med) var(--ease);
+}
+/* Latched: filled once the reader has passed it, and it stays filled.
+   The reference un-fills these when you scroll back up, which turns a
+   progress indicator into a scroll position. */
+.rail li.read::before {
+  background: var(--accent);
+  border-color: var(--accent);
+  animation: hh-dot-fill var(--med) var(--ease);
+}
+.rail li.lvl3 a { padding-left: 14px; font-size: var(--t-tiny); }
+.rail li.lvl3::before {
+  width: 6px; height: 6px; left: -17px; top: 12px;
+}
+
+/* prev / next */
+
+.unitnav {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 56px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-soft);
+}
+.unitnav a {
+  display: block;
+  padding: 14px 16px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-3);
+  color: var(--ink-2);
+  transition: border-color var(--fast) var(--ease);
+}
+.unitnav a:hover { border-color: var(--accent); text-decoration: none; }
+.unitnav a.next { text-align: right; }
+.unitnav .dir {
+  display: block;
+  font: 600 var(--t-micro)/1 var(--mono);
+  color: var(--ink-4);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 6px;
+}
+.unitnav .ttl { color: var(--ink); font-weight: 700; font-size: var(--t-sm); }
+.unitnav a.placeholder { opacity: .4; pointer-events: none; }
+
+/* the contents sheet, below 1060px */
+
+#sheetBtn { display: none; }
+
+.sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 60;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-radius: var(--r-4) var(--r-4) 0 0;
+  padding: 18px 20px calc(24px + env(safe-area-inset-bottom, 0));
+  max-height: 72vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transform: translateY(101%);
+  transition: transform var(--med) var(--ease);
+}
+.sheet[data-open="true"] { transform: none; }
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: var(--sunken);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--med) var(--ease);
+}
+.scrim[data-open="true"] { opacity: .62; pointer-events: auto; }
+
 /* ------------------------------------------------------------ motion */
 
 @keyframes hh-rise {
@@ -468,7 +669,26 @@ footer.bot a { color: var(--ink-3); }
  * specificity of its own. */
 
 @media (max-width: 1060px) {
-  :root { --rail: 0px; }
+  .unit { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .unit .head, .unit .body, .unitnav { grid-column: 1; }
+  .rail:not(.in-sheet) { display: none; }
+  #sheetBtn {
+    display: inline-flex;
+    position: fixed;
+    right: 16px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0));
+    z-index: 50;
+  }
+  .rail.in-sheet {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+}
+
+@media (min-width: 1061px) {
+  .sheet, .scrim { display: none; }
 }
 
 /* The tab bar is the only navigation below 900px. Hidden above it, because a

@@ -852,5 +852,61 @@
   "title": "What else a computer could be",
   "text": "Quantum speedup is interference cancelling wrong answers, not trying everything at once. A 3-qubit circuit is an 8x8 matrix.",
   "part": "Limits"
+ },
+ {
+  "t": "section",
+  "slug": "nand",
+  "anchor": "what-a-gate-actually-is",
+  "title": "What a gate actually is",
+  "text": "",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "nand",
+  "anchor": "the-claim-and-why-it-is-true",
+  "title": "The claim, and why it is true",
+  "text": "",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "nand",
+  "anchor": "why-this-is-a-fact-about-physics-not-about-mathematics",
+  "title": "Why this is a fact about physics, not about mathematics",
+  "text": "",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "nand",
+  "anchor": "counting-and-why-your-xor-is-probably-not-minimal",
+  "title": "Counting, and why your XOR is probably not minimal",
+  "text": "",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "nand",
+  "anchor": "what-you-may-not-do-yet",
+  "title": "What you may not do yet",
+  "text": "",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "nand",
+  "anchor": "the-shape-of-everything-above",
+  "title": "The shape of everything above",
+  "text": "",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "nand",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "",
+  "part": "Logic"
  }
 ]

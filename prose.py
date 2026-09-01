@@ -49,14 +49,25 @@ def _repeated_phrase(text, min_words=3):
     This exists because a careless search-and-replace across a wrapped string
     literal produced 'Everything else is written in else is written in' and it
     took a human read to notice. A machine should notice.
+
+    Digits are part of a word here. Without them, two sentences whose only
+    difference is numeric collapse into one repeated phrase, and parallel
+    structure like "When a is 0 ... When a is 1 ..." is ordinary technical
+    prose. A lint that fires on legitimate writing gets switched off.
     """
-    words = re.findall(r"[a-z']+", text.lower())
+    words = re.findall(r"[a-z0-9']+", text.lower())
     for n in range(min_words, min(8, len(words) // 2 + 1)):
         for i in range(len(words) - 2 * n + 1):
             a = words[i:i + n]
             b = words[i + n:i + 2 * n]
-            if a == b:
-                return " ".join(a)
+            if a != b:
+                continue
+            # A repeated run of pure numbers is data: a truth table, a column
+            # of measurements, a bit pattern. Only a repeat containing real
+            # words is evidence of a botched edit.
+            if sum(1 for w in a if w[0].isalpha()) < 2:
+                continue
+            return " ".join(a)
     return None
 
 
@@ -154,6 +165,19 @@ def _selfcheck():
 
     dup = "Everything else is written in else is written in."
     assert any("repeated back to back" in g for g in lint(dup, "t")), lint(dup, "t")
+
+    # Parallel structure separated only by numbers is not a repeat.
+    parallel = "When a is 0, NAND(0,0) is 1. When a is 1, NAND(1,1) is 0."
+    assert lint(parallel, "t") == [], lint(parallel, "t")
+    parallel2 = ("The L1 hit costs 4 cycles. The L2 hit costs 14 cycles. "
+                 "The DRAM hit costs 300 cycles.")
+    assert lint(parallel2, "t") == [], lint(parallel2, "t")
+
+    # A truth table is data, not a botched edit.
+    table = "a b NAND 0 0 1 0 1 1 1 0 1 1 1 0"
+    assert lint(table, "t") == [], lint(table, "t")
+    bits = "The pattern is 1011 1011 1011 repeated across the word."
+    assert lint(bits, "t") == [], lint(bits, "t")
 
     clean = ("A transistor is a switch you close with a voltage instead of a "
              "finger, and it is not a perfect switch. Both halves matter.")

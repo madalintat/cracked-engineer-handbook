@@ -276,8 +276,8 @@
    "partTitle": "Logic",
    "accent": "phos",
    "backend": "sim",
-   "ready": false,
-   "words": 0,
+   "ready": true,
+   "words": 1541,
    "exercises": 0,
    "drills": 0
   },
@@ -2046,8 +2046,8 @@
  "counts": {
   "parts": 19,
   "units": 122,
-  "ready": 0,
-  "words": 0,
+  "ready": 1,
+  "words": 1541,
   "exercises": 0,
   "drills": 0
  }
