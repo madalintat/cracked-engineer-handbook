@@ -677,6 +677,277 @@ function renderDiagnosis(ex, res) {
   }
 }
 
+/* --------------------------------------------------------------- drills */
+
+async function viewDrills(slug) {
+  const meta = HH.manifest.units.find(u => u.slug === slug);
+  if (!meta || !meta.ready) return viewNotFound(`#/drills/${slug}`);
+  const data = await getJSON(`data/drills/${slug}.json`);
+  HH.drills = { slug, list: data.drills, meta };
+
+  const best = Store.get(`drill.${slug}.best`, null);
+  return `
+  <div class="wrap" data-accent="${esc(meta.accent)}" style="padding:40px 0;max-width:var(--measure)">
+    <div class="kicker" style="font:600 var(--t-micro)/1 var(--mono);color:var(--ink-4);
+         text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">
+      <a href="#/unit/${esc(slug)}">${esc(meta.title)}</a> &middot; drills
+    </div>
+    <h1>${esc(meta.title)}</h1>
+    <p class="prose">${data.drills.length} questions. Nothing is timed and you
+      can answer them in any order. Wrong answers explain themselves, which is
+      the point of doing them at all.</p>
+    ${best !== null ? `<p><span class="badge ok">best so far:
+      ${best} of ${data.drills.length}</span></p>` : ''}
+    <form id="drillform">${data.drills.map(drillCard).join('')}</form>
+    <div class="wbbar" style="margin-top:24px">
+      <button class="btn" id="marka">Mark</button>
+      <button class="btn ghost" id="resetd">Start again</button>
+      <span class="spacer"></span>
+      <a class="btn ghost" href="#/work/${esc(slug)}/1">Exercises</a>
+    </div>
+    <div id="drillout" style="margin-top:18px" aria-live="polite"></div>
+  </div>`;
+}
+
+function drillCard(d) {
+  return `
+    <fieldset class="drill" data-n="${d.n}">
+      <legend>${d.n}. ${esc(d.q)}</legend>
+      ${d.options.map((o, i) => `
+        <label class="opt">
+          <input type="radio" name="q${d.n}" value="${i}">
+          <span>${esc(o)}</span>
+        </label>`).join('')}
+      <div class="why" hidden>${d.why}</div>
+    </fieldset>`;
+}
+
+function wireDrills() {
+  const st = HH.drills;
+  if (!st) return;
+  const form = el('#drillform');
+  if (!form) return;
+
+  el('#resetd').onclick = () => {
+    form.reset();
+    form.querySelectorAll('.drill').forEach(f => {
+      f.removeAttribute('data-verdict');
+      f.querySelector('.why').hidden = true;
+    });
+    el('#drillout').innerHTML = '';
+    announce('Started again');
+  };
+
+  el('#marka').onclick = () => {
+    let right = 0, answered = 0;
+    const wrong = [];
+    st.list.forEach(d => {
+      const box = form.querySelector(`.drill[data-n="${d.n}"]`);
+      const picked = form.querySelector(`input[name="q${d.n}"]:checked`);
+      if (!picked) { box.removeAttribute('data-verdict'); return; }
+      answered++;
+      const ok = Number(picked.value) === d.correct;
+      if (ok) right++; else wrong.push(d.n);
+      box.dataset.verdict = ok ? 'ok' : 'bad';
+      // The explanation appears either way. Being right for the wrong reason
+      // is the failure this catches.
+      box.querySelector('.why').hidden = false;
+      box.querySelectorAll('.opt').forEach((l, i) => {
+        l.dataset.mark = i === d.correct ? 'right'
+                       : (Number(picked.value) === i ? 'chosen' : '');
+      });
+    });
+
+    const prev = Store.get(`drill.${st.slug}.best`, 0);
+    if (right > prev) Store.set(`drill.${st.slug}.best`, right);
+    Store.set(`drill.${st.slug}.last`, { right, answered, at: Date.now() });
+    Store.set(`drill.${st.slug}.attempts`,
+              Store.get(`drill.${st.slug}.attempts`, 0) + 1);
+
+    el('#drillout').innerHTML = `
+      <div class="vrow" data-state="${right === st.list.length ? 'ok' : 'warn'}">
+        <div class="who">${right} / ${st.list.length}</div>
+        <div class="what">
+          ${answered < st.list.length
+            ? `${st.list.length - answered} unanswered. `
+            : ''}
+          ${wrong.length
+            ? `Read the explanation under ${wrong.length === 1 ? 'question' : 'questions'}
+               ${wrong.join(', ')}.`
+            : 'Every one right.'}
+        </div>
+      </div>`;
+    announce(`${right} of ${st.list.length}`);
+    const first = form.querySelector('.drill[data-verdict="bad"]');
+    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+}
+
+/* -------------------------------------------------------------- progress */
+
+function viewProgress() {
+  const units = HH.manifest.units;
+  const rows = units.filter(u => u.ready).map(u => {
+    const read = Store.get(`read.${u.slug}`, -1) + 1;
+    const total = u.exercises || 0;
+    let solved = 0;
+    for (let i = 1; i <= total; i++) if (Store.get(`pass.${u.slug}.${i}`, false)) solved++;
+    let hints = 0;
+    for (let i = 1; i <= total; i++) hints += Store.get(`hints.${u.slug}.${i}`, 0);
+    const best = Store.get(`drill.${u.slug}.best`, null);
+    return { u, read, solved, total, hints, best };
+  });
+
+  const done = rows.reduce((a, r) => a + r.solved, 0);
+  const all = rows.reduce((a, r) => a + r.total, 0);
+
+  const table = rows.length ? `
+    <div class="tw"><table>
+      <thead><tr><th>Unit</th><th>Read</th><th>Solved</th><th>Hints</th><th>Drills</th></tr></thead>
+      <tbody>${rows.map(r => `
+        <tr>
+          <td><a href="#/unit/${esc(r.u.slug)}">${esc(r.u.title)}</a></td>
+          <td>${r.read ? r.read + ' sections' : 'not yet'}</td>
+          <td>${r.solved} / ${r.total}</td>
+          <td>${r.hints || ''}</td>
+          <td>${r.best === null ? '' : r.best + ' / 15'}</td>
+        </tr>`).join('')}</tbody>
+    </table></div>` : '';
+
+  return `
+  <div class="wrap" style="padding:48px 0">
+    <h1>Progress</h1>
+    <p class="prose">${done} of ${all} exercises solved, across
+      ${rows.length} written ${rows.length === 1 ? 'unit' : 'units'}.
+      ${units.length - rows.length} more are planned.</p>
+    <p class="prose" style="color:var(--ink-4);font-size:var(--t-sm)">
+      Hint counts are here because they are worth seeing, not because they
+      count against you. A unit solved with hints is a unit solved.</p>
+    ${table}
+    <p style="margin-top:28px">
+      <button class="btn ghost" id="erase">Erase everything</button>
+    </p>
+    <div id="eraseout" style="margin-top:12px"></div>
+  </div>`;
+}
+
+function wireProgress() {
+  const btn = el('#erase');
+  if (!btn) return;
+  let armed = false;
+  btn.onclick = () => {
+    if (!armed) {
+      armed = true;
+      btn.textContent = 'Erase everything, really';
+      el('#eraseout').innerHTML =
+        '<span class="badge bad">This cannot be undone. Press again.</span>';
+      setTimeout(() => {
+        if (!armed) return;
+        armed = false;
+        btn.textContent = 'Erase everything';
+        el('#eraseout').innerHTML = '';
+      }, 5000);
+      return;
+    }
+    // The theme is a preference, not progress, so it survives.
+    const theme = Store.get('theme');
+    const modal = Store.get('modal', {});
+    Store.write({ theme, modal });
+    announce('Everything erased');
+    render();
+  };
+}
+
+/* ---------------------------------------------------------------- search */
+
+async function viewSearch(q) {
+  const query = decodeURIComponent(q || '').trim();
+  const idx = await getJSON('data/search.json');
+  HH.lastQuery = query;
+  const hits = query ? rank(idx, query) : [];
+  return `
+  <div class="wrap" style="padding:48px 0;max-width:var(--measure)">
+    <h1>Search</h1>
+    <form id="searchform" style="margin-top:18px">
+      <label class="fld"><span>Across notes, sections and exercises</span>
+        <input name="q" type="search" spellcheck="false" autofocus
+               value="${esc(query)}" placeholder="coalescing, two's complement, latch"></label>
+    </form>
+    ${query ? `<p style="color:var(--ink-3);margin-top:16px">
+       ${hits.length} result${hits.length === 1 ? '' : 's'} for
+       <strong>${esc(query)}</strong></p>` : ''}
+    <div class="results">${hits.map(resultRow).join('')}</div>
+    ${query && !hits.length ? `<p class="prose">Nothing matched. The track is
+      ${HH.manifest.counts.units} units, of which ${HH.manifest.counts.ready}
+      are written so far, so it may simply not exist yet.</p>` : ''}
+  </div>`;
+}
+
+/* Ranked, and truncated after ranking rather than during traversal.
+ *
+ * The reference implementation scans for a substring and slices the first
+ * sixty in document order, so a query matching many early units silently drops
+ * every later one. With 122 units that stops being a detail. */
+function rank(idx, query) {
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const scored = [];
+  for (const row of idx) {
+    const title = (row.title || '').toLowerCase();
+    const text = (row.text || '').toLowerCase();
+    let score = 0;
+    for (const t of terms) {
+      if (title === t) score += 100;
+      else if (title.startsWith(t)) score += 40;
+      else if (title.includes(t)) score += 25;
+      if (text.includes(t)) score += 8;
+      if (!title.includes(t) && !text.includes(t)) { score = -1; break; }
+    }
+    if (score > 0) {
+      if (row.t === 'unit') score += 6;          // the note before its parts
+      scored.push({ row, score });
+    }
+  }
+  scored.sort((a, b) => b.score - a.score || a.row.title.localeCompare(b.row.title));
+  return scored.slice(0, 80).map(s => s.row);
+}
+
+/* Show the sentence the match is in, not the first 200 characters of the
+ * section. A result you have to open to find out why it matched is not much
+ * of a result. */
+function snippet(text, query) {
+  const t = String(text);
+  if (!query) return t.slice(0, 180);
+  const term = query.toLowerCase().split(/\s+/)[0];
+  const at = t.toLowerCase().indexOf(term);
+  if (at < 0) return t.slice(0, 180);
+  const from = Math.max(0, at - 70);
+  const cut = t.slice(from, from + 200);
+  return (from ? '…' : '') + cut + (from + 200 < t.length ? '…' : '');
+}
+
+function resultRow(r) {
+  const href = r.t === 'section' ? `#/unit/${r.slug}/${r.anchor}`
+             : r.t === 'exercise' ? `#/work/${r.slug}/${r.n}`
+             : r.t === 'drill' ? `#/drills/${r.slug}`
+             : `#/unit/${r.slug}`;
+  return `
+    <a class="card" href="${esc(href)}" style="margin-top:10px">
+      <div class="meta"><span>${esc(r.t)}</span><span>${esc(r.part)}</span></div>
+      <h3 style="font-size:var(--t-lede)">${esc(r.title)}</h3>
+      ${r.text ? `<p>${esc(snippet(r.text, HH.lastQuery))}</p>` : ''}
+    </a>`;
+}
+
+function wireSearch() {
+  const f = el('#searchform');
+  if (!f) return;
+  f.onsubmit = (ev) => {
+    ev.preventDefault();
+    const v = f.elements.q.value.trim();
+    location.hash = v ? `#/search/${encodeURIComponent(v)}` : '#/search';
+  };
+}
+
 /* ------------------------------------------------------------- settings */
 
 function viewSettings() {
@@ -810,10 +1081,11 @@ const ROUTES = {
   'unit': viewUnit,
   'work': viewWork,
   'atlas': () => viewSoon('Atlas'),
-  'progress': () => viewSoon('Progress'),
   'glossary': () => viewSoon('Glossary'),
-  'search': () => viewSoon('Search'),
   'settings': viewSettings,
+  'drills': viewDrills,
+  'progress': viewProgress,
+  'search': viewSearch,
 };
 
 async function render() {
@@ -834,6 +1106,9 @@ async function render() {
     if (route === 'unit' && a) wireUnit(a);
     if (route === 'work') wireWork();
     if (route === 'settings') wireSettings();
+    if (route === 'drills') wireDrills();
+    if (route === 'progress') wireProgress();
+    if (route === 'search') wireSearch();
   } catch (err) {
     console.error(err);
     main.innerHTML = viewError(err);

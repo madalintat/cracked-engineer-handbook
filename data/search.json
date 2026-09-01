@@ -858,7 +858,7 @@
   "slug": "nand",
   "anchor": "what-a-gate-actually-is",
   "title": "What a gate actually is",
-  "text": "",
+  "text": "Forget schematics for a moment. A gate is a function from bits to bits, and a two-input gate has a domain of exactly four points. You can write the whole function down: That table is the complete specification. There is nothing else to know about a NAND gate. If you build something whose table matches, you have built a NAND gate, whether you did it with transistors, relays, water valves, or dominoes. This matters more than it looks. Once behaviour is a table, checking becomes mechanical. A two-input function has 4 rows, so there are 2^4 = 16 possible two-input functions, and you can enumerate all of them. AND, OR, XOR and NAND are four of the sixteen. The other twelve have no famous names and are no less real.",
   "part": "Logic"
  },
  {
@@ -866,7 +866,7 @@
   "slug": "nand",
   "anchor": "the-claim-and-why-it-is-true",
   "title": "The claim, and why it is true",
-  "text": "",
+  "text": "A set of gates is functionally complete if you can build every Boolean function from copies of it. The claim is that {NAND} on its own is functionally complete. The proof is short and you can hold all of it in your head at once. Any Boolean function can be written in terms of NOT, AND and OR: write out its truth table, take every row that outputs 1, AND the inputs together in the right polarity, then OR those terms. That is sum of products, and it always works because the table is finite. So if NAND can make NOT, AND and OR, it can make everything. NOT. Feed the same signal to both inputs. When is 0, is 1. When is 1, is 0. That is inversion, from one gate. AND. NAND is AND followed by an inversion, so invert it back. Two gates. OR. This is the one that surprises people. De Morgan says . Invert both inputs, then NAND them. Three gates. That is the whole proof. Three constructions, six gates total, and every Boolean function is now reachable. It is worth pausing on how weak the assumption is. Nothing in that argument said anything about electricity. It used only two facts: that a NAND gate computes the table above, and that you can connect the output of one to the input of another. A",
   "part": "Logic"
  },
  {
@@ -874,7 +874,7 @@
   "slug": "nand",
   "anchor": "why-this-is-a-fact-about-physics-not-about-mathematics",
   "title": "Why this is a fact about physics, not about mathematics",
-  "text": "",
+  "text": "Here is the part most treatments skip, and it is the reason this course starts here rather than at AND. NOR is also functionally complete. So is the pair {AND, NOT}. So is {OR, NOT}. Mathematically there is nothing special about NAND at all. If completeness were the only criterion, the choice would be arbitrary and you could start anywhere. The tiebreaker is silicon. In CMOS, a gate is a pull-up network of PMOS transistors and a pull-down network of NMOS transistors, and those networks are duals. Series in one is parallel in the other. Work through what that gives you and the answer is that inversion is free and non-inversion costs a stage : gate transistors NOT 2 NAND 4 NOR 4 AND 6 OR 6 AND is not a primitive. AND is a NAND with an inverter bolted on, and it is both larger and slower than the NAND inside it. The same is true of OR. Every textbook that opens with AND and OR because they are easier to say out loud has quietly started one storey above the ground floor. So the reason to start at NAND is not that it is elegant. It is that the physics hands it to you and charges extra for the alternatives.",
   "part": "Logic"
  },
  {
@@ -882,7 +882,7 @@
   "slug": "nand",
   "anchor": "counting-and-why-your-xor-is-probably-not-minimal",
   "title": "Counting, and why your XOR is probably not minimal",
-  "text": "",
+  "text": "Once you can build anything, the interesting question stops being can I and becomes how few . Build XOR from NAND and the obvious route is to write the sum of products and translate it gate by gate. That works and it costs five or six gates. The minimal XOR is four: Whether you find four or six, both are correct. The difference is area and propagation delay, and on a chip with billions of gates that difference is the whole game. Correctness and efficiency are separate questions, and this course keeps them separate: the exercises check that your table matches, and they report your gate count beside a known minimum without failing you for missing it.",
   "part": "Logic"
  },
  {
@@ -890,7 +890,7 @@
   "slug": "nand",
   "anchor": "what-you-may-not-do-yet",
   "title": "What you may not do yet",
-  "text": "",
+  "text": "One rule governs every exercise in this unit, and it will be enforced. No cycles. The output of a gate may not, through any path, feed back into its own input. Not directly, not through nine other gates. The reason is that nothing in this unit has a clock. A combinational circuit is one where the outputs are a pure function of the inputs, and a cycle destroys that property: the value depends on what it was a moment ago, which means it depends on time, which means it is no longer a function of the inputs alone. A cycle here is not a clever trick. It is a circuit whose behaviour the simulator cannot define. That restriction lifts in a few units, and the moment it lifts is the moment you get memory. Feedback is exactly what makes a bit stay. But it needs a clock first, and you do not have one yet.",
   "part": "Logic"
  },
  {
@@ -898,7 +898,7 @@
   "slug": "nand",
   "anchor": "the-shape-of-everything-above",
   "title": "The shape of everything above",
-  "text": "",
+  "text": "It is worth being explicit about what has just been established, because the rest of this part leans on it constantly. Selection is built from these gates. Addressing is built from selection. Arithmetic is built from these gates. Registers are built from these gates plus a clock. The instruction decoder that makes a CPU a CPU is a lookup table, and a lookup table is built from these gates. There is no point further up the stack where a second kind of primitive gets introduced. No secret ingredient arrives at the CPU level. When you finish Part II and have a machine that runs a program you wrote, every part of it will be this one component, repeated, with wire between the copies. That is the sentence worth carrying out of this unit. A computer is not a pile of clever mechanisms. It is one stupid mechanism, arranged carefully, an enormous number of times.",
   "part": "Logic"
  },
  {
@@ -906,7 +906,7 @@
   "slug": "nand",
   "anchor": "reading-the-errors-you-are-about-to-see",
   "title": "Reading the errors you are about to see",
-  "text": "",
+  "text": "The checker for these exercises is a simulator running in your browser, and it reports four kinds of problem. Each one means something specific. A truth table mismatch gives you the exact input row where your circuit disagreed with the specification, and both values. This is the ordinary failure and the easiest to fix: the row tells you which case you did not think about. A non-NAND part means you referenced a gate you have not built. The checker walks your netlist to its leaves and the only leaf allowed is . Using a built-in XOR to build XOR is not an answer. A combinational cycle prints the loop it found, gate by gate, so you can see which wire closed it. A floating input means a gate input was never connected. An unconnected wire is not 0. It has no value, and a simulator that quietly treated it as 0 would let you ship a design that fails on real silicon. This one is the most valuable error in the set, because it is the one that would otherwise find you much later.",
   "part": "Logic"
  },
  {
@@ -914,7 +914,7 @@
   "slug": "nand",
   "n": 1,
   "title": "Inversion, from one gate",
-  "text": "The only primitive is nand, and inversion costs one of them.",
+  "text": "The only primitive is nand, and inversion costs one of them. Tie both inputs of a nand together and it inverts. Work out why from the truth table before you write it: when both inputs carry the same value, only two rows of the table are reachable. The starter reaches for a built-in. There is no built-in.",
   "part": "Logic"
  },
  {
@@ -922,7 +922,7 @@
   "slug": "nand",
   "n": 2,
   "title": "And, the expensive way round",
-  "text": "AND is not a primitive. It is NAND with an inverter bolted on.",
+  "text": "AND is not a primitive. It is NAND with an inverter bolted on. A nand is an and with the answer inverted. You already have an inverter. Put them together. Notice what this costs: two gates for AND against one for NAND. That ratio is not an accident of this exercise, it is what CMOS charges, and it is why the part you are building everything from is the inverted one.",
   "part": "Logic"
  },
  {
@@ -930,7 +930,7 @@
   "slug": "nand",
   "n": 3,
   "title": "Or, by De Morgan",
-  "text": "De Morgan turns an OR into a NAND of two inversions.",
+  "text": "De Morgan turns an OR into a NAND of two inversions. This is the one that surprises people. is , and written in nands that is: invert both inputs, then nand them. Read that again and count. Inverting twice and nanding once gives OR, in three gates, with no OR anywhere in the construction. The starter leaves a wire dangling.",
   "part": "Logic"
  },
  {
@@ -938,7 +938,7 @@
   "slug": "nand",
   "n": 4,
   "title": "A loop is not a shortcut",
-  "text": "Nothing in this part has a clock, so a value cannot depend on itself.",
+  "text": "Nothing in this part has a clock, so a value cannot depend on itself. The starter looks clever. It feeds a wire back into the gate that produces it, which in a language with statements would be an ordinary assignment. Here it is not. Run it and read what the checker says.",
   "part": "Logic"
  },
  {
@@ -946,7 +946,7 @@
   "slug": "nand",
   "n": 5,
   "title": "Exclusive or",
-  "text": "Correctness and efficiency are separate questions, and this unit",
+  "text": "Correctness and efficiency are separate questions, and this unit True when the inputs differ. Build it however you can get it working first, then look at the gate count the checker reports. The obvious route is to write out the sum of products and translate it gate by gate. That works and it costs five or six. A four-gate solution exists. separates them.",
   "part": "Logic"
  },
  {
@@ -954,7 +954,7 @@
   "slug": "nand",
   "n": 6,
   "title": "Exclusive or, in four",
-  "text": "The same function has many circuits, and on a chip with billions of",
+  "text": "The same function has many circuits, and on a chip with billions of Same function, and now there is a budget. Five gates will be rejected. The trick is that the sum-of-products route computes twice without noticing. Compute it once and feed it to both branches. gates the difference between them is the whole game.",
   "part": "Logic"
  },
  {
@@ -962,7 +962,7 @@
   "slug": "nand",
   "n": 7,
   "title": "Choosing between two wires",
-  "text": "Control is data. A control signal is an ordinary input, routed",
+  "text": "Control is data. A control signal is an ordinary input, routed A multiplexer passes one of its data inputs through, chosen by a third. When is 0 the output follows ; when it is 1 it follows . This is the first circuit whose behaviour depends on a control signal rather than only on data, and there is no difference in the hardware between the two. A control wire is an ordinary wire routed into selector logic. somewhere that changes what the rest of the circuit does.",
   "part": "Logic"
  },
  {
@@ -970,7 +970,127 @@
   "slug": "nand",
   "n": 8,
   "title": "The last of the sixteen",
-  "text": "Every one of the sixteen two-input functions is reachable, and you now",
+  "text": "Every one of the sixteen two-input functions is reachable, and you now There are exactly sixteen functions of two bits. You have built five of them. This one is true when the inputs agree, which makes it the inverse of the one you built two exercises ago. You may use any chip you have already defined in this file. Define it above and call it by name, and the checker counts the nands inside it. have the machinery to reach any of them.",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "nand",
+  "n": 1,
+  "title": "A NAND gate outputs 0 in how many of its four input combinations?",
+  "text": " Only the row where both inputs are 1. Every other combination gives 1, which is what makes NAND the inverted form of AND rather than a rearrangement of it. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "nand",
+  "n": 2,
+  "title": "You have NAND gates and wire. Which Boolean functions can you build?",
+  "text": " Functional completeness. Any function can be written in terms of NOT, AND and OR by taking its truth table as a sum of products, and NAND builds all three. The last option confuses combinational logic with sequential: feedback is a different question, and it needs a clock. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "nand",
+  "n": 3,
+  "title": "How many NAND gates does inversion cost?",
+  "text": " Tie both inputs to the same wire. Then only the two rows where the inputs agree are reachable, and on those rows NAND is exactly inversion. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "nand",
+  "n": 4,
+  "title": "Building OR from NAND takes three gates. Why three rather than one?",
+  "text": "  a OR b  is  NOT(NOT a AND NOT b) . Each inversion is one gate and the final NAND is the third. The buffering answer describes a real concern on silicon but it is not why the count is three here. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "nand",
+  "n": 5,
+  "title": "In CMOS, how many transistors does a NAND gate use?",
+  "text": " Two networks that are duals of each other: two PMOS and two NMOS. Inversion alone is two transistors, and AND is six because it is a NAND followed by an inverter. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "nand",
+  "n": 6,
+  "title": "Which costs more transistors in CMOS, AND or NAND?",
+  "text": " Six against four, and AND is also slower because the signal passes through an extra stage. Inversion is free in CMOS and non-inversion costs a stage, which is why this course starts at NAND rather than at the gate with the friendlier name. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "nand",
+  "n": 7,
+  "title": "NOR is also functionally complete. So why does this course start at NAND?",
+  "text": " Both are complete and the choice between them is not a theorem. NAND and NOR are both four transistors, but NOR puts its PMOS devices in series, and holes move more slowly than electrons, so NOR is the slower of the two. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "nand",
+  "n": 8,
+  "title": "How many distinct Boolean functions of two inputs exist?",
+  "text": " A two-input truth table has four rows, and each row's output is independently 0 or 1. Two to the power of four. AND, OR, XOR and NAND are four of them; the other twelve are just as real and mostly have no names. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "nand",
+  "n": 9,
+  "title": "What is the smallest number of NAND gates that computes XOR?",
+  "text": " The sum-of-products route gives five or six because it computes  nand(a, b)  twice without noticing. Share that value and the count drops to four. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "nand",
+  "n": 10,
+  "title": "The checker reports your gate count beside a known minimum. Why does it not fail you for exceeding it?",
+  "text": " A circuit that computes the right function is correct whether it uses four gates or six. Efficiency is a real and separate concern, so it is reported rather than enforced, except where an exercise sets a budget on purpose. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "nand",
+  "n": 11,
+  "title": "Why is a combinational cycle rejected in this part of the course?",
+  "text": " A combinational circuit's outputs are a pure function of its inputs, and a cycle destroys that. The restriction lifts once there is a clock, and feedback is then exactly the mechanism that makes a bit stay put. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "nand",
+  "n": 12,
+  "title": "A gate input is left unconnected. What should a simulator do?",
+  "text": " An unconnected wire is undefined rather than low. A simulator that quietly substituted 0 would let a design pass that behaves differently on real silicon, and the bug would surface much later and much further from its cause. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "nand",
+  "n": 13,
+  "title": "What does it mean that dominoes and water pipes can compute anything a computer can?",
+  "text": " The proof uses two facts and no physics. What silicon buys is speed and density, which is a difference of roughly fifteen orders of magnitude, and that difference is the only reason the machine on your desk is useful. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "nand",
+  "n": 14,
+  "title": "Reading a NAND-only design, you find a part named `xor`. What has gone wrong?",
+  "text": " The checker walks the design to its leaves and accepts only  nand . Building XOR out of a built-in XOR would leave the central claim untested, which is the one thing this unit exists to demonstrate. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "nand",
+  "n": 15,
+  "title": "Everything above the gate level in a computer is built from what?",
+  "text": " Selection, arithmetic, memory and the instruction decoder are all built from this component. Storage needs a clock added, not a new primitive, and the decoder that makes a CPU a CPU is a lookup table made of the same gates. ",
   "part": "Logic"
  },
  {
@@ -978,7 +1098,7 @@
   "slug": "clock-edge",
   "anchor": "two-kinds-of-logic-and-only-two",
   "title": "Two kinds of logic, and only two",
-  "text": "",
+  "text": "Combinational logic has outputs that are a function of its inputs and nothing else. Give it the same inputs and it settles to the same outputs, every time, with no memory of what came before. That is the entire Part II machine up to the point where you added a clock. Sequential logic has outputs that depend on the inputs and on a stored value, and it updates that value at a clock edge. It remembers. Every construct in Verilog produces one or the other. The trouble is that Verilog will not stop you writing something that produces the one you did not want, and the result usually simulates close enough to correct that you find out much later.",
   "part": "Silicon"
  },
  {
@@ -986,7 +1106,7 @@
   "slug": "clock-edge",
   "anchor": "why-the-assignments-differ",
   "title": "Why the assignments differ",
-  "text": "",
+  "text": "Both modules describe two flip-flops in the same block, driven by the same edge. Real flip-flops all sample at the edge and drive their outputs shortly after, which is the clock-to-Q delay. Because every flop samples before any flop drives, a chain of them shifts: gets the value held before the edge, not the one it is about to take. Non-blocking assignment models exactly that. The right side is evaluated when the block runs, the value is set aside, and the left side is not updated until every block scheduled for this edge has finished evaluating. So both assignments read the old , and you get a shift register. Blocking assignment evaluates and writes immediately, in order. puts into right now, so the next line's reads the new value. Both flops end up holding , the synthesiser notices they always agree, and it deletes one of them. The rule is short. uses . uses . Never mix them in one block, and never drive one signal from two blocks.",
   "part": "Silicon"
  },
  {
@@ -994,7 +1114,7 @@
   "slug": "clock-edge",
   "anchor": "why-the-rule-exists-rather-than-just-what-it-is",
   "title": "Why the rule exists, rather than just what it is",
-  "text": "",
+  "text": "Two blocks waking on the same edge have no defined execution order. The language standard deliberately leaves it undefined, because real hardware has no such order either: the two flops are separate pieces of silicon reacting to the same wire. With blocking assignment that undefinedness is visible. Whichever block runs first decides whether you get one flop or two, and two simulators are both allowed to be right while disagreeing. Non-blocking assignment removes the race, and it is worth being precise about how. It does not pick an order. It makes the order irrelevant, by splitting every assignment into two events: the right side is evaluated during the active phase, and the left side is written afterwards in a separate phase, once every block has finished evaluating. Both blocks read pre-edge values, both write post-edge values, and no interleaving of the two can produce a different result. That two-phase structure is not a quirk of the language. It is the language describing the setup-and-hold discipline you already met when you built the bus in Part II.",
   "part": "Silicon"
  },
  {
@@ -1002,7 +1122,7 @@
   "slug": "clock-edge",
   "anchor": "reading-it-in-the-cells",
   "title": "Reading it in the cells",
-  "text": "",
+  "text": "You do not have to take any of this on trust, and you should not. Synthesise both versions and count. That is the whole argument, delivered by the tool in two lines. The exercises in this unit are built on exactly this: write the design, read the cells, and let the netlist settle the question rather than arguing about semantics. It is worth naming what the second number means. The synthesiser did not misunderstand the blocking version. It understood it perfectly, noticed that both flops would always hold the same value, and removed the redundant one. The optimisation is correct. What is wrong is that the design said something other than what its author meant, and nothing in the language flagged it, because assigning in order is a completely reasonable thing to want inside a combinational block. That is the shape of the whole problem. Blocking assignment in a clocked block is not always wrong, which is precisely why it fails quietly. Follow the rule mechanically rather than reasoning case by case about whether this particular block happens to be safe.",
   "part": "Silicon"
  },
  {
@@ -1010,7 +1130,7 @@
   "slug": "clock-edge",
   "anchor": "the-latch-you-did-not-ask-for",
   "title": "The latch you did not ask for",
-  "text": "",
+  "text": "The second most common bug has nothing to do with edges. This is combinational logic with a hole in it. When is 0 the block says nothing about , and Verilog's rule is that a signal not assigned on some path keeps its previous value. Keeping a previous value requires storage, so the synthesiser gives you storage: a level-sensitive latch. Yosys will tell you, in these words: You almost never want that. A latch is transparent while its enable is high, so it has no single sampling instant, which makes static timing analysis much harder and makes the circuit sensitive to glitches on the enable. Add the missing , or assign a default at the top of the block, and the latch becomes a plain multiplexer. The same hole opens in a statement that does not cover every value and has no . Two output bits left unassigned give you two latches, and the warning names each signal. This is what is for. It is not decoration: it tells the tool your intent, so the tool can check it. A block that infers a latch inside is an error rather than a warning you may not read.",
   "part": "Silicon"
  },
  {
@@ -1018,7 +1138,7 @@
   "slug": "clock-edge",
   "anchor": "what-the-reset-style-does-to-the-flop",
   "title": "What the reset style does to the flop",
-  "text": "",
+  "text": "Two counters, differing only in where the reset is checked: Both are correct designs. They synthesise to different cells. The first gives , a flop with a synchronous reset, which is one input on the same flop. The second gives , a flop with an asynchronous reset, which is a physically different device with a separate reset pin. The consequence is not aesthetic. An asynchronous reset takes effect the moment it asserts, without waiting for a clock, which is what you want at power-on when there may be no clock yet. Its release, though, has to be synchronised, or different flops will leave reset on different cycles. A synchronous reset needs a running clock and behaves like ordinary data, which makes timing analysis straightforward. You cannot tell which one a design uses by reading its behaviour in a simulator. You can tell instantly by reading the cell it synthesised to.",
   "part": "Silicon"
  },
  {
@@ -1026,7 +1146,7 @@
   "slug": "clock-edge",
   "anchor": "where-simulation-and-synthesis-disagree",
   "title": "Where simulation and synthesis disagree",
-  "text": "",
+  "text": "One more, because it is the reason people distrust HDL. The sensitivity list names and not . In simulation the block runs only when changes, so a change to alone leaves stale. In synthesis the tool ignores the list, builds the combinational function you clearly meant, and produces a single AND gate that responds to both. So the simulator and the hardware disagree, and the hardware is the one that is right. Bugs of this shape appear as \"it worked in simulation and failed on the board\", which is the worst debugging position to be in. and both remove the possibility by deriving the list for you.",
   "part": "Silicon"
  },
  {
@@ -1034,7 +1154,7 @@
   "slug": "clock-edge",
   "anchor": "what-to-take-from-this",
   "title": "What to take from this",
-  "text": "",
+  "text": "Every bug above is one confusion: which of the two kinds of logic am I describing? Blocking versus non-blocking is that question at a clock edge. The inferred latch is that question in a combinational block. The reset style is that question about what the flop itself is. The tool answers it precisely, every time, and for free. Synthesise the design and read the cells. Two flops or one, a latch or a mux, a synchronous reset or an asynchronous one. The netlist is not a summary of your intent; it is what you actually said.",
   "part": "Silicon"
  },
  {
@@ -1042,7 +1162,7 @@
   "slug": "clock-edge",
   "n": 1,
   "title": "One character, one flip-flop",
-  "text": "Non-blocking assignment reads pre-edge values, so a chain of flops",
+  "text": "Non-blocking assignment reads pre-edge values, so a chain of flops The starter is a two-stage shift register with the wrong assignment operator. Synthesise it and read the cell count, then change the one character that fixes it. shifts instead of collapsing. same value and removed one.",
   "part": "Silicon"
  },
  {
@@ -1050,7 +1170,7 @@
   "slug": "clock-edge",
   "n": 2,
   "title": "The hole that becomes storage",
-  "text": "A signal left unassigned on some path keeps its previous value, and",
+  "text": "A signal left unassigned on some path keeps its previous value, and This block is meant to be combinational. Synthesise it and the tool will tell you what it actually built. keeping a value requires storage.",
   "part": "Silicon"
  },
  {
@@ -1058,7 +1178,7 @@
   "slug": "clock-edge",
   "n": 3,
   "title": "The same hole, in a case statement",
-  "text": "An unhandled case value is an unassigned path, and every unassigned",
+  "text": "An unhandled case value is an unassigned path, and every unassigned A two-bit selector with four possible values, and a that handles two of them. Count the latches before you run it, then check your count. output bit becomes its own latch.",
   "part": "Silicon"
  },
  {
@@ -1066,7 +1186,7 @@
   "slug": "clock-edge",
   "n": 4,
   "title": "Which flop did you ask for",
-  "text": "Where you check the reset decides whether it is one more input on the",
+  "text": "Where you check the reset decides whether it is one more input on the Both of these counters are correct designs, and they synthesise to different devices. The starter uses a synchronous reset. The specification wants the asynchronous one. flop or a separate pin on a different flop.",
   "part": "Silicon"
  },
  {
@@ -1074,7 +1194,7 @@
   "slug": "clock-edge",
   "n": 5,
   "title": "Two drivers, one wire",
-  "text": "A wire is a piece of metal, and two outputs connected to it are two",
+  "text": "A wire is a piece of metal, and two outputs connected to it are two In software, assigning to a variable twice is fine and the second wins. Here it is not, and the reason is physical. devices fighting over the same voltage. the module is supposed to do.",
   "part": "Silicon"
  },
  {
@@ -1082,7 +1202,7 @@
   "slug": "clock-edge",
   "n": 6,
   "title": "Prove it, do not test it",
-  "text": "For hardware you can sometimes replace testing with proof, and the",
+  "text": "For hardware you can sometimes replace testing with proof, and the Write a multiplexer using only AND, OR and NOT. The checker does not run test vectors against it. It proves that your design and the reference compute the same function for every possible input. tool that does it ships in the same package as the synthesiser. starter selects.",
   "part": "Silicon"
  },
  {
@@ -1090,7 +1210,7 @@
   "slug": "clock-edge",
   "n": 7,
   "title": "An adder, proved against the operator",
-  "text": "A proof over all 256 input pairs costs the same as a proof over one.",
+  "text": "A proof over all 256 input pairs costs the same as a proof over one. Same idea at a width where testing every case would be tedious. Build a 4-bit adder with a carry out, and the checker proves it against . added, or the carry has nowhere to go.",
   "part": "Silicon"
  },
  {
@@ -1098,7 +1218,127 @@
   "slug": "clock-edge",
   "n": 8,
   "title": "The gate you already built, in Verilog",
-  "text": "The netlist you drew by hand in Part II and the netlist the synthesiser",
+  "text": "The netlist you drew by hand in Part II and the netlist the synthesiser Part II had you build XOR from NAND gates. Write it here in Verilog, structurally, using only NAND primitives, and the checker proves it against the operator. produces are the same kind of object. of the next two gates.",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-edge",
+  "n": 1,
+  "title": "Two flops in one clocked block, assigned with `<=`. What do you get?",
+  "text": " Non-blocking assignment evaluates every right side before writing any left side, so both read pre-edge values. That models real flops, which all sample at the edge and drive shortly after. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-edge",
+  "n": 2,
+  "title": "The same block written with `=` instead synthesises to how many flip-flops?",
+  "text": " Measured: two  $_DFF_P_  with  &lt;=  and one with  = . Blocking assignment writes immediately, so the second statement reads the value just written rather than the value held before the edge. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-edge",
+  "n": 3,
+  "title": "Why does the language leave the execution order of two blocks on the same edge undefined?",
+  "text": " The undefinedness is descriptive rather than permissive. Non-blocking assignment does not pick an order; it makes the order irrelevant by splitting evaluation from assignment into two phases. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-edge",
+  "n": 4,
+  "title": "What makes an inferred latch appear?",
+  "text": " A signal not assigned on some path keeps its previous value, and keeping a value requires storage. The synthesiser supplies storage in the form of a level-sensitive latch. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-edge",
+  "n": 5,
+  "title": "An `always @(*)` block assigns a four-bit output, and a `case` leaves two of its four selector values unhandled. What does yosys report?",
+  "text": " Measured: two  $_DLATCH_N_  cells for that design. Latches are inferred per signal, not per block, and the warning names each one. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-edge",
+  "n": 6,
+  "title": "Why is an inferred latch usually worse than a flip-flop?",
+  "text": " The lack of a single sampling edge is the problem. It also makes the circuit sensitive to glitches on the enable, which a clocked flop would simply not see. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-edge",
+  "n": 7,
+  "title": "What does `always_comb` buy you over `always @(*)`?",
+  "text": " Both derive the sensitivity list. The difference is that  always_comb  declares the block is meant to be combinational, which gives the tool something to check against. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-edge",
+  "n": 8,
+  "title": "`if (rst) q <= 0;` inside `always @(posedge clk)` synthesises to which cell?",
+  "text": " A reset checked inside a block that wakes only on the clock is ordinary data, so it becomes a reset input on the same flop. Measured. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-edge",
+  "n": 9,
+  "title": "Moving the reset into the sensitivity list, as `always @(posedge clk or posedge rst)`, changes what?",
+  "text": " Measured, and it is the point of the exercise: two correct designs that synthesise to different devices. You cannot tell them apart by behaviour in a simulator; you can tell instantly by reading the cell. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-edge",
+  "n": 10,
+  "title": "Why does an asynchronous reset still need its release synchronised?",
+  "text": " Asserting without a clock is exactly what you want at power-on. Deasserting without one is not, because the recovery and removal timing is not met uniformly across the design. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-edge",
+  "n": 11,
+  "title": "`always @(a) y = a & b;` What is the disagreement?",
+  "text": " Measured: it synthesises to a single  $_AND_ . The hardware is right and the simulation is wrong, which produces the worst class of bug: it worked in simulation and failed on the board. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-edge",
+  "n": 12,
+  "title": "Two continuous assignments drive the same wire. Why is that worse than a double assignment in software?",
+  "text": " The failure is physical rather than logical. This is the same rule your Part II checker enforced when it refused a control word that enabled two modules onto the bus at once. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-edge",
+  "n": 13,
+  "title": "`equiv_simple` proves a design matches a reference. Over what?",
+  "text": " It is a satisfiability question, not a simulation. The solver looks for any assignment that makes the two disagree, and failing to find one is a proof that none exists. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-edge",
+  "n": 14,
+  "title": "When the equivalence check fails, what has the tool found?",
+  "text": " It reports unproven equivalence cells. Cell count is irrelevant to equivalence: two designs with wildly different cell counts can be proved identical in function. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "clock-edge",
+  "n": 15,
+  "title": "What single question is behind blocking-versus-non-blocking, the inferred latch, and the choice of reset?",
+  "text": " Each bug is that question answered accidentally rather than deliberately. Synthesising the design and reading the cells answers it precisely, every time, and costs nothing. ",
   "part": "Silicon"
  },
  {
@@ -1106,7 +1346,7 @@
   "slug": "integers",
   "anchor": "the-representation-briefly",
   "title": "The representation, briefly",
-  "text": "",
+  "text": "An -bit two's complement number represents through . The top bit is not a sign flag you consult; it carries a negative weight. Three properties fall out of this, and they are the whole reason the scheme won. There is one zero. Sign-magnitude and ones' complement both have a positive and a negative zero, and every comparison then has to handle two bit patterns that mean the same thing. Addition does not care about sign. The adder you built adds the bit patterns, and if you interpret the operands as signed the result is correct as signed. No extra hardware, no separate instruction. Negation is invert-and-add-one, which is why subtraction is addition with one operand inverted and the carry in set. One control bit. The asymmetry is the price. There are 128 negative values and 127 positive ones, so has no representable answer. is negative on every machine you will use. That is not a bug in your standard library.",
   "part": "Numbers and text"
  },
  {
@@ -1114,7 +1354,7 @@
   "slug": "integers",
   "anchor": "widening-and-the-bit-that-gets-copied",
   "title": "Widening, and the bit that gets copied",
-  "text": "",
+  "text": "When a narrow value goes into a wider register, the new high bits have to come from somewhere. For an unsigned value they are zeros. For a signed value they are copies of the sign bit, which is what keeps the number's value the same. That is a real instruction. On x86-64 you will meet and , and which one appears tells you how the compiler understood the type: One quirk of the same instruction set is worth memorising now, because it will confuse you later. Writing to a 32-bit register zeroes the upper 32 bits; writing to a 16-bit or 8-bit one does not. So is not a no-op. It is a zero-extension, and compilers emit it on purpose. That asymmetry was a deliberate choice when AMD designed the 64-bit extension: it removes a dependency on the register's previous value, which lets the processor's renamer break a chain that would otherwise serialise. You will see this again in the unit on registers. Here it is enough to notice that \"convert this number to a wider type\" is not free and not invisible; it is an instruction whose choice was made by the type you wrote.",
   "part": "Numbers and text"
  },
  {
@@ -1122,7 +1362,7 @@
   "slug": "integers",
   "anchor": "the-surprise",
   "title": "The surprise",
-  "text": "",
+  "text": "Here is a program. Read it and predict what it prints. You will find people who tell you it prints 0 at and 1 at . Measure it on current compilers and something more interesting happens. Here is the whole of at , from each: Both compilers folded the comparison to a constant at compile time. Neither emitted an addition. And they folded it to different constants : gcc passes 1 in , clang passes 0. The program prints 1 under one and 0 under the other, at the same optimisation level, on the same machine. gcc reaches 1 by the argument you would expect: signed overflow cannot happen, because the standard says it is undefined and undefined things are things the programmer has promised not to do. Given that promise, holds for every . Clang reaches 0 by folding the arithmetic first and comparing the wrapped result. Both are permitted, because the standard imposes no requirement whatsoever on a program that does this. Neither compiler is wrong. There is no fact of the matter for them to get right, and that is the point. Undefined behaviour does not mean the answer is unpredictable. It means there is no answer, and each compiler is free to pick whichever one falls out of its own reasoning. Yo",
   "part": "Numbers and text"
  },
  {
@@ -1130,7 +1370,7 @@
   "slug": "integers",
   "anchor": "what-undefined-behaviour-actually-is",
   "title": "What undefined behaviour actually is",
-  "text": "",
+  "text": "The word \"undefined\" invites the reading \"unpredictable\", and that reading will mislead you. Undefined behaviour is not a warning that the result might be strange. It is a precondition , stated in the standard, that your program promises to satisfy. The optimiser is not being hostile when it exploits one. It is doing exactly what you would want from a tool that takes your claims seriously. Consider: If signed overflow were defined as wrapping, could wrap to and the loop could run forever, so the compiler would have to keep at 32 bits, check for wraparound, and recompute the address from scratch each iteration. Because overflow is undefined, the compiler knows only increases, promotes it to a 64-bit induction variable, strength-reduces the address arithmetic into a walking pointer, and unrolls. The research behind this unit measured that difference. The same loop written with a signed counter gets a 64-bit induction variable, a walking pointer and two-way unrolling. Written with an unsigned counter it gets none of them, and recomputes every iteration, because may legally wrap. So the rule is not \"signed is dangerous, use unsigned\". It is closer to the opposite. Unsigned arithmetic i",
   "part": "Numbers and text"
  },
  {
@@ -1138,7 +1378,7 @@
   "slug": "integers",
   "anchor": "how-this-fails-in-practice",
   "title": "How this fails in practice",
-  "text": "",
+  "text": "The failure mode that matters is not that you get a wrong number. It is that the reasoning propagates. Once the compiler concludes that a path cannot be taken, everything downstream of that conclusion is fair game. Code on an unreachable path is dead, and dead code is deleted. If the only exit from a function sits on such a path, the exit goes with it, and execution runs off the end into whatever bytes follow. That outcome is documented and reproducible on some compiler versions, though not on the two pinned here for this program, which is itself worth noticing: the same undefined construct produces different damage on different releases, and the damage is not stable enough to learn as a rule. What is stable is where to look. A debugger stepping through the source shows you the program you wrote. The optimiser is not working on that program; it is working on one it derived from your promises. The assembly is the only place those two are visible at the same time, which is why most of the exercises in this unit ask you to read it rather than to run anything.",
   "part": "Numbers and text"
  },
  {
@@ -1146,7 +1386,7 @@
   "slug": "integers",
   "anchor": "the-trap-that-has-nothing-to-do-with-overflow",
   "title": "The trap that has nothing to do with overflow",
-  "text": "",
+  "text": "This does not print. is converted to before the comparison, and as a 32-bit unsigned value is 4294967295, which is not less than 1. The rule is the usual arithmetic conversions: when a signed and an unsigned operand of the same rank meet, the signed one converts to unsigned. It applies to , to arithmetic, to everything. This is why never terminates: is unsigned, so is always true, and the counter wraps to a very large number rather than going negative. , which enables, catches most instances. Turn it on and leave it on.",
   "part": "Numbers and text"
  },
  {
@@ -1154,7 +1394,7 @@
   "slug": "integers",
   "anchor": "saying-what-you-mean",
   "title": "Saying what you mean",
-  "text": "",
+  "text": "Three tools, in the order you should reach for them. Write it so overflow cannot happen. Check the operands before the operation rather than the result after it. is well defined; is a test on a value the standard says does not exist. Ask for wrapping explicitly with , which makes signed overflow defined as two's complement wraparound. The same program that printed 1 at prints 0 again. This costs you the loop optimisations above, and that is the trade you are making. Use the checked builtins where the language offers them. returns whether the operation overflowed and is the honest way to write arithmetic on untrusted input. C23 standardises this family as and friends. And during development, turns the whole class from silent into loud. It costs runtime, catches the overflow at the moment it happens, and names the file and line. There is no reason not to run your tests under it.",
   "part": "Numbers and text"
  },
  {
@@ -1162,7 +1402,7 @@
   "slug": "integers",
   "anchor": "what-to-carry-forward",
   "title": "What to carry forward",
-  "text": "",
+  "text": "Two's complement is why your adder needed no subtractor. That was a gift. Undefined behaviour is the price of the same bargain at a higher level: the compiler will generate excellent code on the assumption that you kept your promises, and it has no way to check. The optimiser is not scanning for mistakes to punish. It is reading a specification you agreed to and taking you at your word. Every exercise in this unit is that idea from a different angle, and most of them are read by looking at the emitted assembly rather than the program's output. When a program's behaviour changes with an optimisation flag, the assembly is where the reason lives.",
   "part": "Numbers and text"
  },
  {
@@ -1170,7 +1410,7 @@
   "slug": "integers",
   "n": 1,
   "title": "The value that has no negative",
-  "text": "Two's complement has one more negative value than positive, so one",
+  "text": "Two's complement has one more negative value than positive, so one Write . The checks include , and one of them asserts something that will look like a typo until you work out why it is not. input has no representable negation.",
   "part": "Numbers and text"
  },
  {
@@ -1178,7 +1418,7 @@
   "slug": "integers",
   "n": 2,
   "title": "A comparison that is not a comparison",
-  "text": "When a signed and an unsigned operand of the same rank meet, the",
+  "text": "When a signed and an unsigned operand of the same rank meet, the The starter looks obviously true and prints nothing. Compile it with the warnings on and the compiler will tell you what it is really doing. signed one converts to unsigned before anything is compared.",
   "part": "Numbers and text"
  },
  {
@@ -1186,7 +1426,7 @@
   "slug": "integers",
   "n": 3,
   "title": "Make the sanitizer speak",
-  "text": "`-fsanitize=undefined` catches the overflow at the moment it happens",
+  "text": "`-fsanitize=undefined` catches the overflow at the moment it happens The flags here turn undefined behaviour from silent into loud. Write an that overflows and watch what the sanitizer says about it. and names the file and line.",
   "part": "Numbers and text"
  },
  {
@@ -1194,7 +1434,7 @@
   "slug": "integers",
   "n": 4,
   "title": "Two midpoints that disagree",
-  "text": "Nothing complained, and one of them is still wrong for an input you",
+  "text": "Nothing complained, and one of them is still wrong for an input you Both of these compute a midpoint. Both compile cleanly with every warning enabled. They do not agree, and the input that separates them does not overflow anything. would not have thought to try. a negative number?",
   "part": "Numbers and text"
  },
  {
@@ -1202,7 +1442,7 @@
   "slug": "integers",
   "n": 5,
   "title": "Ask before you add",
-  "text": "The checked builtins are the honest way to do arithmetic on input you",
+  "text": "The checked builtins are the honest way to do arithmetic on input you Write so it reports whether the addition was representable, and writes the result only when it was. did not choose.",
   "part": "Numbers and text"
  },
  {
@@ -1210,7 +1450,7 @@
   "slug": "integers",
   "n": 6,
   "title": "The loop that never ends",
-  "text": "An unsigned counter cannot go below zero, so a test for that never",
+  "text": "An unsigned counter cannot go below zero, so a test for that never Count down from to and sum the array. The starter uses the type everyone reaches for, and it does not terminate. fires.",
   "part": "Numbers and text"
  },
  {
@@ -1218,7 +1458,7 @@
   "slug": "integers",
   "n": 7,
   "title": "Widening is an instruction",
-  "text": "Whether the high bits are copies of the sign bit or zeros is decided",
+  "text": "Whether the high bits are copies of the sign bit or zeros is decided reads one byte and returns it as an . The checks include a byte whose top bit is set, and the answer depends on a single character in the declaration. by the type, and it becomes a different instruction.",
   "part": "Numbers and text"
  },
  {
@@ -1226,7 +1466,127 @@
   "slug": "integers",
   "n": 8,
   "title": "Say what you mean instead",
-  "text": "Check the operands before the operation, not the result after it.",
+  "text": "Check the operands before the operation, not the result after it. Rewrite the overflow check so it asks a question the standard answers. The starter tests the result of an operation the standard says does not happen. well defined.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "integers",
+  "n": 1,
+  "title": "In 8-bit two's complement, what value does the bit pattern 10000000 represent?",
+  "text": " The top bit carries a weight of -128 rather than flagging a sign. There is no negative zero in two's complement, which is one of the three reasons it won. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "integers",
+  "n": 2,
+  "title": "Why did two's complement beat sign-magnitude for integers?",
+  "text": " Sign-magnitude has two zeroes and needs a separate signed adder. Two's complement makes subtraction into addition with one operand inverted and the carry in set, which is one control bit rather than a second circuit. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "integers",
+  "n": 3,
+  "title": "Why has `-INT_MIN` no correct answer?",
+  "text": " 32 bits give 2147483648 negative values and 2147483647 positive ones. The asymmetry is the price of having exactly one zero, and it is why  abs(INT_MIN)  is negative everywhere. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "integers",
+  "n": 4,
+  "title": "What does \"undefined behaviour\" state about a program?",
+  "text": " It is a precondition, not a warning about variability. Once it is violated, the standard says nothing at all about what the implementation must do, which is why two compilers can produce different answers and both be right. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "integers",
+  "n": 5,
+  "title": "The same signed-overflow program compiled by gcc and by clang at -O2 prints different values. What follows?",
+  "text": " Measured: gcc emits  mov esi, 1  and clang emits  xor esi, esi  for the identical source. Both constant-folded the comparison, using different reasoning, and neither is obliged to agree with the other. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "integers",
+  "n": 6,
+  "title": "Why does an unsigned loop counter often produce worse code than a signed one?",
+  "text": " Because signed overflow is undefined, the compiler may promote the counter to 64 bits, strength-reduce the address arithmetic to a walking pointer and unroll. With an unsigned counter it must keep recomputing the index, because the wrap is a behaviour the program is entitled to. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "integers",
+  "n": 7,
+  "title": "`int a = -1; unsigned b = 1;` What does `a < b` evaluate to, and why?",
+  "text": " The usual arithmetic conversions turn the signed operand unsigned when both have the same rank. The comparison is well defined and it does not mean what it appears to say.  -Wsign-compare , from  -Wextra , names it. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "integers",
+  "n": 8,
+  "title": "Why does `for (size_t i = n - 1; i >= 0; i--)` never terminate?",
+  "text": " An unsigned value has no negative range for the test to detect. Loop from  n  down to 1 and index with  i - 1 , which keeps the index type matching the container's. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "integers",
+  "n": 9,
+  "title": "Running with `-fsanitize=undefined` but without `-fno-sanitize-recover=all`, a program overflows. What happens?",
+  "text": " Measured: the diagnostic appears on stderr and the exit status is still 0, so a test suite reports a pass over a program that has already broken its contract. The recover flag is not optional in a checking harness. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "integers",
+  "n": 10,
+  "title": "Which overflow test is well defined?",
+  "text": " The others all perform the addition first and then examine a value the standard says does not exist, so the compiler may conclude the test is never true and delete it. Checking the operands asks a question the standard answers. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "integers",
+  "n": 11,
+  "title": "What does `__builtin_add_overflow(a, b, &out)` return?",
+  "text": " It reports the overflow rather than the success, which is the opposite of what most people guess and the reason a wrapper usually negates it. C23 standardises the same family as  ckd_add . ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "integers",
+  "n": 12,
+  "title": "Why is `mov eax, eax` not a no-op on x86-64?",
+  "text": " Writes to 32-bit registers zero-extend; writes to 16-bit and 8-bit ones do not. AMD chose that when extending the architecture because it breaks the dependency on the register's previous value, which lets the renamer avoid serialising. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "integers",
+  "n": 13,
+  "title": "Reading one byte through a `char*` on a target where `char` is signed, what does the byte 0xFF become as an `int`?",
+  "text": " Plain  char  is signed here, so the compiler emits  movsx  and copies the top bit into the new high bits. Reading through  unsigned char*  emits  movzx  instead. This is why  char  is the wrong type for a byte of data. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "integers",
+  "n": 14,
+  "title": "`mid(2, -1)` gives 0 for `(a + b) / 2` and 1 for `a + (b - a) / 2`. Why?",
+  "text": " No overflow is involved at these values. The two expressions are genuinely different functions on negative inputs, and the overflow-safe form is not simply a more careful way of writing the same thing. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "integers",
+  "n": 15,
+  "title": "You want the compiler to treat signed overflow as two's complement wraparound. What do you give up?",
+  "text": "  -fwrapv  defines the behaviour, and defining it is exactly what stops the compiler from promoting induction variables, strength-reducing addresses and unrolling. The flag is a real trade, not a free check. ",
   "part": "Numbers and text"
  }
 ]

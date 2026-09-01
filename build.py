@@ -841,18 +841,52 @@ def load_gpu_catalog():
 
 
 def build_search(manifest, units):
+    """The search index.
+
+    Section entries carry the prose under that heading, not only the heading
+    itself, because a reader searching for "latch" wants the paragraph that
+    explains it and not merely a heading that happens to contain the word.
+
+    Code is stripped: a search for "int" should not return every C exercise,
+    and identifiers are better found by reading the unit than by matching them
+    here.
+
+    Loaded only when the search view opens. The Rust Handbook's own analysis
+    found its index was 45% of a payload every page view downloaded.
+    """
     idx = []
     for u in manifest:
         idx.append({"t": "unit", "slug": u["slug"], "title": u["title"],
                     "text": u["blurb"], "part": u["partTitle"]})
+
     for slug, u in units.items():
-        for h in u["headings"]:
-            idx.append({"t": "section", "slug": slug, "anchor": h["id"],
-                        "title": h["text"], "text": "", "part": u["partTitle"]})
+        # split the rendered note at its headings so each section carries its
+        # own prose
+        html = prose.strip_code(u["html"])
+        chunks = re.split(r'<h[23] id="([^"]+)">(.*?)</h[23]>', html)
+        # chunks: [before, id1, title1, body1, id2, title2, body2, ...]
+        for i in range(1, len(chunks) - 2, 3):
+            hid, htitle, body = chunks[i], chunks[i + 1], chunks[i + 2]
+            text = re.sub(r"<[^>]+>", " ", body)
+            text = re.sub(r"\s+", " ", text).strip()
+            idx.append({
+                "t": "section", "slug": slug, "anchor": hid,
+                "title": re.sub(r"<[^>]+>", "", htitle),
+                "text": text[:1200], "part": u["partTitle"],
+            })
         for e in u["exercises"]:
-            idx.append({"t": "exercise", "slug": slug, "n": e["n"],
-                        "title": e["title"], "text": e["concept"],
-                        "part": u["partTitle"]})
+            brief = re.sub(r"<[^>]+>", " ", prose.strip_code(e["brief"]))
+            idx.append({
+                "t": "exercise", "slug": slug, "n": e["n"], "title": e["title"],
+                "text": (e["concept"] + " " + re.sub(r"\s+", " ", brief).strip())[:600],
+                "part": u["partTitle"],
+            })
+        for d in u["drills"]:
+            idx.append({
+                "t": "drill", "slug": slug, "n": d["n"], "title": d["q"],
+                "text": re.sub(r"<[^>]+>", " ", d["why"])[:400],
+                "part": u["partTitle"],
+            })
     return idx
 
 
