@@ -1,0 +1,43 @@
+{
+  "id": "nvidia-sm",
+  "title": "NVIDIA compute capabilities",
+  "blurb": "Every sm_XX target, the architecture behind it, and the cards that report it. This is the table that decides whether your kernel runs.",
+  "note": "Architecture names are a marketing artefact and sm_XX is the thing that is real. Ada Lovelace and Hopper share a tensor core generation number and have completely different programming models: Ada added no new programming model at all, and has the same per-SM resources as sm_86. The suffix matters too. An `a` means architecture-specific: that capability and nothing else, ever, so sm_90a code does not run on Blackwell. And 10.x and 12.x are different majors with no cubin crossing between them, which is why a $3.03/hr sm_120 card cannot run the FP4 material a $6.25/hr sm_100a card can.",
+  "sources": [
+    "NVIDIA CUDA C++ Programming Guide, compute capability tables (5.1, tables 28-33)",
+    "NVIDIA architecture whitepapers (GA100, GA102, GV100, TU102, Ada, Hopper, Blackwell)",
+    "PTX ISA target notes for tcgen05 availability"
+  ],
+  "checked": "2026-09-01",
+  "columns": [
+    {"key": "sm", "label": "Target", "mono": true},
+    {"key": "cc", "label": "CC"},
+    {"key": "arch", "label": "Architecture"},
+    {"key": "datacenter", "label": "Datacenter"},
+    {"key": "consumer", "label": "Consumer and workstation"},
+    {"key": "year", "label": "Year"}
+  ],
+  "rows": [
+    {"sm": "sm_50", "cc": "5.0", "arch": "Maxwell", "datacenter": "Tesla M10", "consumer": "GTX 750 Ti, Quadro K2200", "year": "2014"},
+    {"sm": "sm_52", "cc": "5.2", "arch": "Maxwell", "datacenter": "Tesla M40, M60", "consumer": "GTX Titan X, 980 Ti, Quadro M6000", "year": "2014"},
+    {"sm": "sm_60", "cc": "6.0", "arch": "Pascal", "datacenter": "Tesla P100, DGX-1", "consumer": "Quadro GP100", "year": "2016"},
+    {"sm": "sm_61", "cc": "6.1", "arch": "Pascal", "datacenter": "Tesla P40, P4", "consumer": "GTX 1080 Ti, Titan Xp, Quadro P6000", "year": "2016"},
+    {"sm": "sm_70", "cc": "7.0", "arch": "Volta", "datacenter": "Tesla V100 16/32 GB", "consumer": "Titan V, Quadro GV100", "year": "2017"},
+    {"sm": "sm_72", "cc": "7.2", "arch": "Volta", "datacenter": "", "consumer": "Jetson AGX Xavier, DRIVE AGX Xavier", "year": "2018"},
+    {"sm": "sm_75", "cc": "7.5", "arch": "Turing", "datacenter": "Tesla T4", "consumer": "RTX 2080 Ti, Titan RTX, GTX 1660 (no tensor cores)", "year": "2018"},
+    {"sm": "sm_80", "cc": "8.0", "arch": "Ampere", "datacenter": "A100 40/80 GB, A30", "consumer": "", "year": "2020"},
+    {"sm": "sm_86", "cc": "8.6", "arch": "Ampere", "datacenter": "A40, A10, A16, A2", "consumer": "RTX 3090 Ti, 3080, RTX A6000", "year": "2020"},
+    {"sm": "sm_87", "cc": "8.7", "arch": "Ampere", "datacenter": "", "consumer": "Jetson AGX Orin, Orin NX, DRIVE AGX Orin", "year": "2022"},
+    {"sm": "sm_89", "cc": "8.9", "arch": "Ada Lovelace", "datacenter": "L40S, L40, L20, L4", "consumer": "RTX 4090, 4080, RTX 6000 Ada", "year": "2022"},
+    {"sm": "sm_90a", "cc": "9.0", "arch": "Hopper", "datacenter": "H100 SXM/PCIe/NVL, H200, GH200", "consumer": "", "year": "2022"},
+    {"sm": "sm_100a", "cc": "10.0", "arch": "Blackwell, datacenter", "datacenter": "B200, B100, GB200", "consumer": "", "year": "2024"},
+    {"sm": "sm_103a", "cc": "10.3", "arch": "Blackwell Ultra", "datacenter": "B300, GB300 NVL72", "consumer": "GB300 DGX Station", "year": "2025"},
+    {"sm": "sm_110", "cc": "11.0", "arch": "Blackwell, Thor", "datacenter": "", "consumer": "Jetson T5000, T4000", "year": "2025"},
+    {"sm": "sm_120", "cc": "12.0", "arch": "Blackwell, consumer", "datacenter": "RTX PRO 6000 Server Edition", "consumer": "RTX 5090, 5080, 5070, RTX PRO Blackwell", "year": "2025"},
+    {"sm": "sm_121", "cc": "12.1", "arch": "Blackwell, GB10", "datacenter": "", "consumer": "DGX Spark", "year": "2025"}
+  ],
+  "unverified": [
+    "B200's SM count is not published by NVIDIA. Chips and Cheese measured 148; other sources imply 144. No count is stated here.",
+    "Rubin (sm_107) appears only in the CUDA 13.4 developer preview and is omitted until it reaches a general release."
+  ]
+}

@@ -677,6 +677,87 @@ function renderDiagnosis(ex, res) {
   }
 }
 
+/* ----------------------------------------------------------------- atlas */
+
+async function viewAtlas(id) {
+  const data = await getJSON('data/atlas.json');
+  const tables = data.tables || [];
+  if (!tables.length) {
+    return `<div class="wrap" style="padding:80px 0"><h1>Atlas</h1>
+      <p class="prose">No tables yet.</p></div>`;
+  }
+  const t = tables.find(x => x.id === id) || tables[0];
+  HH.atlas = t;
+
+  const tabs = tables.map(x => `
+    <a href="#/atlas/${esc(x.id)}" class="${x.id === t.id ? 'on' : ''}">
+      ${esc(x.title)}</a>`).join('');
+
+  const head = t.columns.map(c => `<th>${esc(c.label)}</th>`).join('');
+  const body = t.rows.map(r => `<tr>${t.columns.map(c =>
+    `<td${c.mono ? ' class="mono"' : ''}>${esc(r[c.key] || '')}</td>`
+  ).join('')}</tr>`).join('');
+
+  return `
+  <div class="wrap" style="padding:48px 0" data-accent="slate">
+    <h1>Atlas</h1>
+    <p class="prose" style="max-width:var(--measure)">Reference tables. The
+      units teach the depth; these hold the map. Every table says where it came
+      from, when it was checked, and what could not be verified.</p>
+
+    ${tables.length > 1 ? `<nav class="atlastabs">${tabs}</nav>` : ''}
+
+    <h2 style="margin-top:32px">${esc(t.title)}</h2>
+    <p class="prose" style="max-width:var(--measure)">${esc(t.blurb)}</p>
+    ${t.note ? `<p class="idea" style="max-width:var(--measure)">
+      <span class="lbl">Worth knowing</span>${esc(t.note)}</p>` : ''}
+
+    <div class="wbbar" style="margin-top:18px">
+      <input class="filter" id="atlasq" type="search" spellcheck="false"
+             placeholder="filter ${t.rows.length} rows" aria-label="Filter rows">
+      <span class="note" id="atlascount"></span>
+    </div>
+
+    <div class="tw" style="margin-top:12px">
+      <table id="atlastable"><thead><tr>${head}</tr></thead>
+      <tbody>${body}</tbody></table>
+    </div>
+
+    ${t.unverified && t.unverified.length ? `
+      <div class="unverified">
+        <h3>Not verified</h3>
+        <ul>${t.unverified.map(u => `<li>${esc(u)}</li>`).join('')}</ul>
+      </div>` : ''}
+
+    <div class="sources">
+      <h3>Sources</h3>
+      <ul>${t.sources.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      <p>Checked ${esc(t.checked)}.</p>
+    </div>
+  </div>`;
+}
+
+function wireAtlas() {
+  const q = el('#atlasq');
+  if (!q) return;
+  const rows = [...document.querySelectorAll('#atlastable tbody tr')];
+  const count = el('#atlascount');
+  const paint = () => {
+    const needle = q.value.trim().toLowerCase();
+    let shown = 0;
+    rows.forEach(tr => {
+      const hit = !needle || tr.textContent.toLowerCase().includes(needle);
+      tr.hidden = !hit;
+      if (hit) shown++;
+    });
+    count.textContent = needle
+      ? `${shown} of ${rows.length}`
+      : `${rows.length} rows`;
+  };
+  q.oninput = paint;
+  paint();
+}
+
 /* --------------------------------------------------------------- drills */
 
 async function viewDrills(slug) {
@@ -1080,7 +1161,7 @@ const ROUTES = {
   'track': viewTrack,
   'unit': viewUnit,
   'work': viewWork,
-  'atlas': () => viewSoon('Atlas'),
+  'atlas': viewAtlas,
   'glossary': () => viewSoon('Glossary'),
   'settings': viewSettings,
   'drills': viewDrills,
@@ -1109,6 +1190,7 @@ async function render() {
     if (route === 'drills') wireDrills();
     if (route === 'progress') wireProgress();
     if (route === 'search') wireSearch();
+    if (route === 'atlas') wireAtlas();
   } catch (err) {
     console.error(err);
     main.innerHTML = viewError(err);

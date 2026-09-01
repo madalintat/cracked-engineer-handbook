@@ -204,6 +204,12 @@ a:hover { text-decoration: underline; text-underline-offset: 2px; }
   border-radius: var(--r-1);
 }
 
+/* The view heading is focused by script after every navigation so screen
+ * reader users land in the content. That is not keyboard travel, so it must
+ * not paint a ring: a box round the H1 on every page reads as a bug. */
+h1[tabindex="-1"]:focus,
+h1[tabindex="-1"]:focus-visible { outline: none; }
+
 ::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
 
 /* --------------------------------------------------------------- a11y */
@@ -442,7 +448,7 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
 }
 .unit .kicker .n { color: var(--accent); }
 
-.unit .idea {
+.idea {
   margin: 18px 0 0;
   padding: 14px 16px;
   border-left: 2px solid var(--accent);
@@ -453,7 +459,7 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
   line-height: 1.45;
   max-width: var(--measure);
 }
-.unit .idea .lbl {
+.idea .lbl {
   display: block;
   font: 700 var(--t-micro)/1 var(--mono);
   color: var(--accent);
@@ -1036,3 +1042,48 @@ nav.tabs { display: none; }
 .drill .why p { margin: 0; }
 
 .results { margin-top: 8px; }
+
+/* ----------------------------------------------------------------- atlas */
+
+.atlastabs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 20px; }
+.atlastabs a {
+  font: 600 var(--t-sm)/1 var(--sans);
+  color: var(--ink-3);
+  padding: 8px 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-2);
+}
+.atlastabs a:hover { color: var(--ink); border-color: var(--border); text-decoration: none; }
+.atlastabs a.on { color: var(--accent); border-color: var(--accent); }
+
+.filter {
+  font: 500 var(--t-sm)/1.4 var(--mono);
+  color: var(--ink);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  padding: 8px 11px;
+  min-width: 240px;
+}
+.wbbar .note { font-size: var(--t-micro); color: var(--ink-4); }
+
+#atlastable td.mono { font-family: var(--mono); color: var(--accent); font-weight: 500; }
+#atlastable tbody tr:hover { background: var(--raised); }
+
+.sources, .unverified {
+  margin-top: 32px;
+  max-width: var(--measure);
+  font-size: var(--t-sm);
+  color: var(--ink-3);
+}
+.sources h3, .unverified h3 {
+  font: 700 var(--t-micro)/1 var(--mono);
+  color: var(--ink-4);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  margin-bottom: 10px;
+}
+.unverified { border-left: 2px solid var(--warn); padding-left: 14px; }
+.unverified h3 { color: var(--warn); }
+.sources ul, .unverified ul { margin: 0; padding-left: 18px; }
+.sources li, .unverified li { margin-bottom: 5px; }

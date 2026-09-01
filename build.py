@@ -777,6 +777,7 @@ def build(strict=True):
         "parts": parts, "units": manifest,
         "backends": list(track.BACKENDS),
         "counts": {
+            "atlas": len(build_atlas()),
             "parts": len(parts), "units": len(manifest),
             "ready": sum(1 for u in manifest if u["ready"]),
             "words": sum(u["words"] for u in manifest),
@@ -804,9 +805,66 @@ def build(strict=True):
 
     write(DATA / "judges.json", JUDGES_CONFIG)
     write(DATA / "modal-gpus.json", load_gpu_catalog())
+    atlas = build_atlas()
+    write(DATA / "atlas.json", {"tables": atlas})
     write(DATA / "search.json", build_search(manifest, units))
     prune(DATA, units)
     return manifest, units
+
+
+def build_atlas():
+    """The reference tables, checked the way exercises are checked.
+
+    An atlas is data pretending to be authoritative, so it needs its own gate.
+    Three rules, all of which the research turned up as real failure modes:
+
+    * Every table cites its sources and carries the date they were checked. A
+      hardware table with no provenance is a rumour with columns.
+    * Every row has exactly the declared columns. A ragged table renders as a
+      confident lie with cells shifted one to the left, which is precisely how
+      Wikipedia's CUDA specs table produces "128 K registers/SM at CC 8.0".
+    * A table may declare what it could not verify, and those notes are shown
+      to the reader rather than dropped.
+    """
+    d = CONTENT / "atlas"
+    if not d.exists():
+        return []
+    problems, tables = [], []
+    for f in sorted(d.glob("*.json")):
+        w = f"atlas/{f.name}"
+        try:
+            t = json.loads(f.read_text())
+        except json.JSONDecodeError as e:
+            problems.append(f"{w}: not valid JSON: {e}")
+            continue
+        for k in ("id", "title", "blurb", "columns", "rows", "sources", "checked"):
+            if not t.get(k):
+                problems.append(f"{w}: missing {k!r}")
+        if problems and any(w in p for p in problems):
+            continue
+        if t["id"] != f.stem:
+            problems.append(f"{w}: id {t['id']!r} does not match the filename")
+        keys = [c["key"] for c in t["columns"]]
+        if len(set(keys)) != len(keys):
+            problems.append(f"{w}: duplicate column keys")
+        for i, row in enumerate(t["rows"]):
+            extra = set(row) - set(keys)
+            missing = set(keys) - set(row)
+            if extra:
+                problems.append(f"{w}: row {i} has columns the table does not "
+                                f"declare: {', '.join(sorted(extra))}")
+            if missing:
+                problems.append(f"{w}: row {i} is missing {', '.join(sorted(missing))}. "
+                                f"Use an empty string rather than omitting a cell, "
+                                f"or the table renders shifted.")
+        if not isinstance(t["sources"], list) or not t["sources"]:
+            problems.append(f"{w}: sources must be a non-empty list")
+        problems += prose.check_blurb(t["blurb"], f"{w} blurb")
+        if t.get("note"):
+            problems += prose.lint(t["note"], f"{w} note")
+        tables.append({**t, "rowCount": len(t["rows"])})
+    fail(problems)
+    return tables
 
 
 def load_gpu_catalog():
