@@ -76,5 +76,7 @@
  "needs": [
   "encoding"
  ],
- "neededBy": []
+ "neededBy": [
+  "structure"
+ ]
 }

@@ -561,7 +561,8 @@
     "memory"
    ],
    "neededBy": [
-    "control"
+    "control",
+    "structure"
    ],
    "minutes": 45
   },
@@ -583,7 +584,9 @@
    "needs": [
     "encoding"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "structure"
+   ],
    "minutes": 50
   },
   {
@@ -597,14 +600,18 @@
    "phase": "build",
    "accent": "gold",
    "backend": "yosys",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
+   "ready": true,
+   "words": 1420,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "encoding",
+    "control"
+   ],
    "neededBy": [
     "clock-edge"
-   ]
+   ],
+   "minutes": 50
   },
   {
    "slug": "clock-edge",
@@ -2606,9 +2613,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 16,
-  "words": 24703,
-  "exercises": 128,
-  "drills": 240
+  "ready": 17,
+  "words": 26123,
+  "exercises": 136,
+  "drills": 255
  }
 }

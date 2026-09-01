@@ -1,0 +1,185 @@
+{
+ "slug": "structure",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What does <code>assign y = a &amp; b;</code> describe?",
+   "options": [
+    "A permanent connection between <code>y</code> and an AND gate fed by <code>a</code> and <code>b</code>",
+    "A computation that runs once when the module is elaborated",
+    "A computation that runs every time <code>a</code> or <code>b</code> changes",
+    "A value copied into <code>y</code> at the next clock edge"
+   ],
+   "correct": 0,
+   "why": "<p>The verb is not compute, it is is. The connection is as true a nanosecond from now as it was a year ago, and if <code>a</code> changes then <code>y</code> changes because the wire is still there.</p>"
+  },
+  {
+   "n": 2,
+   "q": "Does the order of continuous assignments in a module matter?",
+   "options": [
+    "No, because a circuit has no first line",
+    "Yes, a signal must be driven before it is read",
+    "Yes, but only for signals that cross module boundaries",
+    "Only in simulation, not in synthesis"
+   ],
+   "correct": 0,
+   "why": "<p>A signal is a node, not a variable that acquires a value at some moment. Reorder every continuous assignment in a module and the synthesised hardware is identical.</p>"
+  },
+  {
+   "n": 3,
+   "q": "What happens when two continuous assignments drive the same wire?",
+   "options": [
+    "It is an error, because it describes two gate outputs soldered together",
+    "The later one wins, as it would in a program",
+    "The tool builds a multiplexer and picks at random",
+    "The wire takes the or of the two values"
+   ],
+   "correct": 0,
+   "why": "<p>Nothing about the second line replaces the first, because there is no first. Both connections exist at once, which is the same short circuit the tri-state buffer exists to prevent on a shared bus.</p>"
+  },
+  {
+   "n": 4,
+   "q": "What does a synthesiser do after mapping a design onto cells?",
+   "options": [
+    "Deletes anything whose value cannot change and anything nothing reads",
+    "Places and routes the cells onto a floorplan",
+    "Verifies the design against a testbench",
+    "Inserts flip-flops wherever a path is too slow"
+   ],
+   "correct": 0,
+   "why": "<p>That is the step people are not ready for. It is also why a cell count is the answer to a better question than \"what did I type\": it says how much hardware you actually asked for.</p>"
+  },
+  {
+   "n": 5,
+   "q": "How many gates does <code>assign y = a &amp; 1'b1;</code> produce?",
+   "options": [
+    "None, the output is <code>a</code> and a wire is cheaper than a gate",
+    "One AND gate, as written",
+    "One buffer cell, to drive the output",
+    "It depends on whether <code>a</code> is an input or an internal wire"
+   ],
+   "correct": 0,
+   "why": "<p>The optimiser folds the constant away. This is also why a design can silently be smaller than intended: an unused output is deleted with exactly the same enthusiasm.</p>"
+  },
+  {
+   "n": 6,
+   "q": "What is in the hardware after a <code>for</code> loop with four iterations is synthesised?",
+   "options": [
+    "Four copies of the body, side by side, all settling together",
+    "A counter and one copy of the body",
+    "One copy of the body, evaluated four times per clock",
+    "A state machine with four states"
+   ],
+   "correct": 0,
+   "why": "<p>The tool unrolls the loop while elaborating. There is no thing that goes around four times, and there is no counter anywhere in the result.</p>"
+  },
+  {
+   "n": 7,
+   "q": "Why must a loop bound be known at build time?",
+   "options": [
+    "It decides how many copies of the body exist, and silicon cannot change how much of itself there is",
+    "The simulator needs it to schedule events",
+    "Otherwise the loop cannot be proved to terminate",
+    "It does not have to be, the tool infers a maximum"
+   ],
+   "correct": 0,
+   "why": "<p>A loop whose count depends on an input would need the amount of hardware to change while the chip is running.</p>"
+  },
+  {
+   "n": 8,
+   "q": "In software a loop is cheap and the body is what you pay for. What changes here?",
+   "options": [
+    "The loop is the multiplier: four iterations is four copies in area and power",
+    "Nothing, the cost model is the same",
+    "The body is free and the loop costs a counter",
+    "Cost depends only on the clock frequency"
+   ],
+   "correct": 0,
+   "why": "<p>This is the first real difference between describing hardware and writing software, and it reorganises how you think about what an expression costs.</p>"
+  },
+  {
+   "n": 9,
+   "q": "What does instantiating a module twice give you?",
+   "options": [
+    "Two separate pieces of the chip that share only a description",
+    "One piece of hardware used twice",
+    "Two calls to the same logic, resolved at elaboration",
+    "A single instance, since the tool deduplicates identical modules"
+   ],
+   "correct": 0,
+   "why": "<p>There is no stack, nothing returns, and nothing is reused between the instances. A module you instantiate a thousand times costs a thousand times as much.</p>"
+  },
+  {
+   "n": 10,
+   "q": "How do you make two uses share one piece of hardware?",
+   "options": [
+    "Build it on purpose, with a multiplexer to choose the inputs and a register to hold the result",
+    "Instantiate the module once and read its output twice",
+    "Mark the module as shared and let the tool schedule it",
+    "Put both uses inside the same always block"
+   ],
+   "correct": 0,
+   "why": "<p>It is never free and never automatic. It also takes more than one clock cycle, which is the trade Part V spends most of its time on.</p>"
+  },
+  {
+   "n": 11,
+   "q": "What does a delay like <code>#5</code> mean to a synthesiser?",
+   "options": [
+    "Nothing, it is ignored",
+    "It inserts a five gate delay buffer chain",
+    "It constrains the path to five nanoseconds",
+    "It is a syntax error outside a testbench"
+   ],
+   "correct": 0,
+   "why": "<p>It is meaningful to the simulator, which has a notion of time, and invisible to the tool that builds structure. That gap has a name: simulation and synthesis mismatch.</p>"
+  },
+  {
+   "n": 12,
+   "q": "What is a simulation and synthesis mismatch?",
+   "options": [
+    "A design that passes every test and behaves differently as a chip",
+    "A design that synthesises but cannot be simulated",
+    "A timing violation found after place and route",
+    "A disagreement between two synthesis tools"
+   ],
+   "correct": 0,
+   "why": "<p>The same text is read by two tools with different jobs. Most of the language means the same thing to both, and a subset does not.</p>"
+  },
+  {
+   "n": 13,
+   "q": "Why is a five-bit sum assigned through a four-bit intermediate wrong?",
+   "options": [
+    "The addition happens at four bits, so the carry is gone before the widening",
+    "The intermediate wire adds a gate delay that breaks the timing",
+    "Assigning a narrow wire to a wide one sign extends instead of zero extending",
+    "It is not wrong, the tool widens the operands automatically"
+   ],
+   "correct": 0,
+   "why": "<p>Width is decided where an expression is evaluated, not where its result eventually lands. Widening afterwards cannot recover a bit that was already dropped.</p>"
+  },
+  {
+   "n": 14,
+   "q": "Why did the drawn schematic have to be replaced by text?",
+   "options": [
+    "A real design has millions of gates and nobody draws millions of anything",
+    "Text can be version controlled and a drawing cannot",
+    "Schematics cannot express sequential logic",
+    "Foundries stopped accepting schematic submissions"
+   ],
+   "correct": 0,
+   "why": "<p>Drawing works up to a few hundred gates, which is where Part II stopped. The description that replaces it looks like a program, and every hour lost in this part is lost to that resemblance.</p>"
+  },
+  {
+   "n": 15,
+   "q": "Which report should you trust about what your design contains?",
+   "options": [
+    "The tool's, because it has already deleted everything you asked for by accident",
+    "Your reading of the source, because it says what you intended",
+    "The simulator's, because it executes the real behaviour",
+    "Neither, until the design is placed and routed"
+   ],
+   "correct": 0,
+   "why": "<p>The gap between what you wrote and what survives is where most of the surprise in this part lives.</p>"
+  }
+ ]
+}

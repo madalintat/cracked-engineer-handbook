@@ -1,0 +1,80 @@
+{
+ "slug": "structure",
+ "num": 12,
+ "title": "Structure, not sequence",
+ "blurb": "Your code is not executed, it is built. Everything exists at once, forever, and settles.",
+ "part": "silicon",
+ "partRoman": "III",
+ "partTitle": "Silicon",
+ "phase": "build",
+ "accent": "gold",
+ "backend": "yosys",
+ "meta": {
+  "needs": [
+   "control",
+   "encoding"
+  ],
+  "minutes": 50,
+  "one_idea": "Verilog does not run. It describes a thing that exists all at once, and the tool's job is to build that thing out of cells.",
+  "sources": [
+   "digital-design-hdl-fpga",
+   "nand2tetris-eater-scott"
+  ]
+ },
+ "html": "<p>Part II ended with a computer drawn by hand. Every wire was a line you placed, every gate was a part you counted, and the reason it worked was that you could see all of it.</p>\n<p>That stops scaling somewhere around a few hundred gates. A real design has millions, and nobody draws millions of anything. So the drawing gets replaced by a description, and the description is text.</p>\n<p>The text looks like a program. It has modules that look like functions, assignments that look like assignments, and <code>for</code> loops that look like loops. It is none of those things, and every hour lost in this part is lost to that resemblance.</p>\n<h2 id=\"nothing-here-happens\">Nothing here happens</h2>\n<p>Start with the smallest possible example.</p>\n<pre class=\"cb\" data-lang=\"verilog\"><code>assign y = a &amp; b;</code></pre>\n<p>Read it as a program and it says: compute the and of <code>a</code> and <code>b</code>, store the result in <code>y</code>. Something happens, then it is finished.</p>\n<p>That reading is wrong in every part. The line does not run once. It does not run at all. It says there is a permanent connection between <code>y</code> and an AND gate whose inputs are <code>a</code> and <code>b</code>, and that connection is as true a nanosecond from now as it was a year ago. If <code>a</code> changes, <code>y</code> changes, because the wire is still there.</p>\n<p>The verb is not compute. The verb is is.</p>\n<h2 id=\"which-means-order-cannot-matter\">Which means order cannot matter</h2>\n<p>Take three lines and shuffle them.</p>\n<pre class=\"cb\" data-lang=\"verilog\"><code>assign y  = t &amp; c;\nassign t  = a &amp; b;</code></pre>\n<p>In a program this is a use before assignment and would either fail to compile or read garbage. Here it is fine, and it is fine for a reason worth being precise about: <code>t</code> is not a variable that gets a value at some moment. It is a node in a circuit, and the second line says what drives it. Whether that sentence is written above or below the one that reads it changes nothing, because the circuit does not have a top.</p>\n<p>You can reorder every continuous assignment in a module and synthesise identical hardware. If that feels wrong, the resemblance is still winning.</p>\n<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 556 219\" class=\"fig-svg\" style=\"max-width:806px\" role=\"img\" aria-label=\"Two boxes of Verilog text with their lines in opposite orders, both feeding an arrow into the same single circuit of two AND gates.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><line x1=\"88\" y1=\"79\" x2=\"429\" y2=\"62\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"88\" y1=\"114\" x2=\"429\" y2=\"132\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><rect x=\"0.0\" y=\"8.8\" width=\"176.0\" height=\"70.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"88.0\" y=\"43.0\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">t then y</text><text x=\"88.0\" y=\"59.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">one file order</text><rect x=\"0.0\" y=\"114.4\" width=\"176.0\" height=\"70.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"88.0\" y=\"148.6\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">y then t</text><text x=\"88.0\" y=\"164.6\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">the other</text><rect x=\"330.0\" y=\"61.6\" width=\"198.0\" height=\"70.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"429.0\" y=\"95.8\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">two AND gates</text><text x=\"429.0\" y=\"111.8\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">one netlist</text></svg><figcaption>The same circuit, described twice. Order in the file is not order in time, because there is no time in a continuous assignment.</figcaption></figure>\n<h2 id=\"a-wire-is-a-node-and-a-node-has-one-driver\">A wire is a node, and a node has one driver</h2>\n<p>In Part II this was an electrical rule about buses: two outputs driving one wire is a short, which is why the tri-state buffer exists and why exactly one bit in a control word may put something on the bus.</p>\n<p>Verilog inherits the rule and enforces it earlier. Write two continuous assignments to the same wire and you have described two gate outputs soldered together. The tool will tell you so, and the message names the signal.</p>\n<pre class=\"cb\" data-lang=\"verilog\"><code>assign y = a &amp; b;\nassign y = c | d;      // the same y. This is a fault, not an override.</code></pre>\n<p>Nothing about the second line replaces the first, because there is no first. The two statements coexist, which is precisely the problem.</p>\n<h2 id=\"the-tool-builds-and-then-it-deletes\">The tool builds, and then it deletes</h2>\n<p>What a synthesiser does is worth stating plainly, because the exercises here report its output and the output surprises people.</p>\n<p>It reads the text and works out what the description means, expanding parameters and unrolling loops until what is left is a flat structure. Then it maps that structure onto cells: real parts from a real library, an AND cell, a flip-flop cell, a multiplexer cell. Then it optimises, and this is the step people are not ready for.</p>\n<p>The optimiser removes anything whose value cannot change and anything nothing reads. Write <code>a &amp; 1'b1</code> and no AND gate is built, because the answer is <code>a</code> and a wire is cheaper than a gate. Write a signal nothing uses and it does not appear in the output at all. Compute something two different ways and the tool will notice they agree and build one of them.</p>\n<p>So a cell count is not a count of what you typed. It is the answer to a different and better question: how much hardware did you actually ask for.</p>\n<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 710 140\" class=\"fig-svg\" style=\"max-width:1030px\" role=\"img\" aria-label=\"Four boxes left to right showing the synthesis pipeline: text, elaboration into flat structure, mapping onto library cells, and optimisation into a smaller netlist.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><line x1=\"141\" y1=\"75\" x2=\"180\" y2=\"75\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"321\" y1=\"75\" x2=\"361\" y2=\"75\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"502\" y1=\"75\" x2=\"541\" y2=\"75\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><rect x=\"0.0\" y=\"44.0\" width=\"140.8\" height=\"61.6\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"70.4\" y=\"73.8\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">text</text><text x=\"70.4\" y=\"89.8\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">what you wrote</text><rect x=\"180.4\" y=\"44.0\" width=\"140.8\" height=\"61.6\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"250.8\" y=\"73.8\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">elaborate</text><text x=\"250.8\" y=\"89.8\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">loops unrolled</text><rect x=\"360.8\" y=\"44.0\" width=\"140.8\" height=\"61.6\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"431.2\" y=\"73.8\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">map</text><text x=\"431.2\" y=\"89.8\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">onto real cells</text><rect x=\"541.2\" y=\"44.0\" width=\"140.8\" height=\"61.6\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"611.6\" y=\"73.8\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">optimise</text><text x=\"611.6\" y=\"89.8\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">what survives</text></svg><figcaption>Every exercise in this part reports the last box. The gap between the first and the last is where most of the surprise lives.</figcaption></figure>\n<h2 id=\"a-loop-is-a-copy-machine\">A loop is a copy machine</h2>\n<p>Here is the construct that catches everyone.</p>\n<pre class=\"cb\" data-lang=\"verilog\"><code>for (i = 0; i &lt; 4; i = i + 1)\n  p = p ^ a[i];</code></pre>\n<p>There is no counter in the resulting hardware. There is no thing that goes around four times. The tool unrolls the loop while it is elaborating and emits four XOR gates side by side, all of which exist at once and all of which settle together.</p>\n<p>The bound has to be known at build time for that reason. A loop whose count depends on an input is not a loop the tool can unroll, and it cannot be built, because the amount of hardware would have to change while the chip is running and silicon does not do that.</p>\n<p>This is the first real difference between describing hardware and writing software, and it is the one that reorganises how you think about cost. In a program a loop is cheap and the body is what you pay for. Here the loop is the multiplier: four iterations is four copies of the body, in area, in power, and in every gate that has to settle before the clock edge.</p>\n<h2 id=\"hierarchy-is-copies-too\">Hierarchy is copies too</h2>\n<p>The same logic applies one level up. Instantiating a module is not calling it.</p>\n<pre class=\"cb\" data-lang=\"verilog\"><code>and2 g0 (.a(x), .b(y), .y(t));\nand2 g1 (.a(t), .b(z), .y(out));</code></pre>\n<p>That is two AND gates, not one gate used twice. There is no stack, nothing returns, and nothing is reused between the instances. Each name is a separate piece of the chip with its own inputs and its own output, and the only thing they share is a description.</p>\n<p>Which is why a module you instantiate a thousand times costs a thousand times as much, and why sharing hardware between two uses is something you have to build on purpose, with a multiplexer to choose the inputs and a register to hold the result. Part V calls that pipelining and resource sharing. It is never free and it is never automatic.</p>\n<h2 id=\"two-audiences-one-text\">Two audiences, one text</h2>\n<p>One more source of confusion, and it is worth knowing about before you meet it.</p>\n<p>The same Verilog is read by two tools with different jobs. A simulator executes the text as an event-driven program, one statement at a time, with a notion of time. A synthesiser ignores time and builds structure. Most of the language means the same thing to both, and a subset does not.</p>\n<p>A delay like <code>#5</code> is meaningful to the simulator and simply ignored by the synthesiser. Initial blocks and file input are simulation only. The disagreement has its own name, simulation and synthesis mismatch, and it describes a design that passes every test and then behaves differently as a chip.</p>\n<p>The way out is discipline rather than cleverness: write the subset that means one thing, and let the tool that builds the hardware be the one that decides whether your description is real. That is what the exercises here do.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>Three sentences, and the rest of Part III sits on them.</p>\n<p>Continuous assignment is a permanent connection, so file order is not time order. Repetition, whether a loop or an instance, is copies of hardware rather than passes over one piece of it. And the tool's report of what it built is worth more than your reading of what you wrote, because it has already deleted everything you asked for by accident.</p>\n<p>The next unit adds the clock, and with it the only construct in this language where order genuinely does matter.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>Every exercise here is synthesised by Yosys, in this page, and checked either against a cell count or against a reference module the tool proves you equal to.</p>\n<p><code>syntax-error</code> names a line. <code>multi-driver</code> names a signal that two things drive. <code>cell-budget</code> means the design is correct and larger than the budget, or smaller, which usually means the optimiser found something you did not intend to give it. <code>sat-fail</code> means the tool found an input where your module and the reference disagree, and it will tell you which input, which is the most useful error message in this handbook.</p>",
+ "headings": [
+  {
+   "id": "nothing-here-happens",
+   "text": "Nothing here happens",
+   "level": 2
+  },
+  {
+   "id": "which-means-order-cannot-matter",
+   "text": "Which means order cannot matter",
+   "level": 2
+  },
+  {
+   "id": "a-wire-is-a-node-and-a-node-has-one-driver",
+   "text": "A wire is a node, and a node has one driver",
+   "level": 2
+  },
+  {
+   "id": "the-tool-builds-and-then-it-deletes",
+   "text": "The tool builds, and then it deletes",
+   "level": 2
+  },
+  {
+   "id": "a-loop-is-a-copy-machine",
+   "text": "A loop is a copy machine",
+   "level": 2
+  },
+  {
+   "id": "hierarchy-is-copies-too",
+   "text": "Hierarchy is copies too",
+   "level": 2
+  },
+  {
+   "id": "two-audiences-one-text",
+   "text": "Two audiences, one text",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1420,
+ "needs": [
+  "encoding",
+  "control"
+ ],
+ "neededBy": [
+  "clock-edge"
+ ]
+}

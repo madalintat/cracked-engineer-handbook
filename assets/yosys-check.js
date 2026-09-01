@@ -68,6 +68,54 @@ const allCells = (out) => {
 const firstLine = (out, re) =>
   (out.split('\n').find(l => re.test(l)) || '').trim();
 
+/** Every size assertion a spec can make, applied to one cell tally.
+ *
+ * Shared by the plain path and the equivalence path so a budget means the same
+ * thing whether or not the exercise also proves correctness. Returns a verdict
+ * when something fails and null when everything holds.
+ */
+function budgetVerdict(cells, spec, out) {
+  for (const bad of spec.forbid || []) {
+    if (cells[bad]) {
+      return {
+        verdict: 'cell-budget',
+        message: `The design contains ${cells[bad]} ${bad}, which this ` +
+                 `exercise does not allow.`,
+        cells, out,
+      };
+    }
+  }
+  for (const [name, want] of Object.entries(spec.cells || {})) {
+    const got = cells[name] || 0;
+    if (got !== want) {
+      return {
+        verdict: 'cell-budget',
+        message: `Synthesised to ${got} ${name}, and this exercise wants ` +
+                 `${want}.`,
+        cells, out,
+      };
+    }
+  }
+  const total = Object.values(cells).reduce((a, b) => a + b, 0);
+  if (spec.maxCells !== undefined && total > spec.maxCells) {
+    return {
+      verdict: 'cell-budget',
+      message: `Correct, but ${total} cells against a budget of ${spec.maxCells}.`,
+      cells, out,
+    };
+  }
+  return null;
+}
+
+/** Synthesise for real and apply the spec's size assertions. Used after an
+ *  equivalence proof, where the equivalence script's netlist is the wrong
+ *  thing to count: it holds both designs and the miter between them. */
+async function sizeCheck(files, spec, top, onProgress) {
+  const r = await yosys(files, `read_verilog ${top}.v; synth -top ${top}; stat`,
+                        onProgress);
+  return budgetVerdict(allCells(r.out), spec, r.out);
+}
+
 /**
  * spec: {
  *   top:    "m",
@@ -86,23 +134,50 @@ async function check(src, spec, onProgress) {
   // Equivalence is its own script and its own verdict.
   if (spec.gold) {
     files['gold.v'] = spec.gold;
+    // `flatten` is not optional. Without it a design built from submodules
+    // keeps its instances as opaque boxes, the solver cannot see through them,
+    // and a correct ripple-carry adder is reported as not equivalent to `a+b`.
+    // `opt_clean` afterwards keeps the equivalence problem to the size the
+    // solver was going to need anyway.
     const script = spec.script ||
-      `read_verilog gold.v; read_verilog ${top}.v; prep; ` +
+      `read_verilog gold.v; read_verilog ${top}.v; prep; flatten; opt_clean; ` +
       `equiv_make gold ${top} equiv; equiv_simple; equiv_induct; ` +
       `equiv_status -assert`;
     const r = await yosys(files, script, onProgress);
     if (/^ERROR:.*syntax|syntax error/im.test(r.out)) {
       return { verdict: 'syntax-error', message: firstLine(r.out, /error/i), out: r.out };
     }
-    if (r.code === 0) {
+    // A design with two drivers on one wire is wrong whatever it proves equal
+    // to, and yosys warns about it during `prep`. This branch used to ignore
+    // that line, so an exercise about the shared-bus rule reported `ok`.
+    if (/multiple driver|conflicting drivers/i.test(r.out)) {
+      return {
+        verdict: 'multi-driver',
+        message: firstLine(r.out, /driver/i),
+        out: r.out,
+      };
+    }
+    if (r.code !== 0) {
+      const unproven = firstLine(r.out, /unproven|not equivalent|ERROR/i);
+      return {
+        verdict: 'sat-fail',
+        message: unproven || 'The design is not equivalent to the reference.',
+        out: r.out,
+      };
+    }
+    // Proved correct. If the exercise also has something to say about size,
+    // it gets said: a spec that carried both a gold and a budget used to have
+    // the budget silently dropped, which is an assertion that looks like it
+    // ran and never did.
+    if (!spec.cells && !spec.forbid && !spec.maxCells) {
       return { verdict: 'ok', message: 'Proved equivalent to the reference design.',
                out: r.out, proved: true };
     }
-    const unproven = firstLine(r.out, /unproven|not equivalent|ERROR/i);
-    return {
-      verdict: 'sat-fail',
-      message: unproven || 'The design is not equivalent to the reference.',
-      out: r.out,
+    const sized = await sizeCheck(files, spec, top, onProgress);
+    return sized || {
+      verdict: 'ok',
+      message: 'Proved equivalent to the reference design, and within budget.',
+      out: r.out, proved: true,
     };
   }
 
@@ -147,39 +222,10 @@ async function check(src, spec, onProgress) {
     };
   }
 
-  for (const bad of spec.forbid || []) {
-    if (cells[bad]) {
-      return {
-        verdict: 'cell-budget',
-        message: `The design contains ${cells[bad]} ${bad}, which this ` +
-                 `exercise does not allow.`,
-        cells, out: r.out,
-      };
-    }
-  }
-
-  const wantCells = spec.cells || {};
-  for (const [name, want] of Object.entries(wantCells)) {
-    const got = cells[name] || 0;
-    if (got !== want) {
-      return {
-        verdict: 'cell-budget',
-        message: `Synthesised to ${got} ${name}, and this exercise wants ` +
-                 `${want}.`,
-        cells, out: r.out,
-      };
-    }
-  }
+  const budget = budgetVerdict(cells, spec, r.out);
+  if (budget) return budget;
 
   const total = Object.values(cells).reduce((a, b) => a + b, 0);
-  if (spec.maxCells && total > spec.maxCells) {
-    return {
-      verdict: 'cell-budget',
-      message: `Correct, but ${total} cells against a budget of ${spec.maxCells}.`,
-      cells, out: r.out,
-    };
-  }
-
   return {
     verdict: 'ok',
     message: total

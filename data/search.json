@@ -3871,6 +3871,262 @@
  },
  {
   "t": "section",
+  "slug": "structure",
+  "anchor": "nothing-here-happens",
+  "title": "Nothing here happens",
+  "text": "Start with the smallest possible example. Read it as a program and it says: compute the and of and , store the result in . Something happens, then it is finished. That reading is wrong in every part. The line does not run once. It does not run at all. It says there is a permanent connection between and an AND gate whose inputs are and , and that connection is as true a nanosecond from now as it was a year ago. If changes, changes, because the wire is still there. The verb is not compute. The verb is is.",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "structure",
+  "anchor": "which-means-order-cannot-matter",
+  "title": "Which means order cannot matter",
+  "text": "Take three lines and shuffle them. In a program this is a use before assignment and would either fail to compile or read garbage. Here it is fine, and it is fine for a reason worth being precise about: is not a variable that gets a value at some moment. It is a node in a circuit, and the second line says what drives it. Whether that sentence is written above or below the one that reads it changes nothing, because the circuit does not have a top. You can reorder every continuous assignment in a module and synthesise identical hardware. If that feels wrong, the resemblance is still winning. The same circuit, described twice. Order in the file is not order in time, because there is no time in a continuous assignment.",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "structure",
+  "anchor": "a-wire-is-a-node-and-a-node-has-one-driver",
+  "title": "A wire is a node, and a node has one driver",
+  "text": "In Part II this was an electrical rule about buses: two outputs driving one wire is a short, which is why the tri-state buffer exists and why exactly one bit in a control word may put something on the bus. Verilog inherits the rule and enforces it earlier. Write two continuous assignments to the same wire and you have described two gate outputs soldered together. The tool will tell you so, and the message names the signal. Nothing about the second line replaces the first, because there is no first. The two statements coexist, which is precisely the problem.",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "structure",
+  "anchor": "the-tool-builds-and-then-it-deletes",
+  "title": "The tool builds, and then it deletes",
+  "text": "What a synthesiser does is worth stating plainly, because the exercises here report its output and the output surprises people. It reads the text and works out what the description means, expanding parameters and unrolling loops until what is left is a flat structure. Then it maps that structure onto cells: real parts from a real library, an AND cell, a flip-flop cell, a multiplexer cell. Then it optimises, and this is the step people are not ready for. The optimiser removes anything whose value cannot change and anything nothing reads. Write and no AND gate is built, because the answer is and a wire is cheaper than a gate. Write a signal nothing uses and it does not appear in the output at all. Compute something two different ways and the tool will notice they agree and build one of them. So a cell count is not a count of what you typed. It is the answer to a different and better question: how much hardware did you actually ask for. Every exercise in this part reports the last box. The gap between the first and the last is where most of the surprise lives.",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "structure",
+  "anchor": "a-loop-is-a-copy-machine",
+  "title": "A loop is a copy machine",
+  "text": "Here is the construct that catches everyone. There is no counter in the resulting hardware. There is no thing that goes around four times. The tool unrolls the loop while it is elaborating and emits four XOR gates side by side, all of which exist at once and all of which settle together. The bound has to be known at build time for that reason. A loop whose count depends on an input is not a loop the tool can unroll, and it cannot be built, because the amount of hardware would have to change while the chip is running and silicon does not do that. This is the first real difference between describing hardware and writing software, and it is the one that reorganises how you think about cost. In a program a loop is cheap and the body is what you pay for. Here the loop is the multiplier: four iterations is four copies of the body, in area, in power, and in every gate that has to settle before the clock edge.",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "structure",
+  "anchor": "hierarchy-is-copies-too",
+  "title": "Hierarchy is copies too",
+  "text": "The same logic applies one level up. Instantiating a module is not calling it. That is two AND gates, not one gate used twice. There is no stack, nothing returns, and nothing is reused between the instances. Each name is a separate piece of the chip with its own inputs and its own output, and the only thing they share is a description. Which is why a module you instantiate a thousand times costs a thousand times as much, and why sharing hardware between two uses is something you have to build on purpose, with a multiplexer to choose the inputs and a register to hold the result. Part V calls that pipelining and resource sharing. It is never free and it is never automatic.",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "structure",
+  "anchor": "two-audiences-one-text",
+  "title": "Two audiences, one text",
+  "text": "One more source of confusion, and it is worth knowing about before you meet it. The same Verilog is read by two tools with different jobs. A simulator executes the text as an event-driven program, one statement at a time, with a notion of time. A synthesiser ignores time and builds structure. Most of the language means the same thing to both, and a subset does not. A delay like is meaningful to the simulator and simply ignored by the synthesiser. Initial blocks and file input are simulation only. The disagreement has its own name, simulation and synthesis mismatch, and it describes a design that passes every test and then behaves differently as a chip. The way out is discipline rather than cleverness: write the subset that means one thing, and let the tool that builds the hardware be the one that decides whether your description is real. That is what the exercises here do.",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "structure",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Three sentences, and the rest of Part III sits on them. Continuous assignment is a permanent connection, so file order is not time order. Repetition, whether a loop or an instance, is copies of hardware rather than passes over one piece of it. And the tool's report of what it built is worth more than your reading of what you wrote, because it has already deleted everything you asked for by accident. The next unit adds the clock, and with it the only construct in this language where order genuinely does matter.",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "structure",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "Every exercise here is synthesised by Yosys, in this page, and checked either against a cell count or against a reference module the tool proves you equal to. names a line. names a signal that two things drive. means the design is correct and larger than the budget, or smaller, which usually means the optimiser found something you did not intend to give it. means the tool found an input where your module and the reference disagree, and it will tell you which input, which is the most useful error message in this handbook.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "structure",
+  "n": 1,
+  "title": "Two statements, one circuit",
+  "text": "A continuous assignment is a permanent connection, so the line that drives a wire may be written after the line that reads it. Build , whose output is the and of all three inputs, using two continuous assignments and one internal wire. The checker proves it against . The starter writes the two lines in the order a program would need. Leave them in that order. The bug is in one of the expressions, not in where it sits.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "structure",
+  "n": 2,
+  "title": "Two things soldered to one wire",
+  "text": "A wire is a node with one driver, and two continuous assignments to the same name describe two gate outputs soldered together. The starter drives twice, once from each of the two functions it was meant to choose between. Synthesise it and read what the tool says. Fix it by driving once, from a selection between the two, using . When is 0 the output is the and, and when is 1 it is the or.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "structure",
+  "n": 3,
+  "title": "A swap needs no temporary",
+  "text": "Nothing is destroyed by a connection, so the sequencing that a software swap needs has nothing to sequence. Build , where follows and follows . In a program this needs a third variable, because the first assignment destroys what the second one wanted to read. Here it does not, and the starter is what the programmer's habit produces.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "structure",
+  "n": 4,
+  "title": "What cannot change is not built",
+  "text": "The optimiser deletes what cannot change, so a cell count reports what you asked for rather than what you typed. Build , whose output is unchanged. Write it as combined with a constant, so that the expression contains a gate and the result does not. The budget is zero cells. Anything that survives the optimiser fails.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "structure",
+  "n": 5,
+  "title": "The carry falls out in the middle",
+  "text": "Width is decided where an expression is evaluated, not where its result eventually lands. Build , a four-bit adder whose five-bit output holds the sum including the carry. The starter computes the sum into an internal wire and then widens it. Both lines look reasonable. The result is wrong for a third of the input pairs.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "structure",
+  "n": 6,
+  "title": "A loop is four gates, not four passes",
+  "text": "A loop bound has to be known at build time because it decides how many copies of the body exist, and hardware cannot change how much of itself there is. Build , whose output is the exclusive or of all four bits of . Write it with a loop. There is no counter in the result: the tool unrolls the loop while elaborating and emits the gates side by side.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "structure",
+  "n": 7,
+  "title": "The carry chain, one stage at a time",
+  "text": "Instances are separate hardware, so what connects them is the only thing that makes a chain a chain. Build structurally: four full adder stages, each taking the carry the previous stage produced. The starter wires every stage's carry input to the module's . Each stage is correct on its own and the whole thing is wrong, which is the failure a structural description makes easy to write and easy to see.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "structure",
+  "n": 8,
+  "title": "Instantiating is copying",
+  "text": "An instance is a piece of the chip rather than a call, so using one twice is not sharing hardware, it is reading one wire twice. Build , high when at least two of the three inputs are. Use three instances of , one per pair, and combine them. The starter uses one instance and reads its output twice, which is what calling a function would do and is not what an instance is.",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "structure",
+  "n": 1,
+  "title": "What does <code>assign y = a &amp; b;</code> describe?",
+  "text": " The verb is not compute, it is is. The connection is as true a nanosecond from now as it was a year ago, and if  a  changes then  y  changes because the wire is still there. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "structure",
+  "n": 2,
+  "title": "Does the order of continuous assignments in a module matter?",
+  "text": " A signal is a node, not a variable that acquires a value at some moment. Reorder every continuous assignment in a module and the synthesised hardware is identical. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "structure",
+  "n": 3,
+  "title": "What happens when two continuous assignments drive the same wire?",
+  "text": " Nothing about the second line replaces the first, because there is no first. Both connections exist at once, which is the same short circuit the tri-state buffer exists to prevent on a shared bus. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "structure",
+  "n": 4,
+  "title": "What does a synthesiser do after mapping a design onto cells?",
+  "text": " That is the step people are not ready for. It is also why a cell count is the answer to a better question than \"what did I type\": it says how much hardware you actually asked for. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "structure",
+  "n": 5,
+  "title": "How many gates does <code>assign y = a &amp; 1'b1;</code> produce?",
+  "text": " The optimiser folds the constant away. This is also why a design can silently be smaller than intended: an unused output is deleted with exactly the same enthusiasm. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "structure",
+  "n": 6,
+  "title": "What is in the hardware after a <code>for</code> loop with four iterations is synthesised?",
+  "text": " The tool unrolls the loop while elaborating. There is no thing that goes around four times, and there is no counter anywhere in the result. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "structure",
+  "n": 7,
+  "title": "Why must a loop bound be known at build time?",
+  "text": " A loop whose count depends on an input would need the amount of hardware to change while the chip is running. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "structure",
+  "n": 8,
+  "title": "In software a loop is cheap and the body is what you pay for. What changes here?",
+  "text": " This is the first real difference between describing hardware and writing software, and it reorganises how you think about what an expression costs. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "structure",
+  "n": 9,
+  "title": "What does instantiating a module twice give you?",
+  "text": " There is no stack, nothing returns, and nothing is reused between the instances. A module you instantiate a thousand times costs a thousand times as much. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "structure",
+  "n": 10,
+  "title": "How do you make two uses share one piece of hardware?",
+  "text": " It is never free and never automatic. It also takes more than one clock cycle, which is the trade Part V spends most of its time on. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "structure",
+  "n": 11,
+  "title": "What does a delay like <code>#5</code> mean to a synthesiser?",
+  "text": " It is meaningful to the simulator, which has a notion of time, and invisible to the tool that builds structure. That gap has a name: simulation and synthesis mismatch. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "structure",
+  "n": 12,
+  "title": "What is a simulation and synthesis mismatch?",
+  "text": " The same text is read by two tools with different jobs. Most of the language means the same thing to both, and a subset does not. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "structure",
+  "n": 13,
+  "title": "Why is a five-bit sum assigned through a four-bit intermediate wrong?",
+  "text": " Width is decided where an expression is evaluated, not where its result eventually lands. Widening afterwards cannot recover a bit that was already dropped. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "structure",
+  "n": 14,
+  "title": "Why did the drawn schematic have to be replaced by text?",
+  "text": " Drawing works up to a few hundred gates, which is where Part II stopped. The description that replaces it looks like a program, and every hour lost in this part is lost to that resemblance. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "structure",
+  "n": 15,
+  "title": "Which report should you trust about what your design contains?",
+  "text": " The gap between what you wrote and what survives is where most of the surprise in this part lives. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
   "slug": "clock-edge",
   "anchor": "two-kinds-of-logic-and-only-two",
   "title": "Two kinds of logic, and only two",

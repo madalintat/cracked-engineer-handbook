@@ -1,0 +1,353 @@
+{
+ "slug": "structure",
+ "backend": "yosys",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Two statements, one circuit",
+   "brief": "<p>Build <code>and3</code>, whose output is the and of all three inputs, using two continuous assignments and one internal wire. The checker proves it against <code>a &amp; b &amp; c</code>.</p>\n<p>The starter writes the two lines in the order a program would need. Leave them in that order. The bug is in one of the expressions, not in where it sits.</p>",
+   "kind": "property",
+   "concept": "A continuous assignment is a permanent connection, so the line that drives a wire may be written after the line that reads it.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "Read what <code>t</code> is connected to, then read what <code>y</code> is connected to, and ask which input never reaches the output."
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>The solver found inputs where your module and <code>a &amp; b &amp; c</code> disagree. One of the three inputs is not wired into the result at all: follow <code>y</code> back through <code>t</code> and see which letter never appears.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names. Every continuous assignment needs <code>assign</code>, and every internal signal needs a <code>wire</code> declaration before something drives it.</p>"
+    }
+   ],
+   "after": "<p>The order of the two lines never mattered. Swap them and synthesise again: the same two gates, because a circuit has no first line.</p>",
+   "starter": "module and3(input a, input b, input c, output y);\n  wire t;\n  assign y = t & a;\n  assign t = a & b;\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "and3",
+    "gold": "module gold(input a, input b, input c, output y); assign y = a & b & c; endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 2,
+   "title": "Two things soldered to one wire",
+   "brief": "<p>The starter drives <code>y</code> twice, once from each of the two functions it was meant to choose between. Synthesise it and read what the tool says.</p>\n<p>Fix it by driving <code>y</code> once, from a selection between the two, using <code>s</code>. When <code>s</code> is 0 the output is the and, and when <code>s</code> is 1 it is the or.</p>",
+   "kind": "property",
+   "concept": "A wire is a node with one driver, and two continuous assignments to the same name describe two gate outputs soldered together.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "multi-driver"
+    }
+   ],
+   "hints": [
+    "One assignment, and the choice goes inside the expression."
+   ],
+   "diagnose": [
+    {
+     "id": "multi",
+     "judge": "verdict",
+     "key": "multi-driver",
+     "prose": "<p>The tool names the signal that two things drive. Nothing here is an override: the second assignment does not replace the first, because there is no first. Both connections exist at once, which is a short circuit in copper and an error here.</p>"
+    },
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>One driver now, and it selects the wrong way round. <code>s</code> at 0 should give the and.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names.</p>"
+    }
+   ],
+   "after": "<p>The rule is the one from the shared bus in Part II, enforced at build time instead of by smoke. A synthesiser can catch it because it can see every driver at once, which is exactly what a wire being a node rather than a variable means.</p>",
+   "starter": "module pick(input a, input b, input s, output y);\n  assign y = a & b;\n  assign y = a | b;\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "pick",
+    "gold": "module gold(input a, input b, input s, output y); assign y = s ? (a | b) : (a & b); endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 3,
+   "title": "A swap needs no temporary",
+   "brief": "<p>Build <code>swap</code>, where <code>x</code> follows <code>b</code> and <code>y</code> follows <code>a</code>.</p>\n<p>In a program this needs a third variable, because the first assignment destroys what the second one wanted to read. Here it does not, and the starter is what the programmer's habit produces.</p>",
+   "kind": "property",
+   "concept": "Nothing is destroyed by a connection, so the sequencing that a software swap needs has nothing to sequence.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "Each output is connected to an input. Say which, and write those two connections."
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>Follow the wires. The starter connects <code>x</code> to <code>a</code>, then connects <code>y</code> to <code>x</code>, which is the same node, so both outputs carry <code>a</code> and <code>b</code> never leaves the module. Reading a wire does not consume it, and writing one does not happen at a moment, so the temporary has nothing to protect.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names.</p>"
+    }
+   ],
+   "after": "<p>Two wires crossing. There is no third gate and no instant at which the old value is at risk, which is the difference between a connection and an assignment stated as compactly as it can be.</p>",
+   "starter": "module swap(input a, input b, output x, output y);\n  assign x = a;\n  assign y = x;\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "swap",
+    "gold": "module gold(input a, input b, output x, output y); assign x = b; assign y = a; endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 4,
+   "title": "What cannot change is not built",
+   "brief": "<p>Build <code>mask</code>, whose output is <code>a</code> unchanged. Write it as <code>a</code> combined with a constant, so that the expression contains a gate and the result does not.</p>\n<p>The budget is zero cells. Anything that survives the optimiser fails.</p>",
+   "kind": "property",
+   "concept": "The optimiser deletes what cannot change, so a cell count reports what you asked for rather than what you typed.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "Which constant makes an and gate do nothing? Which one makes an or gate do nothing?"
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>The output is a constant rather than <code>a</code>, so the solver finds an input where you disagree. <code>a &amp; 1'b0</code> is always 0 and <code>a | 1'b1</code> is always 1: you picked the constant that wins the expression instead of the one that yields to it.</p>"
+    },
+    {
+     "id": "cells",
+     "judge": "verdict",
+     "key": "cell-budget",
+     "prose": "<p>Correct now, and a cell survived. Something in the expression still depends on more than <code>a</code>, so there is real logic left for the optimiser to keep. The identity you want folds all the way down to a plain wire.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names. A one-bit constant is written <code>1'b0</code> or <code>1'b1</code>.</p>"
+    }
+   ],
+   "after": "<p>Zero cells for a line that clearly contains a gate. This is why the report is worth more than your reading of the source, and it is also why a design can silently be smaller than intended: the tool deletes an unused output with exactly the same enthusiasm.</p>",
+   "starter": "module mask(input a, output y);\n  assign y = a & 1'b0;\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "mask",
+    "maxCells": 0,
+    "gold": "module gold(input a, output y); assign y = a; endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 5,
+   "title": "The carry falls out in the middle",
+   "brief": "<p>Build <code>add4</code>, a four-bit adder whose five-bit output holds the sum including the carry.</p>\n<p>The starter computes the sum into an internal wire and then widens it. Both lines look reasonable. The result is wrong for a third of the input pairs.</p>",
+   "kind": "property",
+   "concept": "Width is decided where an expression is evaluated, not where its result eventually lands.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "The addition has to be five bits wide at the moment it is performed."
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>The solver names an input pair where you disagree with <code>a + b</code>, and it will be one where the sum exceeds 15. The starter adds at the width of <code>t</code>, which is four bits, so the carry is discarded before the widening to five bits ever happens. Widening afterwards cannot recover a bit that was already dropped.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names. A vector is declared as <code>wire [4:0] name;</code>.</p>"
+    }
+   ],
+   "after": "<p>Assigning straight to the five-bit output makes the addition five bits wide, because the width of a continuous assignment is decided by the widest thing in it, including the left side. The intermediate wire was not a step along the way, it was a narrower circuit.</p>",
+   "starter": "module add4(input [3:0] a, input [3:0] b, output [4:0] s);\n  wire [3:0] t;\n  assign t = a + b;\n  assign s = t;\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "add4",
+    "gold": "module gold(input [3:0] a, input [3:0] b, output [4:0] s); assign s = a + b; endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 6,
+   "title": "A loop is four gates, not four passes",
+   "brief": "<p>Build <code>parity4</code>, whose output is the exclusive or of all four bits of <code>a</code>.</p>\n<p>Write it with a <code>for</code> loop. There is no counter in the result: the tool unrolls the loop while elaborating and emits the gates side by side.</p>",
+   "kind": "property",
+   "concept": "A loop bound has to be known at build time because it decides how many copies of the body exist, and hardware cannot change how much of itself there is.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "Four bits means four terms. Count how many the starter's bounds actually produce."
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>The solver disagrees with you on an input where the bit you skipped is 1. Count the iterations: the starter's condition stops one short, so one of the four gates is never emitted and that bit of <code>a</code> reaches nothing.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names. A <code>for</code> loop that assigns needs to sit inside an <code>always @*</code> block, and the target has to be declared <code>reg</code>.</p>"
+    }
+   ],
+   "after": "<p>Four XOR gates, all of which exist at once and settle together. Change the bound to eight and you have eight gates and a longer path to settle, which is the sense in which a loop here is a multiplier rather than a cost you pay once.</p>",
+   "starter": "module parity4(input [3:0] a, output reg y);\n  integer i;\n  always @* begin\n    y = 1'b0;\n    for (i = 0; i < 3; i = i + 1)\n      y = y ^ a[i];\n  end\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "parity4",
+    "gold": "module gold(input [3:0] a, output y); assign y = ^a; endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 7,
+   "title": "The carry chain, one stage at a time",
+   "brief": "<p>Build <code>ripple4</code> structurally: four full adder stages, each taking the carry the previous stage produced.</p>\n<p>The starter wires every stage's carry input to the module's <code>cin</code>. Each stage is correct on its own and the whole thing is wrong, which is the failure a structural description makes easy to write and easy to see.</p>",
+   "kind": "property",
+   "concept": "Instances are separate hardware, so what connects them is the only thing that makes a chain a chain.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "Stage 1 needs the carry that stage 0 produced, not the one the module was given."
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>The solver names inputs where you disagree with <code>a + b + cin</code>, and the smallest one will be a pair that carries out of bit 0. Every stage in the starter is handed the same carry, so a carry generated inside the adder never travels. The chain is the wiring, not the stages.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names. An instance is <code>name inst (.port(signal), ...)</code> with a semicolon.</p>"
+    }
+   ],
+   "after": "<p>This is the adder from Part II with the same carry path and the same worst case, where bit 0 decides bit 3 and every stage between them has to settle in order. Unit 016 measures what that costs.</p>",
+   "starter": "module fa(input a, input b, input cin, output s, output cout);\n  assign s = a ^ b ^ cin;\n  assign cout = (a & b) | (cin & (a ^ b));\nendmodule\n\nmodule ripple4(input [3:0] a, input [3:0] b, input cin, output [3:0] s, output cout);\n  wire [3:0] c;\n  fa s0 (.a(a[0]), .b(b[0]), .cin(cin), .s(s[0]), .cout(c[0]));\n  fa s1 (.a(a[1]), .b(b[1]), .cin(cin), .s(s[1]), .cout(c[1]));\n  fa s2 (.a(a[2]), .b(b[2]), .cin(cin), .s(s[2]), .cout(c[2]));\n  fa s3 (.a(a[3]), .b(b[3]), .cin(cin), .s(s[3]), .cout(c[3]));\n  assign cout = c[3];\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "ripple4",
+    "gold": "module gold(input [3:0] a, input [3:0] b, input cin, output [3:0] s, output cout); assign {cout, s} = a + b + cin; endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 8,
+   "title": "Instantiating is copying",
+   "brief": "<p>Build <code>maj3</code>, high when at least two of the three inputs are.</p>\n<p>Use three instances of <code>and2</code>, one per pair, and combine them. The starter uses one instance and reads its output twice, which is what calling a function would do and is not what an instance is.</p>",
+   "kind": "property",
+   "concept": "An instance is a piece of the chip rather than a call, so using one twice is not sharing hardware, it is reading one wire twice.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "Three pairs need three gates. There is no way to make one gate produce two different answers at the same instant."
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>The starter feeds <code>a</code> and <code>b</code> into the single instance and then treats its output as though it also meant <code>b &amp; c</code>. One gate has one output and that output has one value, so two of the three terms are the same term. Three pairs need three instances.</p>"
+    },
+    {
+     "id": "cells",
+     "judge": "verdict",
+     "key": "cell-budget",
+     "prose": "<p>Correct, and larger than three and-gates plus the combining logic. Check that you have not instantiated more gates than the three pairs need.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names. Every instance needs its own name.</p>"
+    }
+   ],
+   "after": "<p>Three instances, three gates, three times the area. Sharing one gate between the pairs is possible, but it costs a multiplexer to choose its inputs and a register to keep the earlier answer, and it takes three clock cycles. That trade has a name, and Part V spends most of its time on it.</p>",
+   "starter": "module and2(input a, input b, output y);\n  assign y = a & b;\nendmodule\n\nmodule maj3(input a, input b, input c, output y);\n  wire ab;\n  and2 g0 (.a(a), .b(b), .y(ab));\n  assign y = ab | ab | (a & c);\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "maj3",
+    "gold": "module gold(input a, input b, input c, output y); assign y = (a & b) | (b & c) | (a & c); endmodule"
+   },
+   "lang": "verilog"
+  }
+ ]
+}
