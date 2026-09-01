@@ -1,0 +1,151 @@
+## Why can two threads running `counter++` lose an increment?
+
+- [x] It is three operations, and both can load before either stores
+- [ ] The compiler reorders the increment past the store
+- [ ] The cache line is shared and one write is dropped
+- [ ] Integer overflow wraps the value
+
+@why Both load 7, both compute 8, both store 8. One increment disappeared and
+nothing anywhere reported an error.
+
+## What does the `lock` prefix do on a modern processor?
+
+- [x] Takes exclusive ownership of the cache line for the duration
+- [ ] Asserts a signal that stops every other core using the memory bus
+- [ ] Disables interrupts until the instruction completes
+- [ ] Flushes the store buffer
+
+@why The name is historical. Early processors did lock the bus, which was
+correct and extremely expensive. No bus is locked now; one line is owned.
+
+## What dominates the cost of an atomic operation?
+
+- [x] Contention, meaning how many other cores want the same line
+- [ ] The atomicity itself
+- [ ] The memory fence it implies
+- [ ] The width of the operand
+
+@why Uncontended it is tens of cycles. On a line several cores are fighting over
+it is hundreds, and it gets worse as you add cores.
+
+## What does a failed compare and swap return?
+
+- [x] Failure, plus the value it actually found, so the retry can use it
+- [ ] Failure only
+- [ ] The value it would have written
+- [ ] It blocks until it can succeed
+
+@why That convention is what makes the retry loop work. Without it a loop would
+try the same stale value forever.
+
+## What does a compare-and-swap retry loop actually do?
+
+- [x] Restarts after losing a race, which means somebody else made progress
+- [ ] Spins waiting for a resource to be released
+- [ ] Backs off exponentially before trying again
+- [ ] Blocks the thread until the value changes
+
+@why That is the difference between lock free and a spin lock, and it is why the
+system advances whenever anybody wins.
+
+## What is the ABA problem?
+
+- [x] A value changed to something else and back, so the comparison succeeds and the assumption is wrong
+- [ ] Two threads swapping the same value simultaneously
+- [ ] A compare and swap that succeeds on a stale cache line
+- [ ] A retry loop that never terminates
+
+@why Compare and swap checks that a location still holds a value. It cannot
+check that the location never changed.
+
+## Why is ABA harmless for a counter and dangerous for a pointer?
+
+- [x] A node can be freed, reallocated and land at the same address, so the structure was rebuilt underneath you
+- [ ] Pointers are wider than counters
+- [ ] Counters are always accessed with relaxed ordering
+- [ ] It is equally dangerous for both
+
+@why The standard repair is a tag that increments on every change, which is why
+x86-64 has a sixteen-byte compare and swap.
+
+## Why does the processor reorder a store and a later load?
+
+- [x] The store goes into a buffer and drains later, so the load can complete first
+- [ ] To hide branch misprediction latency
+- [ ] Because loads have higher priority in the scheduler
+- [ ] It does not; only the compiler reorders
+
+@why It preserves what a single thread can observe about its own execution. It
+does not preserve what another thread sees.
+
+## Which reordering does x86-64's total store order permit?
+
+- [x] A store followed by a load of a different address
+- [ ] Any pair
+- [ ] Two stores
+- [ ] Two loads
+
+@why That one entry is the whole list, which is why a great deal of incorrectly
+synchronised code happens to work on x86.
+
+## Why do memory ordering bugs turn up when porting to ARM?
+
+- [x] ARM permits almost any reordering, so a bug that x86 hid becomes visible
+- [ ] ARM has weaker cache coherence
+- [ ] ARM atomics are not sequentially consistent by default
+- [ ] The compiler optimises differently for ARM
+
+@why The bug was always there. It is the most common way an ordering bug is
+discovered, and it was never about the new architecture.
+
+## Two threads each store to one variable then load the other. Can both loads return zero?
+
+- [x] Yes, on x86, because each store is still in its own core's buffer
+- [ ] No, that appears in no interleaving
+- [ ] Only on ARM
+- [ ] Only without atomics
+
+@why It appears in no interleaving of the source and the hardware produces it
+anyway. That is the case a fence exists to forbid.
+
+## What does relaxed ordering guarantee?
+
+- [x] Atomicity, and nothing about ordering
+- [ ] Ordering within one thread but not between threads
+- [ ] That the operation is visible before the next one starts
+- [ ] Nothing at all
+
+@why It is right for a statistics counter nobody reads until the end, and wrong
+for almost everything else.
+
+## What does a release store paired with an acquire load give you?
+
+- [x] Everything the writer did before the release is visible to a reader that sees that value
+- [ ] A single global order all threads agree on
+- [ ] Atomicity of the store
+- [ ] A guarantee that the reader will see the value promptly
+
+@why This is the ordering a mutex provides, and it is what most code actually
+needs.
+
+## What is a data race in C or C++?
+
+- [x] Undefined behaviour, which the compiler may assume does not happen
+- [ ] A stale or torn read
+- [ ] A performance problem, not a correctness one
+- [ ] Defined behaviour with an unspecified value
+
+@why A loop polling a non-atomic flag can be turned into a loop that reads it
+once, because nothing in the program is allowed to change it. The fix is not
+`volatile`, which says nothing about ordering or atomicity between threads.
+
+## What is the difference between lock free and wait free?
+
+- [x] Lock free means some thread progresses; wait free means every thread finishes in bounded steps
+- [ ] Lock free uses atomics and wait free uses fences
+- [ ] They are the same property under two names
+- [ ] Wait free permits blocking and lock free does not
+
+@why An individual thread can retry indefinitely under a lock-free algorithm,
+which is why almost everything called lock free is not wait free, and why the
+reason to choose it is usually robustness rather than throughput.

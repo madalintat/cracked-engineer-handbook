@@ -72,5 +72,7 @@
  "needs": [
   "cache"
  ],
- "neededBy": []
+ "neededBy": [
+  "atomics"
+ ]
 }

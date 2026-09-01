@@ -1,0 +1,310 @@
+{
+ "slug": "atomics",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "The increment that loses",
+   "brief": "<p>Write <code>final_count</code>, which simulates two threads each incrementing a shared counter, under an interleaving given as a schedule.</p>\n<p>Each thread performs load, add, store as three separate steps. The schedule says which thread runs each step. A thread's loaded value lives in its own register until it stores.</p>",
+   "kind": "output",
+   "concept": "An increment is three operations, and the lost update is what happens when both threads load before either stores.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Each thread needs its own held value. A store writes what that thread loaded plus one, not what memory currently holds."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The whole point is that a thread's add operates on the value it loaded, which may be stale by the time it stores. Reading memory again at the store makes every interleaving produce the right answer, which is the bug the exercise is demonstrating, inverted.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Two increments, one survivor, and nothing anywhere reported an error. On two cores running a loop this is not a rare interleaving: a counter incremented a million times by each of two threads routinely lands well short of two million.</p>",
+   "starter": "#include <stddef.h>\nint final_count(const int *sched, size_t n) {\n    int mem = 0;\n    int held[2] = {0, 0};\n    int step[2] = {0, 0};\n    for (size_t i = 0; i < n; i++) {\n        int t = sched[i];\n        if (step[t] == 0) held[t] = mem;\n        else if (step[t] == 1) held[t] = held[t] + 1;\n        else mem = mem + 1;\n        step[t]++;\n    }\n    return mem;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nint final_count(const int *, size_t);\nint main(void) {\n    /* Thread 0 runs to completion, then thread 1. Both increments survive. */\n    int serial[6] = {0,0,0, 1,1,1};\n    assert(final_count(serial, 6) == 2);\n    /* Both load before either stores. One increment is lost. */\n    int lost[6] = {0, 1, 0, 1, 0, 1};\n    assert(final_count(lost, 6) == 1);\n    /* Thread 0 finishes before thread 1 loads. */\n    int safe[6] = {0,0,0, 1,1,1};\n    assert(final_count(safe, 6) == 2);\n    /* Interleaved adds, but thread 1 loads after thread 0 stored. */\n    int ok2[6] = {0, 0, 0, 1, 1, 1};\n    assert(final_count(ok2, 6) == 2);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "Compare and swap, exactly",
+   "brief": "<p>Write <code>cas</code>, which replaces the value at <code>p</code> with <code>desired</code> only if it currently equals <code>*expected</code>. On failure it writes what it found back into <code>*expected</code> and reports 0.</p>\n<p>That last part is what makes the retry loop work: a failed attempt hands you the value somebody else left.</p>",
+   "kind": "output",
+   "concept": "A failed compare and swap is not an error, it is somebody else having succeeded, and it returns what they left so the retry starts from there.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "On failure, update the expected value before returning."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The starter reports failure and leaves <code>*expected</code> alone, so a retry loop would try the same stale value forever. The whole convention is that failure returns the current contents through the same parameter.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>One instruction and everything else is built from it. The hardware version is <code>lock cmpxchg</code>, and its cost has nothing to do with the comparison: it needs exclusive ownership of the cache line, which is cheap when nobody else wants it and expensive when several cores do.</p>",
+   "starter": "int cas(int *p, int *expected, int desired) {\n    if (*p == *expected) {\n        *p = desired;\n        return 1;\n    }\n    return 0;\n}",
+   "tests": "#include <assert.h>\nint cas(int *, int *, int);\nint main(void) {\n    int v = 5, exp = 5;\n    assert(cas(&v, &exp, 9) == 1);\n    assert(v == 9 && exp == 5);\n    /* Now the location no longer holds what we expected. */\n    exp = 5;\n    assert(cas(&v, &exp, 12) == 0);\n    assert(v == 9);\n    /* Failure hands back what is actually there, so a retry can use it. */\n    assert(exp == 9);\n    assert(cas(&v, &exp, 12) == 1);\n    assert(v == 12);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "The retry loop",
+   "brief": "<p>Write <code>atomic_max</code>, which raises the value at <code>p</code> to <code>v</code> if <code>v</code> is larger, leaving it alone otherwise, using only compare and swap.</p>\n<p>Return how many attempts it took. The schedule injects an interfering write before some attempts, which is what makes the loop necessary.</p>",
+   "kind": "output",
+   "concept": "A lock-free update is read, compute, try, and start again from what the winner left, and it makes progress whenever anybody wins.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Recompute the desired value from what the failed swap handed back, not from what you first read."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. After a failed attempt the target may already exceed <code>v</code>, in which case the loop must stop rather than lowering it. Recomputing the condition from the value the failure returned is what makes that work.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The loop is not a spin waiting for a resource. Every iteration is a retry after losing a race, and every loss means somebody else made progress. That is what lock free guarantees, and it is also why an individual thread can in principle retry forever while the system as a whole never stalls.</p>",
+   "starter": "#include <stddef.h>\n\nint cas_sim(int *p, int *expected, int desired, int *interfere) {\n    if (*interfere) { *p = *interfere; *interfere = 0; }\n    if (*p == *expected) { *p = desired; return 1; }\n    *expected = *p;\n    return 0;\n}\n\nint atomic_max(int *p, int v, int *interfere) {\n    int seen = *p;\n    int tries = 0;\n    while (1) {\n        tries++;\n        if (cas_sim(p, &seen, v, interfere)) return tries;\n    }\n}",
+   "tests": "#include <assert.h>\nint atomic_max(int *, int, int *);\nint main(void) {\n    /* No interference: one attempt. */\n    int v = 3, none = 0;\n    assert(atomic_max(&v, 10, &none) == 1);\n    assert(v == 10);\n    /* Already larger: no write, one attempt. */\n    v = 20; none = 0;\n    assert(atomic_max(&v, 10, &none) == 1);\n    assert(v == 20);\n    /* Somebody writes 7 before the first attempt: retry, then succeed. */\n    v = 3;\n    int inter = 7;\n    assert(atomic_max(&v, 10, &inter) == 2);\n    assert(v == 10);\n    /* Somebody writes 50 before the first attempt: retry, then give up. */\n    v = 3;\n    inter = 50;\n    assert(atomic_max(&v, 10, &inter) == 2);\n    assert(v == 50);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "A value that came back",
+   "brief": "<p>Compare and swap checks that a location still holds a value. It cannot check that the location never changed.</p>\n<p>Write <code>aba_safe</code>, which compares a tagged value: a pointer and a counter that increments on every modification. It succeeds only when both halves match, and a successful swap advances the tag.</p>",
+   "kind": "output",
+   "concept": "Widening the comparison with a counter turns \"still holds this value\" into \"has not been modified\", which is the question you actually wanted answered.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Both halves must match, and a successful swap must advance the tag."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees on the case where the value went from A to B and back to A. Comparing the pointer alone succeeds there, because the pointer really does hold what you expected. The tag is what records that something happened in between.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>For a counter this problem is harmless. For a pointer it is not: a node can be removed, freed, reallocated for something else and land at the same address, and your swap installs a pointer into a structure that was rebuilt underneath you. This is why x86-64 has a sixteen-byte compare and swap.</p>",
+   "starter": "int aba_safe(long *ptr, unsigned long *tag,\n             long exp_ptr, unsigned long exp_tag, long desired) {\n    (void)exp_tag;\n    if (*ptr == exp_ptr) {\n        *ptr = desired;\n        *tag = *tag + 1;\n        return 1;\n    }\n    return 0;\n}",
+   "tests": "#include <assert.h>\nint aba_safe(long *, unsigned long *, long, unsigned long, long);\nint main(void) {\n    long ptr = 100;\n    unsigned long tag = 0;\n    /* Nothing happened in between: the swap succeeds and the tag advances. */\n    assert(aba_safe(&ptr, &tag, 100, 0, 200) == 1);\n    assert(ptr == 200 && tag == 1);\n    /* The A to B to A case. Snapshot is (100, 5); somebody cycles it back. */\n    ptr = 100; tag = 5;\n    long snap_ptr = ptr;\n    unsigned long snap_tag = tag;\n    ptr = 300; tag = 6;\n    ptr = 100; tag = 7;\n    /* The pointer matches the snapshot and the tag does not. */\n    assert(aba_safe(&ptr, &tag, snap_ptr, snap_tag, 400) == 0);\n    assert(ptr == 100 && tag == 7);\n    /* Re-reading both halves lets the retry succeed. */\n    assert(aba_safe(&ptr, &tag, ptr, tag, 400) == 1);\n    assert(ptr == 400 && tag == 8);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "What total store order permits",
+   "brief": "<p>x86-64 reorders exactly one pair: a store followed by a load of a different address. Everything else keeps its program order.</p>\n<p>Write <code>tso_allows</code>, which reports whether a given pair of operations may be seen out of order under that model. Operations are 0 for a load and 1 for a store.</p>",
+   "kind": "output",
+   "concept": "A memory model is a list of which reorderings the hardware permits, and x86's list has one entry.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Only one of the four combinations is permitted."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Load then load, store then store, and load then store all keep their order under total store order. Only a store followed by a later load can be observed the other way round, because the store sits in a buffer while the load completes.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>ARM and POWER permit almost every pair. That is why code correctly synchronised for x86 by accident fails on the first ARM machine it meets, and why a port turns up race conditions that were never about the new architecture. The bug was always there.</p>",
+   "starter": "int tso_allows(int first, int second) {\n    return first != second;\n}",
+   "tests": "#include <assert.h>\nint tso_allows(int, int);\nint main(void) {\n    assert(tso_allows(0, 0) == 0);   /* load then load  */\n    assert(tso_allows(0, 1) == 0);   /* load then store */\n    assert(tso_allows(1, 1) == 0);   /* store then store */\n    assert(tso_allows(1, 0) == 1);   /* store then load  */\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Both threads read the old value",
+   "brief": "<p>The standard demonstration of store buffering. Two threads, each storing to one variable and then loading the other. Under total store order both loads can return zero.</p>\n<p>Write <code>sb_outcome</code>, which reports whether a pair of observed values is reachable when both stores may sit in buffers.</p>",
+   "kind": "output",
+   "concept": "The store buffer means a thread's own store is not yet visible to the other when its load executes, which produces an outcome no interleaving of the source explains.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "All four combinations are reachable, including the one that looks impossible."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees, and it will be the pair where both loads return zero. That outcome appears in no interleaving of the two programs, and the hardware produces it anyway, because each store is still in its own core's buffer when the other core's load runs.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is the case a fence exists to forbid. A sequentially consistent store on x86 costs a fence for exactly this reason, which is tens of cycles, and it is why the strongest ordering is not always the right choice for a hot path even though it is the default.</p>",
+   "starter": "int sb_outcome(int r1, int r2) {\n    return !(r1 == 0 && r2 == 0);\n}",
+   "tests": "#include <assert.h>\nint sb_outcome(int, int);\nint main(void) {\n    assert(sb_outcome(1, 0) == 1);\n    assert(sb_outcome(0, 1) == 1);\n    assert(sb_outcome(1, 1) == 1);\n    /* The one that looks impossible and is not. */\n    assert(sb_outcome(0, 0) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "Strong enough, and no stronger",
+   "brief": "<p>Write <code>sufficient</code>, reporting whether a given memory order is strong enough for a stated need.</p>\n<p>The levels are 0 relaxed, 1 acquire or release, 2 sequentially consistent. The needs are 0 atomicity only, 1 publishing prior writes to a reader, 2 a single global order all threads agree on.</p>",
+   "kind": "output",
+   "concept": "Each level guarantees everything the weaker ones do and costs more, so the question is always which is the weakest that suffices.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The levels are ordered. So are the needs."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Relaxed gives atomicity and nothing else, so it is sufficient only for the weakest need. Requiring an exact match rejects a stronger ordering that would have worked, which is the opposite of the mistake people usually make.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Relaxed is right for a statistics counter nobody reads until the end. Release and acquire is what a mutex provides and what most code actually needs. Sequential consistency is the default because it is the only level that behaves the way people expect, and the others are correct and require you to have thought about it.</p>",
+   "starter": "int sufficient(int order, int need) {\n    return order == need;\n}",
+   "tests": "#include <assert.h>\nint sufficient(int, int);\nint main(void) {\n    assert(sufficient(0, 0) == 1);\n    assert(sufficient(0, 1) == 0);\n    assert(sufficient(0, 2) == 0);\n    assert(sufficient(1, 0) == 1);\n    assert(sufficient(1, 1) == 1);\n    assert(sufficient(1, 2) == 0);\n    assert(sufficient(2, 0) == 1);\n    assert(sufficient(2, 1) == 1);\n    assert(sufficient(2, 2) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Striping the counter",
+   "brief": "<p>An atomic operation on a line nobody else wants is cheap. The same operation on a line several cores are fighting over costs the coherence traffic to move it.</p>\n<p>Write <code>stripe_lines</code>, returning how many cache lines a striped counter occupies, given <code>n</code> stripes each padded to avoid sharing, and how many stripes actually fit per line if they are not padded.</p>",
+   "kind": "output",
+   "concept": "The way to make an atomic counter fast is to have several on separate lines, which is the false sharing lesson arriving as a design technique rather than as a bug.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Padded, each stripe is a whole line. Unpadded, eight 8-byte counters share one."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Padded stripes occupy one line each, whatever their size, which is the entire point of padding them. Unpadded, the count is the stripes divided by how many fit in 64 bytes, rounded up.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Sixty-four bytes per counter looks extravagant until the alternative is measured. Eight unpadded counters on one line means every core's increment invalidates every other core's copy, and the structure that was supposed to remove contention concentrates it.</p>",
+   "starter": "#include <stddef.h>\nsize_t stripe_lines(size_t n, size_t counter_size, int padded) {\n    (void)padded;\n    return (n * counter_size + 63) / 64;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t stripe_lines(size_t, size_t, int);\nint main(void) {\n    /* Padded: one line each. */\n    assert(stripe_lines(8, 8, 1) == 8);\n    assert(stripe_lines(4, 8, 1) == 4);\n    assert(stripe_lines(1, 8, 1) == 1);\n    /* Unpadded: eight 8-byte counters per line. */\n    assert(stripe_lines(8, 8, 0) == 1);\n    assert(stripe_lines(9, 8, 0) == 2);\n    assert(stripe_lines(16, 8, 0) == 2);\n    assert(stripe_lines(0, 8, 1) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}
