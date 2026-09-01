@@ -80,6 +80,7 @@
   "registers"
  ],
  "neededBy": [
-  "syscalls"
+  "syscalls",
+  "cache"
  ]
 }

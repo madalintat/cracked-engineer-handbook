@@ -1,0 +1,206 @@
+---
+needs: [addressing]
+minutes: 55
+one_idea: You never load a byte, you load sixty-four of them, and almost every performance difference between two correct programs comes from how many of those sixty-four get used.
+sources: [cpu-architectures, x86-64-assembly]
+---
+
+Two programs, same instruction count, same asymptotic cost, ten times apart in
+running time. This is the unit that explains that, and the explanation is almost
+never about arithmetic.
+
+## The gap
+
+Processors got faster than memory, steadily, for about thirty years. Not by a
+little: a modern core executes several instructions per cycle at a few
+gigahertz, and a fetch from main memory still takes roughly eighty nanoseconds,
+which at that clock is a couple of hundred cycles of doing nothing.
+
+A cache is the answer, and it is a bet. Keep recently used data in something
+small and close, on the assumption that the program will want it again, or will
+want something beside it. The bet pays off because programs are not random, and
+everything in this unit is about the ways a program can accidentally make the
+bet fail.
+
+The scale is worth holding in your head. A register is available now. An L1 hit
+is about four cycles. Main memory is about two hundred. The atlas has the whole
+table; the ratio between the first and the last is what matters.
+
+## You never load one byte
+
+The first thing to internalise, because most of the rest follows from it.
+
+Memory does not move in bytes. It moves in cache lines, and on every x86-64
+machine you will meet a line is 64 bytes. Read a single `char` from a cold
+address and the hardware fetches all 64 bytes containing it, evicting something
+else to make room.
+
+So a load has two very different costs depending on nothing you wrote. If the
+line is already in cache, it is a few cycles. If it is not, it is a couple of
+hundred, and 63 other bytes came along for the ride.
+
+Whether those 63 bytes are useful is the whole game.
+
+```figure
+{
+  "kind": "bits",
+  "alt": "A 64-byte cache line divided into eight 8-byte slots, with the requested value in one slot and the other seven fetched alongside it.",
+  "caption": "One request, sixty-four bytes. The question every layout decision answers is how many of the other seven slots you were going to want anyway.",
+  "bits": 64,
+  "groups": [
+    { "from": 0,  "to": 7,  "label": "asked for", "accent": "gold" },
+    { "from": 8,  "to": 63, "label": "arrived anyway", "accent": "slate" }
+  ]
+}
+```
+
+## Two kinds of locality
+
+Temporal locality is using the same address again soon. A loop counter, a hot
+lookup table, the top of the stack. Caches handle this by keeping what was
+recently used.
+
+Spatial locality is using an address near one you just used. Walking an array
+forwards. Caches handle this by fetching a whole line and, on top of that, by
+guessing.
+
+The guessing is the prefetcher, and it is better than people expect. Hardware
+watches the addresses a program touches, detects a constant stride, and starts
+fetching ahead. A loop walking an array in order rarely waits for memory at all,
+because the line it needs arrived before it asked.
+
+The corollary is the useful part. A linked list has no stride to detect. Each
+node's address is known only after the previous node has arrived, so the
+prefetcher cannot run ahead and every step pays the full latency. That is why an
+array of values beats a list of pointers by margins that look implausible on
+paper, and it is a fact about the prefetcher rather than about pointer
+arithmetic.
+
+## Why the stride 4096 is cursed
+
+Caches are not fully associative, because a fully associative cache would have to
+compare every tag on every access.
+
+Instead the address decides where a line may live. Some middle bits of the
+address select a set, and the line may go in any of the ways within that set, of
+which there are typically eight or twelve. Two addresses whose set bits match
+compete for the same small number of slots regardless of how much cache is
+otherwise free.
+
+Which produces a specific and famous failure. Walk a two-dimensional array down a
+column whose row length is a power of two and every access lands in the same set.
+An eight-way cache holds eight of them, the ninth evicts the first, and a loop
+that touches a few hundred kilobytes behaves as though the cache were 512 bytes.
+
+The repair is to make the stride not a power of two, which is why numerical
+libraries pad their row lengths by a few elements. An array declared 1024 wide
+and allocated 1032 wide is not a mistake.
+
+## The three kinds of miss
+
+A useful classification, because each has a different fix.
+
+Compulsory misses are the first touch of a line. Nothing avoids them, though
+prefetching can hide them.
+
+Capacity misses happen because the working set is larger than the cache. The fix
+is to make the working set smaller, which usually means processing data in blocks
+that fit rather than in one pass over everything.
+
+Conflict misses happen because of the set mapping above, when the working set
+would have fitted but the addresses collided. The fix is to change the addresses,
+by padding or by offsetting.
+
+Telling capacity from conflict is the difference between rewriting your algorithm
+and adding eight bytes to a struct.
+
+## Layout is the lever
+
+This is where the unit becomes practical.
+
+A structure of eight fields where a loop reads one of them wastes seven eighths
+of every line it fetches. The same data held as one array per field lets the loop
+read only the array it needs, and every byte of every line is used. That is the
+difference between an array of structures and a structure of arrays, and on a
+loop that touches one field it is routinely a factor of several.
+
+It is not free. Code that touches every field of one element wants the fields
+together, and the same transformation makes that case worse. There is no correct
+answer, only a question: which access pattern is the hot one.
+
+The same reasoning decides the order of nested loops. A row-major array walked by
+rows uses every byte of every line; walked by columns it uses eight bytes of each
+64 and fetches eight times as many lines for the same work. The loops compute
+identical results and differ in how many lines they ask for, which is a number
+you can count without running anything.
+
+## The one that bites in threads
+
+A preview of unit 026, because the mechanism is this unit's.
+
+Two threads writing to two different variables that happen to share a cache line
+will fight over it. The hardware maintains coherence per line, not per byte, so
+each write invalidates the other core's copy of the whole line and it ping-pongs
+between them. Neither thread shares any data with the other, and both run as
+though they did.
+
+That is false sharing, and the fix is padding: put the two variables on separate
+lines and the contention disappears. It is the clearest case of a cache line
+being the unit that matters rather than the variable.
+
+## Blocking, which is the general answer
+
+One technique deserves its own name, because it applies far beyond the matrix
+multiply it is usually taught with.
+
+If a computation touches more data than fits in cache, do it in pieces that do
+fit. Load a block, do every operation that block participates in, move on. The
+total arithmetic is unchanged and the number of times each byte is fetched from
+memory drops from once per use to once per block.
+
+For a matrix multiply the naive loop reads a row and a column for every output
+element, and at any interesting size neither survives in cache between uses. The
+blocked version works on tiles small enough to sit in L1, and the difference is
+not a few percent.
+
+The same shape appears in a database joining two tables, in a sort that partitions
+before it merges, and in the GPU units later in this handbook, where the block
+that has to fit is shared memory rather than L1 and the arithmetic is the same
+matrix multiply. Part XVI spends most of its time on this one idea with the
+constants changed.
+
+## How to find out
+
+Reasoning about this is unreliable and measuring it is not hard.
+
+Hardware counters report cache misses per level, and every profiler can read
+them. A loop with a high miss rate at L1 and a low one at L3 is thrashing a small
+cache. High misses everywhere means the working set is genuinely large. Low
+misses and poor performance means the problem is somewhere else entirely, and
+looking further at memory is a waste of an afternoon.
+
+The exercises here count rather than time. A cache line count is exact,
+reproducible, and computable from the access pattern, where a wall clock on a
+shared machine is none of those.
+
+## What to carry forward
+
+The unit of transfer is 64 bytes. Every layout question is really the question of
+how many of those 64 bytes you were going to use.
+
+Sequential access is fast because the prefetcher can see it coming. Pointer
+chasing is slow for the same reason in reverse. Power-of-two strides collide.
+And the fix for a conflict miss is different from the fix for a capacity miss,
+which is why it is worth knowing which one you have.
+
+Unit 025 moves from where the data is to what the processor does while waiting
+for it.
+
+## Reading the errors you are about to see
+
+These count lines and offsets rather than measuring time. `assert-failed` names
+the case your count got wrong, and the counts were produced by running the
+reference implementation rather than derived by hand.
+
+The line size is 64 bytes throughout, which is the value on every x86-64 machine
+you will meet.

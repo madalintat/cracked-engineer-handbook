@@ -1,0 +1,310 @@
+{
+ "slug": "cache",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Count the lines, not the bytes",
+   "brief": "<p>Write <code>lines_touched</code>, which reports how many distinct 64-byte cache lines a range of bytes covers, starting at <code>addr</code> and running for <code>len</code> bytes.</p>\n<p>A range does not have to start on a line boundary, and that is most of the exercise.</p>",
+   "kind": "output",
+   "concept": "The unit of transfer is a line rather than a byte, so the cost of a range depends on where it starts as well as how long it is.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Find the line containing the first byte and the line containing the last, and count from one to the other."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Dividing the length by 64 ignores where the range starts: eight bytes beginning at offset 60 span two lines, not one. Round the start down to a boundary and the end up, then take the difference.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>One byte can cost two lines and 64 bytes can cost one, entirely depending on alignment. This is why allocators return aligned memory and why a structure that straddles a boundary is more expensive than the same structure that does not.</p>",
+   "starter": "#include <stddef.h>\nsize_t lines_touched(size_t addr, size_t len) {\n    (void)addr;\n    return (len + 63) / 64;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t lines_touched(size_t, size_t);\nint main(void) {\n    assert(lines_touched(0, 0) == 0);\n    assert(lines_touched(0, 1) == 1);\n    assert(lines_touched(0, 64) == 1);\n    assert(lines_touched(0, 65) == 2);\n    /* Eight bytes starting near the end of a line span two. */\n    assert(lines_touched(60, 8) == 2);\n    assert(lines_touched(63, 1) == 1);\n    assert(lines_touched(63, 2) == 2);\n    assert(lines_touched(128, 64) == 1);\n    assert(lines_touched(129, 64) == 2);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "Rows against columns",
+   "brief": "<p>Two loops compute the same sum over the same array. Write <code>lines_by_column</code>, which counts how many line fetches a column-major walk of a row-major array performs.</p>\n<p>The array is <code>rows</code> by <code>cols</code> of eight-byte values, laid out row by row, and it is walked one column at a time. Assume nothing stays in cache between columns.</p>",
+   "kind": "output",
+   "concept": "Both loops do identical arithmetic and ask for a different number of lines, and that number is computable without running anything.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Each element in a column is a whole row apart, so consecutive accesses share a line only when a row is shorter than eight elements."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Walking down a column, consecutive elements are <code>cols</code> times 8 bytes apart. When that stride is 64 or more, every access is its own line, so the count is <code>rows</code> times <code>cols</code>. The starter counts the row-major answer, which is the total bytes divided by 64.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>For an array of 8-byte values with 8 or more columns, the column walk fetches eight times as many lines as the row walk for identical arithmetic. That factor is the entire content of \"traverse in the order the memory is laid out\", and it is why the loop order in a matrix routine is not a style question.</p>",
+   "starter": "#include <stddef.h>\nsize_t lines_by_column(size_t rows, size_t cols) {\n    return (rows * cols * 8 + 63) / 64;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t lines_by_column(size_t, size_t);\nint main(void) {\n    /* 8 columns of 8 bytes is a 64-byte stride: every access its own line. */\n    assert(lines_by_column(4, 8) == 32);\n    assert(lines_by_column(100, 8) == 800);\n    /* A wider row is a bigger stride, and still one line per access. */\n    assert(lines_by_column(4, 16) == 64);\n    /* Four columns is a 32-byte stride, so two consecutive rows share a line. */\n    assert(lines_by_column(4, 4) == 8);\n    /* Two columns is a 16-byte stride: four rows per line. */\n    assert(lines_by_column(8, 2) == 4);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Which set does it land in",
+   "brief": "<p>A cache is not fully associative. Some middle bits of the address choose a set, and only the ways within that set are available.</p>\n<p>Write <code>set_index</code>, returning the set an address maps to, for a cache with the given number of sets and 64-byte lines.</p>",
+   "kind": "output",
+   "concept": "The address decides where a line may live, so two addresses can compete for the same slots while the rest of the cache sits empty.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Drop the bits that select a byte within the line, then take the low bits of what is left."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The low six bits of an address choose a byte inside the line and play no part in choosing the set, so they have to be shifted away first. The starter uses the address directly, which makes two addresses in the same line appear to be in different sets.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Every address in one line maps to one set, which is the point: the set is a property of the line rather than of the byte. The next exercise is what happens when a program produces addresses whose set bits keep agreeing.</p>",
+   "starter": "#include <stddef.h>\nsize_t set_index(size_t addr, size_t nsets) {\n    return addr % nsets;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t set_index(size_t, size_t);\nint main(void) {\n    /* 64 sets. Every byte of line 0 maps to set 0. */\n    assert(set_index(0, 64) == 0);\n    assert(set_index(63, 64) == 0);\n    assert(set_index(64, 64) == 1);\n    assert(set_index(127, 64) == 1);\n    assert(set_index(128, 64) == 2);\n    /* 64 sets covers 4096 bytes, so the pattern repeats there. */\n    assert(set_index(4096, 64) == 0);\n    assert(set_index(4160, 64) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "The stride that collides",
+   "brief": "<p>Write <code>distinct_sets</code>, counting how many distinct sets are touched by <code>n</code> accesses starting at address 0 and separated by <code>stride</code> bytes.</p>\n<p>A stride that is a multiple of the number of bytes the sets span makes every access land in the same set, whatever the size of the cache.</p>",
+   "kind": "output",
+   "concept": "A conflict miss happens when the working set would have fitted and the addresses collided, which is a different problem from the cache being too small.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Compute each access's set and count how many different ones appear."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. With 64 sets and 64-byte lines the mapping repeats every 4096 bytes, so a stride of 4096 puts every access in set 0 no matter how many there are. The starter assumes every access is a new set, which is true only when the stride does not divide evenly into that period.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is why numerical libraries pad their row lengths. An array declared 1024 wide and allocated 1032 wide is not a mistake: the extra eight elements move the column stride off the period and turn a loop that behaved as though the cache were 512 bytes back into one that uses all of it.</p>",
+   "starter": "#include <stddef.h>\nsize_t distinct_sets(size_t n, size_t stride, size_t nsets) {\n    (void)stride; (void)nsets;\n    return n;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t distinct_sets(size_t, size_t, size_t);\nint main(void) {\n    /* 64 sets, 64-byte lines: the mapping repeats every 4096 bytes. */\n    assert(distinct_sets(10, 4096, 64) == 1);\n    assert(distinct_sets(100, 4096, 64) == 1);\n    /* A stride of 64 walks the sets one at a time. */\n    assert(distinct_sets(10, 64, 64) == 10);\n    assert(distinct_sets(100, 64, 64) == 64);\n    /* A stride of 2048 alternates between two sets. */\n    assert(distinct_sets(10, 2048, 64) == 2);\n    /* Within one line, every access is the same set. */\n    assert(distinct_sets(8, 8, 64) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Seven eighths wasted",
+   "brief": "<p>A loop that reads one field of every element in an array of structures fetches whole lines and uses a fraction of each.</p>\n<p>Write <code>soa_saving</code>, returning how many times fewer lines a structure-of-arrays layout fetches, for <code>n</code> elements of a structure <code>elem_size</code> bytes wide when the loop reads one 8-byte field.</p>",
+   "kind": "output",
+   "concept": "The lever is what fraction of each fetched line the loop actually consumes, and splitting the fields is how that fraction becomes one.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Count lines for each layout and divide. The field-only array is <code>n</code> times 8 bytes, contiguous."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees, and it will be one of the short arrays. The ratio is the structure width over 8 only while both layouts are large enough to fill whole lines. With few enough elements the split array is a single line however narrow it is, so the saving is bounded by how many lines the struct array occupied rather than by the width.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The saving is real and it is not free. Code that touches every field of one element wants the fields together, and this transformation makes that case worse by the same factor. There is no correct layout, only a question about which access pattern is the hot one.</p>",
+   "starter": "#include <stddef.h>\nsize_t soa_saving(size_t n, size_t elem_size) {\n    (void)n;\n    return elem_size / 8;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t soa_saving(size_t, size_t);\nint main(void) {\n    /* 64-byte structs: one line each. Split: 8 fields per line. */\n    assert(soa_saving(64, 64) == 8);\n    assert(soa_saving(64, 32) == 4);\n    assert(soa_saving(64, 16) == 2);\n    /* 8-byte structs are already the split layout. */\n    assert(soa_saving(64, 8) == 1);\n    assert(soa_saving(64, 128) == 16);\n    /* Few enough elements that the split array is a single line, so the\n       ratio is the struct count rather than the struct width over 8. */\n    assert(soa_saving(4, 32) == 2);\n    assert(soa_saving(4, 128) == 8);\n    assert(soa_saving(8, 8) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Padding, and why it is not waste",
+   "brief": "<p>Two counters written by two threads. If they share a cache line, every write by one invalidates the other's copy of the whole line, and two threads that share no data behave as though they did.</p>\n<p>Write <code>pad_to_line</code>, returning the size a structure must be padded to so that consecutive instances never share a line.</p>",
+   "kind": "output",
+   "concept": "Coherence is maintained per line rather than per variable, so two independent variables on one line are one contended variable as far as the hardware is concerned.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Round up to the next multiple of the line size, and remember that a structure already a multiple needs no padding."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A structure of exactly 64 bytes already occupies whole lines and needs no padding, so rounding up must leave it alone. Adding a line unconditionally wastes 64 bytes per element on exactly the case that was already correct.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Sixty-four bytes per counter looks extravagant until you measure the alternative. False sharing has produced slowdowns of several times on code where no variable is shared at all, and the fix is arithmetic on a struct definition.</p>",
+   "starter": "#include <stddef.h>\nsize_t pad_to_line(size_t size) {\n    return size + 64;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t pad_to_line(size_t);\nint main(void) {\n    assert(pad_to_line(8) == 64);\n    assert(pad_to_line(1) == 64);\n    assert(pad_to_line(63) == 64);\n    assert(pad_to_line(64) == 64);\n    assert(pad_to_line(65) == 128);\n    assert(pad_to_line(128) == 128);\n    assert(pad_to_line(0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "Blocking a matrix multiply",
+   "brief": "<p>The naive triple loop reads a row and a column for every output element, and at any interesting size neither survives in cache between uses.</p>\n<p>Write <code>blocked_loads</code>, counting how many times a blocked multiply reads each input matrix from memory, for <code>n</code> by <code>n</code> matrices in blocks of <code>b</code>.</p>",
+   "kind": "output",
+   "concept": "Blocking does not change the arithmetic, it changes how many times each byte is fetched, from once per use to once per block.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "There are <code>n/b</code> blocks along each dimension, and each block of an input participates in one full row or column of block multiplications."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The blocked algorithm has three nested loops over blocks, so each input block is read once per iteration of the loop it is not indexed by, which is <code>n/b</code> times. Larger blocks mean fewer passes.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Doubling the block size halves the traffic, until the block stops fitting in cache and the whole benefit disappears at once. That is why the tile size in a tuned library is a measured constant rather than a derived one, and Part XVI does this again on a GPU where the block that has to fit is shared memory.</p>",
+   "starter": "#include <stddef.h>\nsize_t blocked_loads(size_t n, size_t b) {\n    (void)b;\n    return n;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t blocked_loads(size_t, size_t);\nint main(void) {\n    /* One block covering everything: each input read once. */\n    assert(blocked_loads(64, 64) == 1);\n    /* Two blocks per dimension: each input read twice. */\n    assert(blocked_loads(64, 32) == 2);\n    assert(blocked_loads(64, 16) == 4);\n    assert(blocked_loads(64, 8) == 8);\n    /* Blocks of one element is the naive algorithm. */\n    assert(blocked_loads(64, 1) == 64);\n    assert(blocked_loads(1024, 64) == 16);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "The chase the prefetcher cannot see",
+   "brief": "<p>A hardware prefetcher watches addresses, detects a constant stride, and fetches ahead. Write <code>prefetchable</code>, reporting whether a sequence of addresses has a constant stride the hardware could detect.</p>\n<p>A sequence of fewer than three addresses gives it nothing to detect.</p>",
+   "kind": "output",
+   "concept": "The prefetcher hides latency only where it can predict, so a pattern with no stride pays the full cost at every step.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Compare each gap with the first gap. A backwards stride is still a stride."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Every gap has to equal the first, including negative ones, since a descending walk is as predictable as an ascending one. The starter requires the addresses to increase, which rejects a perfectly detectable pattern.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A linked list produces no stride at all, because each node's address is known only after the previous node has arrived. That is why an array of values beats a list of pointers by margins that look implausible from the instruction counts, and it is a fact about the prefetcher rather than about pointer arithmetic.</p>",
+   "starter": "#include <stddef.h>\nint prefetchable(const long *addrs, size_t n) {\n    if (n < 3) return 0;\n    for (size_t i = 1; i < n; i++)\n        if (addrs[i] <= addrs[i - 1]) return 0;\n    return 1;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nint prefetchable(const long *, size_t);\nint main(void) {\n    long up[] = {0, 64, 128, 192};\n    assert(prefetchable(up, 4) == 1);\n    long down[] = {192, 128, 64, 0};\n    assert(prefetchable(down, 4) == 1);\n    long jumpy[] = {0, 64, 200, 264};\n    assert(prefetchable(jumpy, 4) == 0);\n    long two[] = {0, 64};\n    assert(prefetchable(two, 2) == 0);\n    long same[] = {8, 8, 8};\n    assert(prefetchable(same, 3) == 1);\n    long chase[] = {4096, 17, 900, 33};\n    assert(prefetchable(chase, 4) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

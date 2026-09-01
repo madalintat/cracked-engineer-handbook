@@ -830,7 +830,8 @@
     "registers"
    ],
    "neededBy": [
-    "syscalls"
+    "syscalls",
+    "cache"
    ],
    "minutes": 50
   },
@@ -889,12 +890,15 @@
    "phase": "understand",
    "accent": "copper",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1577,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "addressing"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "pipeline",
@@ -2669,9 +2673,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 26,
-  "words": 39561,
-  "exercises": 208,
-  "drills": 390
+  "ready": 27,
+  "words": 41138,
+  "exercises": 216,
+  "drills": 405
  }
 }
