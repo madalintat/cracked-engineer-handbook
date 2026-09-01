@@ -8263,6 +8263,254 @@
  },
  {
   "t": "section",
+  "slug": "stability",
+  "anchor": "two-different-quantities",
+  "title": "Two different quantities",
+  "text": "Two things decide how wrong an answer is, and they are independent. Conditioning is a property of the problem. It says how much the answer moves when the input moves. Subtracting two numbers that agree to fifteen digits is catastrophically ill-conditioned: perturb an input in its last bit and the answer changes by a large fraction of itself. No algorithm helps, because the difficulty is in the question. Stability is a property of the algorithm. It says how much error the method adds on top of what the problem already had. A stable algorithm gives you an answer that is exact for a slightly perturbed input, which is the best anyone can promise. Putting them together: a stable algorithm on a well-conditioned problem gives a good answer, a stable algorithm on an ill-conditioned problem gives a bad answer and it is not the algorithm's fault, and an unstable algorithm can ruin a perfectly well-conditioned problem all by itself. Knowing which of the two you have is the difference between rewriting your code and rewriting your model.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "section",
+  "slug": "stability",
+  "anchor": "how-error-grows-in-a-sum",
+  "title": "How error grows in a sum",
+  "text": "Adding numbers is the simplest interesting case, and the three ways of doing it have three different error behaviours. Summing left to right, each partial sum rounds, and the error can grow proportionally to . Summing pairwise, the depth of the tree is the logarithm of , and the error grows with that instead. Compensated summation tracks the part that got rounded away and adds it back, and its error does not grow with at all. Here is what that looks like measured. Adding 65536 copies of , where the true total of the stored value is 6553.6000976562: Left to right gives 6557.6464843750, which is off by 4.05, a relative error of about six parts in ten thousand. Pairwise gives the exact answer. Compensated summation gives the exact answer. Six parts in ten thousand does not sound like much until it is a physics simulation running for a million steps, or a loss value used to decide whether training has converged. Measured, summing repeated tenths in 32-bit floats. Pairwise and compensated summation were exact at every one of these sizes, so only the sequential curve has anything to plot.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "section",
+  "slug": "stability",
+  "anchor": "kahan-and-what-it-does-not-do",
+  "title": "Kahan, and what it does not do",
+  "text": "Compensated summation, usually called Kahan summation after its author, is four lines. Keep a running compensation term holding what the last addition lost, subtract it from the next input before adding, and recompute it afterwards. It is remarkable and it has three limits worth knowing. It costs about four times the arithmetic, so it is not free on a hot loop. A compiler with permission to reassociate will delete it. The compensation computes , which is algebraically zero, and is exactly the permission to simplify it away. Code that needs it must be compiled without that flag or must hide the computation from the optimiser. And it does nothing at all about conditioning. Summing 1e8, 1, -1e8 and 1 in a 32-bit float, the true answer is 2. Naive summation gives 1. Kahan summation also gives 1. The information was destroyed when 1e8 and 1 were added, because there is no float between 1e8 and 1e8 plus 1, and no amount of compensation recovers a value that was never representable. That is the whole of \"Kahan is not a panacea\". It fixes accumulated rounding. It does not fix cancellation.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "section",
+  "slug": "stability",
+  "anchor": "why-the-same-code-gives-two-answers",
+  "title": "Why the same code gives two answers",
+  "text": "Run a parallel reduction twice and you can get two different results, from the same input, on the same machine, with no bug anywhere. The reason is the previous unit's: floating point addition is not associative, so the answer depends on the grouping. A parallel reduction's grouping depends on how many threads ran, how the work was split, and in what order partial results arrived. Change the thread count and the tree changes. Run it again and the arrival order changes. This is the single most common surprise for people arriving at GPU programming, and the answer is usually one of three things. Accept it, and compare results with a tolerance rather than for equality. Fix the tree, by reducing in a fixed order regardless of scheduling, which costs some performance. Or accumulate in a wider type, which shrinks the disagreement until it stops mattering at the precision anyone looks at. The third one is what almost everybody actually does, and it is the bridge to the rest of this handbook.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "section",
+  "slug": "stability",
+  "anchor": "the-bridge-to-low-precision",
+  "title": "The bridge to low precision",
+  "text": "Here is the idea that makes eight-bit arithmetic reasonable. In a matrix multiply, each output is a sum of many products. The products themselves do not need much precision: they are inputs times weights, both of which are known to a few significant digits at best. The accumulation does, because it adds many values and the running total spans a wide range. So you multiply in a narrow format and accumulate in a wide one. That is exactly what every tensor core does: fp16 or bf16 or fp8 inputs, fp32 accumulator. The narrow format halves or quarters the memory traffic and the wide accumulator keeps the sum honest. The choice between narrow formats is the conditioning question again. bf16 keeps fp32's exponent range and throws away mantissa bits; fp16 keeps more mantissa and much less range. Training gradients span an enormous range and need bf16 or a scaling trick; inference activations do not and are fine in fp16 or fp8. Loss scaling is that scaling trick. Multiply the loss by a large constant before computing gradients, so small gradients land inside fp16's representable range instead of underflowing to zero, then divide the gradients back down before applying them. It is one multipl",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "section",
+  "slug": "stability",
+  "anchor": "rounding-that-is-not-biased",
+  "title": "Rounding that is not biased",
+  "text": "One more technique, because the GPU part returns to it. Round to nearest, applied to a repeated accumulation in a narrow format, has a failure mode: if every increment is smaller than half a step, every one of them rounds to zero, and the accumulator never moves however many you add. Stochastic rounding rounds up or down with a probability proportional to how close the value is to each neighbour. Any individual result is worse, and the expected value is exactly right, so a long accumulation drifts toward the correct answer instead of standing still. It is the reason low-precision training works at widths where deterministic rounding stalls, and it costs a random number per operation, which is why it appears in hardware rather than in software.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "section",
+  "slug": "stability",
+  "anchor": "measuring-it-instead-of-trusting-it",
+  "title": "Measuring it instead of trusting it",
+  "text": "The techniques above are worth nothing if you cannot tell whether you need them, and the check is cheaper than the reasoning. Run the computation twice at two precisions. If the answers agree to most of the narrower one's digits, the problem is well conditioned and your method is stable enough. If they diverge, one of the two is at fault and the next question is which. Perturbing the input distinguishes them. Change an input in its last bit and rerun at the same precision. A large change in the answer means the problem is ill-conditioned and no amount of care in the code will help. A small change means the problem is fine and the method is adding the error, which is something you can fix. Both checks take minutes and neither requires an error analysis. The literature on this subject is large and precise and mostly unnecessary for deciding whether a particular loop is good enough, which is the question people actually have. Conditioning belongs to the problem, stability belongs to the algorithm, and fixing one does nothing for the other. Summation error grows with sequentially, with the logarithm of pairwise, and not at all with compensation, and compensation costs four times the wo",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "section",
+  "slug": "stability",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These implement the methods and compare them, and every expected value was produced by running the code. names the case your method got wrong. Two of the exercises assert that a technique fails, which is the point of them: a compensated sum that matched the true answer on a cancellation case would mean the exercise was measuring something other than what it claims.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "stability",
+  "n": 1,
+  "title": "Compensated summation",
+  "text": "Keeping the part that was rounded away turns an error that grows with the term count into one that does not grow at all. Write , which tracks what each addition rounded away and adds it back on the next iteration. The checks sum 65536 copies of . Left to right this drifts by four.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "stability",
+  "n": 2,
+  "title": "What compensation cannot fix",
+  "text": "Compensation fixes accumulated rounding and does nothing about conditioning, because it cannot recover information that was never representable. Write , returning the naive and compensated sums of the same values. The checks use a sequence where two large values cancel. Both methods return the same wrong answer, and that is the result the exercise is asserting.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "stability",
+  "n": 3,
+  "title": "Multiply narrow, accumulate wide",
+  "text": "The products in a dot product do not need much precision and the running total does, which is why an eight-bit multiply with a thirty-two-bit accumulator is a sensible thing to build. Write , which rounds each product to a narrow precision and accumulates in full precision. Narrowing is simulated by keeping only the top of the significand. This is what every tensor core does: low-precision inputs, wide accumulator.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "stability",
+  "n": 4,
+  "title": "The accumulator that stops moving",
+  "text": "An increment below half the accumulator's step rounds to nothing, so a long accumulation in a narrow format can stall entirely. Round to nearest has a failure mode in a repeated accumulation: if every increment is smaller than half a step of the accumulator, all of them round away and the total never changes. Write , returning how many additions of a float accumulator absorbs before it stops moving, starting from .",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "stability",
+  "n": 5,
+  "title": "Different tree, different answer",
+  "text": "The result of a parallel reduction depends on the thread count, because the thread count decides the grouping and addition is not associative. A parallel reduction's grouping depends on how many threads ran. Write , which splits the values into chunks, sums each sequentially, then sums the chunk totals. The checks use the same input at three chunk counts and get three answers.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "stability",
+  "n": 6,
+  "title": "Scaling the gradients",
+  "text": "Multiplying by a constant moves a whole distribution into the representable range, and dividing afterwards removes it again exactly, because a power of two is exact in binary. fp16 runs out of range below about 6e-8. A gradient smaller than that underflows to zero and the update is lost. Write , returning the largest power of two by which a value can be multiplied without exceeding a maximum. That is what a training loop searches for each step.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "stability",
+  "n": 7,
+  "title": "Conditioning, measured",
+  "text": "Perturbing an input and rerunning separates a problem that amplifies error from a method that adds it, and it takes minutes rather than a proof. Write , returning how much the result of subtracting two values moves, relative to itself, when one input is perturbed in its last bit. This is the conditioning check, and it distinguishes a bad problem from a bad algorithm without any error analysis.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "stability",
+  "n": 8,
+  "title": "The compiler that deletes your compensation",
+  "text": "An expression that is zero in exact arithmetic and not in floating point is exactly what a reassociating optimiser is permitted to delete. The compensation term computes a quantity that is algebraically zero, which means an optimiser permitted to reassociate will remove it. Write , returning what one Kahan step recovers, and confirm it is not zero.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "stability",
+  "n": 1,
+  "title": "What is conditioning a property of?",
+  "text": " Subtracting two numbers that agree to fifteen digits is catastrophically ill-conditioned, and no algorithm helps, because the difficulty is in the question. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "stability",
+  "n": 2,
+  "title": "What does a stable algorithm promise?",
+  "text": " It is the best anyone can promise. A stable algorithm on an ill-conditioned problem still gives a bad answer, and that is not the algorithm's fault. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "stability",
+  "n": 3,
+  "title": "How does summation error grow, left to right?",
+  "text": " Pairwise grows with the logarithm and compensated does not grow at all. Measured, 65536 tenths in a 32-bit float drift by four. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "stability",
+  "n": 4,
+  "title": "Summing 65536 copies of <code>0.1f</code> left to right gave what?",
+  "text": " Six parts in ten thousand, from nothing but repeated rounding. That does not sound like much until it is a simulation running for a million steps. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "stability",
+  "n": 5,
+  "title": "What does Kahan summation track?",
+  "text": " Four lines. The compensation is  (t - s) - y : what the sum actually gained minus what it should have gained. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "stability",
+  "n": 6,
+  "title": "What are Kahan summation's three limits?",
+  "text": " The compensation is algebraically zero, which is exactly what  -ffast-math  is permission to simplify away. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "stability",
+  "n": 7,
+  "title": "Kahan summing 1e8, 1, -1e8, 1 in a 32-bit float gives what?",
+  "text": " The loss happened when 1e8 and 1 were added, since there is no float between them. No bookkeeping recovers a value the format could not hold. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "stability",
+  "n": 8,
+  "title": "Why do two runs of the same parallel reduction disagree?",
+  "text": " It is the most common surprise for people arriving at GPU programming, and there is no bug anywhere. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "stability",
+  "n": 9,
+  "title": "What do most people actually do about reduction nondeterminism?",
+  "text": " The alternatives are to accept it and compare with a tolerance, or to fix the tree at some cost in performance. Widening is the one that requires nothing of the caller. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "stability",
+  "n": 10,
+  "title": "Why can a matrix multiply use eight-bit inputs?",
+  "text": " Every tensor core is built on that asymmetry: narrow inputs, fp32 accumulator. The narrow format cuts the memory traffic and the wide accumulator keeps the sum honest. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "stability",
+  "n": 11,
+  "title": "When would you choose bf16 over fp16?",
+  "text": " Training gradients span an enormous range and need bf16 or a scaling trick. Inference activations do not and are fine in fp16 or fp8. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "stability",
+  "n": 12,
+  "title": "What does loss scaling do?",
+  "text": " A power of two is chosen because multiplying and dividing by it is exact, so the scaling adds range and no error of its own. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "stability",
+  "n": 13,
+  "title": "What is the failure mode round-to-nearest has in a narrow accumulator?",
+  "text": " Measured: a ten-bit accumulator adding one repeatedly stalls at 2048, and an eight-bit one stalls at 512, however many terms follow. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "stability",
+  "n": 14,
+  "title": "What does stochastic rounding buy?",
+  "text": " Any single result is worse. It is why low-precision training works at widths where deterministic rounding stalls, and it costs a random number per operation, which is why it lives in hardware. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "drill",
+  "slug": "stability",
+  "n": 15,
+  "title": "How do you tell an ill-conditioned problem from an unstable method?",
+  "text": " A large change in the answer means the problem amplifies error. A small one means the problem is fine and the method is adding it, which is something you can fix. Two runs and a division, instead of an error analysis. ",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

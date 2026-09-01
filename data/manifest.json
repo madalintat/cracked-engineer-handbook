@@ -988,7 +988,9 @@
    "needs": [
     "integers"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "stability"
+   ],
    "minutes": 55
   },
   {
@@ -1002,12 +1004,15 @@
    "phase": "understand",
    "accent": "copper",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1514,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "floats"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "text",
@@ -2688,9 +2693,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 30,
-  "words": 45685,
-  "exercises": 240,
-  "drills": 450
+  "ready": 31,
+  "words": 47199,
+  "exercises": 248,
+  "drills": 465
  }
 }
