@@ -218,6 +218,45 @@ t('disabling it hands the keyboard back', () => {
   eq(e.text(), 'abc\n');
 });
 
+t('cw acts like ce and leaves the space', () => {
+  // Vim's documented special case. Changing a word almost never means
+  // changing the gap after it.
+  const e = editor('one two\n');
+  e.key('c'); e.key('w');
+  eq(e.text(), ' two\n');
+});
+
+t('a word operator does not cross a line boundary', () => {
+  // dw on the last word of a line stops there rather than pulling the next
+  // line up, which is the kind of wrong that is invisible until it eats a
+  // line break.
+  const d = editor('ab\ncd\n');
+  d.key('$'); d.key('d'); d.key('w');
+  eq(d.text(), 'a\ncd\n', 'dw:');
+  const c = editor('ab\ncd\n');
+  c.key('$'); c.key('c'); c.key('w');
+  eq(c.text(), 'a\ncd\n', 'cw:');
+});
+
+t('cc clears a line where dd removes one', () => {
+  const c = editor('one\ntwo\n');
+  c.key('c'); c.key('c');
+  eq(c.text(), '\ntwo\n', 'cc:');
+  eq(c.ta.dataset.vimMode, 'insert');
+  const s = editor('one\ntwo\n');
+  s.key('S');
+  eq(s.text(), '\ntwo\n', 'S:');
+  const d = editor('one\ntwo\n');
+  d.key('d'); d.key('d');
+  eq(d.text(), 'two\n', 'dd:');
+});
+
+t('an operator takes gg as its motion', () => {
+  const e = editor('a\nb\nc\n');
+  e.key('j'); e.key('d'); e.key('g'); e.key('g');
+  eq(e.text(), 'c\n');
+});
+
 process.on('exit', () => {
   console.log();
   if (failed.length) {

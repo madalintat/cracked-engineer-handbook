@@ -1,40 +1,49 @@
-# Mascot brief
+# Mascot
 
-Constraint that decides everything: it must read at 26px in the header, and it
-appears rarely, saying one line.
+The mascot is an eagle in a hard hat and overalls, with a laptop reading "the
+handbook series". It arrived as a 1408px JPEG on solid black.
 
-## Candidates, best first
+## What is in assets/img
 
-**Nand**: the NAND gate. D-shaped body, the inversion bubble as its nose, two
-eyes on the flat left edge where the inputs go. Part II is "one primitive, all
-of logic", and Part I proves NAND is four transistors where AND is six. The
-bubble-as-nose is a real pun, not decoration.
+    mascot-512.png       the whole figure, for the 404 and social previews
+    mascot-128.png       the whole figure, smaller
+    mascot-64.png        the whole figure, smaller again
+    mascot-head-128.png  head and shoulders, for the apple touch icon
+    mascot-head-64.png   head and shoulders, the header mark and the favicon
 
-**Dip**: a DIP-package chip with legs, walking. The package notch becomes a
-fringe. At 26px it is a dark rounded rectangle with pin-legs, which is enough.
-Structurally the closest analogue to how Ferris works.
+The header uses the head rather than the whole figure because the whole figure
+is a blob at 30px, and the brief for the mascot said it has to read at that
+size. The 404 is the one place the whole thing fits.
 
-**Smoke**: the magic smoke that hardware runs on until it escapes. Most
-personality, least legible small, and reads as a failure mascot when the
-companion appears on a pass.
+## Regenerating it
 
-**Flip**: a D flip-flop, the bit that stays. Clock triangle on the left edge as
-a mouth. Cleanest geometry, least character.
+The source is a JPEG on black, which is fine on the dark theme and a black
+square on the light one, so the background is keyed out. There is no
+ImageMagick or Pillow here, so `tools/keyout.py` does it with `zlib` alone.
 
-## Generation brief
+    sips -s format png source.jpg --out raw.png
+    sips -Z 512 raw.png --out 512.png
 
-    flat vector, no gradients, no outline glow
-    2 to 3 colours only, from:
-      #4ade80  phosphor (accent)     #0e1113  dark ground
-      #f2f5f6  light ink             #3fd3e0  cyan (sparingly)
-    square canvas, transparent PNG, 512x512
-    silhouette must survive scaling to 26x26 and to 1-bit black
-    face on the left third so it reads beside the wordmark
-    no text, no shadow, no perspective
+    python3 tools/keyout.py 512.png assets/img/mascot-512.png \
+        --key 000000 --tol 34
+    python3 tools/keyout.py 512.png head.png \
+        --key 000000 --tol 34 --crop 0.32,0.085,0.50,0.45
 
-## Wiring
+    sips -Z 128 head.png --out assets/img/mascot-head-128.png
+    sips -Z 64  head.png --out assets/img/mascot-head-64.png
 
-One file, `assets/mascot.png`, and one CSS token, `--mascot`. Nothing else
-references it, so swapping is a single file replacement. The reference
-implementation hardcodes its mascot in 7 places across 3 files plus 9 CSS rules
-plus 5 entries in its track manifest; that is the mistake being avoided.
+Alpha is feathered across the tolerance band rather than switched at a
+threshold. A hard cut on antialiased line art leaves a fringe of the old
+background around every edge, and against a light page that fringe is the first
+thing you see.
+
+## Where it appears
+
+The header mark, the favicon, the apple touch icon, the social preview, and the
+404. Nowhere else. A mascot that turns up on every page is one you stop seeing,
+and then it cannot do the one job it has.
+
+The header image is decorative and carries an empty `alt`, because the brand
+link is already named by the words beside it and repeating them to a screen
+reader is noise. The 404 image describes itself, because there it is the only
+thing on the page that is not an error message.

@@ -18,6 +18,8 @@ refuses to ship anything it has not checked.
     data/           generated, and committed, so the site needs no build step
     assets/         one stylesheet, one app, one workbench, four backends
     assets/vim.js   an opt-in modal editor, off by default and desk only
+    assets/img/     the mascot, at the sizes the interface uses
+    tools/          a contrast audit, and a background remover in pure Python
     runner/         the GPU runner a learner deploys to their own account
     docs/AUTHORING.md   how to write a unit
 

@@ -351,15 +351,28 @@ header.top {
   font-size: var(--t-sm);
 }
 .brand:hover { text-decoration: none; }
+/* The mark is the mascot, cropped to the head, because the whole figure is a
+ * blob at this size and the brief for it said it has to read at 26px. It is
+ * decorative: the brand link is named by the words next to it, so the image
+ * carries an empty alt rather than repeating them to a screen reader. */
 .brand .mark {
-  width: 26px; height: 26px;
-  border-radius: var(--r-2);
-  background: var(--accent);
-  display: grid; place-items: center;
-  color: var(--btn-ink);
-  font-family: var(--mono);
-  font-size: var(--t-micro);
-  font-weight: 700;
+  width: 30px;
+  height: 27px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  /* No background plate. The art has its own outline and a plate behind it
+     reads as a sticker rather than as a mark. */
+}
+
+/* The 404 is the one place the whole figure fits and the one page where a
+ * moment of something other than an error message is worth having. */
+.notfound { text-align: left; }
+.notfound .lost {
+  display: block;
+  width: 150px;
+  height: auto;
+  margin-bottom: 18px;
+  opacity: .92;
 }
 
 nav.main { display: flex; gap: 4px; margin-left: auto; }

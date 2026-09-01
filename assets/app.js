@@ -1753,7 +1753,9 @@ function viewNotFound(hash) {
       if (d > 0 && d < bestD) { bestD = d; near = u; }
     }
   }
-  return `<div class="wrap" style="padding:80px 0">
+  return `<div class="wrap notfound" style="padding:80px 0">
+    <img class="lost" src="assets/img/mascot-512.png" width="150" height="150"
+         alt="The handbook mascot, an eagle in a hard hat, looking at a laptop">
     <h1>No such page</h1>
     <p class="prose">Nothing is routed at <code>${esc(hash)}</code>.</p>
     <div class="empty">

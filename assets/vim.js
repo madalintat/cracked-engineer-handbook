@@ -254,6 +254,28 @@ const VIM = (() => {
 
     const LINEWISE = new Set(['j', 'k', 'G', 'gg', '{', '}']);
 
+    /* Two special cases vim documents and everyone relies on without noticing.
+     *
+     * `cw` on a non-blank behaves like `ce`: it changes the word and leaves
+     * the space after it, because changing a word almost never means changing
+     * the gap that follows it.
+     *
+     * `dw` on the last word of a line stops at the end of that line rather
+     * than pulling the next line up. Both were wrong here, and both are the
+     * kind of wrong that is invisible until it eats a line break. */
+    function wordOperatorEnd(op, key, n, to) {
+      const here = caret();
+      let end = to;
+      if (op === 'c' && !isSpace(val()[here] || ' ')) {
+        const e = motion(key === 'w' ? 'e' : 'E', here, n, true);
+        if (e !== null) end = e + 1;
+      }
+      // Neither form crosses a line boundary. The end of the line is the end
+      // of the word for this purpose, whichever route got here.
+      const le = lineEnd(here);
+      return end > le ? le : end;
+    }
+
     // ---------------------------------------------------------- operating
     function operate(op, from, to, linewise) {
       let a = Math.min(from, to), b = Math.max(from, to);
@@ -380,17 +402,32 @@ const VIM = (() => {
           if (k === op) {                 // dd, cc, yy
             const from = lineAt(lineOf(caret()));
             const to = lineAt(Math.min(nLines() - 1, lineOf(caret()) + n - 1));
-            operate(op, from, to, true);
+            // `cc` clears the line and leaves you on it, where `dd` removes
+            // the line entirely. Sending cc through the linewise path takes
+            // the newline with it and drops you onto the line below.
+            if (op === 'c') operate('c', lineStart(from), lineEnd(to), false);
+            else operate(op, from, to, true);
             count = ''; return;
           }
           if ('fFtT'.includes(k)) { pending = op + k; count = String(n); return; }
           if (k === 'g') { pending = op + 'g'; count = String(n); return; }
-          const to = motion(k, caret(), n, true);
-          if (to !== null) operate(op, caret(), k === 'e' || k === 'E' ? to + 1 : to,
-                                   LINEWISE.has(k));
+          let to = motion(k, caret(), n, true);
+          if (to !== null) {
+            if (k === 'e' || k === 'E') to += 1;
+            if (k === 'w' || k === 'W') to = wordOperatorEnd(op, k, n, to);
+            operate(op, caret(), to, LINEWISE.has(k));
+          }
           count = ''; return;
         }
         if (op.length === 2 && 'dcy'.includes(op[0])) {
+          // `dgg` and friends: the second key was `g`, so this one completes it.
+          if (op[1] === 'g') {
+            if (k === 'g') {
+              const to = motion('gg', caret(), n, true, count ? n : 1);
+              if (to !== null) operate(op[0], caret(), to, true);
+            }
+            count = ''; return;
+          }
           const to = motion(op[1], caret(), n, true, k);
           if (to !== null) operate(op[0], caret(), 'ft'.includes(op[1]) ? to + 1 : to, false);
           count = ''; return;
@@ -466,9 +503,11 @@ const VIM = (() => {
         case 'X': operate('d', Math.max(lineStart(caret()), caret() - n), caret(), false); count = ''; return;
         case 's': operate('c', caret(), Math.min(lineEnd(caret()), caret() + n), false); count = ''; return;
         case 'S': {
+          // S is cc: clear the line's contents and stay on it.
           const from = lineAt(lineOf(caret()));
           const to = lineAt(Math.min(nLines() - 1, lineOf(caret()) + n - 1));
-          operate('c', from, to, true); count = ''; return;
+          operate('c', lineStart(from), lineEnd(to), false);
+          count = ''; return;
         }
         case 'p': paste(true, n); count = ''; return;
         case 'P': paste(false, n); count = ''; return;

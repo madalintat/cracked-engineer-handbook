@@ -120,4 +120,6 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
       than passing it, and verifies it changed nothing
 - [x] `runner/app.py` with a self-test, and the settings page that explains it
 - [x] `docs/AUTHORING.md`, with its commands and its numbers under test
-- [ ] Mascot from the user, wired at its single swap point
+- [x] Mascot wired: header mark, favicon, apple touch icon, social preview and
+      the 404. Background keyed out by `tools/keyout.py`, since there is no
+      ImageMagick here and the source is a JPEG on solid black
