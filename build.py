@@ -883,7 +883,9 @@ def build(strict=True):
     write(DATA / "modal-gpus.json", load_gpu_catalog())
     write(DATA / "atlas.json", {"tables": atlas})
     write(DATA / "glossary.json", {"terms": glossary})
-    write(DATA / "search.json", build_search(manifest, units))
+    search_index = build_search(manifest, units)
+    fail(check_search_examples(search_index))
+    write(DATA / "search.json", search_index)
     prune(DATA, units)
     return manifest, units
 
@@ -1086,6 +1088,29 @@ def build_search(manifest, units):
                 "part": u["partTitle"],
             })
     return idx
+
+
+def check_search_examples(index):
+    """The search page offers example queries. They have to actually return
+    something, or the first thing a reader does on that page is get nothing."""
+    src = (Path(__file__).parent / "assets" / "app.js").read_text()
+    m = re.search(r"const SEARCH_EXAMPLES = \[(.*?)\];", src, re.S)
+    if not m:
+        return ["assets/app.js: SEARCH_EXAMPLES is gone, so nothing checks the "
+                "example queries on the search page"]
+    examples = re.findall(r"'([^']+)'", m.group(1))
+    if not examples:
+        return ["assets/app.js: SEARCH_EXAMPLES is empty"]
+    problems = []
+    for q in examples:
+        needle = q.lower()
+        hits = sum(1 for d in index
+                   if needle in (d["title"] + " " + d.get("text", "")).lower())
+        if not hits:
+            problems.append(
+                f"assets/app.js: the search page offers {q!r} as an example "
+                f"query and it returns nothing")
+    return problems
 
 
 def prune(data, units):

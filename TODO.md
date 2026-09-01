@@ -73,7 +73,10 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
       computed, so a planned unit can say which written units already build on
       it. Shown on written units and on stubs
 - [x] Non-binary pass state: "Correct, and not clean"
-- [ ] Empty states worth reading, which is the family's weakest copy
+- [x] Empty states worth reading: search idle names what is indexed and offers
+      example queries the build proves return something, a missed search or a
+      mistyped unit slug names the nearest real one, and progress before any
+      work shows where to start rather than a table of zeros
 
 ## 5. The rest of the site
 
@@ -82,7 +85,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] Search: ranked, snippets around the match, indexes section bodies
 - [x] Glossary, with a gate that rejects a link to an undefined term
 - [x] Atlas: data-driven tables with a validation gate, sources and a filter
-- [ ] Errors page
+- [~] Errors page
 
 ## 6. Ship
 

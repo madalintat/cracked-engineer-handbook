@@ -1316,15 +1316,22 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
 .track li.u.stub .t { color: var(--ink-2); font-weight: 500; }
 .badge.muted { color: var(--ink-3); background: var(--raised); }
 
-.track .empty {
+/* Every view that can come up empty uses this, so an empty state looks like a
+ * deliberate part of the page rather than a missing one. */
+.empty {
   max-width: var(--measure);
   color: var(--ink-3);
   font-size: var(--t-sm);
+  line-height: 1.55;
   border: 1px dashed var(--border);
   border-radius: var(--r-3);
   padding: 16px 18px;
-  margin: 12px 0 0;
+  margin: 16px 0 0;
 }
+.empty p { margin: 0; }
+.empty a { color: var(--accent-ink); text-decoration: underline;
+           text-decoration-color: var(--border); }
+.empty a:hover { text-decoration-color: var(--accent); }
 
 @media (max-width: 640px) {
   .track li.u > a { grid-template-columns: 2.8rem 1fr; }

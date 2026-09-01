@@ -51,6 +51,11 @@ const esc = s => String(s).replace(/[&<>"']/g,
 
 const el = sel => document.querySelector(sel);
 
+/* A unit's number as a reader counts it. `num` is the index into the track and
+ * stays that way, because prev/next index with it; printing it raw made the
+ * first unit "000" and made the track and the unit page disagree by one. */
+const unitNo = u => String(u.num + 1).padStart(3, '0');
+
 function announce(msg) {
   const live = el('#live');
   if (live) { live.textContent = ''; setTimeout(() => { live.textContent = msg; }, 30); }
@@ -130,7 +135,7 @@ function viewTrack() {
         data-hay="${esc([u.title, u.blurb, u.backend].join(' ').toLowerCase())}">
       <a href="${u.ready ? `#/unit/${esc(u.slug)}` : '#/track'}"
          ${u.ready ? '' : 'aria-disabled="true"'}>
-        <span class="n">${String(u.num + 1).padStart(3, '0')}</span>
+        <span class="n">${unitNo(u)}</span>
         <span class="t">${esc(u.title)}
           <span class="b">${esc(u.blurb)}</span></span>
         <span class="tags">
@@ -277,6 +282,7 @@ async function viewUnit(slug) {
   if (!meta.ready) {
     return `<div class="wrap" style="padding:80px 0" data-accent="${esc(meta.accent)}">
       <div class="kicker" style="font:600 var(--t-micro)/1 var(--mono);color:var(--ink-4)">
+        <span style="color:var(--accent-ink)">${unitNo(meta)}</span>
         ${esc(meta.partRoman)} &middot; ${esc(meta.partTitle)}</div>
       <h1>${esc(meta.title)}</h1>
       <p class="prose">${esc(meta.blurb)}</p>
@@ -324,7 +330,7 @@ async function viewUnit(slug) {
     ${rail}
     <header class="head">
       <div class="kicker">
-        <span class="n">${String(u.num).padStart(3, '0')}</span>
+        <span class="n">${unitNo(u)}</span>
         <span>${esc(u.partRoman)} &middot; ${esc(u.partTitle)}</span>
       </div>
       <h1>${esc(u.title)}</h1>
@@ -566,7 +572,7 @@ async function viewWork(slug, nRaw) {
     <div class="pane">
       <header class="exhead">
         <div class="kicker">
-          <span class="n">${String(meta.num).padStart(3, '0')}</span>
+          <span class="n">${unitNo(meta)}</span>
           <a href="#/unit/${esc(slug)}">${esc(meta.title)}</a>
           <span>exercise ${n} of ${data.exercises.length}</span>
           ${ex.backend === 'modal'
@@ -845,6 +851,11 @@ async function viewGlossary() {
              placeholder="filter ${terms.length} terms" aria-label="Filter terms">
       <span class="note" id="glosscount"></span>
     </div>
+    <p id="glossnone" class="empty" hidden>
+      No term matches that. The glossary only holds terms a written note links
+      to with <code>[[double brackets]]</code>, so it grows with the track
+      rather than ahead of it. <a href="#/search">Search</a> reads the notes
+      themselves.</p>
     ${sections}
   </div>`;
 }
@@ -886,6 +897,8 @@ function wireGlossary() {
       s.hidden = ![...s.querySelectorAll('.term')].some(t => !t.hidden);
     });
     count.textContent = needle ? `${shown} of ${terms.length}` : `${terms.length} terms`;
+    const none = el('#glossnone');
+    if (none) none.hidden = !(needle && shown === 0);
   };
   q.oninput = paint;
   paint();
@@ -1107,6 +1120,10 @@ function viewProgress() {
 
   const done = rows.reduce((a, r) => a + r.solved, 0);
   const all = rows.reduce((a, r) => a + r.total, 0);
+  // Before anything has been done, a table of zeros tells the reader nothing
+  // they did not already know, and hides the one useful link on the page.
+  const untouched = rows.every(r => !r.read && !r.solved && r.best === null);
+  const first = HH.manifest.units.find(u => u.ready);
 
   const table = rows.length ? `
     <div class="tw"><table>
@@ -1124,6 +1141,18 @@ function viewProgress() {
   return `
   <div class="wrap" style="padding:48px 0">
     <h1>Progress</h1>
+    ${untouched ? `
+    <div class="empty">
+      <p>Nothing recorded yet. This page fills in as you read sections, solve
+      exercises and mark drills, and all of it is kept in this browser rather
+      than sent anywhere.</p>
+      ${first ? `<p style="margin-top:10px">The first unit written so far is
+        <a href="#/unit/${esc(first.slug)}">${esc(first.title)}</a>, unit
+        ${unitNo(first)} of the track.</p>` : ''}
+    </div>
+    <p style="margin-top:28px">
+      <a class="btn" href="#/track">See the track</a>
+    </p>` : `
     <p class="prose">${done} of ${all} exercises solved, across
       ${rows.length} written ${rows.length === 1 ? 'unit' : 'units'}.
       ${units.length - rows.length} more are planned.</p>
@@ -1134,7 +1163,7 @@ function viewProgress() {
     <p style="margin-top:28px">
       <button class="btn ghost" id="erase">Erase everything</button>
     </p>
-    <div id="eraseout" style="margin-top:12px"></div>
+    <div id="eraseout" style="margin-top:12px"></div>`}
   </div>`;
 }
 
@@ -1167,6 +1196,49 @@ function wireProgress() {
 
 /* ---------------------------------------------------------------- search */
 
+/* Real queries that hit written content. An example that returns nothing is
+ * worse than no example, so these are checked by the build. */
+const SEARCH_EXAMPLES = ['nand', 'overflow', 'latch', 'warp'];
+
+/* Levenshtein, bounded. Only used to answer "did you mean", so it stops caring
+ * once a candidate is clearly not a typo of the query. */
+function editDistance(a, b, cap = 4) {
+  if (Math.abs(a.length - b.length) > cap) return cap + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    let best = i;
+    for (let j = 1; j <= b.length; j++) {
+      row[j] = Math.min(prev[j] + 1, row[j - 1] + 1,
+                        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      best = Math.min(best, row[j]);
+    }
+    if (best > cap) return cap + 1;
+    prev = row;
+  }
+  return prev[b.length];
+}
+
+/* The nearest indexed word to a query that found nothing, or '' if the query
+ * is not a near miss for anything. Suggesting a wildly different word reads as
+ * a non-sequitur, so the threshold is deliberately tight. */
+function nearestTerm(idx, query) {
+  const q = query.toLowerCase().trim();
+  if (!q || /\s/.test(q) || q.length < 3) return '';
+  let best = '', bestD = Math.min(3, Math.floor(q.length / 2) + 1);
+  const seen = new Set();
+  for (const doc of idx) {
+    for (const w of (doc.title + ' ' + (doc.text || '')).toLowerCase()
+                    .split(/[^a-z0-9']+/)) {
+      if (w.length < 3 || seen.has(w)) continue;
+      seen.add(w);
+      const d = editDistance(q, w, bestD);
+      if (d > 0 && d < bestD) { bestD = d; best = w; }
+    }
+  }
+  return best;
+}
+
 async function viewSearch(q) {
   const query = decodeURIComponent(q || '').trim();
   const idx = await getJSON('data/search.json');
@@ -1184,9 +1256,23 @@ async function viewSearch(q) {
        ${hits.length} result${hits.length === 1 ? '' : 's'} for
        <strong>${esc(query)}</strong></p>` : ''}
     <div class="results">${hits.map(resultRow).join('')}</div>
-    ${query && !hits.length ? `<p class="prose">Nothing matched. The track is
-      ${HH.manifest.counts.units} units, of which ${HH.manifest.counts.ready}
-      are written so far, so it may simply not exist yet.</p>` : ''}
+    ${!query ? `<div class="empty">
+      <p>This searches the body of every written note, section by section,
+      along with exercise titles and their briefs. It does not search the
+      planned units, because there is nothing in them yet.</p>
+      <p style="margin-top:10px">Try ${SEARCH_EXAMPLES.map(s =>
+        `<a href="#/search/${encodeURIComponent(s)}">${esc(s)}</a>`).join(', ')}.</p>
+    </div>` : ''}
+    ${query && !hits.length ? `<div class="empty">
+      <p>Nothing matched <strong>${esc(query)}</strong>.${nearestTerm(idx, query)
+        ? ` The closest thing indexed is <a href="#/search/${
+            encodeURIComponent(nearestTerm(idx, query))}">${
+            esc(nearestTerm(idx, query))}</a>.` : ''}</p>
+      <p style="margin-top:10px">${HH.manifest.counts.ready} of
+      ${HH.manifest.counts.units} units are written so far, so it may simply
+      not be there yet. The <a href="#/track">track</a> lists all of them,
+      written or not.</p>
+    </div>` : ''}
   </div>`;
 }
 
@@ -1358,10 +1444,31 @@ function wireSettings() {
 }
 
 function viewNotFound(hash) {
+  // A 404 here is usually a mistyped or renamed unit slug, so say which unit
+  // was probably meant rather than only that this one does not exist.
+  const tail = (hash.split('/').filter(Boolean).pop() || '').toLowerCase();
+  let near = null;
+  if (tail.length >= 3) {
+    let bestD = 4;
+    for (const u of HH.manifest.units) {
+      const d = editDistance(tail, u.slug, bestD);
+      if (d > 0 && d < bestD) { bestD = d; near = u; }
+    }
+  }
   return `<div class="wrap" style="padding:80px 0">
     <h1>No such page</h1>
     <p class="prose">Nothing is routed at <code>${esc(hash)}</code>.</p>
-    <p><a class="btn" href="#/">Back to the start</a></p>
+    <div class="empty">
+      ${near ? `<p>The closest unit in the track is
+        <a href="#/unit/${esc(near.slug)}">${esc(near.title)}</a>
+        (<code>${esc(near.slug)}</code>).</p>` : ''}
+      <p${near ? ' style="margin-top:10px"' : ''}>Every page here lives under
+      <code>#/track</code>, <code>#/unit/&lt;slug&gt;</code>,
+      <code>#/work/&lt;slug&gt;/&lt;n&gt;</code> or
+      <code>#/drills/&lt;slug&gt;</code>. The
+      <a href="#/track">track</a> links all ${HH.manifest.counts.units} of them.</p>
+    </div>
+    <p style="margin-top:24px"><a class="btn" href="#/">Back to the start</a></p>
   </div>`;
 }
 
