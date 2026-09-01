@@ -54,6 +54,7 @@ step "Tests"
 run "test_build.py"      python3 test_build.py
 run "test_sim.mjs"       node test_sim.mjs
 run "test_workbench.mjs" node test_workbench.mjs
+run "test_vim.mjs"       node test_vim.mjs
 run "prose.py selfcheck" python3 prose.py
 run "track.py validate"  python3 -c "import track; track.validate()"
 run "contrast.py"        python3 contrast.py

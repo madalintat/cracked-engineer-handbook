@@ -17,6 +17,7 @@ refuses to ship anything it has not checked.
     content/        notes, exercises, drills, glossary, atlas, in markdown
     data/           generated, and committed, so the site needs no build step
     assets/         one stylesheet, one app, one workbench, four backends
+    assets/vim.js   an opt-in modal editor, off by default and desk only
     runner/         the GPU runner a learner deploys to their own account
     docs/AUTHORING.md   how to write a unit
 

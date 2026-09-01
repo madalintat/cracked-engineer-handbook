@@ -627,6 +627,8 @@ async function viewWork(slug, nRaw) {
       <div class="wbbar">
         <button class="btn" id="run">Run</button>
         <button class="btn ghost" id="reset">Reset to starter</button>
+        <span id="vimbadge" class="vimbadge" hidden aria-live="polite"></span>
+        <span id="vimmsg" class="vimmsg" hidden></span>
         <span class="spacer"></span>
         <button class="tog" id="wrap" aria-pressed="false">wrap</button>
       </div>
@@ -684,6 +686,29 @@ function wireWork() {
       HH._saveT = setTimeout(() => Store.set(draftKey, v), 400);
     },
   });
+  /* Vim mode: a setting, and desk only. A modal editor on a phone keyboard is
+   * a way to lose your work rather than a way to edit faster. */
+  const badge = el('#vimbadge');
+  const wantVim = Store.get('vim', false)
+    && matchMedia('(min-width: 900px)').matches
+    && matchMedia('(pointer: fine)').matches;
+  if (wantVim && editor.useVim) {
+    editor.useVim(true, {
+      onMode: m => {
+        if (!badge) return;
+        badge.hidden = !m;
+        badge.textContent = m ? m.toUpperCase() : '';
+        badge.dataset.mode = m;
+      },
+      onMessage: msg => {
+        const line = el('#vimmsg');
+        if (line) { line.textContent = msg || ''; line.hidden = !msg; }
+      },
+    });
+  } else if (badge) {
+    badge.hidden = true;
+  }
+
   HH.teardown.push(() => clearTimeout(HH._saveT));
 
   el('#wrap').onclick = ev => {
@@ -1335,10 +1360,12 @@ function wireProgress() {
       }, 5000);
       return;
     }
-    // The theme is a preference, not progress, so it survives.
+    // Preferences are not progress, so they survive an erase. The theme, the
+    // runner addresses, and whether the editor is modal.
     const theme = Store.get('theme');
     const modal = Store.get('modal', {});
-    Store.write({ theme, modal });
+    const vim = Store.get('vim', false);
+    Store.write({ theme, modal, vim });
     announce('Everything erased');
     render();
   };
@@ -1508,6 +1535,37 @@ function viewSettings() {
       account, paste its two addresses here, and the GPU exercises become
       runnable. Your code goes to your account and nowhere else.</p>
 
+    <h2 style="margin-top:32px">The editor</h2>
+    <label class="opt vimopt">
+      <input type="checkbox" id="vimtoggle" ${Store.get('vim', false) ? 'checked' : ''}>
+      <span><strong>Vim mode</strong><br>
+        <span class="note">Normal, insert and visual modes, with counts,
+        operators, motions, registers, undo and search. It is off on a phone
+        whatever this says, because a modal editor on a touch keyboard is a way
+        to lose your work rather than a way to edit faster.</span></span>
+    </label>
+    <details class="vimhelp">
+      <summary>What is bound</summary>
+      <div class="prose">
+        <p><strong>Modes.</strong> <code>i I a A o O</code> to insert,
+        <code>v</code> and <code>V</code> to select, <code>R</code> to replace,
+        <code>Escape</code> back to normal.</p>
+        <p><strong>Motions.</strong> <code>h j k l w W b B e E 0 ^ $ gg G { }</code>,
+        <code>f F t T</code> with <code>;</code> and <code>,</code>, and
+        <code>%</code> to the matching bracket. Any of them takes a count.</p>
+        <p><strong>Operators.</strong> <code>d c y</code> with any motion, plus
+        <code>dd cc yy D C Y x X s S</code>. Then <code>p</code> and
+        <code>P</code> to put it back.</p>
+        <p><strong>The rest.</strong> <code>r</code> to replace one character,
+        <code>J</code> to join, <code>u</code> and <code>Ctrl-r</code> for undo,
+        <code>/</code> and <code>?</code> to search with <code>n</code> and
+        <code>N</code>.</p>
+        <p>Not bound, on purpose: marks, macros, named registers and text
+        objects. Each is a real feature and none is the difference between
+        editing comfortably and not.</p>
+      </div>
+    </details>
+
     <h2 style="margin-top:32px">Deploy it</h2>
     <pre class="cb"><code>pip install modal
 modal setup
@@ -1544,6 +1602,15 @@ modal deploy runner/app.py</code></pre>
 }
 
 function wireSettings() {
+  const vt = el('#vimtoggle');
+  if (vt) {
+    vt.onchange = () => {
+      Store.set('vim', vt.checked);
+      announce(vt.checked
+        ? 'Vim mode on. It applies the next time you open an exercise.'
+        : 'Vim mode off.');
+    };
+  }
   const form = el('#modalForm');
   if (!form) return;
   const out = el('#settingsOut');

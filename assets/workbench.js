@@ -196,11 +196,30 @@ const WB = (() => {
     });
 
     sync();
+
+    /* Vim mode, if the reader asked for it. It attaches to this textarea
+     * rather than replacing the editor, so the highlight layer, the width
+     * sync and the draft save all keep working with no knowledge of it. */
+    let vim = null;
+    const useVim = (on, hooks = {}) => {
+      if (on && !vim && typeof VIM !== 'undefined') {
+        vim = VIM.attach(ta, {
+          onChange: v => { sync(); onChange && onChange(v); },
+          onMode: hooks.onMode || (() => {}),
+          onMessage: hooks.onMessage || (() => {}),
+        });
+      }
+      if (vim) vim.enable(on);
+      host.dataset.vim = on ? 'on' : 'off';
+    };
+
     return {
       get value() { return ta.value; },
       set value(v) { ta.value = v; sync(); },
       focus: () => ta.focus(),
       setWrap: on => { host.dataset.wrap = on ? 'on' : 'off'; sync(); },
+      useVim,
+      get vimMode() { return vim && vim.isEnabled() ? vim.mode : ''; },
       el: ta,
     };
   }

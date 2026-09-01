@@ -46,7 +46,10 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] Judged expectations: `verdict` / `match` / `silent`, per-backend vocabulary
 - [x] Diagnostics UI: prose beside the real error, ordered first-match
 - [x] Pass state, hint counting, editor buffer persisted per exercise
-- [ ] Vim mode (not started, and not on the path to anything)
+- [x] Vim mode: `assets/vim.js`, opt-in, off by default, desk only. Normal,
+      insert, visual and visual-line modes, counts, the usual motions,
+      operators over any motion, an unnamed register, undo and redo, search.
+      22 tests against a stub textarea, no browser needed
 
 ## 4. Content
 

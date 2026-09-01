@@ -1798,3 +1798,50 @@ a.gl:hover { text-decoration-style: solid; color: var(--accent-ink); }
 /* A trace's cycle number is its identity, so it reads as an index rather than
    as another data column. */
 .truth td.cyc { color: var(--ink-4); font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------- vim mode */
+/* Opt-in, and the badge is the only thing it adds to the interface. The mode
+ * is the one piece of state a modal editor has that the reader cannot see by
+ * looking at the text, so it is the one piece worth showing. */
+
+.vimbadge {
+  font: 700 var(--t-micro)/1 var(--mono);
+  letter-spacing: .09em;
+  padding: 7px 9px;
+  border-radius: var(--r-1);
+  background: var(--raised);
+  color: var(--ink-3);
+  align-self: center;
+}
+/* Colour by mode, because which mode you are in is the thing you get wrong. */
+.vimbadge[data-mode="insert"]  { color: var(--ok-ink);
+  background: color-mix(in srgb, var(--ok) 16%, transparent); }
+.vimbadge[data-mode="visual"],
+.vimbadge[data-mode="vline"]   { color: var(--accent-ink);
+  background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.vimbadge[data-mode="replace"] { color: var(--bad-ink);
+  background: color-mix(in srgb, var(--bad) 16%, transparent); }
+
+.vimmsg {
+  font: 500 var(--t-sm)/1 var(--mono);
+  color: var(--ink-3);
+  align-self: center;
+}
+
+/* In normal mode the caret sits on a character rather than between two, so a
+   block caret is not decoration: it is where the next command will act. */
+.ed[data-vim="on"] textarea { caret-shape: block; }
+.ed[data-vim="on"] textarea::selection {
+  background: color-mix(in srgb, var(--accent) 34%, transparent);
+}
+
+.vimopt { align-items: flex-start; margin-top: 10px; }
+.vimopt .note { color: var(--ink-3); font-size: var(--t-sm); line-height: 1.5; }
+.vimhelp { margin-top: 14px; max-width: var(--measure); }
+.vimhelp summary {
+  cursor: pointer;
+  font: 600 var(--t-sm)/1.4 var(--sans);
+  color: var(--accent-ink);
+}
+.vimhelp .prose { margin-top: 10px; font-size: var(--t-sm); }
+.vimhelp code { white-space: nowrap; }
