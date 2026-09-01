@@ -9055,6 +9055,278 @@
  },
  {
   "t": "section",
+  "slug": "raii",
+  "anchor": "the-problem-stated-precisely",
+  "title": "The problem, stated precisely",
+  "text": "A function acquires two resources and can leave through six places: four returns, one exception from a call in the middle, and one exception from a call at the end. Releasing correctly means the right subset released at each of the six, and the number of subsets grows with the number of resources. Every language that solved this solved it by taking the decision away from the programmer. Some run a collector later. Some use a defer statement executed at scope exit. C++ ties it to object lifetime, which turns out to be the version with the fewest gaps, because it composes: an object holding two resources releases both without anybody writing a release for the pair.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "raii",
+  "anchor": "the-destructor-is-scheduled-not-called",
+  "title": "The destructor is scheduled, not called",
+  "text": "The key move is that you never write the release at the exit points. You write it once, in a destructor, and the compiler emits a call to it at every point control leaves the scope. Every point. The returns, the break, the exception unwinding through. That last one is what a defer statement in a language without exceptions does not have to handle and what a manual release always gets wrong somewhere. Destruction happens in reverse order of construction, and this is guaranteed rather than incidental. It has to be: a later object may depend on an earlier one, so the earlier one must outlive it. One destructor written, six call sites emitted. The exception path is the one a manual release forgets and the one that matters.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "raii",
+  "anchor": "three-promises-a-function-can-make",
+  "title": "Three promises a function can make",
+  "text": "Once destructors run on the exception path, a function can offer one of three guarantees, and knowing which one you are offering is most of writing correct code with exceptions. The basic guarantee says nothing leaks and every object is still in a usable state, though not necessarily the one it had. This is the minimum and it is what RAII gives you almost for free. The strong guarantee says the operation either completes or leaves everything exactly as it was. It usually costs a copy: build the new state beside the old one, and swap only when nothing can throw any more. The no-throw guarantee says the operation cannot fail. Destructors and swaps must offer it, because they run during unwinding and an exception escaping there ends the program. That last rule is why destructors are implicitly and why a destructor that can fail is a design problem rather than a coding one.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "raii",
+  "anchor": "what-a-move-actually-is",
+  "title": "What a move actually is",
+  "text": "Copying a resource-owning object means duplicating the resource, which is often expensive and sometimes impossible. A socket cannot be copied. A move is the alternative: transfer what the source holds and leave the source in a state that is valid and unspecified, so that its destructor runs harmlessly. Measured on a type that counts its own operations, moving a value out of an object leaves the source at zero and the destination holding what it had, with no copy performed. Valid and unspecified is the precise phrase and it is worth respecting. A moved-from object may be destroyed and may be assigned to. Reading its value is allowed and tells you nothing. The standard library's types mostly leave themselves empty, and depending on that is depending on an implementation detail.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "raii",
+  "anchor": "the-one-that-has-to-be-handled",
+  "title": "The one that has to be handled",
+  "text": "Assignment is where the special members get interesting, because the target already holds something. Copy assignment has to release what the target had, acquire a copy of what the source has, and cope with the two being the same object. Writing it as release then acquire fails on self-assignment: the release destroys the thing about to be copied. The usual answer is copy and swap, which builds the new value first and gives the old one to a temporary that dies at the end of the statement. Move assignment has the same shape and one more case. Self-move must leave the object usable, and the standard's requirement is only that it be valid, which is why the library's own types check for it rather than relying on the steal being harmless. None of this is an argument for writing them. It is an argument for the rule that follows: every one of these hazards belongs to a class that owns something raw, and a class that owns nothing raw has none of them.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "raii",
+  "anchor": "the-cast-that-does-not-move",
+  "title": "The cast that does not move",
+  "text": "moves nothing. It is a cast, and its entire body is a to an rvalue reference. Measured: calling on an object and binding the result to a reference performs zero moves and zero copies. What performs the move is the constructor or assignment that the cast made eligible for overload resolution. Which means on a object silently does nothing useful. The cast produces a rvalue reference, no move constructor accepts one, the copy constructor is chosen instead, and you get a copy where you asked for a move, with no diagnostic.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "raii",
+  "anchor": "the-move-that-never-happens",
+  "title": "The move that never happens",
+  "text": "Returning a local object looks like it should cost a move. It does not. Measured on the same counting type: a function returning a temporary performs one construction and one destruction. A function that names a local and returns it performs one construction and one destruction. Not a move, not a copy. Since C++17 this is guaranteed for the temporary case rather than merely allowed: the object is constructed directly in the caller's storage, and there is no second object for a move to happen between. The named case is still technically an optimisation and every compiler performs it. The practical rule that follows is the one people get backwards. Do not write . It cannot help, because there was nothing to elide the move of, and it can hurt, because naming a cast where a plain name was expected prevents the elision that would otherwise happen.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "raii",
+  "anchor": "where-the-scope-is-not-the-lifetime",
+  "title": "Where the scope is not the lifetime",
+  "text": "RAII binds a release to a scope, and sometimes the scope is not where the resource should die. Three answers, in increasing cost. Move it out. A function that opens something and returns the handle transfers ownership to the caller, and the release now happens at the caller's scope exit. This is what the move is for and it costs nothing. Put it in a container. A vector of owning objects releases all of them when it goes, and the individual lifetimes are the container's problem. Share it. When two independent parts genuinely both need the thing alive, a reference count decides who is last. That is the only case that needs , and reaching for it before establishing that ownership really is shared is the commonest way a C++ codebase becomes hard to reason about: with everything shared, nothing has an owner and no lifetime is stated anywhere. The question worth asking at each resource is who decides when this dies. If the answer is one place, it is exclusive. If the answer is whoever finishes last, it is shared. If the answer is unclear, the design is unclear, and no smart pointer fixes that.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "raii",
+  "anchor": "zero-or-five",
+  "title": "Zero, or five",
+  "text": "If a class owns a raw resource it needs a destructor, and then the compiler's generated copy operations are wrong: they duplicate the pointer, both objects destroy it, and the second destruction is a double free. So the rule of five: if you write any of the destructor, copy constructor, copy assignment, move constructor or move assignment, you probably need all five. And the rule of zero, which is the better one: do not own raw resources. Hold a type that already handles it, and write none of the five, and let the compiler generate all of them correctly. Measured, the cost of that advice is nothing. A is 8 bytes, the same as the raw pointer it replaces. A is 16, because it also carries a pointer to the reference counts, and its copies cost an atomic increment, which unit 026 already priced.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "raii",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "A destructor is a release the compiler schedules at every exit, including the ones exceptions take, and destruction is in reverse construction order because later objects may depend on earlier ones. A move transfers and leaves the source valid and unspecified. is a cast that makes a move eligible and performs none itself, and returning a local performs neither a copy nor a move. Own nothing raw and you write none of the five special members. That costs zero bytes for exclusive ownership and one pointer plus an atomic for shared.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "raii",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These count constructions, moves and destructions with static counters, which is exact and reproducible. Every expected count was produced by running the code. names the count that disagreed. Several of these exercises assert that something does not happen, which is the point: an assertion that a move occurred where the language guarantees elision would be testing the wrong claim.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "raii",
+  "n": 1,
+  "title": "Released on every path",
+  "text": "A destructor is a release scheduled at every exit including the ones exceptions take, which is the path a manual release always gets wrong somewhere. Write , whose destructor increments a counter, and confirm it runs on all three ways out of a scope. You write the release once. The compiler emits a call at every point control leaves.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "raii",
+  "n": 2,
+  "title": "Reverse order, guaranteed",
+  "text": "Destruction in reverse construction order is what makes it safe for one object to hold a reference to another declared before it. Two objects constructed in a scope are destroyed in the opposite order. Write so it records when it is destroyed. This is guaranteed rather than incidental: a later object may depend on an earlier one, so the earlier one must outlive it.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "raii",
+  "n": 3,
+  "title": "Taking what a dying object held",
+  "text": "A move transfers and leaves the source valid and unspecified, so its destructor still runs and releases nothing. Write the move constructor for , which owns a heap array. A move transfers the pointer and leaves the source in a state whose destructor is harmless. Copying the pointer without clearing the source gives two owners and a double free.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "raii",
+  "n": 4,
+  "title": "The cast that moves nothing",
+  "text": "<code>std::move</code> is a cast to an rvalue reference, and what performs the move is the constructor or assignment the cast made eligible. performs no move. Write , which applies it to an object, binds the result to a reference, and reports how many moves and copies happened. The answer is none of either.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "raii",
+  "n": 5,
+  "title": "The move that never happens",
+  "text": "Since C++17 a returned temporary is constructed directly in the caller's storage, so there is no second object for a move to happen between. Write and , both returning a , and report how many objects were constructed. Returning a local costs neither a copy nor a move. The object is built where the caller wanted it.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "raii",
+  "n": 6,
+  "title": "Assigning to yourself",
+  "text": "Assignment has a case construction does not, because the target already holds something and the source may be the target. Write move assignment for , which holds a heap value. It must release what it had, take what the source has, and survive being assigned from itself. The naive order fails on self-assignment, and it fails in a way you can see rather than a way that merely reads freed memory.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "raii",
+  "n": 7,
+  "title": "What owning costs",
+  "text": "Exclusive ownership is free in space and shared ownership costs a second pointer plus an atomic on every copy. Write , reporting the size of a raw pointer, a and a . The rule of zero says to own nothing raw. This is what that advice costs.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "raii",
+  "n": 8,
+  "title": "Nothing escapes a destructor",
+  "text": "A destructor must offer the no-throw guarantee, because it runs at a moment when there is no way to report a second failure. A destructor runs during exception unwinding, so an exception escaping one meets an exception already in flight and the program ends. Write , whose cleanup can fail, so that the failure is recorded rather than thrown.",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "raii",
+  "n": 1,
+  "title": "What is the actual difficulty with releasing resources?",
+  "text": " A function with two resources and six exits needs the right subset released at each, and the number of subsets grows with the number of resources. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "raii",
+  "n": 2,
+  "title": "Where does the compiler emit a destructor call?",
+  "text": " The exception path is the one a defer statement in a language without exceptions does not have to handle, and the one a manual release always gets wrong somewhere. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "raii",
+  "n": 3,
+  "title": "In what order are objects in a scope destroyed?",
+  "text": " A later object may depend on an earlier one, so the earlier one must outlive it. That one rule decides the correctness of a lot of code that never mentions it. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "raii",
+  "n": 4,
+  "title": "What is the strong exception guarantee?",
+  "text": " It usually costs a copy: build the new state beside the old one and swap only when nothing can throw any more. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "raii",
+  "n": 5,
+  "title": "Why must a destructor not throw?",
+  "text": " Which is why destructors are implicitly  noexcept , and why a cleanup that can genuinely fail belongs in a named method with the destructor as a quiet fallback. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "raii",
+  "n": 6,
+  "title": "What does a move leave in the source?",
+  "text": " A moved-from object may be destroyed and may be assigned to. Reading its value is allowed and tells you nothing, and the library's types mostly leaving themselves empty is an implementation detail. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "raii",
+  "n": 7,
+  "title": "What does <code>std::move</code> do?",
+  "text": " Measured: applying it and binding the result to a reference performs zero moves and zero copies. What performs the move is the constructor the cast made eligible. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "raii",
+  "n": 8,
+  "title": "What happens to <code>std::move</code> on a <code>const</code> object?",
+  "text": " The cast produces a  const  rvalue reference and no move constructor accepts one, so you get a copy where you asked for a move. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "raii",
+  "n": 9,
+  "title": "How many moves does returning a local object cost?",
+  "text": " Since C++17 a returned temporary is constructed directly in the caller's storage, so there is no second object for a move to happen between. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "raii",
+  "n": 10,
+  "title": "Why should you not write <code>return std::move(local)</code>?",
+  "text": " There was nothing to elide the move of, and naming a cast where a plain name was expected adds exactly the move it was trying to avoid. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "raii",
+  "n": 11,
+  "title": "Why does the naive move assignment break on self-assignment?",
+  "text": " The object ends up owning nothing at all, which is visible rather than merely reading freed memory, and that is why this is the version worth writing an exercise about. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "raii",
+  "n": 12,
+  "title": "What does copy and swap get right for free?",
+  "text": " It builds the new value first, so if the allocation throws nothing has been modified, and the source is never destroyed before it is read. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "raii",
+  "n": 13,
+  "title": "What is the rule of five?",
+  "text": " If a class owns a raw resource it needs a destructor, and then the generated copy operations duplicate the pointer and the second destruction is a double free. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "raii",
+  "n": 14,
+  "title": "What is the rule of zero, and what does it cost?",
+  "text": " Measured: 8 bytes for exclusive ownership, 16 for shared, and shared copies cost an atomic increment which unit 026 already priced. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "raii",
+  "n": 15,
+  "title": "When is <code>shared_ptr</code> the right answer?",
+  "text": " With everything shared, nothing has an owner and no lifetime is stated anywhere. The question is who decides when this dies, and an unclear answer is a design problem no smart pointer fixes. ",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

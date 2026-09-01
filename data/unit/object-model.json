@@ -79,5 +79,7 @@
   "cache",
   "text"
  ],
- "neededBy": []
+ "neededBy": [
+  "raii"
+ ]
 }

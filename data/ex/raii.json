@@ -1,0 +1,316 @@
+{
+ "slug": "raii",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Released on every path",
+   "brief": "<p>Write <code>Guard</code>, whose destructor increments a counter, and confirm it runs on all three ways out of a scope.</p>\n<p>You write the release once. The compiler emits a call at every point control leaves.</p>",
+   "kind": "output",
+   "concept": "A destructor is a release scheduled at every exit including the ones exceptions take, which is the path a manual release always gets wrong somewhere.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A destructor with a body, and nothing else."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees on the count. The default destructor does nothing, so the counter never moves. Give the class a destructor that increments it and the compiler will call it at the closing brace, at the return, and while an exception unwinds through.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Three exits, one destructor written, three calls emitted. The exception path is the one that matters: it is the exit nobody writes a release for, and it is why binding cleanup to a lifetime beat every convention that relied on remembering.</p>",
+   "starter": "struct Guard {\n    int *count;\n    explicit Guard(int *c) : count(c) {}\n};",
+   "tests": "#include <cassert>\nstruct Guard;\n\nstatic int normal_exit() {\n    int n = 0;\n    { Guard g(&n); }\n    return n;\n}\n\nstatic int early_return() {\n    int n = 0;\n    for (int i = 0; i < 1; i++) {\n        Guard g(&n);\n        break;\n    }\n    return n;\n}\n\nstatic int throwing() {\n    int n = 0;\n    try {\n        Guard g(&n);\n        throw 1;\n    } catch (int) {}\n    return n;\n}\n\nint main() {\n    assert(normal_exit() == 1);\n    assert(throwing() == 1);\n    assert(early_return() == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 2,
+   "title": "Reverse order, guaranteed",
+   "brief": "<p>Two objects constructed in a scope are destroyed in the opposite order. Write <code>Marker</code> so it records when it is destroyed.</p>\n<p>This is guaranteed rather than incidental: a later object may depend on an earlier one, so the earlier one must outlive it.</p>",
+   "kind": "output",
+   "concept": "Destruction in reverse construction order is what makes it safe for one object to hold a reference to another declared before it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Append the marker's own identifier to the log when it is destroyed."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees on the order. The object constructed second is destroyed first, so a scope declaring 1 then 2 logs 2 then 1. Recording on construction rather than destruction gives the sequence the other way round.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is why an object may safely hold a reference to one declared above it in the same scope, and why the reverse is a dangling reference waiting for a destructor to run. The rule is one line in the standard and it decides the correctness of a great deal of code that never mentions it.</p>",
+   "starter": "struct Marker {\n    int id;\n    int *log;\n    int *n;\n    Marker(int i, int *l, int *count) : id(i), log(l), n(count) { log[(*n)++] = id; }\n};",
+   "tests": "#include <cassert>\nstruct Marker;\nint main() {\n    int log[4] = {0}, n = 0;\n    {\n        Marker a(1, log, &n);\n        Marker b(2, log, &n);\n        Marker c(3, log, &n);\n    }\n    assert(n == 3);\n    assert(log[0] == 3);\n    assert(log[1] == 2);\n    assert(log[2] == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 3,
+   "title": "Taking what a dying object held",
+   "brief": "<p>Write the move constructor for <code>Buf</code>, which owns a heap array.</p>\n<p>A move transfers the pointer and leaves the source in a state whose destructor is harmless. Copying the pointer without clearing the source gives two owners and a double free.</p>",
+   "kind": "output",
+   "concept": "A move transfers and leaves the source valid and unspecified, so its destructor still runs and releases nothing.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Take the pointer and the size, then clear both in the source."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The source has to be left with a null pointer and a size of zero, so that its destructor deletes nothing. Leaving the pointer in place gives two objects that both believe they own the array.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Valid and unspecified is the standard's phrase and it is worth respecting. A moved-from object may be destroyed and may be assigned to; reading its value is allowed and tells you nothing. The library's own types mostly leave themselves empty, and depending on that is depending on an implementation detail.</p>",
+   "starter": "#include <cstddef>\nstruct Buf {\n    int *data = nullptr;\n    size_t n = 0;\n    Buf() = default;\n    explicit Buf(size_t k) : data(new int[k]()), n(k) {}\n    Buf(Buf &&o) noexcept : data(o.data), n(o.n) {}\n    Buf(const Buf &) = delete;\n    Buf &operator=(const Buf &) = delete;\n    ~Buf() { delete[] data; }\n};",
+   "tests": "#include <cassert>\n#include <cstddef>\n#include <utility>\nstruct Buf;\nint main() {\n    Buf a(4);\n    a.data[0] = 7;\n    Buf b(std::move(a));\n    assert(b.n == 4);\n    assert(b.data != nullptr);\n    assert(b.data[0] == 7);\n    /* The source must be left owning nothing. */\n    assert(a.data == nullptr);\n    assert(a.n == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 4,
+   "title": "The cast that moves nothing",
+   "brief": "<p><code>std::move</code> performs no move. Write <code>count_ops</code>, which applies it to an object, binds the result to a reference, and reports how many moves and copies happened.</p>\n<p>The answer is none of either.</p>",
+   "kind": "output",
+   "concept": "<code>std::move</code> is a cast to an rvalue reference, and what performs the move is the constructor or assignment the cast made eligible.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Binding to a reference constructs nothing. Constructing a new object does."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Constructing a second object from the cast result invokes the move constructor and counts one. Binding a reference to it invokes nothing, and that is the distinction the exercise exists for.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names. <code>std::move</code> needs <code>&lt;utility&gt;</code>.</p>"
+    }
+   ],
+   "after": "<p>Which is why <code>std::move</code> on a <code>const</code> object silently does nothing useful: the cast produces a <code>const</code> rvalue reference, no move constructor accepts one, the copy constructor wins overload resolution, and you get a copy where you asked for a move with no diagnostic anywhere.</p>",
+   "starter": "#include <utility>\nstruct Counted {\n    static int moves;\n    static int copies;\n    int v = 0;\n    Counted() = default;\n    explicit Counted(int x) : v(x) {}\n    Counted(const Counted &o) : v(o.v) { ++copies; }\n    Counted(Counted &&o) noexcept : v(o.v) { o.v = 0; ++moves; }\n};\nint Counted::moves = 0;\nint Counted::copies = 0;\n\nvoid count_ops(int *moves, int *copies) {\n    Counted::moves = 0;\n    Counted::copies = 0;\n    Counted a(5);\n    Counted b(std::move(a));\n    (void)b;\n    *moves = Counted::moves;\n    *copies = Counted::copies;\n}",
+   "tests": "#include <cassert>\nvoid count_ops(int *, int *);\nint main() {\n    int m = -1, c = -1;\n    count_ops(&m, &c);\n    /* A cast, and a reference bound to its result. Nothing was constructed. */\n    assert(m == 0);\n    assert(c == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 5,
+   "title": "The move that never happens",
+   "brief": "<p>Write <code>make_direct</code> and <code>make_named</code>, both returning a <code>Tracked</code>, and report how many objects were constructed.</p>\n<p>Returning a local costs neither a copy nor a move. The object is built where the caller wanted it.</p>",
+   "kind": "output",
+   "concept": "Since C++17 a returned temporary is constructed directly in the caller's storage, so there is no second object for a move to happen between.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Return the object plainly. Do not cast it on the way out."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees, and the count will be too high by one. <code>return std::move(x)</code> names a cast where a plain name was expected, which prevents the elision that would otherwise have happened and adds exactly the move it was trying to avoid.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Measured: one construction and one destruction, for both the temporary and the named local, with no move and no copy in either. This is why <code>return std::move(local)</code> is the rule people get backwards. It cannot help, because there was nothing to elide the move of, and it can hurt.</p>",
+   "starter": "#include <utility>\nstruct Tracked {\n    static int ctors, moves, copies, dtors;\n    int v = 0;\n    Tracked() { ++ctors; }\n    explicit Tracked(int x) : v(x) { ++ctors; }\n    Tracked(const Tracked &o) : v(o.v) { ++copies; }\n    Tracked(Tracked &&o) noexcept : v(o.v) { o.v = 0; ++moves; }\n    ~Tracked() { ++dtors; }\n};\nint Tracked::ctors = 0;\nint Tracked::moves = 0;\nint Tracked::copies = 0;\nint Tracked::dtors = 0;\n\nTracked make_direct() { return Tracked(7); }\nTracked make_named() { Tracked t(9); return std::move(t); }\n\nint direct_moves() {\n    Tracked::moves = 0;\n    { Tracked a = make_direct(); (void)a; }\n    return Tracked::moves;\n}\nint named_moves() {\n    Tracked::moves = 0;\n    { Tracked a = make_named(); (void)a; }\n    return Tracked::moves;\n}",
+   "tests": "#include <cassert>\nstruct Tracked;\nint direct_moves();\nint named_moves();\nTracked make_direct();\nTracked make_named();\nint main() {\n    assert(direct_moves() == 0);\n    assert(named_moves() == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 6,
+   "title": "Assigning to yourself",
+   "brief": "<p>Write move assignment for <code>Owner</code>, which holds a heap value. It must release what it had, take what the source has, and survive being assigned from itself.</p>\n<p>The naive order fails on self-assignment, and it fails in a way you can see rather than a way that merely reads freed memory.</p>",
+   "kind": "output",
+   "concept": "Assignment has a case construction does not, because the target already holds something and the source may be the target.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Ask whether the source is this object before touching anything."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees, and it will be the self-move. Deleting the pointer, taking the source's, and then clearing the source clears the pointer you just took, because the source is the target. The object ends up owning nothing at all.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Copy assignment has the same shape and a nastier version of the same bug: release then acquire reads freed memory rather than leaving a visible null, which is why it can appear to work for years. Copy and swap avoids both by building the new value first and handing the old one to a temporary that dies at the end of the statement, which also gives the strong exception guarantee for free.</p>",
+   "starter": "#include <utility>\nstruct Owner {\n    int *p = nullptr;\n    Owner() = default;\n    explicit Owner(int v) : p(new int(v)) {}\n    Owner(const Owner &) = delete;\n    Owner &operator=(const Owner &) = delete;\n    Owner(Owner &&o) noexcept : p(o.p) { o.p = nullptr; }\n    Owner &operator=(Owner &&o) noexcept {\n        delete p;\n        p = o.p;\n        o.p = nullptr;\n        return *this;\n    }\n    ~Owner() { delete p; }\n};\n\nint assign_value(int a, int b) {\n    Owner x(a), y(b);\n    x = std::move(y);\n    return x.p ? *x.p : -1;\n}\nint self_assign_value(int a) {\n    Owner x(a);\n    x = std::move(x);\n    return x.p ? *x.p : -1;\n}",
+   "tests": "#include <cassert>\nint assign_value(int a, int b);\nint self_assign_value(int a);\nint main() {\n    assert(assign_value(1, 2) == 2);\n    /* Moving an object from itself must leave it intact. */\n    assert(self_assign_value(5) == 5);\n    assert(self_assign_value(0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 7,
+   "title": "What owning costs",
+   "brief": "<p>Write <code>sizes</code>, reporting the size of a raw pointer, a <code>unique_ptr</code> and a <code>shared_ptr</code>.</p>\n<p>The rule of zero says to own nothing raw. This is what that advice costs.</p>",
+   "kind": "output",
+   "concept": "Exclusive ownership is free in space and shared ownership costs a second pointer plus an atomic on every copy.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "<code>sizeof</code> on each of the three."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A <code>unique_ptr</code> with the default deleter holds nothing but the pointer, so it is the same eight bytes. A <code>shared_ptr</code> holds a second pointer to the control block that carries the counts.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names. The smart pointers live in <code>&lt;memory&gt;</code>.</p>"
+    }
+   ],
+   "after": "<p>Eight bytes against eight, measured, for exclusive ownership. Sixteen for shared, and its copies cost an atomic increment, which unit 026 already priced as cheap uncontended and expensive when several cores want the same line. That is the reason to establish that ownership really is shared before reaching for it.</p>",
+   "starter": "#include <cstddef>\n#include <memory>\nvoid sizes(size_t *raw, size_t *uniq, size_t *shared) {\n    *raw = sizeof(int *);\n    *uniq = sizeof(int *) * 2;\n    *shared = sizeof(int *) * 2;\n}",
+   "tests": "#include <cassert>\n#include <cstddef>\nvoid sizes(size_t *, size_t *, size_t *);\nint main() {\n    size_t r, u, s;\n    sizes(&r, &u, &s);\n    assert(r == 8);\n    /* Exclusive ownership costs nothing in space. */\n    assert(u == 8);\n    /* Shared ownership carries a pointer to the counts. */\n    assert(s == 16);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 8,
+   "title": "Nothing escapes a destructor",
+   "brief": "<p>A destructor runs during exception unwinding, so an exception escaping one meets an exception already in flight and the program ends.</p>\n<p>Write <code>Safe</code>, whose cleanup can fail, so that the failure is recorded rather than thrown.</p>",
+   "kind": "output",
+   "concept": "A destructor must offer the no-throw guarantee, because it runs at a moment when there is no way to report a second failure.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "signal"
+    }
+   ],
+   "hints": [
+    "Catch inside the destructor and record the outcome somewhere the caller can read."
+   ],
+   "diagnose": [
+    {
+     "id": "sig",
+     "judge": "verdict",
+     "key": "signal",
+     "prose": "<p>The program was killed rather than failing a check, and that is the point. An exception escaping a destructor calls <code>std::terminate</code>, which aborts, so there is no opportunity to report anything and no way for a caller to recover. Catch it inside the destructor and leave a flag behind instead.</p>"
+    },
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>The destructor no longer aborts and the flag is wrong. The failing cleanup has to be attempted and its exception swallowed, so unwinding continues and the caller can still find out what happened.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is why destructors are implicitly <code>noexcept</code> and why a cleanup that can genuinely fail belongs in a named method the caller invokes, with the destructor as the fallback that tries and gives up quietly. A close that can fail is the standard example, and the reason file wrappers offer an explicit close.</p>",
+   "starter": "struct Safe {\n    bool fail;\n    int *flag;\n    Safe(bool f, int *fl) : fail(f), flag(fl) {}\n    ~Safe() noexcept(false) {\n        if (fail) throw 1;\n    }\n};\n\nint run(bool fail) {\n    int flag = 0;\n    { Safe s(fail, &flag); }\n    return flag;\n}",
+   "tests": "#include <cassert>\nstruct Safe;\nint run(bool fail);\nint main() {\n    /* A cleanup that succeeds leaves the flag alone. */\n    assert(run(false) == 0);\n    /* One that fails records it and does not propagate. */\n    assert(run(true) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  }
+ ]
+}

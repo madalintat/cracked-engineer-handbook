@@ -1,0 +1,185 @@
+{
+ "slug": "raii",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What is the actual difficulty with releasing resources?",
+   "options": [
+    "Releasing on every path out of a function, including the ones you did not write",
+    "Remembering to release them at all",
+    "Knowing which resources are scarce",
+    "Releasing them in the right order"
+   ],
+   "correct": 0,
+   "why": "<p>A function with two resources and six exits needs the right subset released at each, and the number of subsets grows with the number of resources.</p>"
+  },
+  {
+   "n": 2,
+   "q": "Where does the compiler emit a destructor call?",
+   "options": [
+    "At every point control leaves the scope, including exception unwinding",
+    "At the closing brace only",
+    "Where the programmer writes one",
+    "At the end of the enclosing function"
+   ],
+   "correct": 0,
+   "why": "<p>The exception path is the one a defer statement in a language without exceptions does not have to handle, and the one a manual release always gets wrong somewhere.</p>"
+  },
+  {
+   "n": 3,
+   "q": "In what order are objects in a scope destroyed?",
+   "options": [
+    "Reverse of construction, guaranteed",
+    "Declaration order",
+    "Unspecified",
+    "By decreasing size, for cache reasons"
+   ],
+   "correct": 0,
+   "why": "<p>A later object may depend on an earlier one, so the earlier one must outlive it. That one rule decides the correctness of a lot of code that never mentions it.</p>"
+  },
+  {
+   "n": 4,
+   "q": "What is the strong exception guarantee?",
+   "options": [
+    "The operation either completes or leaves everything exactly as it was",
+    "The operation cannot throw",
+    "Nothing leaks and objects remain usable",
+    "Exceptions are caught and converted to error codes"
+   ],
+   "correct": 0,
+   "why": "<p>It usually costs a copy: build the new state beside the old one and swap only when nothing can throw any more.</p>"
+  },
+  {
+   "n": 5,
+   "q": "Why must a destructor not throw?",
+   "options": [
+    "It runs during unwinding, where a second exception in flight ends the program",
+    "Throwing from a destructor leaks the object",
+    "The standard forbids allocation in destructors",
+    "It would confuse the optimiser"
+   ],
+   "correct": 0,
+   "why": "<p>Which is why destructors are implicitly <code>noexcept</code>, and why a cleanup that can genuinely fail belongs in a named method with the destructor as a quiet fallback.</p>"
+  },
+  {
+   "n": 6,
+   "q": "What does a move leave in the source?",
+   "options": [
+    "A valid, unspecified state whose destructor runs harmlessly",
+    "An empty object, guaranteed",
+    "The original value, unchanged",
+    "An object that must not be touched again"
+   ],
+   "correct": 0,
+   "why": "<p>A moved-from object may be destroyed and may be assigned to. Reading its value is allowed and tells you nothing, and the library's types mostly leaving themselves empty is an implementation detail.</p>"
+  },
+  {
+   "n": 7,
+   "q": "What does <code>std::move</code> do?",
+   "options": [
+    "Nothing but cast to an rvalue reference",
+    "Transfers the object's contents",
+    "Calls the move constructor",
+    "Marks the object for destruction"
+   ],
+   "correct": 0,
+   "why": "<p>Measured: applying it and binding the result to a reference performs zero moves and zero copies. What performs the move is the constructor the cast made eligible.</p>"
+  },
+  {
+   "n": 8,
+   "q": "What happens to <code>std::move</code> on a <code>const</code> object?",
+   "options": [
+    "The copy constructor is chosen, silently, with no diagnostic",
+    "The compiler rejects it",
+    "The move happens anyway, since the object is dying",
+    "The <code>const</code> is stripped"
+   ],
+   "correct": 0,
+   "why": "<p>The cast produces a <code>const</code> rvalue reference and no move constructor accepts one, so you get a copy where you asked for a move.</p>"
+  },
+  {
+   "n": 9,
+   "q": "How many moves does returning a local object cost?",
+   "options": [
+    "None, measured, for both a temporary and a named local",
+    "One",
+    "One, unless the type is trivially copyable",
+    "Two: into the return slot and out of it"
+   ],
+   "correct": 0,
+   "why": "<p>Since C++17 a returned temporary is constructed directly in the caller's storage, so there is no second object for a move to happen between.</p>"
+  },
+  {
+   "n": 10,
+   "q": "Why should you not write <code>return std::move(local)</code>?",
+   "options": [
+    "It cannot help, and it prevents the elision that would otherwise happen",
+    "It is a compile error in C++17",
+    "It moves twice",
+    "It only matters for non-trivial types"
+   ],
+   "correct": 0,
+   "why": "<p>There was nothing to elide the move of, and naming a cast where a plain name was expected adds exactly the move it was trying to avoid.</p>"
+  },
+  {
+   "n": 11,
+   "q": "Why does the naive move assignment break on self-assignment?",
+   "options": [
+    "Clearing the source clears the pointer you just took, because they are the same object",
+    "The delete runs twice",
+    "The move constructor is called instead",
+    "It does not; self-move is undefined and never happens"
+   ],
+   "correct": 0,
+   "why": "<p>The object ends up owning nothing at all, which is visible rather than merely reading freed memory, and that is why this is the version worth writing an exercise about.</p>"
+  },
+  {
+   "n": 12,
+   "q": "What does copy and swap get right for free?",
+   "options": [
+    "Self-assignment and the strong exception guarantee, from the ordering alone",
+    "Move semantics",
+    "Thread safety",
+    "Reduced allocation"
+   ],
+   "correct": 0,
+   "why": "<p>It builds the new value first, so if the allocation throws nothing has been modified, and the source is never destroyed before it is read.</p>"
+  },
+  {
+   "n": 13,
+   "q": "What is the rule of five?",
+   "options": [
+    "Writing any of the five special members usually means you need all of them",
+    "Every class needs five members to be complete",
+    "There are five levels of exception safety",
+    "Five is the maximum useful inheritance depth"
+   ],
+   "correct": 0,
+   "why": "<p>If a class owns a raw resource it needs a destructor, and then the generated copy operations duplicate the pointer and the second destruction is a double free.</p>"
+  },
+  {
+   "n": 14,
+   "q": "What is the rule of zero, and what does it cost?",
+   "options": [
+    "Own nothing raw and write none of the five; a <code>unique_ptr</code> is the same 8 bytes as the pointer",
+    "Write all five explicitly; it costs nothing",
+    "Use only value types; it costs a copy per assignment",
+    "Delete all five; it costs the ability to copy"
+   ],
+   "correct": 0,
+   "why": "<p>Measured: 8 bytes for exclusive ownership, 16 for shared, and shared copies cost an atomic increment which unit 026 already priced.</p>"
+  },
+  {
+   "n": 15,
+   "q": "When is <code>shared_ptr</code> the right answer?",
+   "options": [
+    "When two independent parts genuinely both need the thing alive and neither decides",
+    "Whenever more than one function touches the object",
+    "Whenever the lifetime is not obvious",
+    "By default, since it is safer"
+   ],
+   "correct": 0,
+   "why": "<p>With everything shared, nothing has an owner and no lifetime is stated anywhere. The question is who decides when this dies, and an unclear answer is a design problem no smart pointer fixes.</p>"
+  }
+ ]
+}
