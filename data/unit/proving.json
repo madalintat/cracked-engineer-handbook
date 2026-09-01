@@ -74,5 +74,7 @@
   "structure",
   "clock-edge"
  ],
- "neededBy": []
+ "neededBy": [
+  "timing"
+ ]
 }

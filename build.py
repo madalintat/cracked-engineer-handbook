@@ -192,7 +192,7 @@ VERDICTS = {
     },
     "yosys": {
         "syntax-error", "latch-inferred", "multi-driver", "sat-fail",
-        "cell-budget", "ok",
+        "cell-budget", "path-too-long", "ok",
     },
     "modal": {
         "compile-error", "launch-error", "cuda-error", "sanitizer",
@@ -684,7 +684,8 @@ def _check_yosys_spec(spec, w):
         return p
     if not spec.get("top"):
         p.append(f"{w}: spec has no 'top' module name")
-    has_check = any(k in spec for k in ("cells", "forbid", "gold", "maxCells"))
+    has_check = any(k in spec for k in
+                    ("cells", "forbid", "gold", "maxCells", "maxDepth"))
     if not has_check:
         p.append(f"{w}: spec asserts nothing. Give it cells, forbid, gold or "
                  f"maxCells, or the exercise passes whatever is written.")
@@ -697,8 +698,9 @@ def _check_yosys_spec(spec, w):
         if not str(name).startswith("$"):
             p.append(f"{w}: {name!r} is not a yosys cell name; they start "
                      f"with a dollar sign, like $_DFF_P_")
-    if "maxCells" in spec and not isinstance(spec["maxCells"], int):
-        p.append(f"{w}: spec maxCells must be a whole number")
+    for k in ("maxCells", "maxDepth"):
+        if k in spec and not isinstance(spec[k], int):
+            p.append(f"{w}: spec {k} must be a whole number")
     return p
 
 

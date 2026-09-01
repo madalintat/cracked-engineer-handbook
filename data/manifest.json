@@ -635,7 +635,8 @@
     "structure"
    ],
    "neededBy": [
-    "proving"
+    "proving",
+    "timing"
    ],
    "minutes": 55
   },
@@ -658,7 +659,9 @@
     "structure",
     "clock-edge"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "timing"
+   ],
    "minutes": 55
   },
   {
@@ -672,12 +675,16 @@
    "phase": "build",
    "accent": "gold",
    "backend": "yosys",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1442,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "clock-edge",
+    "proving"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "universal",
@@ -2616,13 +2623,13 @@
   "atlas": 4,
   "glossary": 28,
   "paths": 4,
-  "errors": 30,
+  "errors": 31,
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 18,
-  "words": 27585,
-  "exercises": 144,
-  "drills": 270
+  "ready": 19,
+  "words": 29027,
+  "exercises": 152,
+  "drills": 285
  }
 }

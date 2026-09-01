@@ -68,6 +68,18 @@ const allCells = (out) => {
 const firstLine = (out, re) =>
   (out.split('\n').find(l => re.test(l)) || '').trim();
 
+/* Yosys prints "Longest topological path in m (length=15):". The length is a
+ * count of cells on the deepest combinational path, which is the closest thing
+ * a gate-level netlist has to a delay: real timing needs a cell library with
+ * picoseconds in it, and depth is what is left when you do not have one.
+ *
+ * -noff stops the walk at flip-flops, so what is measured is one clock period's
+ * worth of logic rather than a path through the whole design. */
+const pathLength = (out) => {
+  const m = out.match(/Longest topological path in .*?\(length=(\d+)\)/);
+  return m ? Number(m[1]) : null;
+};
+
 /** Every size assertion a spec can make, applied to one cell tally.
  *
  * Shared by the plain path and the equivalence path so a budget means the same
@@ -104,6 +116,24 @@ function budgetVerdict(cells, spec, out) {
       cells, out,
     };
   }
+  if (spec.maxDepth !== undefined) {
+    const depth = pathLength(out);
+    if (depth === null) {
+      return {
+        verdict: 'path-too-long',
+        message: 'The depth of the longest path could not be measured.',
+        cells, out,
+      };
+    }
+    if (depth > spec.maxDepth) {
+      return {
+        verdict: 'path-too-long',
+        message: `Correct, and its longest path is ${depth} cells deep ` +
+                 `against a limit of ${spec.maxDepth}.`,
+        cells, depth, out,
+      };
+    }
+  }
   return null;
 }
 
@@ -111,8 +141,11 @@ function budgetVerdict(cells, spec, out) {
  *  equivalence proof, where the equivalence script's netlist is the wrong
  *  thing to count: it holds both designs and the miter between them. */
 async function sizeCheck(files, spec, top, onProgress) {
-  const r = await yosys(files, `read_verilog ${top}.v; synth -top ${top}; stat`,
-                        onProgress);
+  const r = await yosys(
+    files,
+    `read_verilog ${top}.v; synth -top ${top}; stat` +
+      (spec.maxDepth !== undefined ? '; ltp -noff' : ''),
+    onProgress);
   return budgetVerdict(allCells(r.out), spec, r.out);
 }
 
@@ -169,7 +202,9 @@ async function check(src, spec, onProgress) {
     // it gets said: a spec that carried both a gold and a budget used to have
     // the budget silently dropped, which is an assertion that looks like it
     // ran and never did.
-    if (!spec.cells && !spec.forbid && !spec.maxCells) {
+    const sized_ = spec.cells || spec.forbid ||
+                   spec.maxCells !== undefined || spec.maxDepth !== undefined;
+    if (!sized_) {
       return { verdict: 'ok', message: 'Proved equivalent to the reference design.',
                out: r.out, proved: true };
     }
@@ -181,7 +216,9 @@ async function check(src, spec, onProgress) {
     };
   }
 
-  const script = spec.script || `read_verilog ${top}.v; synth -top ${top}; stat`;
+  const script = spec.script ||
+    `read_verilog ${top}.v; synth -top ${top}; stat` +
+    (spec.maxDepth !== undefined ? '; ltp -noff' : '');
   const r = await yosys(files, script, onProgress);
 
   if (/syntax error|^ERROR: Parser error/im.test(r.out)) {

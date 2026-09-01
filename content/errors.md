@@ -228,6 +228,24 @@ guess from reading the source.
 Read the cell list rather than the total. A flip-flop where you expected none,
 or a wide adder where a comparator would do, is usually the whole difference.
 
+## yosys / path-too-long
+
+@short It is correct and its longest combinational path is deeper than allowed.
+
+Every path between two flip-flops has to settle inside one clock period, and the
+deepest one decides the whole clock. A design that is correct and too deep is
+not slow, it is wrong at the clock rate it was built for.
+
+The number reported is a count of cells on the deepest path, measured with
+flip-flops as endpoints, so it is one clock period's worth of logic rather than
+a walk through the whole design. It is not picoseconds: real timing needs a cell
+library with delays in it, and depth is the closest thing available without one.
+
+Look for a chain where a tree would do. A carry that ripples through every bit,
+a reduction written as a running total, or a priority chain tested one condition
+at a time all produce depth proportional to the width, where a balanced
+structure produces depth proportional to its logarithm.
+
 ## yosys / sat-fail
 
 @short Your design and the reference disagree on some input.

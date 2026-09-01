@@ -4639,6 +4639,254 @@
  },
  {
   "t": "section",
+  "slug": "timing",
+  "anchor": "the-budget",
+  "title": "The budget",
+  "text": "One clock period has to contain four things. The flip-flop that starts the path takes some time to put its stored value on its output after the edge. Call that the clock to output delay. Then the logic between the two flops has to settle. Then the flop at the end needs the value to be stable for a little while before the edge arrives, which is its setup time. And the two flops do not see the edge at exactly the same instant, because the clock reaches them through different amounts of wire, which is skew. Add them and you have the period. Anything left over is called slack, and the number every hardware engineer watches is the worst slack across every path in the design. Positive slack means it works at this clock. Negative slack means it does not, and the process of getting to zero has a name: timing closure. It is most of the schedule of a real chip. One period, and everything that has to fit inside it. The logic gets what is left after the flops have taken their share.",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "timing",
+  "anchor": "too-slow-is-not-slow",
+  "title": "Too slow is not slow",
+  "text": "This is the sentence worth keeping. In software, a slow function makes the program take longer and produce the same answer. That intuition does not transfer. A path that misses its deadline does not delay the result: the flop captures the previous value, or a value partway through changing, and the design computes something wrong from that point on. There is a worse case. A flip-flop given a value that changes right at the edge can enter a state that is neither 0 nor 1, and stay there for an unbounded time before falling one way or the other. That is metastability, and the probability of it is not zero, it is small, which means a design with a marginal path fails rarely and unpredictably rather than never or always. Rarely and unpredictably is the worst failure mode there is. It survives your tests, it ships, and it comes back as a field return that nobody can reproduce.",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "timing",
+  "anchor": "the-other-deadline-in-the-other-direction",
+  "title": "The other deadline, in the other direction",
+  "text": "Setup is the deadline you expect. There is a second one that runs the other way and it catches people because it is not intuitive. A flip-flop also needs its input to stay still for a short time after the edge, which is its hold time. If the path between two flops is very short, the new value can race through the logic and reach the second flop before that window closes, corrupting the value the second flop was supposed to capture from the previous cycle. The asymmetry matters. A setup problem is fixed by slowing the clock down, so a chip that fails setup can still be sold at a lower speed grade, which is exactly what binning is. A hold problem is not fixed by slowing the clock, because the race does not care how long the period is. A chip that fails hold is scrap, and the fix is another spin of the silicon. Which is why the tools insert buffers into paths that are too fast. Delay added on purpose, to make a signal arrive later, in a design where everything else is a fight to make signals arrive sooner.",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "timing",
+  "anchor": "what-makes-a-path-deep",
+  "title": "What makes a path deep",
+  "text": "Almost always a chain where a tree would do. The ripple carry adder is the canonical example and you built one. Bit 0's carry feeds bit 1, whose carry feeds bit 2, and the top bit cannot settle until every stage below it has. Depth grows with the width, so doubling the width doubles the delay. The same shape appears everywhere once you look for it. A maximum computed by comparing the running best against each candidate in turn is a chain. A selection written as a ladder of conditions tested one after another is a chain. An accumulator that adds into a wide register is a chain, and a nasty one, because its output feeds its own input and there is nowhere to put a register. The repair is usually the same too. Compare in pairs, then compare the winners: a tournament of eight is three rounds rather than seven comparisons. Decode a select in bits rather than in cases: three balanced multiplexers rather than eight conditions in sequence. Depth proportional to the logarithm of the width instead of to the width. It is not free. A tree usually costs more gates than a chain, and area and power go with gates. Trading one for the other is most of what physical design is. Same comparisons, same ",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "timing",
+  "anchor": "cutting-the-path",
+  "title": "Cutting the path",
+  "text": "When a tree is not available, the other lever is a register in the middle. Split the logic into two halves and put flip-flops between them. Each half now has its own clock period to settle in, so the deepest path is roughly halved and the clock can roughly double. The design produces a result every cycle as before, and any particular result now takes two cycles to come out. That is the pipeline trade, and both halves of it are real. Throughput goes up, which is what you wanted. Latency goes up too, which is a cost somebody pays: a branch that has to wait for a comparison waits longer, and a control loop that has to react to a sensor reacts later. A register at the end of a deep path is not a pipeline stage. The path is still as deep as it was; you have only given its result somewhere to sit. The cut has to be in the middle of the logic, and choosing where is the design work.",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "timing",
+  "anchor": "how-anyone-knows-before-building-it",
+  "title": "How anyone knows before building it",
+  "text": "Static timing analysis, and its logic is the one from the last unit. The tool takes the netlist and a library that says what every cell's delay is, finds the longest path between every pair of registers, and reports the worst one. It does this without simulating anything and without any input vectors, because delay does not depend on the values, only on the structure. Every path is considered, including the ones no realistic input ever exercises. That last part is a weakness as well as a strength. A path that no input can activate still shows up as the critical path and still has to be fixed or excluded by hand, and those false paths are a recurring nuisance. The exercises here do not have a cell library, so they measure depth instead: the number of cells on the deepest path between two flip-flops. It is not picoseconds, and it is the right shape. A design at depth 42 will not clock at the speed of the same function at depth 18, whatever library you hand it.",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "timing",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Part III is done, and it added three things to the machine you built by hand. A description that a tool turns into structure. A proof that the structure computes the right function for every input. And a deadline that decides whether the structure can be clocked at all. Part IV steps back from the hardware entirely and asks what any machine can compute, which turns out not to depend on how deep its adder is.",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "timing",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "is the verdict this unit is about. The design is correct and its deepest path is deeper than the exercise allows, and the message reports the number so you can see the change your fix made. still means what it meant: your restructured design no longer computes the same thing. Restructuring for depth is where that happens most, because it is exactly the kind of edit that looks safe and reassociates something that could not be reassociated.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "timing",
+  "n": 1,
+  "title": "The tournament",
+  "text": "A chain has depth proportional to its length and a tree has depth proportional to the logarithm of it, for the same comparisons and the same answer. Build , the largest of four eight-bit values. The starter compares the running best against each candidate in turn. It is correct, and every comparison waits for the one before it. Restructure it as a tournament: compare in pairs, then compare the winners.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "timing",
+  "n": 2,
+  "title": "Eight of them, and the chain gets worse",
+  "text": "Chain depth grows with the number of inputs and tree depth grows with its logarithm, so the gap widens as the design does. The same shape at eight inputs, where the difference stops being a detail. Build , the smallest of eight four-bit values. The starter is a chain of seven comparisons.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "timing",
+  "n": 3,
+  "title": "Shift by a variable amount",
+  "text": "Decomposing an amount into its bits turns a chain of small steps into a fixed number of stages, one per bit of the amount. Build , which shifts an eight-bit value left by places. The starter shifts by one, times, testing at each step whether it has done enough. Every step waits for the one before it. Do it in three stages instead: shift by four or not, then by two or not, then by one or not.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "timing",
+  "n": 4,
+  "title": "Eight cases, tested one at a time",
+  "text": "A select is a number, and decoding it one bit at a time costs one multiplexer per bit rather than one comparison per case. Build , which picks one of eight bytes according to a three-bit select. The starter is a ladder of eight equality tests. Replace it with three multiplexer stages, one per bit of the select.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "timing",
+  "n": 5,
+  "title": "The cut has to be in the middle",
+  "text": "A register at the end of a deep path is not a pipeline stage, because the path is still as deep as it was. Both versions here take two clock cycles to produce a result. They differ in where the work sits. The starter registers its inputs, then does the whole sixteen-bit addition in the second stage. Split the addition instead: add the low halves in the first stage and the high halves in the second, carrying between them.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "timing",
+  "n": 6,
+  "title": "The carry that ripples",
+  "text": "What a tool produces from an operator is a choice it made, and the report is the only way to find out which choice. Build , an eight-bit adder with a nine-bit result, at a depth of at most ten. The starter uses the operator. It is correct, and on this toolchain the adder it produces is deeper than a ripple carry chain written out by hand. Build the chain structurally instead, with a generate loop over eight full adders.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "timing",
+  "n": 7,
+  "title": "Combinational, by accident sequential",
+  "text": "A clocked block is storage whether or not you wanted storage, and a budget that forbids a cell is how a design says it must be combinational. Build , the exclusive or of all eight bits of , at a depth of at most four and with no flip-flops at all. The starter computes the right value and computes it a cycle late, because the work sits in a clocked block. Nothing in the source says \"this is a register\"; the clock in the sensitivity list does.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "timing",
+  "n": 8,
+  "title": "The technique that did not win",
+  "text": "A technique is faster or slower only against a particular library and a particular tool, and the report is the only place that fact lives. Carry select is the textbook answer to a slow adder. Compute the high half twice, once assuming the carry from the low half is 0 and once assuming it is 1, then pick the right one when the carry arrives. Both high halves are computed while the low half is still settling, so the carry costs one multiplexer instead of eight stages. The starter is that adder, at sixteen bits, and on this toolchain it is deeper than the plain ripple chain. Build the ripple chai",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "timing",
+  "n": 1,
+  "title": "What decides the clock period for the whole design?",
+  "text": " The deadline applies to every path at once and the worst one decides. That is why the number engineers watch is the worst slack across the whole design rather than a typical figure. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "timing",
+  "n": 2,
+  "title": "What are the four things one clock period has to contain?",
+  "text": " Whatever is left over after those four is slack, and getting the worst slack to zero is timing closure, which is most of the schedule of a real chip. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "timing",
+  "n": 3,
+  "title": "What happens when a path misses its setup deadline?",
+  "text": " The intuition from software, that slow means the same answer later, does not transfer. A missed deadline means a wrong value, and the design computes from that wrong value onward. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "timing",
+  "n": 4,
+  "title": "What is metastability?",
+  "text": " Its probability is small rather than zero, so a design with a marginal path fails rarely and unpredictably, which survives testing and comes back as a field return nobody can reproduce. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "timing",
+  "n": 5,
+  "title": "What is a hold time violation?",
+  "text": " It is the deadline running the other way, and it catches people because it is caused by a path being too fast rather than too slow. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "timing",
+  "n": 6,
+  "title": "Why is a hold violation worse than a setup violation?",
+  "text": " A chip that fails setup can be sold at a lower speed grade, which is what binning is. A chip that fails hold is scrap, because the race does not care how long the period is. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "timing",
+  "n": 7,
+  "title": "Why do tools insert buffers into paths that are too fast?",
+  "text": " Delay added deliberately, in a design where everything else is a fight to make signals arrive sooner. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "timing",
+  "n": 8,
+  "title": "Why is a ripple carry adder's depth proportional to its width?",
+  "text": " Doubling the width doubles the delay. It is the canonical chain, and once you have seen it the same shape appears in maxima, selections and accumulators. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "timing",
+  "n": 9,
+  "title": "A maximum of eight values, as a chain and as a tournament. What differs?",
+  "text": " Seven comparisons either way. A chain is seven deep and a tournament is three, and only the second one can be clocked fast. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "timing",
+  "n": 10,
+  "title": "What does a tree cost that a chain does not?",
+  "text": " A chain can reuse one comparator across its steps and a tree needs its own per pair. Trading depth against area is most of what physical design is. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "timing",
+  "n": 11,
+  "title": "What does adding a pipeline stage do?",
+  "text": " Both halves are real. Throughput goes up, which is what you wanted, and any particular result now takes an extra cycle, which somebody pays for. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "timing",
+  "n": 12,
+  "title": "Why is a register at the end of a deep path not a pipeline stage?",
+  "text": " The cut has to be in the middle of the logic. Choosing where is the design work, and it is why the number of stages a unit has is an architecture decision. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "timing",
+  "n": 13,
+  "title": "Why can an accumulator not be pipelined?",
+  "text": " A register in the loop means adding to a value that is a cycle stale, which is a different function rather than a faster one. The width is the lever that is left. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "timing",
+  "n": 14,
+  "title": "How does static timing analysis know a design's worst path?",
+  "text": " Delay does not depend on the values, only on the structure, which is the same reason the equivalence checker in the last unit needed no vectors either. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "drill",
+  "slug": "timing",
+  "n": 15,
+  "title": "What is a false path, and why is it a nuisance?",
+  "text": " Considering every path is the strength of the method and also its weakness, because \"every path\" includes the ones that cannot happen. ",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
   "slug": "registers",
   "anchor": "what-a-register-actually-is",
   "title": "What a register actually is",
