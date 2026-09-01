@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Hardware Handbook</title>
+<meta name="description" content="How computers work, from a transistor to a distributed training run. 19 parts, 122 units, every exercise checked by a real tool.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap row">
+    <a class="brand" href="#/">
+      <span class="mark" aria-hidden="true">HH</span>
+      <span>The Hardware Handbook</span>
+    </a>
+    <nav class="main" aria-label="Sections">
+      <a href="#/track" data-route="track">Track</a>
+      <a href="#/atlas" data-route="atlas">Atlas</a>
+      <a href="#/progress" data-route="progress">Progress</a>
+      <a href="#/glossary" data-route="glossary">Glossary</a>
+      <a href="#/search" data-route="search">Search</a>
+    </nav>
+    <button class="btn ghost" id="theme" aria-label="Switch theme" title="Switch theme">
+      <span id="themeIcon" aria-hidden="true">◐</span>
+    </button>
+  </div>
+</header>
+
+<main id="main" tabindex="-1"></main>
+
+<!-- Below 900px nav.main is hidden, so this is the only navigation there.
+     Without it those routes are unreachable on a phone. -->
+<nav class="tabs" aria-label="Sections">
+  <a href="#/" data-route=""><span class="ti" aria-hidden="true">▚</span>Home</a>
+  <a href="#/track" data-route="track"><span class="ti" aria-hidden="true">≡</span>Track</a>
+  <a href="#/atlas" data-route="atlas"><span class="ti" aria-hidden="true">◫</span>Atlas</a>
+  <a href="#/progress" data-route="progress"><span class="ti" aria-hidden="true">◔</span>Progress</a>
+  <a href="#/search" data-route="search"><span class="ti" aria-hidden="true">⌕</span>Search</a>
+</nav>
+
+<!-- Compile results land here so a screen reader hears them. The reference
+     implementation announces nothing at all. -->
+<div id="live" class="sr" role="status" aria-live="polite"></div>
+
+<footer class="bot">
+  <div class="wrap">
+    <p id="footcount">Loading the track.</p>
+    <p>Built against real tools. Every exercise is checked by something that
+      complains specifically: an in-page simulator, Compiler Explorer, Yosys, or
+      a GPU you own.</p>
+  </div>
+</footer>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

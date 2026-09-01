@@ -1,0 +1,856 @@
+[
+ {
+  "t": "unit",
+  "slug": "switch",
+  "title": "The switch",
+  "text": "A transistor is a switch you close with a voltage instead of a finger, and it is not a perfect switch. Both halves matter.",
+  "part": "Physics"
+ },
+ {
+  "t": "unit",
+  "slug": "cmos-gate",
+  "title": "The gate is two switch networks",
+  "text": "Inversion is free and non-inversion costs a stage. That is why the next part starts at NAND rather than AND.",
+  "part": "Physics"
+ },
+ {
+  "t": "unit",
+  "slug": "power",
+  "title": "Every switch costs energy",
+  "text": "P = alpha C V^2 f, and around 2005 the V stopped falling. Everything after this unit is a consequence.",
+  "part": "Physics"
+ },
+ {
+  "t": "unit",
+  "slug": "fabrication",
+  "title": "Making the thing is the hard part",
+  "text": "Yield falls exponentially with die area, so a big chip is not merely expensive. It is impossible. Chiplets follow.",
+  "part": "Physics"
+ },
+ {
+  "t": "unit",
+  "slug": "nand",
+  "title": "One primitive, all of logic",
+  "text": "Functional completeness: every Boolean function is one repeated part, and there is no second kind of magic further up.",
+  "part": "Logic"
+ },
+ {
+  "t": "unit",
+  "slug": "selection",
+  "title": "Selection and addressing",
+  "text": "Control is data. A control signal is an ordinary input routed into selector logic, and that is also how memory gets addressed.",
+  "part": "Logic"
+ },
+ {
+  "t": "unit",
+  "slug": "arithmetic",
+  "title": "Arithmetic, and why subtraction is free",
+  "text": "One control bit inverting an operand turns the adder into a subtractor. The first time a representation choice buys hardware.",
+  "part": "Logic"
+ },
+ {
+  "t": "unit",
+  "slug": "feedback",
+  "title": "Feedback, and the bit that stays",
+  "text": "Memory is feedback plus a clock edge. No new parts, and the loop is legal here and illegal one unit ago for one reason.",
+  "part": "Logic"
+ },
+ {
+  "t": "unit",
+  "slug": "clock-bus",
+  "title": "The clock and the shared bus",
+  "text": "A clock cycle is a contract about when signals are allowed to be garbage. One wire can then serve every module.",
+  "part": "Logic"
+ },
+ {
+  "t": "unit",
+  "slug": "memory",
+  "title": "Addressable storage and the counter",
+  "text": "An address is a position, not a name. And since the counter defaults to +1, a jump is a parallel load rather than a special mechanism.",
+  "part": "Logic"
+ },
+ {
+  "t": "unit",
+  "slug": "encoding",
+  "title": "Instruction encoding",
+  "text": "An instruction is a bit pattern chosen so the wiring is cheap. The fields line up with the decoder you already built.",
+  "part": "Logic"
+ },
+ {
+  "t": "unit",
+  "slug": "control",
+  "title": "Control: the fetch-execute loop",
+  "text": "The instruction decoder is a lookup table. The least clever component in the machine, and the one that makes it a computer.",
+  "part": "Logic"
+ },
+ {
+  "t": "unit",
+  "slug": "structure",
+  "title": "Structure, not sequence",
+  "text": "Your code is not executed, it is built. Everything exists at once, forever, and settles.",
+  "part": "Silicon"
+ },
+ {
+  "t": "unit",
+  "slug": "clock-edge",
+  "title": "The clock edge",
+  "text": "There are exactly two kinds of logic, and almost every bug is a confusion between them. One character proves it.",
+  "part": "Silicon"
+ },
+ {
+  "t": "unit",
+  "slug": "proving",
+  "title": "Proving it works",
+  "text": "Verification is the job, and for hardware you can sometimes actually prove it rather than test it.",
+  "part": "Silicon"
+ },
+ {
+  "t": "unit",
+  "slug": "timing",
+  "title": "Timing, and the chip it runs on",
+  "text": "The longest combinational path sets your clock. Too slow is not slow, it is wrong.",
+  "part": "Silicon"
+ },
+ {
+  "t": "unit",
+  "slug": "universal",
+  "title": "The universal machine",
+  "text": "Every model of computation anyone has proposed computes the same things and you built one two parts ago without being told.",
+  "part": "Theory"
+ },
+ {
+  "t": "unit",
+  "slug": "languages",
+  "title": "Formal languages, and the tools built on them",
+  "text": "A lexer is a finite automaton and a regex engine is a choice between two walks. One of them takes 251 million steps.",
+  "part": "Theory"
+ },
+ {
+  "t": "unit",
+  "slug": "computability",
+  "title": "What cannot be decided",
+  "text": "Rice's theorem, and why a perfect optimiser, a perfect analyser and a perfect virus scanner are all impossible.",
+  "part": "Theory"
+ },
+ {
+  "t": "unit",
+  "slug": "complexity",
+  "title": "Complexity as advice",
+  "text": "NP-hardness tells you which approach to take, not that you should give up. SAT solvers crush intractable instances daily.",
+  "part": "Theory"
+ },
+ {
+  "t": "unit",
+  "slug": "registers",
+  "title": "Registers and the stack",
+  "text": "Sixteen names, one of which grows downward. The calling convention is a contract you can read in the assembly.",
+  "part": "The machine"
+ },
+ {
+  "t": "unit",
+  "slug": "addressing",
+  "title": "Addressing and flags",
+  "text": "Addressing modes, the flags register, and why lea is not a load.",
+  "part": "The machine"
+ },
+ {
+  "t": "unit",
+  "slug": "syscalls",
+  "title": "Syscalls",
+  "text": "The one interface Linux promises never to renumber, and the register contract that is not the C one.",
+  "part": "The machine"
+ },
+ {
+  "t": "unit",
+  "slug": "elf",
+  "title": "ELF, linking and loading",
+  "text": "What runs between execve and main, and who chose the address of the function you are about to call.",
+  "part": "The machine"
+ },
+ {
+  "t": "unit",
+  "slug": "cache",
+  "title": "The memory hierarchy",
+  "text": "Four cycles or three hundred, decided by an address you did not think about. You can read your own cache sizes out of a timing table.",
+  "part": "The machine"
+ },
+ {
+  "t": "unit",
+  "slug": "pipeline",
+  "title": "Pipelines, prediction and SIMD",
+  "text": "The processor is guessing, and it is right 95% of the time. The other 5% is where your performance went.",
+  "part": "The machine"
+ },
+ {
+  "t": "unit",
+  "slug": "atomics",
+  "title": "Atomics and ordering",
+  "text": "x86 gives you more than you asked for, ARM gives you exactly what you asked for, and that is why your code broke on the M1.",
+  "part": "The machine"
+ },
+ {
+  "t": "unit",
+  "slug": "integers",
+  "title": "Integers and overflow",
+  "text": "Two's complement makes subtraction free. Signed overflow is undefined, and the optimiser will cash that promise.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "unit",
+  "slug": "floats",
+  "title": "IEEE-754",
+  "text": "Subnormals, NaN, and five rounding modes. Also: what -ffast-math actually discards.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "unit",
+  "slug": "stability",
+  "title": "Stability, and the bridge to low precision",
+  "text": "Why parallel reductions disagree, why Kahan is not a panacea, and why 4-bit training needs stochastic rounding.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "unit",
+  "slug": "text",
+  "title": "Unicode and UTF-8",
+  "text": "Code points are not characters, characters are not glyphs, and UTF-8 is one of the best-designed formats in computing.",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "unit",
+  "slug": "object-model",
+  "title": "The C++ object model",
+  "text": "Where the bytes go, what a vptr is, and why declaration order governs the vtable.",
+  "part": "Systems"
+ },
+ {
+  "t": "unit",
+  "slug": "raii",
+  "title": "RAII and moves",
+  "text": "A destructor is a scheduled instruction. Moves are what let ownership be cheap.",
+  "part": "Systems"
+ },
+ {
+  "t": "unit",
+  "slug": "compile-time",
+  "title": "Compile time",
+  "text": "Templates, instantiation, and why your build is slow.",
+  "part": "Systems"
+ },
+ {
+  "t": "unit",
+  "slug": "processes",
+  "title": "Processes and file descriptors",
+  "text": "Everything is a file until it is not, and a thread is a process that shared too much.",
+  "part": "Systems"
+ },
+ {
+  "t": "unit",
+  "slug": "virtual-memory",
+  "title": "Virtual memory",
+  "text": "Memory is manufactured lazily in response to hardware faults. Allocation is nearly free; the faults are not.",
+  "part": "Systems"
+ },
+ {
+  "t": "unit",
+  "slug": "scheduling",
+  "title": "Threads and scheduling",
+  "text": "What the kernel thinks a thread is, and who decides which one runs.",
+  "part": "Systems"
+ },
+ {
+  "t": "unit",
+  "slug": "abi",
+  "title": "The ABI",
+  "text": "The C calling convention is not one thing. Two compilers, one diff, every time.",
+  "part": "Systems"
+ },
+ {
+  "t": "unit",
+  "slug": "linking",
+  "title": "Linking and interposition",
+  "text": "The target of a call is chosen at run time by a program you can lie to.",
+  "part": "Systems"
+ },
+ {
+  "t": "unit",
+  "slug": "flash",
+  "title": "The device decides everything",
+  "text": "NAND is read in pages and erased in blocks. Every piece of storage software is a consequence of that asymmetry.",
+  "part": "Storage"
+ },
+ {
+  "t": "unit",
+  "slug": "nvme",
+  "title": "Getting to the device",
+  "text": "The interface must express as much parallelism as the medium contains, which is also how your GPU is attached.",
+  "part": "Storage"
+ },
+ {
+  "t": "unit",
+  "slug": "page-cache",
+  "title": "The kernel's memory of the disk",
+  "text": "Your reads and writes talk to RAM. Durability is the separate, expensive act of leaving it.",
+  "part": "Storage"
+ },
+ {
+  "t": "unit",
+  "slug": "filesystems",
+  "title": "Naming bytes",
+  "text": "A filesystem is a crash-consistency protocol that protects its own metadata, not your data.",
+  "part": "Storage"
+ },
+ {
+  "t": "unit",
+  "slug": "storage-engines",
+  "title": "Structures dictated by physics",
+  "text": "B-tree or LSM is not a taste question. The device's cost asymmetry picks it, and the wrong key order costs 250x.",
+  "part": "Storage"
+ },
+ {
+  "t": "unit",
+  "slug": "terminal",
+  "title": "The terminal is a kernel object",
+  "text": "Not the program and not the window: a kernel state machine with settable flags. Every weird behaviour is that machine obeying.",
+  "part": "Tools"
+ },
+ {
+  "t": "unit",
+  "slug": "shell",
+  "title": "The shell forks, and the tradition follows",
+  "text": "Globbing, redirection and pipes all happen in the gap between fork and exec, before your command runs one instruction.",
+  "part": "Tools"
+ },
+ {
+  "t": "unit",
+  "slug": "parsing",
+  "title": "Source text to syntax tree",
+  "text": "A grammar describes syntax, but a real language's syntax depends on its own semantics. C++ is the proof.",
+  "part": "Tools"
+ },
+ {
+  "t": "unit",
+  "slug": "ssa",
+  "title": "SSA and the middle end",
+  "text": "One definition per value turns 'where did this come from' into a pointer dereference. That is what made optimisation tractable.",
+  "part": "Tools"
+ },
+ {
+  "t": "unit",
+  "slug": "codegen",
+  "title": "The back end and the linker",
+  "text": "An -O level does not change what your program means. It changes how much of what you told the compiler it is allowed to believe.",
+  "part": "Tools"
+ },
+ {
+  "t": "unit",
+  "slug": "interpreters",
+  "title": "Interpreters and JITs",
+  "text": "An interpreter trades ahead-of-time optimisation for knowing what actually happened. A JIT spends that knowledge.",
+  "part": "Tools"
+ },
+ {
+  "t": "unit",
+  "slug": "build",
+  "title": "The build graph",
+  "text": "Never under-build, never over-build. Timestamps cannot tell you which.",
+  "part": "Tools"
+ },
+ {
+  "t": "unit",
+  "slug": "debugger",
+  "title": "The debugger and the sanitizer",
+  "text": "A breakpoint is a patched byte. A sanitizer is a compiler pass that makes the bug loud instead of silent.",
+  "part": "Tools"
+ },
+ {
+  "t": "unit",
+  "slug": "measurement",
+  "title": "Measurement",
+  "text": "One timing number is not a measurement. Report a distribution, and know what coordinated omission hides.",
+  "part": "Tools"
+ },
+ {
+  "t": "unit",
+  "slug": "testing",
+  "title": "Properties, fuzzing and proof",
+  "text": "Stop writing examples. Generate them, shrink them, and let coverage drive the search.",
+  "part": "Tools"
+ },
+ {
+  "t": "unit",
+  "slug": "cost-model",
+  "title": "Big-O and the machine it assumes",
+  "text": "The cost model counts operations. The machine charges for memory movement. That gap is 600x.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "unit",
+  "slug": "layout",
+  "title": "Layout is the algorithm",
+  "text": "Same complexity, same operations, different arrangement, and the arrangement wins at every size that fits in a real machine.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "unit",
+  "slug": "branches",
+  "title": "Control flow is the algorithm",
+  "text": "The branch predictor is part of your complexity model, and the compiler has already applied half the fixes.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "unit",
+  "slug": "scan",
+  "title": "Work, depth and the scan",
+  "text": "Parallel algorithms rank on two axes, and scan converts irregular work into regular work. The GPU part reuses this directly.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "unit",
+  "slug": "blas",
+  "title": "The BLAS levels",
+  "text": "Only level 3 can ever reach peak. That single ratio explains why every numerical algorithm is rewritten in terms of GEMM.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "unit",
+  "slug": "gemm",
+  "title": "GEMM itself",
+  "text": "Five loops written against the memory hierarchy. The same shape returns as thread-block, warp and thread tiles.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "unit",
+  "slug": "decompositions",
+  "title": "Decompositions and conditioning",
+  "text": "LU, QR, SVD, and why you never invert a matrix to solve a system.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "unit",
+  "slug": "sparse",
+  "title": "Sparse and iterative",
+  "text": "Sparsity destroys arithmetic intensity, so SpMV runs at 2% of peak and that is correct rather than a bug.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "unit",
+  "slug": "memory-model",
+  "title": "Memory models",
+  "text": "Sequential consistency is the ideal nobody provides. The litmus tests show you what your hardware actually promises.",
+  "part": "Concurrency"
+ },
+ {
+  "t": "unit",
+  "slug": "lock-free",
+  "title": "Lock-free and the reclamation problem",
+  "text": "CAS is the easy part. Knowing when it is safe to free is the hard part, and usually the mutex wins.",
+  "part": "Concurrency"
+ },
+ {
+  "t": "unit",
+  "slug": "parallel-theory",
+  "title": "Work, span and scaling",
+  "text": "Amdahl and Gustafson disagree only about whether the problem size is fixed.",
+  "part": "Concurrency"
+ },
+ {
+  "t": "unit",
+  "slug": "coroutines",
+  "title": "Coroutines",
+  "text": "A coroutine is a function whose stack frame outlives its invocation. Every other detail follows from that.",
+  "part": "Concurrency"
+ },
+ {
+  "t": "unit",
+  "slug": "frames",
+  "title": "Frames and the link layer",
+  "text": "A packet is a byte layout with a fixed grammar, and every protocol is a header you parse with a pointer and a shift.",
+  "part": "Networks"
+ },
+ {
+  "t": "unit",
+  "slug": "routing",
+  "title": "Addressing and routing",
+  "text": "A network is a lookup table. The internet is 75,000 of them kept consistent by a protocol that votes on price.",
+  "part": "Networks"
+ },
+ {
+  "t": "unit",
+  "slug": "tcp",
+  "title": "TCP as a control loop",
+  "text": "Two coupled feedback loops: one protecting the receiver with a number it is told, one protecting the network with a number it must infer.",
+  "part": "Networks"
+ },
+ {
+  "t": "unit",
+  "slug": "sockets",
+  "title": "The socket API and how servers scale",
+  "text": "Every I/O API is a position on one question: who waits, and how many things can wait at once.",
+  "part": "Networks"
+ },
+ {
+  "t": "unit",
+  "slug": "web",
+  "title": "DNS, HTTP and TLS",
+  "text": "Typing a URL costs six round trips. Every protocol revision of the last fifteen years deletes one from that list.",
+  "part": "Networks"
+ },
+ {
+  "t": "unit",
+  "slug": "collectives",
+  "title": "How 512 GPUs talk",
+  "text": "A collective costs bytes divided by the bandwidth of the slowest link it crosses. Understanding that is worth 61% to 98%.",
+  "part": "Networks"
+ },
+ {
+  "t": "unit",
+  "slug": "sampling",
+  "title": "The analog boundary",
+  "text": "Aliasing is not noise, it is a different signal that is indistinguishable from yours. The filter must be analog and must come first.",
+  "part": "Signals"
+ },
+ {
+  "t": "unit",
+  "slug": "fourier",
+  "title": "Time and frequency",
+  "text": "The FFT is not just faster than the DFT, it is more accurate. Both are worth knowing why.",
+  "part": "Signals"
+ },
+ {
+  "t": "unit",
+  "slug": "filters",
+  "title": "Filters",
+  "text": "One pole, one line of code, and the most-used filter in embedded software. Also the complementary filter in disguise.",
+  "part": "Signals"
+ },
+ {
+  "t": "unit",
+  "slug": "entropy",
+  "title": "Information has a measure",
+  "text": "Entropy is expected code length and a hard floor, but only for the model you assumed. Your training loss is this number.",
+  "part": "Information"
+ },
+ {
+  "t": "unit",
+  "slug": "compression",
+  "title": "Removing redundancy",
+  "text": "Every compressor is a model plus a coder. The coder is solved; all remaining progress is modelling.",
+  "part": "Information"
+ },
+ {
+  "t": "unit",
+  "slug": "ecc",
+  "title": "Adding redundancy back",
+  "text": "Redundancy in the right algebraic shape reconstructs the original, and the guarantee is a theorem about an error model.",
+  "part": "Information"
+ },
+ {
+  "t": "unit",
+  "slug": "symmetric",
+  "title": "Symmetric cryptography",
+  "text": "The cipher is not the system. Modes are taught by their failure modes because that is how they are chosen.",
+  "part": "Information"
+ },
+ {
+  "t": "unit",
+  "slug": "asymmetric",
+  "title": "Asymmetric cryptography",
+  "text": "Uniqueness is load-bearing. Reuse a nonce and the maths hands over your key.",
+  "part": "Information"
+ },
+ {
+  "t": "unit",
+  "slug": "crypto-hardware",
+  "title": "Crypto and the hardware",
+  "text": "One of the few workloads where the correct implementation is deliberately slower than the fastest one.",
+  "part": "Information"
+ },
+ {
+  "t": "unit",
+  "slug": "cache-channel",
+  "title": "The cache is real and you can see it",
+  "text": "Microarchitectural state is observable as timing, and it is not rolled back. A histogram proves it.",
+  "part": "Security"
+ },
+ {
+  "t": "unit",
+  "slug": "speculation",
+  "title": "Speculation leaks what it touches",
+  "text": "The architecture rolls back what you computed, not what you touched.",
+  "part": "Security"
+ },
+ {
+  "t": "unit",
+  "slug": "mitigations",
+  "title": "Every mitigation is a fossil",
+  "text": "Read the list backwards and it is a history of the field. Overwriting a return address teaches the calling convention.",
+  "part": "Security"
+ },
+ {
+  "t": "unit",
+  "slug": "constant-time",
+  "title": "Constant time as a discipline",
+  "text": "If the time or the access pattern depends on a secret, it leaks. The compiler does not know that.",
+  "part": "Security"
+ },
+ {
+  "t": "unit",
+  "slug": "frame-budget",
+  "title": "Why a screen is an arithmetic problem",
+  "text": "Huge, deadlined and independent. A 16-core CPU has 80 cycles per pixel for everything.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "unit",
+  "slug": "rasteriser",
+  "title": "How a triangle becomes pixels",
+  "text": "Three linear edge functions on a grid, evaluated in 2x2 blocks, and that block is where the warp comes from.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "unit",
+  "slug": "sm-shape",
+  "title": "Why the SM is shaped like that",
+  "text": "Every structural feature was built to render triangles. CUDA added scatter, pointers, a scratchpad, and permission to stop pretending.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "unit",
+  "slug": "throughput",
+  "title": "The throughput machine",
+  "text": "A GPU does not make any instruction stream fast. It makes stalling free.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "unit",
+  "slug": "execution-model",
+  "title": "The execution model",
+  "text": "The warp is the unit of execution and the block is the unit of cooperation. Neither is the thread.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "unit",
+  "slug": "gpu-memory",
+  "title": "The memory hierarchy",
+  "text": "DRAM latency is about 100x shared memory, and local memory is DRAM wearing a disguise.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "unit",
+  "slug": "coalescing",
+  "title": "Coalescing",
+  "text": "A ratio, not a rule: maximise bytes used over bytes transferred. The compiler cannot see this and the profiler must.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "unit",
+  "slug": "shared-memory",
+  "title": "Shared memory and banks",
+  "text": "It decouples the access pattern you want from the one DRAM rewards, and has its own 32-way striping rule you must not violate instead.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "unit",
+  "slug": "occupancy",
+  "title": "The resource budget",
+  "text": "Occupancy is a budget outcome, not a goal. You compute it; you do not chase it.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "unit",
+  "slug": "latency-hiding",
+  "title": "Latency hiding",
+  "text": "Latency is hidden by having something else to issue, which is exactly why 100% occupancy is not the target.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "unit",
+  "slug": "roofline",
+  "title": "Roofline and the three limiters",
+  "text": "Memory, compute or latency. Speed of Light tells you which in two numbers, before you guess.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "unit",
+  "slug": "strides",
+  "title": "Strides and the dispatcher",
+  "text": "A transpose is free because a stride is a lie you tell about memory. One aten call routes on device, layout, autograd and autocast.",
+  "part": "Kernels and AI"
+ },
+ {
+  "t": "unit",
+  "slug": "autograd",
+  "title": "Autograd",
+  "text": "The tape is built during the forward pass. backward() is a topological traversal of a graph you did not know you were making.",
+  "part": "Kernels and AI"
+ },
+ {
+  "t": "unit",
+  "slug": "tiled-gemm",
+  "title": "Naive to tiled GEMM",
+  "text": "The same five loops from the algorithms part, now as thread-block, warp and thread tiles.",
+  "part": "Kernels and AI"
+ },
+ {
+  "t": "unit",
+  "slug": "cute",
+  "title": "CuTe layouts",
+  "text": "Layout algebra turns index arithmetic back into algebra, and a swizzle into a composition.",
+  "part": "Kernels and AI"
+ },
+ {
+  "t": "unit",
+  "slug": "formats",
+  "title": "The number formats",
+  "text": "E4M3, E5M2, E2M1. Sixteen values, and the whole dynamic range is 3.58 binades.",
+  "part": "Kernels and AI"
+ },
+ {
+  "t": "unit",
+  "slug": "block-scaling",
+  "title": "Block scaling",
+  "text": "Shrink the scale's scope until the outliers stop poisoning the block. Two levels, because the first one's format is narrow.",
+  "part": "Kernels and AI"
+ },
+ {
+  "t": "unit",
+  "slug": "stochastic-rounding",
+  "title": "Rounding and Hadamard",
+  "text": "Round-to-nearest stagnates at 0.5 where stochastic rounding reaches 101.0. Two orthogonal fixes for two different problems.",
+  "part": "Kernels and AI"
+ },
+ {
+  "t": "unit",
+  "slug": "transformer-arithmetic",
+  "title": "Transformer arithmetic",
+  "text": "A config file is a complete performance model. Params, FLOPs, bytes and step time all follow from eight numbers.",
+  "part": "Kernels and AI"
+ },
+ {
+  "t": "unit",
+  "slug": "flash-attention",
+  "title": "Online softmax and FlashAttention",
+  "text": "Reformulating a global reduction as a streaming one lets you compute an NxN matrix without ever storing it. It is exact.",
+  "part": "Kernels and AI"
+ },
+ {
+  "t": "unit",
+  "slug": "inference",
+  "title": "Inference is two machines",
+  "text": "Prefill is compute-bound and decode is memory-bound. Batch-1 decode wastes 99.66% of an H100 regardless of model size.",
+  "part": "Kernels and AI"
+ },
+ {
+  "t": "unit",
+  "slug": "parallelism",
+  "title": "The parallelism taxonomy",
+  "text": "Each dimension buys a specific memory saving with a specific collective. Map the worst collective to the fastest wire.",
+  "part": "Kernels and AI"
+ },
+ {
+  "t": "unit",
+  "slug": "training-run",
+  "title": "What actually breaks at scale",
+  "text": "466 interruptions in 54 days on 16,384 GPUs, and six of them were silent data corruption.",
+  "part": "Kernels and AI"
+ },
+ {
+  "t": "unit",
+  "slug": "no-os",
+  "title": "The chip with no operating system",
+  "text": "Your main() is the system. There is no boot, no scheduler and no one to catch you.",
+  "part": "Embodied"
+ },
+ {
+  "t": "unit",
+  "slug": "abstraction-cost",
+  "title": "The abstraction has a cost",
+  "text": "digitalWrite and PORTB do the same thing, and one costs 26x more. The optimiser provably cannot fix it.",
+  "part": "Embodied"
+ },
+ {
+  "t": "unit",
+  "slug": "volatile",
+  "title": "Time, interrupts and volatile",
+  "text": "The compiler may delete code you need, because it cannot see the hardware or the interrupt. And volatile is not atomic.",
+  "part": "Embodied"
+ },
+ {
+  "t": "unit",
+  "slug": "cortex-m",
+  "title": "Wider machines",
+  "text": "The same C on a machine with enough registers produces different code and different problems.",
+  "part": "Embodied"
+ },
+ {
+  "t": "unit",
+  "slug": "determinism",
+  "title": "Where determinism goes to die",
+  "text": "An OS buys abstraction and sells determinism. Knowing which side you are on is the architectural decision.",
+  "part": "Embodied"
+ },
+ {
+  "t": "unit",
+  "slug": "actuators",
+  "title": "Actuators and FOC",
+  "text": "A PI controller cannot track a sinusoid with zero error. That sentence is why field-oriented control exists.",
+  "part": "Embodied"
+ },
+ {
+  "t": "unit",
+  "slug": "control-loops",
+  "title": "Control loops",
+  "text": "PID properly, then cascade, and why the loop rates differ by four orders of magnitude.",
+  "part": "Embodied"
+ },
+ {
+  "t": "unit",
+  "slug": "estimation",
+  "title": "Estimation",
+  "text": "The Kalman filter is inverse-variance weighting. The off-diagonals are the punchline.",
+  "part": "Embodied"
+ },
+ {
+  "t": "unit",
+  "slug": "kinematics",
+  "title": "Kinematics",
+  "text": "Gimbal lock is a Jacobian going to zero, and you can watch it happen to six significant figures.",
+  "part": "Embodied"
+ },
+ {
+  "t": "unit",
+  "slug": "planning",
+  "title": "Planning",
+  "text": "Configuration space, sampling, and why a correct planner over a silently wrong domain is the bug you will actually write.",
+  "part": "Embodied"
+ },
+ {
+  "t": "unit",
+  "slug": "policies",
+  "title": "Physical intelligence",
+  "text": "The System 1 / System 2 split in modern robot policies is cascade control, rediscovered.",
+  "part": "Embodied"
+ },
+ {
+  "t": "unit",
+  "slug": "landauer",
+  "title": "The thermodynamic floor",
+  "text": "Erasing a bit costs kT ln 2. A 3 nm gate sits four orders of magnitude above it, and a 1990s gate sat eight.",
+  "part": "Limits"
+ },
+ {
+  "t": "unit",
+  "slug": "walls",
+  "title": "The walls we are hitting",
+  "text": "Moving a 64-bit word 10 mm costs 82 pJ and the arithmetic on it costs a few. Measure work in bytes moved.",
+  "part": "Limits"
+ },
+ {
+  "t": "unit",
+  "slug": "alternatives",
+  "title": "What else a computer could be",
+  "text": "Quantum speedup is interference cancelling wrong answers, not trying everything at once. A 3-qubit circuit is an 8x8 matrix.",
+  "part": "Limits"
+ }
+]

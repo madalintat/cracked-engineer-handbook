@@ -1,0 +1,142 @@
+{
+  "_meta": {
+    "source_gpu_strings": "https://modal.com/docs/guide/gpu",
+    "source_prices": "https://modal.com/pricing",
+    "retrieved": "2026-09-01",
+    "currency": "USD",
+    "price_basis": "per GPU, per hour, on-demand/preemptible base price. Modal publishes per-SECOND prices; per-hour = per-second * 3600.",
+    "warning": "Prices change. Re-verify against https://modal.com/pricing before shipping. VRAM/arch/sm are NVIDIA hardware facts, NOT documented by Modal (except H200=141GB and H100/H200=SXM, which Modal states explicitly)."
+  },
+  "gpus": [
+    {
+      "id": "t4",
+      "gpu_string": "T4",
+      "name": "NVIDIA T4",
+      "vram_gb": 16,
+      "arch": "Turing",
+      "sm": "sm_75",
+      "price_per_hour": 0.59,
+      "notes": "Cheapest GPU on Modal. No BF16 tensor cores, no async copy. FP16/INT8 tensor cores only. Up to 8 per container. ~50.8h on the $30/mo Starter credit."
+    },
+    {
+      "id": "l4",
+      "gpu_string": "L4",
+      "name": "NVIDIA L4",
+      "vram_gb": 24,
+      "arch": "Ada Lovelace",
+      "sm": "sm_89",
+      "price_per_hour": 0.8,
+      "notes": "Ada. Has FP8 tensor cores (E4M3/E5M2) but no TMA and no wgmma. Up to 8 per container. ~37.5h on $30."
+    },
+    {
+      "id": "a10",
+      "gpu_string": "A10",
+      "name": "NVIDIA A10",
+      "vram_gb": 24,
+      "arch": "Ampere",
+      "sm": "sm_86",
+      "price_per_hour": 1.1,
+      "notes": "Canonical string is 'A10'. The legacy alias 'A10G' still appears in Modal's own current docs examples (guide/cuda) and still resolves. Max 4 GPUs per container (all other types allow 8). ~27.3h on $30."
+    },
+    {
+      "id": "l40s",
+      "gpu_string": "L40S",
+      "name": "NVIDIA L40S",
+      "vram_gb": 48,
+      "arch": "Ada Lovelace",
+      "sm": "sm_89",
+      "price_per_hour": 1.95,
+      "notes": "Modal's explicitly recommended default for inference: 'we recommend starting off with the L40S, which offers an excellent trade-off of cost and performance and 48 GB of GPU RAM'. FP8, no TMA/wgmma. ~15.4h on $30."
+    },
+    {
+      "id": "a100-40gb",
+      "gpu_string": "A100-40GB",
+      "name": "NVIDIA A100, 40 GB",
+      "vram_gb": 40,
+      "arch": "Ampere",
+      "sm": "sm_80",
+      "price_per_hour": 2.1,
+      "notes": "Plain gpu=\"A100\" requests this tier but Modal 'may automatically upgrade a gpu=\"A100\" request to run on an 80 GB A100' at no extra cost. Use 'A100-40GB' to pin 40GB. First arch with async copy (cp.async) and BF16. ~14.3h on $30."
+    },
+    {
+      "id": "a100-80gb",
+      "gpu_string": "A100-80GB",
+      "name": "NVIDIA A100, 80 GB",
+      "vram_gb": 80,
+      "arch": "Ampere",
+      "sm": "sm_80",
+      "price_per_hour": 2.5,
+      "notes": "Same sm_80 target as the 40GB part; only HBM capacity/bandwidth differ. ~12h on $30."
+    },
+    {
+      "id": "rtx-pro-6000",
+      "gpu_string": "RTX-PRO-6000",
+      "name": "NVIDIA RTX PRO 6000 (Blackwell Server Edition)",
+      "vram_gb": 96,
+      "arch": "Blackwell (GB202, consumer/workstation line)",
+      "sm": "sm_120",
+      "price_per_hour": 3.03,
+      "notes": "TRAP FOR FP4 CURRICULUM: this is Blackwell but it is the GB202 workstation die, compute capability 12.0, NOT the sm_100 datacenter Blackwell. It has 5th-gen tensor cores with FP4, but it does NOT have tcgen05 / the sm_100a datacenter tensor-core instructions. sm_100-targeted PTX/kernels will NOT run here. VRAM/arch/sm are from NVIDIA, not documented by Modal. ~9.9h on $30."
+    },
+    {
+      "id": "h100",
+      "gpu_string": "H100",
+      "name": "NVIDIA H100 SXM5",
+      "vram_gb": 80,
+      "arch": "Hopper",
+      "sm": "sm_90a",
+      "price_per_hour": 3.95,
+      "notes": "Modal states 'All H100 and H200 GPUs on the Modal platform are of the SXM variant'. Modal 'may automatically upgrade a gpu=\"H100\" request to run on an H200' at no extra cost; pass gpu=\"H100!\" to forbid that (matters for benchmarking). Modal's own docs use TORCH_CUDA_ARCH_LIST=\"9.0 9.0a\" for H100. TMA + wgmma + FP8. ~7.6h on $30."
+    },
+    {
+      "id": "h100-strict",
+      "gpu_string": "H100!",
+      "name": "NVIDIA H100 SXM5 (no H200 upgrade)",
+      "vram_gb": 80,
+      "arch": "Hopper",
+      "sm": "sm_90a",
+      "price_per_hour": 3.95,
+      "notes": "Same hardware and price as 'H100'; the trailing '!' opts out of the silent H200 upgrade. Use this for any benchmarking lesson where the learner must know exactly which chip they are on."
+    },
+    {
+      "id": "h200",
+      "gpu_string": "H200",
+      "name": "NVIDIA H200 SXM",
+      "vram_gb": 141,
+      "arch": "Hopper",
+      "sm": "sm_90a",
+      "price_per_hour": 4.54,
+      "notes": "141 GB HBM3e at 4.8 TB/s, explicitly stated in Modal's GPU guide. Same sm_90a target as H100 - a kernel compiled for one runs on the other. ~6.6h on $30."
+    },
+    {
+      "id": "b200",
+      "gpu_string": "B200",
+      "name": "NVIDIA B200",
+      "vram_gb": 180,
+      "arch": "Blackwell (GB100 datacenter)",
+      "sm": "sm_100a",
+      "price_per_hour": 6.25,
+      "notes": "AVAILABLE AND SELF-SERVE. This is the part your FP4/sm_100 curriculum needs: 5th-gen tensor cores, tcgen05, native FP4 (NVFP4/MXFP4). Requires CUDA 12.8+ toolkit in your image. ~4.8h on $30 - the FP4 lesson must be short."
+    },
+    {
+      "id": "b200-plus",
+      "gpu_string": "B200+",
+      "name": "NVIDIA B200 or B300 (opt-in upgrade pool)",
+      "vram_gb": 180,
+      "arch": "Blackwell / Blackwell Ultra",
+      "sm": "sm_100a or sm_103a",
+      "price_per_hour": 6.25,
+      "notes": "Modal: 'Use gpu=\"B200+\" to allow Modal to run requests on either B200 or B300 GPUs. B200+ is billed as B200, regardless of which GPU is used.' Cheaper capacity access, but the learner no longer knows which SM they got - BAD for a teaching runner where the arch is the lesson. Requires CUDA 13.1+ because it may land on B300."
+    },
+    {
+      "id": "b300",
+      "gpu_string": "B300",
+      "name": "NVIDIA B300 (Blackwell Ultra)",
+      "vram_gb": 288,
+      "arch": "Blackwell Ultra (GB300)",
+      "sm": "sm_103a",
+      "price_per_hour": 7.1,
+      "notes": "Most expensive. Modal: 'B300 requires CUDA version 13.1+. Make sure your container Image and libraries are compatible with CUDA 13 before requesting a B300.' sm_103a is from NVIDIA, not documented by Modal - VERIFY on-device with torch.cuda.get_device_capability(). ~4.2h on $30."
+    }
+  ]
+}
