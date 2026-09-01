@@ -940,3 +940,52 @@ nav.tabs { display: none; }
   nav.tabs a .ti { font-size: 17px; line-height: 1; }
   nav.tabs a[aria-current="page"] { color: var(--accent); }
 }
+
+/* ------------------------------------------------------------- settings */
+
+.fld { display: block; margin-top: 14px; }
+.fld span {
+  display: block;
+  font: 600 var(--t-micro)/1 var(--mono);
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 6px;
+}
+.fld input {
+  width: 100%;
+  font: 500 var(--t-sm)/1.5 var(--mono);
+  color: var(--ink);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  padding: 10px 12px;
+}
+.fld input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ------------------------------------------------------------ gpu picker */
+
+.gpubar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 14px;
+  padding: 11px 13px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-3);
+  background: var(--surface);
+}
+.gpubar label {
+  font: 700 var(--t-micro)/1 var(--mono);
+  color: var(--ink-4); text-transform: uppercase; letter-spacing: .08em;
+}
+.gpubar select {
+  font: 500 var(--t-sm)/1.4 var(--mono);
+  color: var(--ink);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  padding: 7px 9px;
+  max-width: 100%;
+}
+.gpubar select option:disabled { color: var(--ink-4); }
+.gpubar .note { font-size: var(--t-micro); color: var(--ink-4); }
+.gpubar a.note { margin-left: auto; color: var(--ink-3); }

@@ -306,7 +306,7 @@ def t_missing_solution_is_an_error():
 
 def t_gpu_outside_modal_is_an_error():
     expect_problem(ex_file(GOOD + "@gpu sm_100a\n"),
-                   "only means something on the modal backend")
+                   "means something only on the modal backend")
 
 
 def t_prose_lint_runs_on_the_brief():
@@ -441,6 +441,60 @@ def t_the_real_integers_content_builds_strictly():
     manifest, _ = build.build(strict=True)
     u = next(x for x in manifest if x["slug"] == "integers")
     assert u["ready"] and u["exercises"] == 8 and u["drills"] == 15, u
+
+
+# ------------------------------------------------------------- gpu eligibility
+
+def t_compute_capability_eligibility():
+    """The picker greys out cards that cannot run an exercise, and getting
+    this wrong sends a learner to a cheaper GPU that fails with a PTX error."""
+    cases = [
+        # the trap: RTX-PRO-6000 is sm_120 at $3.03 against B200 sm_100a at $6.25
+        ("sm_100a", "sm_120",  False),
+        ("sm_100a", "sm_103a", True),   # compute_100f covers 10.0 and 10.3
+        ("sm_103a", "sm_100a", False),  # but not backwards
+        ("sm_120",  "sm_121",  True),   # compute_120f covers 12.0 and 12.1
+        ("sm_121",  "sm_120",  False),
+        # the `a` suffix means that capability and nothing else, ever
+        ("sm_90a",  "sm_100a", False),
+        ("sm_90a",  "sm_90a",  True),
+        # base capabilities JIT forward, including across majors
+        ("sm_75",   "sm_90a",  True),
+        ("sm_75",   "sm_120",  True),
+        ("sm_80",   "sm_100a", True),
+        # and never backwards
+        ("sm_86",   "sm_80",   False),
+        ("sm_89",   "sm_86",   False),
+    ]
+    for req, av, want in cases:
+        got = build.sm_satisfies(req, av)
+        assert got == want, f"{req} on {av}: got {got}, want {want}"
+
+
+def t_the_gpu_catalog_is_well_formed():
+    cat = build.load_gpu_catalog()
+    assert len(cat["gpus"]) >= 10, len(cat["gpus"])
+    prices = [g["price_per_hour"] for g in cat["gpus"]]
+    assert prices == sorted(prices), "the catalog should be cheapest first"
+    for g in cat["gpus"]:
+        assert g["smMin"] in build.SM_ORDER, g
+        assert g["vram_gb"] > 0 and g["price_per_hour"] > 0, g
+    # the specific card that makes the gate necessary
+    rtx = next(g for g in cat["gpus"] if g["id"] == "rtx-pro-6000")
+    assert rtx["smMin"] == "sm_120", rtx
+    assert not build.sm_satisfies("sm_100a", rtx["smMin"])
+
+
+def t_a_modal_exercise_must_declare_its_gpu():
+    body = (GOOD.replace("@backend godbolt", "@backend modal")
+                .replace("@lang cpp", "@lang cuda"))
+    expect_problem(ex_file(body), "must declare @gpu")
+
+
+def t_an_unknown_gpu_target_is_an_error():
+    body = (GOOD.replace("@backend godbolt", "@backend modal")
+                .replace("@lang cpp", "@lang cuda") + "@gpu sm_999\n")
+    expect_problem(ex_file(body), "is not a compute capability")
 
 
 # ------------------------------------------------------------------- markdown

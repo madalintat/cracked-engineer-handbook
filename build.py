@@ -109,6 +109,67 @@ JUDGES_CONFIG = {
               "pollMs": 1500, "catalog": "data/modal-gpus.json"},
 }
 
+# Compute-capability families, from the NVIDIA architecture research.
+#
+# This is not an ordering. A cubin built for sm_100a does NOT run on sm_120,
+# even though 120 is a larger number and the card is newer and cheaper: 10.x
+# and 12.x are different majors and nothing crosses between them except PTX
+# JIT. Modal lists RTX-PRO-6000 (sm_120) at $3.03/hr against B200 (sm_100a) at
+# $6.25, so a learner economising on an FP4 exercise picks the cheap Blackwell
+# and gets a PTX error. Modal documents this nowhere.
+SM_FAMILIES = {
+    "sm_75":   ["sm_75"],
+    "sm_80":   ["sm_80"],
+    "sm_86":   ["sm_86"],
+    "sm_89":   ["sm_89"],
+    "sm_90a":  ["sm_90a"],
+    "sm_100a": ["sm_100a", "sm_103a"],   # compute_100f covers 10.0 and 10.3
+    "sm_103a": ["sm_103a"],
+    "sm_120":  ["sm_120", "sm_121"],     # compute_120f covers 12.0 and 12.1
+    "sm_121":  ["sm_121"],
+}
+
+# Newer cards run older code, within the limits above.
+SM_ORDER = ["sm_75", "sm_80", "sm_86", "sm_89", "sm_90a",
+            "sm_100a", "sm_103a", "sm_120", "sm_121"]
+
+
+def sm_satisfies(required, available):
+    """Can a GPU reporting `available` run code built for `required`?
+
+    Three rules, in order:
+
+    1. An `a` suffix means architecture-specific: that compute capability and
+       nothing else, ever. sm_90a code does not run on a Blackwell card. The
+       family table lists the exceptions, which are the `f` family groupings.
+    2. 10.x and 12.x are different majors and nothing crosses between them.
+       This is the rule that stops a cheap sm_120 card being offered for an
+       FP4 exercise that needs sm_100a.
+    3. Otherwise a later card runs earlier code.
+    """
+    if required == available:
+        return True
+    if available in SM_FAMILIES.get(required, []):
+        return True
+
+    if required.endswith("a"):
+        return False              # rule 1: nothing outside the family table
+
+    def major(sm):
+        # sm_75 is major 7 minor 5; sm_100a is major 10 minor 0. The digit
+        # count decides, which is why this cannot be a string comparison.
+        d = "".join(c for c in sm.split("_")[1] if c.isdigit())
+        return int(d[:-1]) if d else 0
+
+    if major(required) >= 10 and major(required) != major(available):
+        return False              # rule 2: majors do not cross at 10.x / 12.x
+
+    try:
+        return SM_ORDER.index(available) >= SM_ORDER.index(required)
+    except ValueError:
+        return False
+
+
 VERDICTS = {
     "sim": {
         "table-mismatch",     # output disagreed with the specification
@@ -418,7 +479,13 @@ def _check_exercise_shape(ex, w):
     if ex["backend"] not in track.BACKENDS:
         p.append(f"{w}: unknown backend {ex['backend']!r}")
     if ex["gpu"] and ex["backend"] != "modal":
-        p.append(f"{w}: @gpu only means something on the modal backend")
+        p.append(f"{w}: @gpu means something only on the modal backend")
+    if ex["gpu"] and ex["gpu"] not in SM_ORDER:
+        p.append(f"{w}: {ex['gpu']!r} is not a compute capability this "
+                 f"handbook knows. One of: {', '.join(SM_ORDER)}")
+    if ex["backend"] == "modal" and not ex["gpu"]:
+        p.append(f"{w}: a modal exercise must declare @gpu, so the picker can "
+                 f"grey out cards that cannot run it")
     langs = BACKEND_LANGS.get(ex["backend"], set())
     if not ex["lang"]:
         # one language per backend means no ambiguity; more means say which
@@ -736,9 +803,41 @@ def build(strict=True):
               {"slug": slug, "drills": u["drills"]})
 
     write(DATA / "judges.json", JUDGES_CONFIG)
+    write(DATA / "modal-gpus.json", load_gpu_catalog())
     write(DATA / "search.json", build_search(manifest, units))
     prune(DATA, units)
     return manifest, units
+
+
+def load_gpu_catalog():
+    """The GPU list the picker renders, checked on the way through.
+
+    Sourced from the Modal platform research. Every entry needs an sm target,
+    because an exercise that declares a minimum is meaningless against a card
+    whose capability is unknown.
+    """
+    src = ROOT / ".research" / "modal-gpus.json"
+    if not src.exists():
+        raise BuildError("modal-gpus.json is missing from .research/")
+    rows = json.loads(src.read_text())
+    if isinstance(rows, dict):
+        rows = rows.get("gpus", [])
+    problems, out = [], []
+    for r in rows:
+        w = f"modal gpu {r.get('id', '?')}"
+        for k in ("id", "gpu_string", "name", "vram_gb", "sm", "price_per_hour"):
+            if not r.get(k):
+                problems.append(f"{w}: missing {k!r}")
+        sm = r.get("sm", "")
+        # "sm_100a or sm_103a" describes a pool that could hand you either, so
+        # the conservative member is the one an exercise can rely on.
+        first = sm.split(" or ")[0].strip()
+        if first and first not in SM_ORDER:
+            problems.append(f"{w}: {first!r} is not a known compute capability")
+        out.append({**r, "smMin": first, "pool": " or " in sm})
+    fail(problems)
+    out.sort(key=lambda r: r["price_per_hour"])
+    return {"gpus": out, "families": SM_FAMILIES, "order": SM_ORDER}
 
 
 def build_search(manifest, units):

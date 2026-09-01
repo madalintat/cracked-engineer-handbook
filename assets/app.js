@@ -237,6 +237,54 @@ function land(id, behavior) {
   return true;
 }
 
+/* The GPU picker.
+ *
+ * Every card is listed with its compute capability and its hourly price, and
+ * the ones that cannot run this exercise are disabled with the reason shown.
+ * That is not politeness. Modal lists RTX-PRO-6000 at $3.03/hr next to B200 at
+ * $6.25/hr, both labelled Blackwell, and the cheap one is sm_120 while FP4
+ * datacenter code needs sm_100a. A learner economising picks the wrong card
+ * and gets a PTX error that explains nothing. Modal documents this nowhere.
+ */
+function smSatisfies(required, available) {
+  if (!required || required === available) return true;
+  const fam = (HH.gpus && HH.gpus.families) || {};
+  const order = (HH.gpus && HH.gpus.order) || [];
+  if ((fam[required] || []).includes(available)) return true;
+  if (required.endsWith('a')) return false;
+  const major = (sm) => {
+    const d = (sm.split('_')[1] || '').replace(/\D/g, '');
+    return d ? parseInt(d.slice(0, -1), 10) : 0;
+  };
+  if (major(required) >= 10 && major(required) !== major(available)) return false;
+  const i = order.indexOf(available), j = order.indexOf(required);
+  return i >= 0 && j >= 0 && i >= j;
+}
+
+function gpuPicker(ex) {
+  const cat = (HH.gpus && HH.gpus.gpus) || [];
+  if (!cat.length) return '';
+  const chosen = Store.get('gpu', 'T4');
+  const need = ex.gpu || '';
+  const rows = cat.map(g => {
+    const ok = smSatisfies(need, g.smMin);
+    const sel = ok && g.gpu_string === chosen;
+    return `<option value="${esc(g.gpu_string)}" ${sel ? 'selected' : ''}
+      ${ok ? '' : 'disabled'}>
+      ${esc(g.gpu_string)} &middot; ${esc(g.smMin)} &middot; ${g.vram_gb} GB &middot; $${g.price_per_hour}/hr${ok ? '' : ' — cannot run ' + esc(need)}
+    </option>`;
+  }).join('');
+  const eligible = cat.filter(g => smSatisfies(need, g.smMin));
+  const cheapest = eligible.length ? eligible[0] : null;
+  return `
+    <div class="gpubar">
+      <label for="gpusel">GPU</label>
+      <select id="gpusel">${rows}</select>
+      <span class="note" id="gpunote"></span>
+      <a class="note" href="#/settings">runner settings</a>
+    </div>`;
+}
+
 /* The rail. Two jobs, one layout read, throttled to a frame.
  *
  * The spine fills by read progress and the dots LATCH: once passed, a heading
@@ -401,6 +449,8 @@ async function viewWork(slug, nRaw) {
 
       <div class="editor" id="ed" data-wrap="off"></div>
 
+      ${ex.backend === 'modal' ? gpuPicker(ex) : ''}
+
       <div class="wbbar">
         <button class="btn" id="run">Run</button>
         <button class="btn ghost" id="reset">Reset to starter</button>
@@ -497,6 +547,22 @@ function wireWork() {
 
   if (Store.get(`pass.${slug}.${n}`, false)) el('#afterword').hidden = false;
 
+  const sel = el('#gpusel');
+  if (sel) {
+    const note = el('#gpunote');
+    const paint = () => {
+      const cat = (HH.gpus && HH.gpus.gpus) || [];
+      const g = cat.find(x => x.gpu_string === sel.value);
+      if (!g || !note) return;
+      const hours = (30 / g.price_per_hour);
+      note.textContent =
+        `${g.name}. $30 of monthly credit is about ` +
+        `${hours < 10 ? hours.toFixed(1) : Math.round(hours)} hours of this card.`;
+    };
+    sel.onchange = () => { Store.set('gpu', sel.value); paint(); };
+    paint();
+  }
+
   const runBtn = el('#run');
   const be = WB.BACKENDS[ex.backend];
 
@@ -532,10 +598,18 @@ function wireWork() {
     renderVerdicts([{ who: ex.backend, state: 'running', title: 'Checking.' }]);
     el('#diagnosis').innerHTML = '';
     try {
-      const res = await WB.run(ex, editor.value, {
+      const res = await WB.run(
+        { ...ex, gpuChoice: sel ? sel.value : undefined },
+        editor.value, {
         judges: HH.judges,
-        onProgress: (done, total) => {
-          if (!total) return;
+        modal: Store.get('modal', {}),
+        gpu: sel ? sel.value : undefined,
+        onProgress: (done, total, msg) => {
+          if (!total) {
+            if (msg) renderVerdicts([{ who: be ? be.label : ex.backend,
+                                       state: 'running', title: msg }]);
+            return;
+          }
           const pct = Math.round((done / total) * 100);
           renderVerdicts([{
             who: be ? be.label : ex.backend, state: 'running',
@@ -603,6 +677,108 @@ function renderDiagnosis(ex, res) {
   }
 }
 
+/* ------------------------------------------------------------- settings */
+
+function viewSettings() {
+  const m = Store.get('modal', {}) || {};
+  return `
+  <div class="wrap" style="padding:48px 0;max-width:var(--measure)">
+    <h1>Your GPU runner</h1>
+    <p class="prose">Most of this handbook checks your work with tools that
+      cost nothing: a simulator in this page, a public compiler service, and a
+      synthesiser that runs in your browser. A few units need an actual GPU,
+      and there is no honest way to give you one for free.</p>
+    <p class="prose">So you rent it. Modal gives every account
+      <strong>$30 of credit a month</strong>, which is about five hours of a
+      B200 or fifty hours of a T4. You deploy a small runner to your own
+      account, paste its two addresses here, and the GPU exercises become
+      runnable. Your code goes to your account and nowhere else.</p>
+
+    <h2 style="margin-top:32px">Deploy it</h2>
+    <pre class="cb"><code>pip install modal
+modal setup
+modal deploy runner/app.py</code></pre>
+    <p class="prose">Open <code>runner/app.py</code> first and change
+      <code>SHARED_SECRET</code>. Modal's URLs are built from your workspace
+      name, so they are guessable, and that secret is what stops a stranger
+      spending your credit.</p>
+
+    <h2 style="margin-top:32px">Paste it here</h2>
+    <form id="modalForm">
+      <label class="fld"><span>Submit address</span>
+        <input name="submit" type="url" spellcheck="false"
+               placeholder="https://you--hh-runner-submit.modal.run"
+               value="${esc(m.submit || '')}"></label>
+      <label class="fld"><span>Poll address</span>
+        <input name="poll" type="url" spellcheck="false"
+               placeholder="https://you--hh-runner-poll.modal.run"
+               value="${esc(m.poll || '')}"></label>
+      <label class="fld"><span>Shared secret</span>
+        <input name="token" type="password" spellcheck="false"
+               autocomplete="off" value="${esc(m.token || '')}"></label>
+      <p style="margin-top:14px">
+        <button class="btn" type="submit">Save</button>
+        <button class="btn ghost" type="button" id="testrunner">Test it</button>
+        <button class="btn ghost" type="button" id="forget">Forget</button>
+      </p>
+    </form>
+    <div id="settingsOut" style="margin-top:14px"></div>
+    <p class="prose" style="color:var(--ink-4);font-size:var(--t-sm)">
+      Stored in this browser only. Nothing is sent anywhere except to the
+      address you entered.</p>
+  </div>`;
+}
+
+function wireSettings() {
+  const form = el('#modalForm');
+  if (!form) return;
+  const out = el('#settingsOut');
+  const read = () => Object.fromEntries(
+    [...new FormData(form).entries()].map(([k, v]) => [k, String(v).trim()]));
+
+  form.onsubmit = (ev) => {
+    ev.preventDefault();
+    Store.set('modal', read());
+    out.innerHTML = '<div class="vrow" data-state="ok"><div class="who">saved</div>' +
+      '<div class="what">Stored in this browser.</div></div>';
+    announce('Runner saved');
+  };
+
+  el('#forget').onclick = () => {
+    Store.set('modal', {});
+    form.reset();
+    ['submit', 'poll', 'token'].forEach(n => { form.elements[n].value = ''; });
+    out.innerHTML = '<div class="vrow" data-state="unavailable">' +
+      '<div class="who">cleared</div><div class="what">Nothing stored.</div></div>';
+  };
+
+  el('#testrunner').onclick = async () => {
+    const cfg = read();
+    if (!cfg.submit || !cfg.poll || !cfg.token) {
+      out.innerHTML = '<div class="vrow" data-state="bad"><div class="who">no</div>' +
+        '<div class="what">All three fields are needed.</div></div>';
+      return;
+    }
+    Store.set('modal', cfg);
+    out.innerHTML = '<div class="vrow" data-state="running"><div class="who">gpu</div>' +
+      '<div class="what">Sending a one-line kernel to a T4. A cold start takes about a minute.</div></div>';
+    const ex = { backend: 'modal', lang: 'cuda', kind: 'output', flags: '',
+                 gpu: 'sm_75', gpuChoice: 'T4', diagnose: [] };
+    const src = '#include <cstdio>\n' +
+      '__global__ void k(int* o){ o[threadIdx.x] = threadIdx.x * threadIdx.x; }\n' +
+      'int main(){ int* o; cudaMallocManaged(&o, 128); k<<<1,32>>>(o);\n' +
+      '  cudaDeviceSynchronize(); printf("%d %d %d\\n", o[3], o[10], o[31]); }\n';
+    const res = await WB.run(ex, src, { judges: HH.judges, modal: cfg, gpu: 'T4' });
+    const good = res.pass && /9 100 961/.test(
+      res.verdicts.map(v => v.detail || '').join(' '));
+    out.innerHTML = `<div class="vrow" data-state="${good ? 'ok' : 'bad'}">
+      <div class="who">${good ? 'works' : 'no'}</div>
+      <div class="what">${res.verdicts.map(v => esc(v.title)).join(' ')}
+        ${good ? 'Your runner is ready.' : ''}</div></div>`;
+    announce(good ? 'Runner works' : 'Runner did not answer correctly');
+  };
+}
+
 function viewNotFound(hash) {
   return `<div class="wrap" style="padding:80px 0">
     <h1>No such page</h1>
@@ -637,6 +813,7 @@ const ROUTES = {
   'progress': () => viewSoon('Progress'),
   'glossary': () => viewSoon('Glossary'),
   'search': () => viewSoon('Search'),
+  'settings': viewSettings,
 };
 
 async function render() {
@@ -656,6 +833,7 @@ async function render() {
     main.innerHTML = fn ? await fn(a, b) : viewNotFound(location.hash || '#/');
     if (route === 'unit' && a) wireUnit(a);
     if (route === 'work') wireWork();
+    if (route === 'settings') wireSettings();
   } catch (err) {
     console.error(err);
     main.innerHTML = viewError(err);
@@ -703,6 +881,7 @@ async function boot() {
     // The backend configuration comes from the build, not from this file, so
     // the page cannot call a toolchain --validate has never checked.
     HH.judges = await getJSON('data/judges.json');
+    HH.gpus = await getJSON('data/modal-gpus.json');
     const c = HH.manifest.counts;
     el('#footcount').textContent =
       `${c.parts} parts, ${c.units} units, ${c.ready} written. ` +

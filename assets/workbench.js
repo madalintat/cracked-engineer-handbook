@@ -628,6 +628,148 @@ const WB = (() => {
     },
   });
 
+  /* modal: a GPU on the learner's own account.
+   *
+   * Submit then poll, because Modal enforces a hard 150-second ceiling on web
+   * functions and a cold start plus an nvcc compile can exceed it. The submit
+   * endpoint is CPU-only and checks the secret before any GPU is started, so a
+   * leaked URL costs a fraction of a cent rather than $6.25 an hour.
+   *
+   * Nothing here has a fallback to someone else's GPU. If the learner has not
+   * configured a runner, the honest answer is `unavailable`, not a pretend
+   * pass.
+   */
+  function nvccVerdict(r) {
+    if (r.compile_rc !== 0) return 'compile-error';
+    if (/compute-sanitizer|Invalid __global__|CUDA-MEMCHECK/.test(r.stderr || ''))
+      return 'sanitizer';
+    if (/\b(cudaError|CUDA error|an illegal memory access)\b/.test(
+          (r.stderr || '') + (r.stdout || ''))) return 'cuda-error';
+    if (/\bAssertion\b.*\bfailed\b/.test((r.stderr || '') + (r.stdout || '')))
+      return 'assert-failed';
+    if (r.run_rc === undefined || r.run_rc === null) return 'launch-error';
+    if (r.run_rc !== 0) return 'cuda-error';
+    return 'ok';
+  }
+
+  register('modal', {
+    label: 'gpu',
+    needsSetup: true,
+    async run(ex, source, cfg) {
+      const conf = (cfg.judges && cfg.judges.modal) || {};
+      const ep = cfg.modal || {};
+      if (!ep.submit || !ep.poll || !ep.token) {
+        return {
+          pass: false, signals: [{ judge: 'verdict', key: 'no-endpoint' }],
+          verdicts: [{
+            who: 'gpu', state: 'unavailable',
+            title: 'No GPU runner is configured. These exercises run on a ' +
+                   'GPU you rent, from your own free credit, and the handbook ' +
+                   'has no GPU of its own to lend you.',
+          }],
+        };
+      }
+
+      const gpu = ex.gpuChoice || cfg.gpu || 'T4';
+      const post = async (url, body) => {
+        const r = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: ep.token, ...body }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || `the runner answered ${r.status}`);
+        return j;
+      };
+
+      let started;
+      try {
+        started = await post(ep.submit, {
+          gpu, source, arch: ex.gpu || undefined, flags: ex.flags || '',
+        });
+      } catch (e) {
+        return {
+          pass: false, signals: [{ judge: 'verdict', key: 'no-endpoint' }],
+          verdicts: [{ who: 'gpu', state: 'unavailable',
+                       title: `Could not reach your runner: ${e.message}` }],
+        };
+      }
+
+      const deadline = Date.now() + (conf.timeoutMs || 300000);
+      const every = conf.pollMs || 1500;
+      let r = null;
+      while (Date.now() < deadline) {
+        await new Promise(res => setTimeout(res, every));
+        let p;
+        try {
+          p = await post(ep.poll, { call_id: started.call_id });
+        } catch (e) {
+          return {
+            pass: false, signals: [{ judge: 'verdict', key: 'no-endpoint' }],
+            verdicts: [{ who: 'gpu', state: 'unavailable',
+                         title: `Lost contact with your runner: ${e.message}` }],
+          };
+        }
+        if (p.state === 'done') { r = p.result; break; }
+        if (p.state === 'failed') {
+          return {
+            pass: false, signals: [{ judge: 'verdict', key: 'launch-error' }],
+            verdicts: [{ who: 'gpu', state: 'bad',
+                         title: `The run failed on the GPU: ${p.error}` }],
+          };
+        }
+        cfg.onProgress && cfg.onProgress(0, 0,
+          `Waiting on ${gpu}. A cold start takes about a minute.`);
+      }
+
+      if (!r) {
+        return {
+          pass: false, signals: [{ judge: 'verdict', key: 'timeout' }],
+          verdicts: [{ who: 'gpu', state: 'bad',
+                       title: 'The GPU did not answer in time.' }],
+        };
+      }
+
+      const verdict = nvccVerdict(r);
+      const diag = normalise(r.compile_stderr || '');
+      const runOut = normalise((r.stdout || '') + '\n' + (r.stderr || ''));
+      const signals = [{ judge: 'verdict', key: verdict }];
+      if (diag) signals.push({ judge: 'match', key: diag });
+      if (runOut) signals.push({ judge: 'match', key: runOut });
+      if (r.sass) signals.push({ judge: 'match', key: r.sass });
+      if (r.ptxas) signals.push({ judge: 'match', key: normalise(r.ptxas) });
+      if (verdict !== 'ok' && !diag) signals.push({ judge: 'silent', key: '' });
+
+      const verdicts = [{
+        who: 'nvcc',
+        state: r.compile_rc === 0 ? 'ok' : 'bad',
+        title: r.compile_rc === 0
+          ? `Compiled for ${r.arch}.`
+          : 'It did not compile.',
+        detail: diag ? `<pre>${escHtml(diag)}</pre>` : '',
+      }];
+      verdicts.push({
+        who: r.gpu ? r.gpu.split(',')[0] : gpu,
+        state: verdict === 'ok' ? 'ok'
+             : (r.compile_rc !== 0 ? 'unavailable' : 'bad'),
+        title: r.compile_rc !== 0 ? 'Not run, because it did not compile.'
+             : verdict === 'ok' ? 'Ran and every check passed.'
+             : verdict === 'assert-failed' ? 'A check failed on the GPU.'
+             : verdict === 'cuda-error' ? `The kernel failed: exit ${r.run_rc}.`
+             : 'The run did not complete.',
+        detail: runOut ? `<pre>${escHtml(runOut)}</pre>` : '',
+      });
+
+      return {
+        pass: verdict === 'ok',
+        clean: verdict === 'ok',
+        signals, verdicts,
+        sass: r.sass,
+        toolchain: `nvcc on ${(r.gpu || gpu).split(',')[0]}`,
+      };
+    },
+  });
+
   const escHtml = s => String(s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 

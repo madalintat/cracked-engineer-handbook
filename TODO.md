@@ -40,7 +40,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] `sim` — in-page logic simulator, 24 tests, Worker-ready
 - [x] `godbolt` — Compiler Explorer client, nonce proven to defeat the cache
 - [x] `yosys` — yowasp-yosys 0.68 in a module worker, size gate, progress
-- [ ] `modal` — submit and poll against the learner's own endpoint
+- [x] `modal` — submit and poll, GPU picker with compute-capability gating
 - [x] Judged expectations: `verdict` / `match` / `silent`, per-backend vocabulary
 - [x] Diagnostics UI: prose beside the real error, ordered first-match
 - [x] Pass state, hint counting, editor buffer persisted per exercise
@@ -58,7 +58,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 
 - [x] `data/judges.json` authored by `build.py`, so the browser cannot call a
       backend configuration that `--validate` never checked
-- [ ] Label the verdict row per backend rather than badging the exercise; badge
+- [x] Label the verdict row per backend rather than badging the exercise; badge
       only Modal, because it is the one with a cost
 - [ ] Track view will not survive 122 units as a flat list: two-level index,
       live filter, and stop loading the whole manifest at boot
@@ -84,6 +84,6 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 
 - [~] `build.py --validate`: proven for `sim`, `godbolt` and `yosys`; modal pending
 - [ ] `release.sh --check`, staleness gate on `data/`
-- [ ] `runner/app.py` and the learner onboarding doc
+- [x] `runner/app.py` with a self-test, and the settings page that explains it
 - [ ] `docs/AUTHORING.md`
 - [ ] Mascot from the user, wired at its single swap point
