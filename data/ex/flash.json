@@ -1,0 +1,310 @@
+{
+ "slug": "flash",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "What one byte costs",
+   "brief": "<p>Write <code>bytes_programmed</code>, returning how much the device must actually program to change one byte, given the page and block sizes.</p>\n<p>A page cannot be programmed twice, so changing anything means erasing the whole block and writing it back.</p>",
+   "kind": "output",
+   "concept": "There is no in-place overwrite, so the smallest possible change is an operation the size of an erase block.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The unit of erasure is the block, and everything in it has to be rewritten."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Programming a page and erasing a block are different sizes, so a one-byte change costs the block rather than the page. That gap of two orders of magnitude is the fact every piece of storage software above the device exists to hide.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Four kilobytes of page and four megabytes of block means one byte costs four megabytes if the device really did it that way. It does not, and the next exercise is why: the controller writes somewhere else entirely and changes a map.</p>",
+   "starter": "unsigned long bytes_programmed(unsigned long page, unsigned long block) {\n    (void)block;\n    return page;\n}",
+   "tests": "#include <assert.h>\nunsigned long bytes_programmed(unsigned long, unsigned long);\nint main(void) {\n    /* 4 KB pages, 4 MB blocks. */\n    assert(bytes_programmed(4096, 4194304) == 4194304);\n    /* 16 KB pages, 1 MB blocks. */\n    assert(bytes_programmed(16384, 1048576) == 1048576);\n    /* A device where a block is one page has no asymmetry at all. */\n    assert(bytes_programmed(4096, 4096) == 4096);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "The map that makes it look like a disk",
+   "brief": "<p>Write <code>write_sector</code>, which models the translation layer: program a fresh page, point the sector at it, and mark the old page dead.</p>\n<p>Nothing is modified in place. The drive presents an array of sectors that behaves like a disk's, and a map is what makes that true.</p>",
+   "kind": "output",
+   "concept": "A write allocates rather than modifies, so repeated writes to one sector leave a trail of dead pages and one live one.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Update the map to the new page, and mark whatever it pointed at before as dead."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The old page has to be marked dead before the map forgets where it was, and a sector written for the first time has no old page to mark. Marking without checking turns page 0 into garbage on the first write to any sector.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Three writes to one sector leave two dead pages and one live one, and from outside the drive nothing happened but three writes. Every performance characteristic people attribute to flash is really a characteristic of this firmware.</p>",
+   "starter": "#include <stddef.h>\n/* map[s] is the physical page holding sector s, or -1 if never written.\n   dead[p] marks a physical page as garbage. */\nvoid write_sector(int *map, unsigned char *dead, int sector, int new_page) {\n    map[sector] = new_page;\n}",
+   "tests": "#include <assert.h>\nvoid write_sector(int *, unsigned char *, int, int);\nint main(void) {\n    int map[4] = {-1, -1, -1, -1};\n    unsigned char dead[8] = {0};\n    /* First write: nothing to abandon. */\n    write_sector(map, dead, 0, 3);\n    assert(map[0] == 3);\n    assert(dead[3] == 0);\n    /* Nothing else was marked, including page 0. */\n    assert(dead[0] == 0);\n    /* Second write to the same sector abandons the first page. */\n    write_sector(map, dead, 0, 5);\n    assert(map[0] == 5);\n    assert(dead[3] == 1);\n    assert(dead[5] == 0);\n    /* And again. */\n    write_sector(map, dead, 0, 6);\n    assert(dead[5] == 1);\n    assert(map[0] == 6);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "What collecting costs",
+   "brief": "<p>Write <code>pages_copied</code>, returning how many live pages a garbage collection must move to reclaim a block.</p>\n<p>The copying is real work the drive does on its own account, and it is the difference between a fresh drive and one that has been written to.</p>",
+   "kind": "output",
+   "concept": "Reclaiming a block means preserving whatever in it is still live, so a block of mixed data costs a copy per surviving page.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Count the pages that are not dead."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A block where everything is dead costs nothing to reclaim, which is the case the drive is hoping for, and a block where everything is live cannot usefully be reclaimed at all. Counting the dead pages rather than the live ones inverts both.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Which is why writing in large sequential runs helps: a block filled with data that will be discarded together collects with no copying at all. The next exercise turns this into the number that decides both wear and sustained speed.</p>",
+   "starter": "#include <stddef.h>\nsize_t pages_copied(const unsigned char *dead, size_t pages_per_block) {\n    size_t n = 0;\n    for (size_t i = 0; i < pages_per_block; i++)\n        if (dead[i]) n++;\n    return n;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t pages_copied(const unsigned char *, size_t);\nint main(void) {\n    /* Everything dead: reclaim it for free. */\n    unsigned char all_dead[8] = {1,1,1,1,1,1,1,1};\n    assert(pages_copied(all_dead, 8) == 0);\n    /* Everything live: eight copies to reclaim nothing. */\n    unsigned char all_live[8] = {0,0,0,0,0,0,0,0};\n    assert(pages_copied(all_live, 8) == 8);\n    /* Mixed. */\n    unsigned char mixed[8] = {1,0,1,0,1,1,0,1};\n    assert(pages_copied(mixed, 8) == 3);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "The ratio that decides everything",
+   "brief": "<p>Write <code>write_amplification</code>, returning how many bytes the device programs per byte the host wrote, scaled by 100 so the answer is an integer percentage.</p>\n<p>It is the number that decides both wear and sustained speed.</p>",
+   "kind": "output",
+   "concept": "Amplification is device bytes over host bytes, and a small write that forces a block rewrite is amplification in the hundreds.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Device over host, not the other way round, and multiply before dividing."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Amplification is at least 1 by definition, since the device must at minimum program what the host asked for, so a value below 100 means the ratio is inverted. Dividing before multiplying loses it to integer truncation.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Four kilobytes written forcing a four megabyte block rewrite is 1024 times, or 102400 percent. That is the worst case, and real workloads sit between two and ten, which is still the difference between a drive lasting five years and lasting one.</p>",
+   "starter": "unsigned long write_amplification(unsigned long host_bytes,\n                                  unsigned long device_bytes) {\n    return host_bytes * 100 / device_bytes;\n}",
+   "tests": "#include <assert.h>\nunsigned long write_amplification(unsigned long, unsigned long);\nint main(void) {\n    /* Nothing extra: one to one. */\n    assert(write_amplification(4096, 4096) == 100);\n    /* Twice as much programmed as written. */\n    assert(write_amplification(4096, 8192) == 200);\n    /* 4 KB forcing a 4 MB block rewrite. */\n    assert(write_amplification(4096, 4194304) == 102400);\n    assert(write_amplification(1000000, 3000000) == 300);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Room to work",
+   "brief": "<p>Write <code>spare_blocks</code>, returning how many erase blocks the controller has to work with, given the device's physical capacity, the capacity it advertises, and how much of the advertised space the filesystem has used.</p>\n<p>Space the host never uses is space the controller can collect into without copying.</p>",
+   "kind": "output",
+   "concept": "A full drive is slower than an empty one because the controller's working room is whatever the host has not claimed.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Reserved capacity and unused capacity are both available, and both are counted in blocks."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The controller has the difference between physical and advertised capacity, which is deliberate over-provisioning, plus whatever of the advertised capacity is not in use. Counting only the first misses why a half-empty drive is faster than a full one.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A drive advertised at 512 GB with 544 GB of NAND has 32 GB the host cannot see, and an empty filesystem adds 512 more. Full, it has 32. That is the whole reason enterprise drives reserve a fraction of their capacity and why filling a consumer drive to the last gigabyte changes its character.</p>",
+   "starter": "unsigned long spare_blocks(unsigned long physical_blocks,\n                           unsigned long advertised_blocks,\n                           unsigned long used_blocks) {\n    (void)used_blocks;\n    return physical_blocks - advertised_blocks;\n}",
+   "tests": "#include <assert.h>\nunsigned long spare_blocks(unsigned long, unsigned long, unsigned long);\nint main(void) {\n    /* 1100 physical, 1000 advertised, half used. */\n    assert(spare_blocks(1100, 1000, 500) == 600);\n    /* Completely full: only the reserve is left. */\n    assert(spare_blocks(1100, 1000, 1000) == 100);\n    /* Empty: everything is available. */\n    assert(spare_blocks(1100, 1000, 0) == 1100);\n    /* No over-provisioning at all. */\n    assert(spare_blocks(1000, 1000, 900) == 100);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Telling it what is dead",
+   "brief": "<p>Write <code>live_after_trim</code>, counting how many pages the controller must still preserve, given which pages hold data and which sectors the filesystem has told it are no longer needed.</p>\n<p>Without trim, a deleted file's sectors are live data the drive copies through every collection.</p>",
+   "kind": "output",
+   "concept": "The controller cannot tell which sectors a filesystem still cares about, so it preserves everything until it is told otherwise.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A page is live when it holds data and has not been trimmed."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Trimming a page that was never written changes nothing, and trimming a live one removes it from the count. Ignoring the trim entirely gives the behaviour of a drive whose filesystem never tells it anything, which is the situation the command exists to fix.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A drive that got slower over months and recovered after a reformat was not wearing out. It was collecting data that had been deleted years earlier by software that never told it, and from the controller's side that data was indistinguishable from a file somebody still wanted.</p>",
+   "starter": "#include <stddef.h>\nsize_t live_after_trim(const unsigned char *has_data,\n                       const unsigned char *trimmed, size_t n) {\n    (void)trimmed;\n    size_t live = 0;\n    for (size_t i = 0; i < n; i++)\n        if (has_data[i]) live++;\n    return live;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t live_after_trim(const unsigned char *, const unsigned char *, size_t);\nint main(void) {\n    unsigned char data[6] = {1, 1, 1, 1, 0, 0};\n    /* Nothing trimmed: everything with data is preserved. */\n    unsigned char none[6] = {0, 0, 0, 0, 0, 0};\n    assert(live_after_trim(data, none, 6) == 4);\n    /* Two files deleted and reported. */\n    unsigned char some[6] = {1, 0, 1, 0, 0, 0};\n    assert(live_after_trim(data, some, 6) == 2);\n    /* Trimming pages that held nothing changes nothing. */\n    unsigned char empty[6] = {0, 0, 0, 0, 1, 1};\n    assert(live_after_trim(data, empty, 6) == 4);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "The buffer, and the number after it",
+   "brief": "<p>Write <code>bytes_per_second</code>, returning the rate a drive sustains over a transfer, given a fast buffer of limited size and a slower rate once it is full.</p>\n<p>A benchmark that writes a few gigabytes measures the buffer.</p>",
+   "kind": "output",
+   "concept": "The advertised write speed is the buffered one, and the sustained rate is several times lower, which is the most misleading number in consumer storage.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Time is the buffered part at the fast rate plus the remainder at the slow one, and the answer is total bytes over total time."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A transfer that fits entirely in the buffer runs at the fast rate, and one that exceeds it runs at a blend weighted by how much fell either side. Reporting the fast rate always is exactly the benchmark this exercise is about.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Not a lie about the hardware. Part of the drive is operated at one bit per cell, which really is that fast, and the rest is at three or four, which really is not. A short benchmark measures the first and a real workload gets the second.</p>",
+   "starter": "unsigned long bytes_per_second(unsigned long total, unsigned long buffer,\n                               unsigned long fast_rate, unsigned long slow_rate) {\n    (void)total; (void)buffer; (void)slow_rate;\n    return fast_rate;\n}",
+   "tests": "#include <assert.h>\nunsigned long bytes_per_second(unsigned long, unsigned long,\n                               unsigned long, unsigned long);\nint main(void) {\n    /* Fits in the buffer: the fast rate. */\n    assert(bytes_per_second(1000, 2000, 5000, 1000) == 5000);\n    assert(bytes_per_second(2000, 2000, 5000, 1000) == 5000);\n    /* Far past the buffer: close to the slow rate. */\n    assert(bytes_per_second(102000, 2000, 5000, 1000) == 1015);\n    /* Exactly twice the buffer. */\n    assert(bytes_per_second(4000, 2000, 5000, 1000) == 1666);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Written is not durable",
+   "brief": "<p>Write <code>survives_power_loss</code>, reporting whether data the host was told was written is still there after the power goes.</p>\n<p>The drive acknowledges once the data is in volatile memory inside the controller, not once it is in NAND.</p>",
+   "kind": "output",
+   "concept": "Durability is a property of having flushed rather than of having written, which is what every database's commit path is arranged around.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Two independent ways to survive, and either is enough."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A drive with stored energy finishes what it accepted whether or not anybody flushed, and a flush completing means the data reached NAND whether or not the drive has a capacitor. Requiring both makes correct configurations look unsafe.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The cost of a flush is the real programming latency rather than the buffered one, which is why a commit is slow in a way an ordinary write is not. And a filesystem that reorders or drops the call converts a correct database into an incorrect one without either of them being wrong.</p>",
+   "starter": "int survives_power_loss(int flushed, int has_power_loss_protection) {\n    return flushed && has_power_loss_protection;\n}",
+   "tests": "#include <assert.h>\nint survives_power_loss(int, int);\nint main(void) {\n    /* Written and acknowledged, nothing more: lost. */\n    assert(survives_power_loss(0, 0) == 0);\n    /* Flushed on a consumer drive: safe. */\n    assert(survives_power_loss(1, 0) == 1);\n    /* Unflushed on a drive with stored energy: safe. */\n    assert(survives_power_loss(0, 1) == 1);\n    assert(survives_power_loss(1, 1) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

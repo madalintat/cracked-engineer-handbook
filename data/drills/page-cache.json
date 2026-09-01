@@ -1,0 +1,185 @@
+{
+ "slug": "page-cache",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What does a successful <code>write</code> guarantee?",
+   "options": [
+    "The page is dirty in memory and nothing more",
+    "The data has reached the device",
+    "The data has reached the device's buffer",
+    "The data will reach the device within a bounded time"
+   ],
+   "correct": 0,
+   "why": "<p>Something eventually will send it, on a schedule nobody in the program chose, and the gap between those two facts is where a whole category of data loss lives.</p>"
+  },
+  {
+   "n": 2,
+   "q": "What does the page cache compete with for memory?",
+   "options": [
+    "Every process's anonymous pages, under the same replacement policy",
+    "Nothing; it has a fixed reservation",
+    "Only other file mappings",
+    "The kernel's own allocations only"
+   ],
+   "correct": 0,
+   "why": "<p>Which is why a machine copying a large file evicts a program's data and then appears to have less memory than it did.</p>"
+  },
+  {
+   "n": 3,
+   "q": "Roughly how far apart are a page cache hit and a miss?",
+   "options": [
+    "Three orders of magnitude",
+    "A factor of two",
+    "A factor of ten",
+    "Six orders of magnitude"
+   ],
+   "correct": 0,
+   "why": "<p>Tens of nanoseconds for a copy from memory against tens of microseconds for a device access, decided by whether somebody read it recently.</p>"
+  },
+  {
+   "n": 4,
+   "q": "What happens to the read-ahead window on a non-sequential access?",
+   "options": [
+    "It collapses to one",
+    "It halves",
+    "It stays at its current size",
+    "It grows, on the assumption of a new sequence"
+   ],
+   "correct": 0,
+   "why": "<p>The evidence for the pattern is gone rather than weakened, and a program that jumps constantly disables the mechanism entirely and pays full latency per access.</p>"
+  },
+  {
+   "n": 5,
+   "q": "What happens when dirty pages cross the first threshold?",
+   "options": [
+    "Background writeback starts and the program notices nothing",
+    "Writes begin to block",
+    "The kernel drops the oldest dirty pages",
+    "Reads slow down"
+   ],
+   "correct": 0,
+   "why": "<p>Only past the second threshold is a process made to write pages out itself, and that transition is abrupt.</p>"
+  },
+  {
+   "n": 6,
+   "q": "A program writes at memory speed for several seconds and then at device speed. What changed?",
+   "options": [
+    "Nothing in the program; it filled the dirty page allowance",
+    "The device entered a thermal limit",
+    "The file grew past an extent boundary",
+    "The writeback thread was descheduled"
+   ],
+   "correct": 0,
+   "why": "<p>A benchmark short enough to stay under the threshold reports a number no sustained workload will ever see, which is the same shape as the write buffer in unit 039.</p>"
+  },
+  {
+   "n": 7,
+   "q": "What does <code>fsync</code> guarantee?",
+   "options": [
+    "That file's dirty pages are written back and the device's buffer is flushed",
+    "That every dirty page in the system is written back",
+    "That the file and its directory entry are durable",
+    "That subsequent writes will also be durable"
+   ],
+   "correct": 0,
+   "why": "<p>It says nothing about the directory the file is in, so a newly created file can be fully written and flushed and still not exist after a power loss.</p>"
+  },
+  {
+   "n": 8,
+   "q": "What are the four steps of safely replacing a file?",
+   "options": [
+    "Write the temporary, flush it, rename over the original, flush the directory",
+    "Write the temporary, rename, flush the directory",
+    "Write in place and flush",
+    "Delete the original, write the new one, flush"
+   ],
+   "correct": 0,
+   "why": "<p>Skip the directory flush and the rename is not durable. Skip the file flush and the name points at incomplete contents, which is worse than the file not existing.</p>"
+  },
+  {
+   "n": 9,
+   "q": "An <code>fsync</code> fails and you call it again. What happens?",
+   "options": [
+    "It succeeds, because the error was reported once and cleared",
+    "It fails again",
+    "It blocks until the write succeeds",
+    "It returns a different error"
+   ],
+   "correct": 0,
+   "why": "<p>Not because anything was written. Several databases treated that second success as proof of durability and lost data for years.</p>"
+  },
+  {
+   "n": 10,
+   "q": "What is the current guidance on an <code>fsync</code> failure?",
+   "options": [
+    "It is not retryable and the data must be assumed lost",
+    "Retry with exponential backoff",
+    "Reopen the file and retry",
+    "Fall back to a direct write"
+   ],
+   "correct": 0,
+   "why": "<p>Some systems treat it as fatal, which sounds extreme and is the only interpretation the interface supports.</p>"
+  },
+  {
+   "n": 11,
+   "q": "What orders two writes to different files?",
+   "options": [
+    "Nothing, without a flush between them",
+    "The order the calls were made",
+    "The kernel's writeback queue",
+    "The device's completion order"
+   ],
+   "correct": 0,
+   "why": "<p>A program that writes a record and then a pointer to it can lose the record and keep the pointer, which is exactly the corruption a journal exists to prevent.</p>"
+  },
+  {
+   "n": 12,
+   "q": "Why is a system doing small durable updates limited by flushes rather than bandwidth?",
+   "options": [
+    "Each flush costs the real device latency rather than the buffered one",
+    "Each flush writes the whole file",
+    "Flushes are serialised across the machine",
+    "Small writes have high amplification"
+   ],
+   "correct": 0,
+   "why": "<p>Batching several logical updates into one flush is the standard answer and it is why databases group commits.</p>"
+  },
+  {
+   "n": 13,
+   "q": "What must be aligned for a direct transfer?",
+   "options": [
+    "The file offset, the length, and the memory buffer's address",
+    "The file offset only",
+    "The offset and the length",
+    "Nothing; alignment affects speed rather than correctness"
+   ],
+   "correct": 0,
+   "why": "<p>The device transfers whole blocks between the medium and the address you gave it, with nothing in between to fix a misalignment, so the call fails rather than being slow.</p>"
+  },
+  {
+   "n": 14,
+   "q": "Why do databases bypass the page cache?",
+   "options": [
+    "They have their own buffer pool, and a second cache underneath duplicates it",
+    "The page cache is slower than direct access",
+    "The page cache does not support large files",
+    "To avoid the kernel's read-ahead"
+   ],
+   "correct": 0,
+   "why": "<p>The reason is duplication rather than overhead, and for anything that does not manage its own caching the page cache is better than what you would write.</p>"
+  },
+  {
+   "n": 15,
+   "q": "Does <code>mmap</code> change durability?",
+   "options": [
+    "No; a write through a mapping dirties a page and needs the same flush",
+    "Yes; mapped writes go straight to the device",
+    "Yes; the mapping is flushed on unmap",
+    "Only for shared mappings"
+   ],
+   "correct": 0,
+   "why": "<p>It removes the transition and the copy, and it introduces a failure mode the read path does not have: an I/O error becomes a signal rather than a return value.</p>"
+  }
+ ]
+}

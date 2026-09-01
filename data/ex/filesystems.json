@@ -1,0 +1,310 @@
+{
+ "slug": "filesystems",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "When a file actually dies",
+   "brief": "<p>Write <code>inode_freed</code>, reporting whether removing a name frees the file, given how many names remain and how many processes still have it open.</p>\n<p>Removing a name decrements a count. The count is not the only thing keeping a file alive.</p>",
+   "kind": "output",
+   "concept": "A file survives while any name or any open descriptor refers to it, which is why a deleted log can keep a disk full.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Two independent references, and the file dies only when both are gone."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A file with no names and an open descriptor still exists, and it is invisible: nothing in the directory tree names it and the space is not returned. Freeing on the name count alone would pull the storage out from under a running process.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>That is the mechanism behind a temporary file that cannot be found and cannot leak, and behind a disk that stays full after you deleted the log a running process was writing to. Removing the name did exactly what it says, and the file is still there.</p>",
+   "starter": "int inode_freed(int names_remaining, int open_descriptors) {\n    (void)open_descriptors;\n    return names_remaining == 0;\n}",
+   "tests": "#include <assert.h>\nint inode_freed(int, int);\nint main(void) {\n    /* Another name still refers to it. */\n    assert(inode_freed(1, 0) == 0);\n    /* No names, nobody holding it: freed. */\n    assert(inode_freed(0, 0) == 1);\n    /* No names and a process still writing: alive and invisible. */\n    assert(inode_freed(0, 1) == 0);\n    assert(inode_freed(2, 3) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "The state that contradicts itself",
+   "brief": "<p>Write <code>crash_state</code>, classifying what a crash leaves after an append that was interrupted partway: 0 consistent, 1 leaked space, 2 a block in two places.</p>\n<p>Stopping after the allocation leaks. Stopping after the inode update is worse.</p>",
+   "kind": "output",
+   "concept": "The problem is not losing an update, it is that a partial one leaves a structure that is self-contradictory rather than merely out of date.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Marked used and belonging to nothing leaks. Belonging to a file and still free is the dangerous one."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A block referenced by an inode while still marked free is handed out again by the next allocation, so two files share it and each corrupts the other. That is a different and worse outcome than a block nobody can reach.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Leaked space is recoverable by a scan. A block in two files is not, and by the time anybody notices, both files have been written. That asymmetry is why every filesystem has a protocol rather than an ordering convention.</p>",
+   "starter": "int crash_state(int marked_used, int in_inode) {\n    (void)in_inode;\n    return marked_used ? 1 : 0;\n}",
+   "tests": "#include <assert.h>\nint crash_state(int, int);\nint main(void) {\n    /* Nothing happened, or everything did. */\n    assert(crash_state(0, 0) == 0);\n    assert(crash_state(1, 1) == 0);\n    /* Allocated and never attached: leaked. */\n    assert(crash_state(1, 0) == 1);\n    /* Attached and still free: two files will share it. */\n    assert(crash_state(0, 1) == 2);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Replay, or forget",
+   "brief": "<p>Write <code>journal_outcome</code>, reporting what recovery does after a crash: 0 discard the entry, 1 replay it.</p>\n<p>A crash before the log is flushed loses the update entirely, which is fine because nothing was applied.</p>",
+   "kind": "output",
+   "concept": "There is no window where a partial change survives without the instructions to finish it, which is the entire property a journal buys.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The log being complete and flushed is what makes replaying safe."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. An entry that was written but not flushed may be partial on the medium, so replaying it would apply a change nobody has a full description of. Only a flushed entry is known to be whole.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A completed entry is discarded rather than replayed, because the change already reached its real locations and replaying it would be harmless but pointless. The cost of the whole scheme is that everything is written twice, which is what makes the next exercise's decision worth making.</p>",
+   "starter": "int journal_outcome(int entry_flushed, int entry_marked_done) {\n    (void)entry_marked_done;\n    return entry_flushed;\n}",
+   "tests": "#include <assert.h>\nint journal_outcome(int, int);\nint main(void) {\n    /* Never flushed: nothing was applied, so discard. */\n    assert(journal_outcome(0, 0) == 0);\n    /* Flushed and not yet applied: replay. */\n    assert(journal_outcome(1, 0) == 1);\n    /* Flushed and completed: nothing left to do. */\n    assert(journal_outcome(1, 1) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Consistent, and wrong",
+   "brief": "<p>Write <code>after_crash</code>, returning two answers: whether the filesystem is consistent and whether the file's contents are the ones that were written.</p>\n<p>A metadata journal protects the structure. The contents are yours.</p>",
+   "kind": "output",
+   "concept": "A crash mid-write leaves a valid file, correctly described, containing a mixture of old and new bytes, and every check the filesystem performs passes.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The journal decides the first answer. The flush decides the second."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees, and it will be the one where the metadata was journalled and the data was not flushed. The filesystem is consistent, because its own bookkeeping was protected, and the file contains part of an update. Reporting the data as intact there is exactly the assumption the unit exists to remove.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The distinction is the whole unit. A filesystem check after a crash reports no problems, because there are none of the kind it looks for, and your file is a mixture of two versions. The protocol protects the structure and the contents are your responsibility.</p>",
+   "starter": "void after_crash(int metadata_journalled, int data_flushed,\n                 int *fs_consistent, int *data_intact) {\n    *fs_consistent = metadata_journalled;\n    *data_intact = metadata_journalled;\n    (void)data_flushed;\n}",
+   "tests": "#include <assert.h>\nvoid after_crash(int, int, int *, int *);\nint main(void) {\n    int fs, data;\n    /* The ordinary default: metadata journalled, data not flushed. */\n    after_crash(1, 0, &fs, &data);\n    assert(fs == 1);\n    assert(data == 0);\n    /* Both: everything survives. */\n    after_crash(1, 1, &fs, &data);\n    assert(fs == 1 && data == 1);\n    /* No journal: the structure itself may be broken. */\n    after_crash(0, 1, &fs, &data);\n    assert(fs == 0 && data == 1);\n    after_crash(0, 0, &fs, &data);\n    assert(fs == 0 && data == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "One pointer, and everything changed",
+   "brief": "<p>Write <code>cow_visible</code>, reporting what a reader sees after a copy-on-write update that was interrupted: 0 the old tree, 1 the new one.</p>\n<p>Until the root switches nothing has changed. After it, everything has.</p>",
+   "kind": "output",
+   "concept": "The only mutation is one pointer, so there is no partial state to recover from and no journal to write.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Only the root switch matters. Everything before it is invisible."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. New blocks written and new structures built are all unreachable until the root points at them, so a crash at any point before the switch leaves a reader seeing exactly the old tree. That is the property, and partial progress being invisible is what replaces the journal.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Keeping the old root keeps the whole old tree, which is why snapshots are almost free. And a block is never modified in place, so its checksum stays valid, which is why the filesystems that do this are also the ones that check.</p>",
+   "starter": "int cow_visible(int new_blocks_written, int new_tree_written,\n                int root_switched) {\n    (void)root_switched;\n    return new_blocks_written && new_tree_written;\n}",
+   "tests": "#include <assert.h>\nint cow_visible(int, int, int);\nint main(void) {\n    /* Nothing done. */\n    assert(cow_visible(0, 0, 0) == 0);\n    /* Blocks written, unreachable. */\n    assert(cow_visible(1, 0, 0) == 0);\n    /* The whole new tree built and not yet published. */\n    assert(cow_visible(1, 1, 0) == 0);\n    /* The switch. */\n    assert(cow_visible(1, 1, 1) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Describing a file two ways",
+   "brief": "<p>Write <code>map_entries</code>, returning how many entries a file's block map needs, under a block list and under extents.</p>\n<p>A contiguous file of any size is one extent. A fully fragmented one is worse than the list it replaced.</p>",
+   "kind": "output",
+   "concept": "An extent is a start and a length, so the description is proportional to the number of runs rather than to the size.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The list needs one entry per block whatever the layout. Extents need one per run."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The block list's size does not depend on the layout at all, since it names every block regardless, and only the extent count does. Reporting the same number for both loses the entire distinction.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A contiguous gigabyte is one extent and 262144 list entries. The same gigabyte in single-block fragments is 262144 of each, and each extent is larger than a pointer, so the worst case really is worse. That is another reason every layer in this part rewards long runs.</p>",
+   "starter": "void map_entries(unsigned long blocks, unsigned long runs,\n                 unsigned long *list, unsigned long *extents) {\n    *list = runs;\n    *extents = runs;\n}",
+   "tests": "#include <assert.h>\nvoid map_entries(unsigned long, unsigned long, unsigned long *,\n                 unsigned long *);\nint main(void) {\n    unsigned long l, e;\n    /* A contiguous gigabyte in 4 KB blocks. */\n    map_entries(262144, 1, &l, &e);\n    assert(l == 262144);\n    assert(e == 1);\n    /* Ten runs. */\n    map_entries(262144, 10, &l, &e);\n    assert(l == 262144 && e == 10);\n    /* Every block somewhere different. */\n    map_entries(262144, 262144, &l, &e);\n    assert(l == 262144 && e == 262144);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "Silently wrong",
+   "brief": "<p>Write <code>corruption_detected</code>, reporting whether a filesystem notices that a block read back different bytes than were written, given whether it checksums data and whether the device reported an error.</p>\n<p>A device that returns wrong bytes without reporting an error is a case most filesystems do not detect.</p>",
+   "kind": "output",
+   "concept": "The failure a data checksum prevents is undetectable by everything above it, which is why a backup of corrupted data is a corrupted backup.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Either the device says so, or the filesystem checks. Otherwise nobody knows."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A reported error is noticed whether or not anybody checksums, and a silent corruption is noticed only by a filesystem that verifies. The case where neither holds is the interesting one and it returns wrong data with no indication anywhere.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A cable, a controller bug, or a write that landed at the wrong offset all produce data that reads back fine and is wrong. The filesystems that checksum catch it and, given a redundant copy, repair it. The ones that do not hand it to you, and nothing above them notices.</p>",
+   "starter": "int corruption_detected(int checksums_data, int device_reported_error) {\n    (void)checksums_data;\n    return device_reported_error;\n}",
+   "tests": "#include <assert.h>\nint corruption_detected(int, int);\nint main(void) {\n    /* The device noticed and said so. */\n    assert(corruption_detected(0, 1) == 1);\n    assert(corruption_detected(1, 1) == 1);\n    /* Silent corruption, and the filesystem verifies. */\n    assert(corruption_detected(1, 0) == 1);\n    /* Silent corruption and nobody checking. */\n    assert(corruption_detected(0, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "The rename that was never durable",
+   "brief": "<p>Write <code>rename_survives</code>, reporting whether a file replacement survives a crash under delayed allocation, given whether the data was flushed and whether allocation happened to have run before the crash.</p>\n<p>Applications had been getting away with it because the old behaviour happened to write the data first.</p>",
+   "kind": "output",
+   "concept": "Delaying allocation widened a window that was always there, and the pattern that broke had never been guaranteed.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A flush closes the window. Allocation running is luck."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Allocation having run means the data reached the medium without anybody arranging it, which is the behaviour applications had come to depend on, and a flush is the only version of that anyone promised. Both produce a surviving file and only one is a guarantee.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The arguments were about whether the applications or the filesystem were wrong, and both positions were defensible. The resolution was practical: the filesystem added a special case for that pattern, and the guidance stayed that a rename without a flush guarantees nothing, because it never did.</p>",
+   "starter": "int rename_survives(int data_flushed, int allocation_ran) {\n    (void)allocation_ran;\n    return data_flushed;\n}",
+   "tests": "#include <assert.h>\nint rename_survives(int, int);\nint main(void) {\n    /* Neither: a correctly named, empty file. */\n    assert(rename_survives(0, 0) == 0);\n    /* Flushed: guaranteed. */\n    assert(rename_survives(1, 0) == 1);\n    /* Allocation happened to run, which nobody arranged. */\n    assert(rename_survives(0, 1) == 1);\n    assert(rename_survives(1, 1) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

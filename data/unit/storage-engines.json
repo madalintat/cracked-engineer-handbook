@@ -1,0 +1,83 @@
+{
+ "slug": "storage-engines",
+ "num": 43,
+ "title": "Structures dictated by physics",
+ "blurb": "B-tree or LSM is not a taste question. The device's cost asymmetry picks it, and the wrong key order costs 250x.",
+ "part": "storage",
+ "partRoman": "VIII",
+ "partTitle": "Storage",
+ "phase": "system",
+ "accent": "clay",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "filesystems",
+   "flash"
+  ],
+  "minutes": 55,
+  "one_idea": "B-tree or log-structured is not a taste question; the device's cost asymmetry picks it, and the choice is a trade between what reads cost and what writes cost.",
+  "sources": [
+   "compilers-interpreters-terminals-unix",
+   "cpu-architectures"
+  ]
+ },
+ "html": "<p>Every database has to solve one problem: keep an ordered collection on a device that is slow, and answer point lookups, range scans and updates against it. There are two families of answer, they have been competing for forty years, and the thing that decides between them is not elegance.</p>\n<h2 id=\"three-costs-and-you-cannot-have-all-three\">Three costs, and you cannot have all three</h2>\n<p>Any structure of this kind is a trade between three quantities, and improving one worsens another.</p>\n<p>Read amplification is how much you must read to answer a query. Write amplification, which unit 039 already priced at the device level, is how much you must write per byte of update. Space amplification is how much room the structure takes beyond the data it holds.</p>\n<p>A structure that keeps everything perfectly ordered has excellent reads and pays for every update by rewriting the neighbourhood. A structure that appends everything has excellent writes and pays on every read by looking in several places. There is no arrangement with all three, and the choice is which one your workload can afford to be bad at.</p>\n<h2 id=\"ordered-in-place\">Ordered in place</h2>\n<p>A B-tree keeps keys sorted in fixed-size pages, with interior pages of separators pointing at children. A lookup walks from the root, one page per level, and the tree is shallow: a fanout of a few hundred means a billion keys in four or five levels.</p>\n<p>Reads are close to optimal. A point lookup is a handful of page reads, and the upper levels stay cached, so in practice it is one device access. A range scan walks leaves in order, which is sequential.</p>\n<p>The cost is in updates. Changing one record means reading its page, modifying it, and writing the whole page back, so a hundred-byte update writes a page. At four kilobytes that is amplification of forty before the device's own amplification is applied on top, and unit 039 said what a small write does to a block-erased medium.</p>\n<p>And a page that fills has to split, which rewrites two pages and an ancestor, and in the worst case propagates to the root.</p>\n<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 459 214\" class=\"fig-svg\" style=\"max-width:666px\" role=\"img\" aria-label=\"A B-tree with a root, interior separator pages and sorted leaves, beside a log-structured tree with a memory table and several sorted files of increasing size.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><line x1=\"70\" y1=\"57\" x2=\"70\" y2=\"70\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"70\" y1=\"119\" x2=\"70\" y2=\"132\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"356\" y1=\"57\" x2=\"356\" y2=\"70\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"356\" y1=\"119\" x2=\"356\" y2=\"132\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><rect x=\"0.0\" y=\"8.8\" width=\"140.8\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"70.4\" y=\"37.0\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">root</text><rect x=\"0.0\" y=\"70.4\" width=\"140.8\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"70.4\" y=\"98.6\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">separators</text><rect x=\"0.0\" y=\"132.0\" width=\"140.8\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"70.4\" y=\"160.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">sorted leaves</text><rect x=\"281.6\" y=\"8.8\" width=\"149.6\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--gold-ink, var(--accent));stroke:var(--gold-ink, var(--accent))\"/><text x=\"356.4\" y=\"37.0\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">in memory</text><rect x=\"281.6\" y=\"70.4\" width=\"149.6\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"356.4\" y=\"98.6\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">small file</text><rect x=\"281.6\" y=\"132.0\" width=\"149.6\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"356.4\" y=\"160.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">larger file</text></svg><figcaption>Sorted in place against appended and merged later. The first is optimal to read and expensive to update; the second is the reverse, and the device decides which is the right mistake.</figcaption></figure>\n<h2 id=\"appended-and-sorted-out-later\">Appended, and sorted out later</h2>\n<p>The other family never updates anything in place. Writes go into a sorted structure in memory, and when it fills it is written out as one immutable sorted file. Those files accumulate, and a background process merges them into fewer, larger ones.</p>\n<p>Writes are as cheap as they can be: an append to a log for durability and an insertion into memory. Nothing is read to perform an update, and nothing on the device is modified.</p>\n<p>The cost lands on reads. A key may be in the memory table or in any of the files, so a lookup that finds nothing has to check all of them. That is what the two mitigations exist for: every file carries a summary structure that can say definitely not present without a read, and a cache holds the ones consulted most.</p>\n<p>And the merging is not free. It is the write amplification, deferred and batched: each record is rewritten once per level it passes through, so a structure with seven levels rewrites everything about seven times over its life. The difference from the B-tree is that this happens in large sequential runs at a time of the system's choosing rather than in small random writes at the time of the update.</p>\n<h2 id=\"which-the-device-decides\">Which the device decides</h2>\n<p>Now the reason this is not a taste question.</p>\n<p>On a spinning disk a random write and a random read cost about the same, both dominated by the seek, so the B-tree's page rewrite is not obviously worse than anything else. The structure was designed for that machine and it fits it.</p>\n<p>On flash the costs are not symmetric. A read is tens of microseconds; a small random write is cheap to issue and expensive downstream, because unit 039's controller must eventually erase a block hundreds of times larger. Small random writes are the one thing the medium is worst at.</p>\n<p>So the log-structured design is not a general improvement. It is a response to a device whose write path is the expensive one, converting many small random writes into few large sequential ones, which is precisely the transformation that makes the controller's garbage collection cheap.</p>\n<p>Change the device again and the answer changes again. That is the whole argument.</p>\n<h2 id=\"the-summary-that-answers-without-reading\">The summary that answers without reading</h2>\n<p>The structure that lets a log-structured engine skip files deserves its own paragraph, because it is a good example of paying space for reads.</p>\n<p>Each file carries a compact filter over the keys it contains. Asked whether a key is present, it answers definitely not or possibly, never definitely yes. A negative answer skips the file with no device access at all; a positive answer means reading it and finding out.</p>\n<p>The cost is a few bits per key held in memory and a false positive rate that falls as you spend more. Ten bits per key gives roughly one percent, so a lookup across seven files reads about one of them unnecessarily rather than all seven.</p>\n<p>It is the third amplification being traded for the first: memory spent to avoid reads. And it only helps for keys that are absent, which is why a workload of lookups that mostly succeed gets far less from it than one checking for existence.</p>\n<h2 id=\"what-the-workload-decides\">What the workload decides</h2>\n<p>The device narrows it and the workload picks.</p>\n<p>A read-heavy workload with occasional updates wants the B-tree: reads are optimal, and the update cost is paid rarely. A write-heavy workload with scattered keys wants the log structure, because the alternative is one page rewrite per update and the device will hate it.</p>\n<p>Range scans favour the B-tree, since leaves are already in order, where the log structure must merge several files on the fly. Point lookups of keys that do not exist favour the B-tree too, unless the summaries are doing their job.</p>\n<p>And space is the third axis. The log structure holds superseded versions until a merge removes them, so it can occupy substantially more than its live data, while a B-tree's pages are typically most of the way full and its overhead is bounded.</p>\n<h2 id=\"deleting-something-that-was-never-there\">Deleting something that was never there</h2>\n<p>One asymmetry the log structure has and the B-tree does not, because it catches people.</p>\n<p>Nothing is modified in place, so a deletion cannot remove anything. It writes a marker saying this key is gone, and that marker has to persist until every older file that might contain the key has been merged away. Until then a lookup finds the marker first and reports absence correctly.</p>\n<p>The consequence is that deleting does not free space and can consume it, and a workload that inserts and deletes the same keys repeatedly accumulates markers faster than merging removes them. A range that was emptied still has to be walked past, so scanning a mostly deleted region reads all the markers.</p>\n<p>There is no equivalent in a B-tree, where a delete removes the record from its page and the space is immediately reusable. It is the clearest single example of the family difference: in one structure a delete is an update, and in the other it is another append.</p>\n<h2 id=\"where-the-durability-goes\">Where the durability goes</h2>\n<p>Both families need the same thing underneath, and it is the previous two units.</p>\n<p>An update is written to a log and that log is flushed before the update is acknowledged, because unit 041 said a write that returned is only a dirty page. Recovery replays the log against whatever survived. That is the same protocol a filesystem journal uses and for the same reason.</p>\n<p>The cost is one flush per commit, which unit 041 also priced, so a system doing many small durable updates is limited by flushes per second. Grouping several commits into one flush is the standard answer, and it trades a little latency for a great deal of throughput.</p>\n<p>Which means the durability mechanism is the same whichever structure you chose. The structure decides what the steady state costs; the log decides what a crash costs.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>Read, write and space amplification trade against each other and no structure is good at all three.</p>\n<p>A B-tree is ordered in place, optimal to read, and rewrites a page per update. A log-structured tree appends and merges, is optimal to write, and pays on reads that must consult several files.</p>\n<p>The device picks the family, because flash is worst at small random writes and a disk was not. The workload picks within it. And both sit on a flushed log, because that is the only durability the layers below offer.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These compute the amplification arithmetic, which is exact, where a benchmark of a real engine measures its tuning as much as its design.</p>\n<p><code>assert-failed</code> names the number your model got wrong. Every one follows from the structure described in the prose rather than from any particular implementation.</p>",
+ "headings": [
+  {
+   "id": "three-costs-and-you-cannot-have-all-three",
+   "text": "Three costs, and you cannot have all three",
+   "level": 2
+  },
+  {
+   "id": "ordered-in-place",
+   "text": "Ordered in place",
+   "level": 2
+  },
+  {
+   "id": "appended-and-sorted-out-later",
+   "text": "Appended, and sorted out later",
+   "level": 2
+  },
+  {
+   "id": "which-the-device-decides",
+   "text": "Which the device decides",
+   "level": 2
+  },
+  {
+   "id": "the-summary-that-answers-without-reading",
+   "text": "The summary that answers without reading",
+   "level": 2
+  },
+  {
+   "id": "what-the-workload-decides",
+   "text": "What the workload decides",
+   "level": 2
+  },
+  {
+   "id": "deleting-something-that-was-never-there",
+   "text": "Deleting something that was never there",
+   "level": 2
+  },
+  {
+   "id": "where-the-durability-goes",
+   "text": "Where the durability goes",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1529,
+ "needs": [
+  "flash",
+  "filesystems"
+ ],
+ "neededBy": []
+}

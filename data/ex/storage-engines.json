@@ -1,0 +1,310 @@
+{
+ "slug": "storage-engines",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "A page for a hundred bytes",
+   "brief": "<p>Write <code>btree_write_amp</code>, returning how many bytes a B-tree writes per byte of update, scaled by 100.</p>\n<p>Changing one record means reading its page, modifying it, and writing the whole page back.</p>",
+   "kind": "output",
+   "concept": "A structure that keeps everything ordered in place pays for every update by rewriting the neighbourhood, whatever the update's size.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The page is written whatever the record's size, so the ratio is the page over the record."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The amount written does not depend on the update's size, so the ratio grows as the update shrinks: a hundred-byte change to a four-kilobyte page is forty times, and a four-kilobyte change to the same page is one.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Forty times, before the device's own amplification is applied on top of it. Unit 039 said what a small random write does to a block-erased medium, and this is a structure that produces one per update by construction.</p>",
+   "starter": "unsigned long btree_write_amp(unsigned long record_bytes,\n                              unsigned long page_bytes) {\n    (void)page_bytes;\n    return 100;\n}",
+   "tests": "#include <assert.h>\nunsigned long btree_write_amp(unsigned long, unsigned long);\nint main(void) {\n    /* A hundred bytes into a four kilobyte page. */\n    assert(btree_write_amp(100, 4096) == 4096);\n    /* A full page: no amplification at all. */\n    assert(btree_write_amp(4096, 4096) == 100);\n    /* Half a page. */\n    assert(btree_write_amp(2048, 4096) == 200);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "How deep the tree is",
+   "brief": "<p>Write <code>btree_levels</code>, returning how many levels a B-tree needs to hold a given number of keys at a given fanout.</p>\n<p>A fanout of a few hundred means a billion keys in four or five levels.</p>",
+   "kind": "output",
+   "concept": "The tree is shallow because the fanout is large, which is why a point lookup is a handful of page reads and in practice one device access.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Multiply the capacity by the fanout until it reaches the key count, counting levels."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. One level holds <code>fanout</code> keys, two hold <code>fanout</code> squared, and so on, so the answer is how many times you multiply before covering the count. Dividing the key count by the fanout once gives the number of leaves rather than the depth.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Four levels at a fanout of 256 covers four billion keys. The upper levels stay cached because they are small and every lookup touches them, so the device access is the leaf, and that is why reads are close to optimal.</p>",
+   "starter": "int btree_levels(unsigned long keys, unsigned long fanout) {\n    if (keys <= 1) return 1;\n    return (int)(keys / fanout) + 1;\n}",
+   "tests": "#include <assert.h>\nint btree_levels(unsigned long, unsigned long);\nint main(void) {\n    assert(btree_levels(1, 256) == 1);\n    assert(btree_levels(256, 256) == 1);\n    assert(btree_levels(257, 256) == 2);\n    assert(btree_levels(65536, 256) == 2);\n    assert(btree_levels(65537, 256) == 3);\n    /* Four billion keys in four levels. */\n    assert(btree_levels(4294967296UL, 256) == 4);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Rewritten once per level",
+   "brief": "<p>Write <code>lsm_write_amp</code>, returning how many times a record is rewritten over its life in a log-structured tree, given the number of levels and the merge fan.</p>\n<p>The merging is the write amplification, deferred and batched.</p>",
+   "kind": "output",
+   "concept": "The amplification does not disappear, it moves: from small random writes at update time to large sequential ones at a time of the system's choosing.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Once written into each level, plus the initial flush from memory."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A record is written once when the memory table is flushed and once more as it passes into each subsequent level, so seven levels is eight writes rather than seven. The merge fan affects how much is read per merge rather than how many times a record is written.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Eight times over its life, in large sequential runs, against the B-tree's forty in one small random write at the moment of the update. The totals are not far apart and the shapes are completely different, and the shape is what the device cares about.</p>",
+   "starter": "unsigned long lsm_write_amp(unsigned long levels, unsigned long merge_fan) {\n    return levels * merge_fan;\n}",
+   "tests": "#include <assert.h>\nunsigned long lsm_write_amp(unsigned long, unsigned long);\nint main(void) {\n    /* One flush and no levels below. */\n    assert(lsm_write_amp(0, 10) == 1);\n    /* Seven levels: the flush plus one write per level. */\n    assert(lsm_write_amp(7, 10) == 8);\n    assert(lsm_write_amp(3, 4) == 4);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Looking in several places",
+   "brief": "<p>Write <code>files_read</code>, returning how many files a lookup must actually read, given how many exist, whether the key is present, and the summary filter's false positive rate as a percentage.</p>\n<p>A negative answer from a summary skips the file with no device access at all.</p>",
+   "kind": "output",
+   "concept": "The filter trades memory for reads and only helps for keys that are absent, which is why it is worth far more to a workload checking existence than to one fetching known keys.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A present key is read from its own file whatever the filters say. Absent keys are read only on a false positive."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A key that exists is in exactly one file and that file's filter says possibly, so it is read, and the others contribute false positives on top. Treating a present key as costing nothing ignores the read that answers the question.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>One percent across seven files means a lookup for an absent key reads about none of them rather than all seven. That is the mitigation, and it costs a few bits per key held in memory, which is the third amplification paying for the first.</p>",
+   "starter": "unsigned long files_read(unsigned long file_count, int key_present,\n                         unsigned long false_positive_pct) {\n    (void)key_present; (void)false_positive_pct;\n    return file_count;\n}",
+   "tests": "#include <assert.h>\nunsigned long files_read(unsigned long, int, unsigned long);\nint main(void) {\n    /* Absent, perfect filters: nothing is read. */\n    assert(files_read(7, 0, 0) == 0);\n    /* Absent, filters useless: everything is read. */\n    assert(files_read(7, 0, 100) == 7);\n    /* Present: the one holding it, plus false positives among the rest. */\n    assert(files_read(7, 1, 0) == 1);\n    assert(files_read(7, 1, 100) == 7);\n    /* Absent, one file, a filter that always says possibly. */\n    assert(files_read(1, 0, 100) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Deleting is another append",
+   "brief": "<p>Write <code>space_after_delete</code>, returning how many records a log-structured engine still holds after a deletion, given the live records and how many deletion markers are outstanding.</p>\n<p>Nothing is modified in place, so a deletion cannot remove anything.</p>",
+   "kind": "output",
+   "concept": "In one structure a delete is an update and in the other it is another append, which is the clearest single example of the family difference.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The old record is still there and the marker is there too, until a merge removes both."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Deleting adds a marker without removing the record it hides, so the storage held goes up rather than down until a merge passes over both. Subtracting the deletions models a structure that can modify in place, which is the other family.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A workload that inserts and deletes the same keys repeatedly accumulates markers faster than merging removes them, and a range that was emptied still has to be walked past. A B-tree has no equivalent, because a delete removes the record from its page and the space is immediately reusable.</p>",
+   "starter": "unsigned long space_after_delete(unsigned long live_records,\n                                 unsigned long deleted_records) {\n    return live_records - deleted_records;\n}",
+   "tests": "#include <assert.h>\nunsigned long space_after_delete(unsigned long, unsigned long);\nint main(void) {\n    /* Nothing deleted. */\n    assert(space_after_delete(1000, 0) == 1000);\n    /* A hundred deleted: the records remain and the markers are added. */\n    assert(space_after_delete(1000, 100) == 1100);\n    /* Everything deleted and nothing merged yet. */\n    assert(space_after_delete(1000, 1000) == 2000);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Which the device picks",
+   "brief": "<p>Write <code>prefer_log_structured</code>, deciding which family a device suits, given the cost of a random read and the eventual cost of a small random write.</p>\n<p>The log structure is a response to a device whose write path is the expensive one.</p>",
+   "kind": "output",
+   "concept": "On a spinning disk the two costs are about equal and the B-tree fits; on flash they are not, and small random writes are what the medium is worst at.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The asymmetry is the input, not the absolute speed."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A slow device with symmetric costs suits the B-tree exactly as a fast one does, because what matters is the ratio between a read and a write rather than either number. Comparing the write cost against a threshold makes the answer depend on the device's speed instead of its shape.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Change the device again and the answer changes again. That is the whole argument, and it is why this is not a taste question: the same structure is right on one medium and wrong on another with nothing about the software having changed.</p>",
+   "starter": "int prefer_log_structured(unsigned long read_ns, unsigned long write_ns) {\n    (void)read_ns;\n    return write_ns > 100000;\n}",
+   "tests": "#include <assert.h>\nint prefer_log_structured(unsigned long, unsigned long);\nint main(void) {\n    /* A disk: a seek either way, so the costs are symmetric. */\n    assert(prefer_log_structured(8000000, 8000000) == 0);\n    /* Flash: reads are cheap and small random writes are not. */\n    assert(prefer_log_structured(50000, 500000) == 1);\n    /* A hypothetical fast device with symmetric costs. */\n    assert(prefer_log_structured(1000, 1000) == 0);\n    /* And one where writes are somehow cheaper. */\n    assert(prefer_log_structured(500000, 50000) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "Reading a range",
+   "brief": "<p>Write <code>range_scan_cost</code>, returning how many sequential runs a range scan reads, under a B-tree and under a log-structured tree with a given number of files.</p>\n<p>Leaves are already in order in one and must be merged on the fly in the other.</p>",
+   "kind": "output",
+   "concept": "Range scans favour the ordered structure, because the log-structured one must read from every file that overlaps the range and combine them.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The ordered structure reads one run whatever the range. The other reads one per overlapping file."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A B-tree's leaves for a contiguous range are contiguous, so it is one sequential run however wide the range, and the log structure needs one per file the range touches. Reporting the same for both loses the distinction the exercise is about.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Which is why a workload dominated by scans favours the B-tree even on flash, since a scan is sequential and sequential writes were the thing the log structure existed to produce. The device narrows the choice and the workload picks within it.</p>",
+   "starter": "void range_scan_cost(unsigned long overlapping_files,\n                     unsigned long *btree_runs, unsigned long *lsm_runs) {\n    *btree_runs = overlapping_files;\n    *lsm_runs = overlapping_files;\n}",
+   "tests": "#include <assert.h>\nvoid range_scan_cost(unsigned long, unsigned long *, unsigned long *);\nint main(void) {\n    unsigned long b, l;\n    range_scan_cost(1, &b, &l);\n    assert(b == 1 && l == 1);\n    range_scan_cost(7, &b, &l);\n    assert(b == 1);\n    assert(l == 7);\n    range_scan_cost(20, &b, &l);\n    assert(b == 1 && l == 20);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Flushes per second",
+   "brief": "<p>Write <code>commit_rate</code>, returning how many durable updates a second a system achieves, given the flush latency and how many commits are grouped into one flush.</p>\n<p>The structure decides what the steady state costs; the log decides what a crash costs.</p>",
+   "kind": "output",
+   "concept": "One flush per commit limits a system to flushes per second, and grouping trades a little latency for a great deal of throughput.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The flushes per second is fixed, and each one commits a group."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Grouping does not make the flush faster, it makes one flush serve several commits, so the rate is flushes per second times the group size. Ignoring the group size models a system that flushes once per commit, which is the case the grouping exists to escape.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The durability mechanism is the same whichever structure you chose, because it is the only durability the layers below offer. Both families write to a log and flush it before acknowledging, for the reason unit 041 gave: a write that returned is only a dirty page.</p>",
+   "starter": "unsigned long commit_rate(unsigned long flush_us, unsigned long group_size) {\n    (void)group_size;\n    return 1000000 / flush_us;\n}",
+   "tests": "#include <assert.h>\nunsigned long commit_rate(unsigned long, unsigned long);\nint main(void) {\n    /* A one millisecond flush, one commit each. */\n    assert(commit_rate(1000, 1) == 1000);\n    /* Grouping a hundred commits into each flush. */\n    assert(commit_rate(1000, 100) == 100000);\n    /* A faster device. */\n    assert(commit_rate(100, 1) == 10000);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

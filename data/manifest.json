@@ -391,7 +391,9 @@
    "needs": [
     "power"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "flash"
+   ],
    "minutes": 50
   },
   {
@@ -952,7 +954,8 @@
     "pipeline"
    ],
    "neededBy": [
-    "scheduling"
+    "scheduling",
+    "nvme"
    ],
    "minutes": 55
   },
@@ -1139,7 +1142,8 @@
    ],
    "neededBy": [
     "virtual-memory",
-    "scheduling"
+    "scheduling",
+    "filesystems"
    ],
    "minutes": 55
   },
@@ -1162,7 +1166,10 @@
     "cache",
     "processes"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "flash",
+    "page-cache"
+   ],
    "minutes": 55
   },
   {
@@ -1244,12 +1251,20 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1459,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "fabrication",
+    "virtual-memory"
+   ],
+   "neededBy": [
+    "nvme",
+    "page-cache",
+    "storage-engines"
+   ],
+   "minutes": 55
   },
   {
    "slug": "nvme",
@@ -1262,12 +1277,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1558,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "atomics",
+    "flash"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "page-cache",
@@ -1280,12 +1299,18 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1429,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "virtual-memory",
+    "flash"
+   ],
+   "neededBy": [
+    "filesystems"
+   ],
+   "minutes": 55
   },
   {
    "slug": "filesystems",
@@ -1298,12 +1323,18 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1430,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "processes",
+    "page-cache"
+   ],
+   "neededBy": [
+    "storage-engines"
+   ],
+   "minutes": 55
   },
   {
    "slug": "storage-engines",
@@ -1316,12 +1347,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1529,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "flash",
+    "filesystems"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "terminal",
@@ -2750,9 +2785,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 40,
-  "words": 60672,
-  "exercises": 320,
-  "drills": 600
+  "ready": 45,
+  "words": 68077,
+  "exercises": 360,
+  "drills": 675
  }
 }

@@ -773,6 +773,16 @@ def parse_drills(text, where):
                 continue
             if line.startswith("@why"):
                 why.append(line[4:].strip()); sink = "why"; continue
+            # A bullet the option pattern did not match is a malformed option,
+            # not prose. `- [] text` with no space in the box parses as neither
+            # and used to be dropped in silence, taking a distractor with it and
+            # leaving a drill that still had three and still passed.
+            if re.match(r"^\s*[-*]\s", line) and sink != "why":
+                problems.append(
+                    f"{w}: {line.strip()!r} looks like an option and is not one. "
+                    f"An option is `- [ ] text` or `- [x] text`, with a space "
+                    f"inside the brackets.")
+                continue
             if sink == "why":
                 why.append(line)
         if len(opts) < 3:

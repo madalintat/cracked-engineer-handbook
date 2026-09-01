@@ -10951,6 +10951,1326 @@
  },
  {
   "t": "section",
+  "slug": "flash",
+  "anchor": "three-operations-three-sizes",
+  "title": "Three operations, three sizes",
+  "text": "NAND supports three things and they operate at three different granularities. Reading works on a page, which is a few kilobytes, and takes tens of microseconds. Programming, meaning writing, also works on a page and takes a few hundred microseconds. Erasing works on a block, which is hundreds of pages, and takes a few milliseconds. The rule that makes this awkward is that a page cannot be programmed twice. To change a byte you must erase the entire block containing it and program the whole thing back, which is an operation a hundred times larger and a hundred times slower than the write you asked for. So flash cannot do what a disk does. A disk overwrites a sector in place. Flash has no in-place overwrite at all. Read and program one page. Erase hundreds of them. Every storage design decision in this part follows from those two numbers being different.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "flash",
+  "anchor": "the-translation-layer",
+  "title": "The translation layer",
+  "text": "The device hides all of it. A flash drive presents an array of numbered sectors that behave exactly like a disk's, and inside it a controller maintains a mapping from those numbers to physical pages. A write does not modify anything. It programs a fresh page somewhere, updates the map, and marks the old page as garbage. So a sequence of writes to the same sector leaves a trail of dead pages and one live one, and the map is what makes the sector appear to have been overwritten. That controller is a real computer with its own processor, its own memory holding the map, and firmware more complex than most of the software running above it. Every performance characteristic people attribute to flash is really a characteristic of that firmware.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "flash",
+  "anchor": "reclaiming-what-was-abandoned",
+  "title": "Reclaiming what was abandoned",
+  "text": "Dead pages accumulate, and the space has to come back, which means erasing blocks that contain a mixture of dead and live pages. Garbage collection copies the live pages of such a block somewhere else, erases it, and adds it to the free pool. The copying is real work the drive does on its own account, and it is why a drive that has been written to heavily behaves differently from a fresh one: the fresh one has free blocks and the used one has to make some. The ratio between what the host wrote and what the device actually programmed is write amplification, and it is the number that decides both wear and sustained speed. Writing 4 KB that forces a 4 MB block to be rewritten is an amplification of a thousand. Two things reduce it. Space the host never uses gives the controller room to work without copying, which is why enterprise drives reserve a fraction of their capacity and why a full drive is slower than an empty one. And writing in large sequential runs means a block fills with data that will be discarded together, so collecting it copies nothing.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "flash",
+  "anchor": "telling-the-drive-what-is-dead",
+  "title": "Telling the drive what is dead",
+  "text": "The controller cannot tell which sectors a filesystem still cares about. From its side a deleted file's sectors are live data it must preserve through every collection. That is what the trim command is for: the filesystem tells the drive that a range is no longer needed, and the controller can drop those pages instead of copying them. Without it, a drive that has been written to once has no free space from its own point of view, however empty the filesystem is, and it collects garbage that nobody wanted. The mechanism is worth knowing because it explains a class of complaint. A drive that got slower over months and recovered after being reformatted was not wearing out; it was collecting data that had been deleted years earlier by software that never told it.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "flash",
+  "anchor": "wearing-out-is-real-and-mostly-not-your-problem",
+  "title": "Wearing out is real and mostly not your problem",
+  "text": "A NAND cell tolerates a limited number of erase cycles before it stops holding charge reliably. The number depends on how many bits each cell stores: a cell holding one bit lasts on the order of a hundred thousand cycles, one holding three or four lasts hundreds to low thousands. That sounds alarming and mostly is not. The controller spreads erases evenly across the device, so no block is worn out while others are fresh, and a consumer drive rated for a few hundred terabytes of writes will outlast the machine for almost every workload. The workloads where it matters are the ones writing constantly in small pieces, because that is where write amplification is worst and each host byte costs many device bytes. A database with a badly chosen page size can wear a drive out in a year, and the fix is a storage design question rather than a hardware one, which is what unit 043 is about.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "flash",
+  "anchor": "more-bits-less-everything-else",
+  "title": "More bits, less everything else",
+  "text": "The choice of how many bits to store per cell is the largest lever in the whole design and it trades three things at once. One bit per cell is fastest, most durable and most expensive per gigabyte. Three or four bits are the opposite, and the reason is that distinguishing sixteen charge levels rather than two requires more precise reading, longer programming, and tolerates far less drift. Almost everything sold is three or four bits, with a portion of the drive operated as one bit per cell and used as a write buffer. Which is why a benchmark that writes a few gigabytes reports a speed the drive cannot sustain: the buffer absorbed it, and when the buffer is full the sustained rate is several times lower. That is the single most misleading number in consumer storage, and it is not a lie about the hardware. It is a measurement of the buffer.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "flash",
+  "anchor": "losing-power-in-the-middle",
+  "title": "Losing power in the middle",
+  "text": "One consequence of the buffer is worth stating on its own, because it decides what durability means in unit 041. The drive acknowledges a write once it is in volatile memory inside the controller, not once it is in NAND. That is what makes writes appear fast. It also means a power loss between the acknowledgement and the programming loses data the host was told was safe. Drives intended for servers carry enough stored energy to finish what they accepted, usually a capacitor sized for exactly that. Consumer drives mostly do not, and their answer is to obey a flush command: the host asks, the drive programs everything outstanding, and only then reports completion. So durability is not a property of having written. It is a property of having flushed, and the cost of a flush is the real programming latency rather than the buffered one. Every database's commit path is arranged around that single call, and a filesystem that reorders or drops it converts a correct database into an incorrect one without either of them being wrong.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "flash",
+  "anchor": "what-the-numbers-actually-are",
+  "title": "What the numbers actually are",
+  "text": "Worth holding, because they set the scale for the next three units. A read is tens of microseconds. A write, from the host's point of view, is similar because the drive acknowledges it once it is buffered. An erase is milliseconds and is hidden. A spinning disk's seek is around eight milliseconds, which is roughly a thousand times a flash read. And the parallelism is the part people miss. A drive contains many independent NAND chips, and one request at a time uses one of them. Reaching the advertised throughput requires many requests outstanding at once, which is a property of the interface rather than the medium, and it is what unit 040 exists to explain.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "flash",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Read and program a page, erase a block hundreds of times larger, and never overwrite anything in place. A controller hides that with a map, and the copying it does to reclaim space is write amplification. A full drive is slower than an empty one, trim is how the drive learns what to stop preserving, and the sustained write rate is not the one a short benchmark reports. And the device is internally parallel, which nothing above it can exploit without asking for many things at once.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "flash",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These compute the arithmetic of pages, blocks and amplification, which is exact, where a measurement of a real drive would depend on its history and its firmware's mood. names the count your model got wrong. The page and block sizes are stated in each exercise, because unlike the cache line they genuinely differ between devices.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "flash",
+  "n": 1,
+  "title": "What one byte costs",
+  "text": "There is no in-place overwrite, so the smallest possible change is an operation the size of an erase block. Write , returning how much the device must actually program to change one byte, given the page and block sizes. A page cannot be programmed twice, so changing anything means erasing the whole block and writing it back.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "flash",
+  "n": 2,
+  "title": "The map that makes it look like a disk",
+  "text": "A write allocates rather than modifies, so repeated writes to one sector leave a trail of dead pages and one live one. Write , which models the translation layer: program a fresh page, point the sector at it, and mark the old page dead. Nothing is modified in place. The drive presents an array of sectors that behaves like a disk's, and a map is what makes that true.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "flash",
+  "n": 3,
+  "title": "What collecting costs",
+  "text": "Reclaiming a block means preserving whatever in it is still live, so a block of mixed data costs a copy per surviving page. Write , returning how many live pages a garbage collection must move to reclaim a block. The copying is real work the drive does on its own account, and it is the difference between a fresh drive and one that has been written to.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "flash",
+  "n": 4,
+  "title": "The ratio that decides everything",
+  "text": "Amplification is device bytes over host bytes, and a small write that forces a block rewrite is amplification in the hundreds. Write , returning how many bytes the device programs per byte the host wrote, scaled by 100 so the answer is an integer percentage. It is the number that decides both wear and sustained speed.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "flash",
+  "n": 5,
+  "title": "Room to work",
+  "text": "A full drive is slower than an empty one because the controller's working room is whatever the host has not claimed. Write , returning how many erase blocks the controller has to work with, given the device's physical capacity, the capacity it advertises, and how much of the advertised space the filesystem has used. Space the host never uses is space the controller can collect into without copying.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "flash",
+  "n": 6,
+  "title": "Telling it what is dead",
+  "text": "The controller cannot tell which sectors a filesystem still cares about, so it preserves everything until it is told otherwise. Write , counting how many pages the controller must still preserve, given which pages hold data and which sectors the filesystem has told it are no longer needed. Without trim, a deleted file's sectors are live data the drive copies through every collection.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "flash",
+  "n": 7,
+  "title": "The buffer, and the number after it",
+  "text": "The advertised write speed is the buffered one, and the sustained rate is several times lower, which is the most misleading number in consumer storage. Write , returning the rate a drive sustains over a transfer, given a fast buffer of limited size and a slower rate once it is full. A benchmark that writes a few gigabytes measures the buffer.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "flash",
+  "n": 8,
+  "title": "Written is not durable",
+  "text": "Durability is a property of having flushed rather than of having written, which is what every database's commit path is arranged around. Write , reporting whether data the host was told was written is still there after the power goes. The drive acknowledges once the data is in volatile memory inside the controller, not once it is in NAND.",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "flash",
+  "n": 1,
+  "title": "What are the three NAND operations and their units?",
+  "text": " The rule that makes it awkward is that a page cannot be programmed twice, so changing anything means erasing a unit a hundred times larger than the write you asked for. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "flash",
+  "n": 2,
+  "title": "Can flash overwrite a sector in place?",
+  "text": " A disk overwrites a sector in place. Flash has no in-place overwrite, and the entire translation layer exists to make it look otherwise. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "flash",
+  "n": 3,
+  "title": "What does the flash translation layer do on a write?",
+  "text": " Repeated writes to one sector leave a trail of dead pages and one live one, and the map is what makes the sector appear to have been overwritten. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "flash",
+  "n": 4,
+  "title": "What is inside a flash drive doing all of that?",
+  "text": " Every performance characteristic people attribute to flash is really a characteristic of that firmware. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "flash",
+  "n": 5,
+  "title": "What is write amplification?",
+  "text": " Four kilobytes forcing a four megabyte block rewrite is 1024 times, and it is the number that decides both wear and sustained speed. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "flash",
+  "n": 6,
+  "title": "Why is a full drive slower than an empty one?",
+  "text": " Space the host never uses is space the controller can work in, which is why enterprise drives reserve a fraction of their capacity. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "flash",
+  "n": 7,
+  "title": "What does the trim command tell the drive?",
+  "text": " Without it the controller cannot tell a deleted file from one somebody wants, so it copies both through every collection. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "flash",
+  "n": 8,
+  "title": "A drive got slower over months and recovered after a reformat. What happened?",
+  "text": " From the controller's side that data was indistinguishable from a file somebody still wanted. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "flash",
+  "n": 9,
+  "title": "Roughly how many erase cycles does a cell storing three bits tolerate?",
+  "text": " A cell storing one bit lasts on the order of a hundred thousand, and the difference is why the choice of bits per cell is the largest lever in the design. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "flash",
+  "n": 10,
+  "title": "Which workloads actually wear a drive out?",
+  "text": " A database with a badly chosen page size can wear a drive out in a year, and the fix is a storage design question rather than a hardware one. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "flash",
+  "n": 11,
+  "title": "What does storing more bits per cell trade away?",
+  "text": " Distinguishing sixteen charge levels rather than two requires more precise reading, longer programming, and tolerates far less drift. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "flash",
+  "n": 12,
+  "title": "Why does a short benchmark report a write speed the drive cannot sustain?",
+  "text": " It is not a lie about the hardware. That part really is that fast and the rest really is not, and a real workload gets the second number. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "flash",
+  "n": 13,
+  "title": "When does a drive acknowledge a write?",
+  "text": " Which is what makes writes appear fast, and it means a power loss between the acknowledgement and the programming loses data the host was told was safe. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "flash",
+  "n": 14,
+  "title": "What makes a write durable?",
+  "text": " Every database's commit path is arranged around that one call, and the cost of it is the real programming latency rather than the buffered one. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "flash",
+  "n": 15,
+  "title": "Why can one request at a time not reach a drive's advertised throughput?",
+  "text": " The parallelism is in the medium and exploiting it is a property of the interface, which is what the next unit exists to explain. ",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "nvme",
+  "anchor": "an-interface-shaped-like-a-disk",
+  "title": "An interface shaped like a disk",
+  "text": "The interface flash inherited was designed for a device with one arm. One command queue, thirty-two entries, and a protocol whose registers were laid out for a controller that would service them in an order it chose to minimise head movement. Thirty-two outstanding commands is enough for a disk, because a disk can only do one thing at a time and the queue exists so the controller can reorder. It is nowhere near enough for a device with dozens of independent chips, each capable of an operation concurrently. So a fast drive on that interface was idle most of the time, waiting for a host that could not ask for enough at once. The bottleneck was not the medium, the controller or the wire. It was the shape of the conversation.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "nvme",
+  "anchor": "many-queues-and-one-per-core",
+  "title": "Many queues, and one per core",
+  "text": "The replacement inverts the design. Up to sixty-five thousand queues, each with up to sixty-five thousand entries, and the intended arrangement is one queue pair per processor core. That last part is the important one and it is not about depth. A single shared queue needs a lock, and unit 026 already priced a contended lock: the cache line holding it moves between cores and the cost grows with the core count. A queue per core has no sharing at all, so submitting a command touches only memory that core already owns. Each pair is a submission queue and a completion queue, both living in host memory. The host writes a command into the submission ring and rings a doorbell, which is a single write to a device register. The device reads the command over the bus, does the work, and writes an entry into the completion ring. One pair per core, in host memory, with nothing shared. The absence of a common structure is the design, and it is why the cost per command stopped growing with the core count.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "nvme",
+  "anchor": "the-arithmetic-of-keeping-it-busy",
+  "title": "The arithmetic of keeping it busy",
+  "text": "There is one equation that decides how many requests you need outstanding, and it is not specific to storage. Concurrency equals throughput times latency. A device that completes a million operations per second, each taking a hundred microseconds, has a hundred operations in flight at all times. Ask for fewer and you get less throughput; the device is not slower, it is idle. This is why a benchmark with one thread issuing one request at a time reports a tenth of a drive's capability and is not wrong about anything. It measured latency, correctly, and reported it as though it were throughput. It also explains the shape of the two useful measurements. Queue depth one tells you the latency, which is what an interactive operation waits for. High queue depth tells you the throughput, which is what a batch job gets. A drive can be excellent at one and unremarkable at the other, and a single number describes neither.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "nvme",
+  "anchor": "being-told-or-asking",
+  "title": "Being told, or asking",
+  "text": "A completed command has to reach the host somehow, and there are two ways with opposite costs. An interrupt costs a trip into the kernel, which unit 022 priced, and it arrives promptly. At a million completions a second that is a million interrupts, which is more work than the requests themselves. Coalescing waits for several completions or a short timer before interrupting once. It divides the interrupt cost by the batch size and adds up to the timer's duration to every completion's latency. Which is a good trade for throughput and a bad one for a request somebody is waiting on. Polling removes interrupts entirely: the thread spins reading the completion queue. That costs a core doing nothing else and it removes both the interrupt and the wakeup, so it wins when the completion rate is high enough that the core would have been busy anyway. Below that rate it is a core spent on nothing. The kernel supports all three because the right choice depends on a ratio the kernel cannot know.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "nvme",
+  "anchor": "the-doorbell-and-why-one-write-is-a-lot",
+  "title": "The doorbell, and why one write is a lot",
+  "text": "Ringing the doorbell is a write to a device register across the bus, and it is the one part of the submission path that leaves the processor's own memory. That costs far more than writing the command did. Which is why the ring is a ring: several commands can be placed in it and one doorbell write announces all of them, so the per-command cost of reaching the device falls with the batch size. A driver that rings after every command is correct and slow, and one that batches is correct and fast, and the difference is visible only under load. It is the same shape as the buffering in unit 022: the boundary is expensive, so cross it less often rather than more cheaply. The completion direction has the same property from the other side, which is what the next section's coalescing is.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "nvme",
+  "anchor": "the-layer-above-had-to-change-too",
+  "title": "The layer above had to change too",
+  "text": "None of this helps if the operating system funnels everything through one structure, and for years it did. The old block layer had a single request queue per device, with a lock, and a scheduler designed to reorder requests to reduce head movement on a mechanism that no longer existed. On a machine with many cores that lock was the limit, and the reordering was work spent optimising for a constraint that had gone away. The replacement gives each core a software queue, maps those onto the device's hardware queues, and defaults to doing almost no scheduling at all. That last part is the interesting one: the best scheduler for a device with no seek time turned out to be barely a scheduler. Which is a recurring shape. A layer written to compensate for a constraint becomes overhead when the constraint disappears, and it takes a long time for anybody to notice, because the layer is not wrong, it is just no longer earning its cost.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "nvme",
+  "anchor": "what-a-command-carries",
+  "title": "What a command carries",
+  "text": "One more property, because it decides how much data one request can move. A command is a fixed-size entry, sixty-four bytes, and it does not contain the data. It contains a description of where in host memory the data lives, and the device fetches or deposits it directly without the processor touching any of it. Which means the size of a transfer is almost independent of the cost of asking for it. Reading four kilobytes and reading a megabyte cost the same submission, the same doorbell and the same completion, and differ only in the time the transfer takes. That is the arithmetic behind a rule that keeps appearing in this part: large requests are cheap per byte and small ones are not, because the per-request cost is fixed and the per-byte cost is small. A workload doing four-kilobyte reads spends most of its budget on bookkeeping, and the same bytes read in megabytes spends almost none. It also means the host's memory layout matters. A transfer scattered across many non-contiguous pages needs a list of them, which the device reads separately, so a buffer that is one contiguous run is cheaper to describe than the same bytes in fragments.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "nvme",
+  "anchor": "where-the-bottleneck-went",
+  "title": "Where the bottleneck went",
+  "text": "Add the pieces up and the result is a device that can complete millions of operations per second, at which point something else becomes the limit. At those rates the per-operation cost in the host matters: the system call, the interrupt, the copy through a buffer, the filesystem's bookkeeping. A drive capable of a million operations per second attached to a stack costing five microseconds each will deliver two hundred thousand, and every one of those five microseconds is software. That is why io_uring exists, why polling exists, why some workloads bypass the kernel entirely and drive the device from userspace, and why the interesting storage engineering of the last decade has been about removing host overhead rather than making devices faster. The bottleneck moved from the medium to the interface, and then from the interface to the operating system, and each move made the previous layer's cleverness redundant.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "nvme",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "The medium is parallel and an interface has to express that. One queue of thirty-two commands cannot, and one queue per core with a deep ring can. Concurrency is throughput times latency, so the number of requests you keep outstanding decides which of the two you measure, and a benchmark at queue depth one reports latency whatever it claims to be reporting. Interrupts, coalescing and polling trade the same quantity three ways. And the bottleneck is now in the host, which is why the software above the device has been getting thinner rather than cleverer.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "nvme",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These compute queue arithmetic and completion costs, which is exact, where a measurement of a shared machine's storage stack would be a measurement of the other tenants. names the number your model got wrong. Every one of them follows from the relationship in the prose rather than from a device's datasheet.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "nvme",
+  "n": 1,
+  "title": "Concurrency is throughput times latency",
+  "text": "One relation decides how many requests you keep in flight, and it is not specific to storage. Write , returning how many requests must be outstanding to keep a device busy, given the operations per second it can complete and the microseconds each one takes. Ask for fewer and the device is idle rather than slow.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "nvme",
+  "n": 2,
+  "title": "What the interface could express",
+  "text": "An interface that cannot hold enough requests outstanding limits the device regardless of what the medium could do. Write , returning how many operations per second a device can actually deliver, given its capability, its latency, and the maximum number of commands the interface allows outstanding. Thirty-two is enough for a device with one arm and nowhere near enough for one with dozens of chips.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "nvme",
+  "n": 3,
+  "title": "One queue, or one each",
+  "text": "A queue per core has nothing shared, so submitting touches only memory that core already owns and the cost stops growing with the core count. Write , returning the cost of submitting a command, given whether the queue is shared between cores and how many cores are contending. A shared queue needs a lock, and unit 026 priced a contended one.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "nvme",
+  "n": 4,
+  "title": "Ringing once for several",
+  "text": "The boundary is expensive, so cross it less often rather than more cheaply, which is the same move as the buffering in unit 022. Write , returning the average cost of reaching the device per command, given the fixed cost of a doorbell write and how many commands are placed in the ring before ringing it. The doorbell is the one part of the path that leaves the processor's own memory.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "nvme",
+  "n": 5,
+  "title": "Told, or asked",
+  "text": "The three trade the same quantity three ways, and the right choice depends on a rate the kernel cannot know. Write , returning the host cost per completion under three schemes: 0 an interrupt each, 1 coalescing into batches, 2 polling. Polling costs a core's time whether or not anything completed.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "nvme",
+  "n": 6,
+  "title": "Fixed per request, small per byte",
+  "text": "The per-request cost is fixed and the per-byte cost is small, which is why large requests are cheap per byte and small ones are not. Write , returning the average cost of moving a byte, given the fixed per-request cost and the transfer size at a given rate. A command describes where the data is rather than containing it, so asking costs the same whatever the size.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "nvme",
+  "n": 7,
+  "title": "The scheduler that stopped earning its cost",
+  "text": "A layer written to compensate for a constraint becomes overhead when the constraint disappears, and it takes a long time for anybody to notice. Write , returning how much time reordering requests saves, given the seek time the reordering avoids and how many requests were reordered. On a device with no seek time the benefit is zero and the work is not.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "nvme",
+  "n": 8,
+  "title": "Where the limit actually is",
+  "text": "The bottleneck moved from the medium to the interface and then to the operating system, and each move made the previous layer's cleverness redundant. Write , returning how many operations per second a system delivers, given the device's capability and the host's software cost per operation in microseconds. At a million operations per second the software becomes the limit.",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "nvme",
+  "n": 1,
+  "title": "What was the older storage interface shaped for?",
+  "text": " Thirty-two outstanding commands is plenty for a device that can only do one thing at a time, and nowhere near enough for one with dozens of chips. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "nvme",
+  "n": 2,
+  "title": "Why was a fast drive on that interface idle?",
+  "text": " The bottleneck was not the medium, the controller or the wire. It was the shape of the conversation, which is why the answer was a new interface rather than a faster one. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "nvme",
+  "n": 3,
+  "title": "What is the intended queue arrangement in NVMe?",
+  "text": " The depth is the headline and this is the design: no two cores need ever touch the same memory to talk to the device. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "nvme",
+  "n": 4,
+  "title": "Why does a queue per core matter more than the depth?",
+  "text": " Submitting to a private queue touches only memory that core already owns, which is why the per-command cost stopped rising as machines grew more cores. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "nvme",
+  "n": 5,
+  "title": "What decides how many requests must be outstanding to keep a device busy?",
+  "text": " A million operations a second at a hundred microseconds each means a hundred in flight. Ask for fewer and the device is idle rather than slow. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "nvme",
+  "n": 6,
+  "title": "A benchmark issues one request at a time. What did it measure?",
+  "text": " Queue depth one tells you what an interactive operation waits for, and high queue depth tells you what a batch job gets. A single number describes neither. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "nvme",
+  "n": 7,
+  "title": "What does the doorbell do, and why does it cost?",
+  "text": " Which is why several commands can be placed in the ring and one doorbell announces all of them, so the per-command cost of reaching the device falls with the batch size. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "nvme",
+  "n": 8,
+  "title": "What does interrupt coalescing trade?",
+  "text": " A good trade for a batch job and a bad one for a request somebody is waiting on. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "nvme",
+  "n": 9,
+  "title": "When does polling beat interrupts?",
+  "text": " Below that rate it is a core spent on nothing, which is why the kernel supports all three schemes: the right choice depends on a ratio it cannot know. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "nvme",
+  "n": 10,
+  "title": "Does an NVMe command contain the data?",
+  "text": " Which is why asking for four kilobytes and asking for a megabyte cost the same submission, the same doorbell and the same completion. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "nvme",
+  "n": 11,
+  "title": "Why are small requests expensive per byte?",
+  "text": " A workload doing four-kilobyte reads spends most of its budget on bookkeeping, and the same bytes read in megabytes spends almost none. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "nvme",
+  "n": 12,
+  "title": "What was wrong with the old block layer?",
+  "text": " On a machine with many cores the lock was the limit, and the reordering was work spent on head movement for a mechanism that no longer existed. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "nvme",
+  "n": 13,
+  "title": "What is the best scheduler for a device with no seek time?",
+  "text": " The layer it replaced was not wrong. It had stopped earning its cost, which is a shape that recurs whenever a constraint disappears. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "nvme",
+  "n": 14,
+  "title": "A device can do a million operations a second and the software costs five microseconds each. What is delivered?",
+  "text": " Every one of those five microseconds is software, which is why the interesting storage engineering of the last decade has been about removing host overhead rather than making devices faster. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "nvme",
+  "n": 15,
+  "title": "Where has the storage bottleneck ended up?",
+  "text": " Each move made the previous layer's cleverness redundant, which is why the software above the device has been getting thinner rather than more capable. ",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "page-cache",
+  "anchor": "the-cache-is-the-memory-system",
+  "title": "The cache is the memory system",
+  "text": "The kernel keeps file contents in memory, in pages, in the same structures unit 035 described. A file's pages and a process's anonymous pages compete for the same physical memory under the same replacement policy, which is why a machine copying a large file evicts a program's data to make room and then appears to have less memory than it did. A read consults the cache. A hit is a copy from memory, which is tens of nanoseconds a page. A miss is a major fault, which is a device access, and unit 039 priced that in tens of microseconds. Three orders of magnitude, decided by whether somebody read it recently. A write marks a page dirty and returns. The data is in memory, the call succeeded, and nothing has been sent anywhere. Two paths and only one of them is yours. The write returns when the page is dirty; whether it ever reaches the device is a different question with a different answer.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "page-cache",
+  "anchor": "guessing-what-comes-next",
+  "title": "Guessing what comes next",
+  "text": "The kernel watches the offsets a file is read at, and when they look sequential it fetches ahead. This is the same idea as the hardware prefetcher from unit 024 at a different scale, with the same consequence: sequential access is far faster than the device latency suggests, because the data arrived before it was asked for, and random access gets no help at all. The window grows while the guess keeps being right and collapses when it stops. So a program that reads a file sequentially and occasionally jumps gets most of the benefit, and one that jumps constantly disables the mechanism and pays full latency per access. Which is worth knowing because it is adjustable. A program that knows it will read a file straight through can say so, and one that knows its access is random can say that too and stop the kernel reading pages it will never use.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "page-cache",
+  "anchor": "when-a-write-finally-blocks",
+  "title": "When a write finally blocks",
+  "text": "Dirty pages accumulate and something has to bound them, because memory full of unwritten data is memory that cannot be reclaimed and data that cannot be recovered. The kernel has two thresholds. Above the first, background writeback starts and your program notices nothing. Above the second, a process that dirties another page is made to write some out itself, and at that moment stops returning immediately and starts taking as long as the device does. That transition is abrupt and it is the explanation for a common shape: a program that writes at memory speed for several seconds and then suddenly at device speed forever. Nothing changed in the program. It filled the allowance.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "page-cache",
+  "anchor": "the-only-thing-that-makes-it-durable",
+  "title": "The only thing that makes it durable",
+  "text": "is the primitive, and what it promises is narrow enough to be worth stating exactly. It writes back every dirty page of that file and asks the device to flush its own buffer, which is the flush unit 039 described. When it returns successfully, the data is on the medium. It does not make anything else durable. In particular it says nothing about the directory the file is in, so a newly created file can be fully written and flushed and still not exist after a power loss, because the directory entry naming it was itself a dirty page nobody flushed. The safe pattern for replacing a file is four steps and every one is needed: write the new contents to a temporary file, flush it, rename it over the original, and flush the directory. Skip the last and the rename is not durable. Skip the second and the file exists with the wrong contents, which is worse than not existing.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "page-cache",
+  "anchor": "the-error-you-only-get-once",
+  "title": "The error you only get once",
+  "text": "This one is a genuine trap and it cost a well-known database several years of quiet corruption. If writeback fails, the kernel has a problem: the failure happened asynchronously, long after the that caused it returned successfully, and there is nobody obvious to tell. What it does is record the error and report it to the next on that file, and then clear it. Which means the error is delivered once, to whoever asks first, and a program that retries the after a failure gets success the second time. Not because anything was written, but because the error was already reported. Several databases treated that success as proof of durability and had lost data. The current guidance is blunt: an failure is not retryable and the data it covered must be assumed lost. Some systems respond by treating it as fatal, which sounds extreme and is the only interpretation the interface supports.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "page-cache",
+  "anchor": "barriers-and-the-order-nobody-promised",
+  "title": "Barriers, and the order nobody promised",
+  "text": "One more thing the interface does not give you, because assuming it does is a common design error. Nothing orders two writes to different files, or even two writes to one file across a flush boundary. The kernel may write back pages in any order it likes, and the device may complete them in any order it likes, so a program that writes a record and then writes a pointer to it can lose the record and keep the pointer. That is exactly the corruption a journal exists to prevent, which is the next unit. The mechanism is always the same: write the thing, flush, and only then write the reference to it, so no crash can leave a reference to something that does not exist. The cost is the flush in the middle, which is the real device latency rather than the buffered one, and it is why a system doing many small durable updates is limited by flushes per second rather than by bandwidth. Batching several logical updates into one flush is the standard answer and it is why databases group commits.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "page-cache",
+  "anchor": "going-around-it",
+  "title": "Going around it",
+  "text": "Databases mostly do not want the page cache. They have their own buffer pool, they know their access pattern, and a second cache underneath theirs wastes memory holding a copy of what they already have. Opening a file with the direct flag skips the cache: reads come from the device and writes go to it. The price is that every transfer must be aligned, in offset, in length, and in the memory address of the buffer, usually to the device's block size. Get it wrong and the call fails rather than being slow. It also means every access pays full device latency, so it is only correct for a program that manages its own caching and its own read-ahead. For everything else the page cache is better than what you would write, and the reason to avoid it is duplication rather than overhead.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "page-cache",
+  "anchor": "mapping-is-not-a-shortcut",
+  "title": "Mapping is not a shortcut",
+  "text": "Unit 035 described , and it is worth stating what it does and does not change here. Mapping a file makes reads faults rather than system calls, which removes the transition and the copy. That is a real saving for a workload reading the same data repeatedly. It does not change durability. A write through a mapping dirties a page exactly as does, and it needs the same flush. It does not change the eviction policy either, so a mapped file competes for memory with everything else. And it introduces a failure mode the read path does not have: an I/O error on a mapped page is a signal rather than a return value, which almost no program is prepared to handle.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "page-cache",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Reads and writes talk to memory, so a write returning means the page is dirty and nothing more. Read-ahead makes sequential access fast and random access unhelped, dirty page limits explain a program that suddenly slows to device speed, and durability is on the file and on the directory. And an error is reported once and then cleared, so a retry that succeeds proves nothing.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "page-cache",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the cache's decisions, which is exact, where a measurement on a shared machine would depend on what everybody else had recently read. names the outcome your model got wrong. Several of the exercises assert that something is not durable, which is the point of them: a model that reported durability after a plain write would be modelling a system nobody has.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "page-cache",
+  "n": 1,
+  "title": "Three orders of magnitude apart",
+  "text": "The same call costs tens of nanoseconds or tens of microseconds depending on nothing the program did, only on whether somebody read it recently. Write , returning what a read costs, given whether the page is in the cache and the two latencies. A hit is a copy from memory. A miss is a device access.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "page-cache",
+  "n": 2,
+  "title": "Guessing what comes next",
+  "text": "Read-ahead is the hardware prefetcher's idea at a different scale, with the same consequence: sequential access is fast and random access gets no help. Write , returning how many pages the kernel fetches ahead, doubling while its guess keeps being right and collapsing to one when it stops. The window is capped, and a jump resets it.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "page-cache",
+  "n": 3,
+  "title": "When the write starts costing",
+  "text": "The transition is abrupt, which is why a program writes at memory speed for several seconds and then at device speed forever with nothing having changed in it. Write , returning what a write costs, given how many dirty pages exist and the two thresholds. Below the second threshold a write is a memory operation. Above it, the process is made to write some out itself.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "page-cache",
+  "n": 4,
+  "title": "Written is not there",
+  "text": "Durability is something you ask for, and a write that returned successfully has promised only that the data is in memory. Write , reporting whether a file's contents survive a power loss, given whether the data was flushed and whether writeback happened to have run. A write returning means the page is dirty and nothing more.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "page-cache",
+  "n": 5,
+  "title": "The four steps of replacing a file",
+  "text": "<code>fsync</code> on a file says nothing about the directory naming it, so a fully flushed file can fail to exist after a power loss. Write , reporting whether a file replacement survives a crash, given which of the four steps were performed. Write the new contents, flush the file, rename it over the original, flush the directory.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "page-cache",
+  "n": 6,
+  "title": "Reported once, then cleared",
+  "text": "The error is delivered once to whoever asks first, so a retry that succeeds proves nothing about the data. Write , returning what a flush reports, given whether an error is pending. Return 0 for success and -1 for failure, and clear the pending error. The failure happened asynchronously, long after the write that caused it returned successfully.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "page-cache",
+  "n": 7,
+  "title": "The reference that outlived the thing",
+  "text": "The kernel and the device may reorder freely, so a program that writes a record and then a pointer to it can lose the record and keep the pointer. Write , reporting whether a crash can leave a reference to data that was never written, given the order the two writes were issued and whether a flush separated them. Nothing orders two writes without one.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "page-cache",
+  "n": 8,
+  "title": "Aligned, or refused",
+  "text": "Bypassing the cache means the device sees your buffer directly, so its alignment requirements become yours. Write , reporting whether a direct transfer is accepted, given the offset, the length and the buffer address, and the device's block size. Get it wrong and the call fails rather than being slow.",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "page-cache",
+  "n": 1,
+  "title": "What does a successful <code>write</code> guarantee?",
+  "text": " Something eventually will send it, on a schedule nobody in the program chose, and the gap between those two facts is where a whole category of data loss lives. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "page-cache",
+  "n": 2,
+  "title": "What does the page cache compete with for memory?",
+  "text": " Which is why a machine copying a large file evicts a program's data and then appears to have less memory than it did. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "page-cache",
+  "n": 3,
+  "title": "Roughly how far apart are a page cache hit and a miss?",
+  "text": " Tens of nanoseconds for a copy from memory against tens of microseconds for a device access, decided by whether somebody read it recently. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "page-cache",
+  "n": 4,
+  "title": "What happens to the read-ahead window on a non-sequential access?",
+  "text": " The evidence for the pattern is gone rather than weakened, and a program that jumps constantly disables the mechanism entirely and pays full latency per access. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "page-cache",
+  "n": 5,
+  "title": "What happens when dirty pages cross the first threshold?",
+  "text": " Only past the second threshold is a process made to write pages out itself, and that transition is abrupt. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "page-cache",
+  "n": 6,
+  "title": "A program writes at memory speed for several seconds and then at device speed. What changed?",
+  "text": " A benchmark short enough to stay under the threshold reports a number no sustained workload will ever see, which is the same shape as the write buffer in unit 039. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "page-cache",
+  "n": 7,
+  "title": "What does <code>fsync</code> guarantee?",
+  "text": " It says nothing about the directory the file is in, so a newly created file can be fully written and flushed and still not exist after a power loss. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "page-cache",
+  "n": 8,
+  "title": "What are the four steps of safely replacing a file?",
+  "text": " Skip the directory flush and the rename is not durable. Skip the file flush and the name points at incomplete contents, which is worse than the file not existing. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "page-cache",
+  "n": 9,
+  "title": "An <code>fsync</code> fails and you call it again. What happens?",
+  "text": " Not because anything was written. Several databases treated that second success as proof of durability and lost data for years. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "page-cache",
+  "n": 10,
+  "title": "What is the current guidance on an <code>fsync</code> failure?",
+  "text": " Some systems treat it as fatal, which sounds extreme and is the only interpretation the interface supports. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "page-cache",
+  "n": 11,
+  "title": "What orders two writes to different files?",
+  "text": " A program that writes a record and then a pointer to it can lose the record and keep the pointer, which is exactly the corruption a journal exists to prevent. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "page-cache",
+  "n": 12,
+  "title": "Why is a system doing small durable updates limited by flushes rather than bandwidth?",
+  "text": " Batching several logical updates into one flush is the standard answer and it is why databases group commits. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "page-cache",
+  "n": 13,
+  "title": "What must be aligned for a direct transfer?",
+  "text": " The device transfers whole blocks between the medium and the address you gave it, with nothing in between to fix a misalignment, so the call fails rather than being slow. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "page-cache",
+  "n": 14,
+  "title": "Why do databases bypass the page cache?",
+  "text": " The reason is duplication rather than overhead, and for anything that does not manage its own caching the page cache is better than what you would write. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "page-cache",
+  "n": 15,
+  "title": "Does <code>mmap</code> change durability?",
+  "text": " It removes the transition and the copy, and it introduces a failure mode the read path does not have: an I/O error becomes a signal rather than a return value. ",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "filesystems",
+  "anchor": "the-name-is-not-the-file",
+  "title": "The name is not the file",
+  "text": "A file is an inode: a record holding the size, the permissions, the timestamps and where the blocks are. It has no name. A directory is a file whose contents are a list of names paired with inode numbers, and that is where names live. Which makes several familiar things follow. Two names can refer to one inode, and neither is the original, because there is nothing in the inode saying which came first. Removing a name is not deleting a file; it decrements a count, and the inode is freed when the count reaches zero. And the count is not the whole condition. A file whose last name is removed while a process still has it open continues to exist, invisibly, until that descriptor is closed. That is the mechanism behind a temporary file that cannot be found and cannot leak, and behind a disk that stays full after you deleted the log a running process was writing to. Names point at the inode and the inode owns the blocks. Removing a name decrements a count, and the count is not the only thing keeping a file alive.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "filesystems",
+  "anchor": "why-any-of-this-is-difficult",
+  "title": "Why any of this is difficult",
+  "text": "Consider appending to a file. The filesystem must allocate a block, mark it used in the free map, add it to the inode's list, and update the size. Four writes to four different places, and a crash can happen between any two. Stop after the allocation and the block is marked used and belongs to nothing, which leaks space. Stop after adding it to the inode and the block is in a file and also in the free list, which is far worse: a later allocation hands it to another file and two files share a block. So the problem is not losing the update. It is that a partial update leaves a structure that is not merely out of date but self-contradictory, and every filesystem is a scheme for making sure that cannot happen.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "filesystems",
+  "anchor": "writing-down-what-you-are-about-to-do",
+  "title": "Writing down what you are about to do",
+  "text": "The common answer is a journal. Write a description of the whole change to a dedicated log, flush it, then apply the change to its real locations, then mark the log entry done. A crash before the flush loses the update entirely, which is fine: nothing was applied. A crash after it means the log holds a complete description, so recovery replays it and the change completes. There is no window where a partial change survives without the instructions to finish it. The cost is that everything is written twice. Which leads directly to the decision that matters.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "filesystems",
+  "anchor": "what-the-journal-actually-covers",
+  "title": "What the journal actually covers",
+  "text": "By default, most filesystems journal metadata only. The inode, the free map, the directory entries: all protected. Your file's actual contents: not in the journal at all. They are written to their final location and ordered relative to the metadata, and that ordering is the only guarantee. The default ordering does buy something real. Data blocks are written before the metadata that references them, so a crash cannot leave an inode pointing at blocks that still hold a previous file's contents, which would be a security problem as much as a correctness one. What it does not buy is your update being complete. A crash mid-write leaves a file that is a valid file, correctly described, containing a mixture of old and new bytes. The filesystem is consistent and your data is not, and every check the filesystem performs afterwards passes. That distinction is the whole unit. The protocol protects the structure; the contents are yours.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "filesystems",
+  "anchor": "not-writing-anything-twice",
+  "title": "Not writing anything twice",
+  "text": "The other approach never overwrites anything. A change writes new blocks somewhere free, then writes new versions of the structures pointing at them, up to a root pointer, and the last step is switching that root from the old tree to the new one. Until the root switches, nothing has changed. After it, everything has. There is no partial state because the only mutation is one pointer. That buys snapshots almost free, since keeping the old root keeps the whole old tree, and it buys checksums naturally, since a block is never modified in place so its checksum stays valid. It costs fragmentation, because updating one block in the middle of a file puts the new version somewhere else entirely, and it costs the space held by anything still referenced by an old root.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "filesystems",
+  "anchor": "describing-where-the-blocks-are",
+  "title": "Describing where the blocks are",
+  "text": "A small design decision worth knowing, because it decides how large a file can be before the bookkeeping costs more than the data. The old scheme lists every block a file uses, with the list itself spilling into blocks of pointers once it grows. That is exact and it means a large file's description is proportional to its size, and reading a byte in the middle needs several lookups to find which block it is in. The modern scheme records extents: a starting block and a length. A contiguous file of any size is one extent, so the description is tiny and the lookup is immediate. A fragmented file needs one extent per run, and in the worst case, where every block is somewhere different, it is worse than the list it replaced. Which is another reason the layers below care about contiguity, and the same reason as everywhere else in this part: a description proportional to the number of runs rewards writing in long ones.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "filesystems",
+  "anchor": "knowing-the-bytes-are-the-bytes-you-wrote",
+  "title": "Knowing the bytes are the bytes you wrote",
+  "text": "Most filesystems do not check. They trust the device to return what was stored, and a device that returns wrong bytes without reporting an error is a case they do not detect. That case is real. A cable, a controller bug, a cosmic ray in a buffer, or a write that landed at the wrong offset all produce data that reads back fine and is wrong. The filesystems that checksum data catch it and, given a redundant copy, repair it. The ones that do not will hand it to you. Which is worth knowing when choosing, because the failure it prevents is undetectable by everything above it. A backup of corrupted data is a corrupted backup, and nothing in the stack notices.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "filesystems",
+  "anchor": "the-optimisation-that-surprised-everyone",
+  "title": "The optimisation that surprised everyone",
+  "text": "One more mechanism, because it caused a public argument that clarified the whole subject. Delaying allocation until writeback lets the filesystem see the whole file and choose contiguous blocks, which is a large win. It also widens the window between a write returning and anything being decided about where the data goes. Applications that had been replacing files by writing and renaming without flushing had been getting away with it, because the old behaviour happened to write the data first. Under delayed allocation the rename could reach the disk while the contents had not been allocated, so a crash left a correctly named, empty file where a complete one used to be. The arguments were about whether the applications or the filesystem were wrong. Both positions were defensible and the resolution was practical: the filesystem added a special case for that pattern, and the guidance to applications remained that a rename without a flush guarantees nothing, because it never did.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "filesystems",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "A name is a directory entry, an inode is the file, and removing a name decrements a count that an open descriptor also holds. A journal makes multi-part updates atomic and by default covers metadata only, so after a crash the filesystem is consistent and your file may contain a mixture of old and new bytes. Copy on write replaces the journal with one pointer switch and gets snapshots and checksums out of it. Most filesystems do not verify your data. And a rename without a flush has never been durable, whatever it happened to do.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "filesystems",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the protocols rather than crashing a real filesystem, because a test that depends on when a crash happens is a test that mostly does not reproduce. names the outcome your model got wrong. Several of the exercises assert that data was lost while the filesystem stayed consistent, which is the distinction the unit is about rather than a bug in the model.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "filesystems",
+  "n": 1,
+  "title": "When a file actually dies",
+  "text": "A file survives while any name or any open descriptor refers to it, which is why a deleted log can keep a disk full. Write , reporting whether removing a name frees the file, given how many names remain and how many processes still have it open. Removing a name decrements a count. The count is not the only thing keeping a file alive.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "filesystems",
+  "n": 2,
+  "title": "The state that contradicts itself",
+  "text": "The problem is not losing an update, it is that a partial one leaves a structure that is self-contradictory rather than merely out of date. Write , classifying what a crash leaves after an append that was interrupted partway: 0 consistent, 1 leaked space, 2 a block in two places. Stopping after the allocation leaks. Stopping after the inode update is worse.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "filesystems",
+  "n": 3,
+  "title": "Replay, or forget",
+  "text": "There is no window where a partial change survives without the instructions to finish it, which is the entire property a journal buys. Write , reporting what recovery does after a crash: 0 discard the entry, 1 replay it. A crash before the log is flushed loses the update entirely, which is fine because nothing was applied.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "filesystems",
+  "n": 4,
+  "title": "Consistent, and wrong",
+  "text": "A crash mid-write leaves a valid file, correctly described, containing a mixture of old and new bytes, and every check the filesystem performs passes. Write , returning two answers: whether the filesystem is consistent and whether the file's contents are the ones that were written. A metadata journal protects the structure. The contents are yours.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "filesystems",
+  "n": 5,
+  "title": "One pointer, and everything changed",
+  "text": "The only mutation is one pointer, so there is no partial state to recover from and no journal to write. Write , reporting what a reader sees after a copy-on-write update that was interrupted: 0 the old tree, 1 the new one. Until the root switches nothing has changed. After it, everything has.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "filesystems",
+  "n": 6,
+  "title": "Describing a file two ways",
+  "text": "An extent is a start and a length, so the description is proportional to the number of runs rather than to the size. Write , returning how many entries a file's block map needs, under a block list and under extents. A contiguous file of any size is one extent. A fully fragmented one is worse than the list it replaced.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "filesystems",
+  "n": 7,
+  "title": "Silently wrong",
+  "text": "The failure a data checksum prevents is undetectable by everything above it, which is why a backup of corrupted data is a corrupted backup. Write , reporting whether a filesystem notices that a block read back different bytes than were written, given whether it checksums data and whether the device reported an error. A device that returns wrong bytes without reporting an error is a case most filesystems do not detect.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "filesystems",
+  "n": 8,
+  "title": "The rename that was never durable",
+  "text": "Delaying allocation widened a window that was always there, and the pattern that broke had never been guaranteed. Write , reporting whether a file replacement survives a crash under delayed allocation, given whether the data was flushed and whether allocation happened to have run before the crash. Applications had been getting away with it because the old behaviour happened to write the data first.",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "filesystems",
+  "n": 1,
+  "title": "Where does a file's name live?",
+  "text": " The inode has no name, which is why two names can refer to one file and neither is the original. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "filesystems",
+  "n": 2,
+  "title": "What does removing a name do?",
+  "text": " And the count is not the only reference: a descriptor holds the file too, which is why a deleted log can keep a disk full while a process is still writing to it. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "filesystems",
+  "n": 3,
+  "title": "Appending to a file is four separate writes. What is the danger of a crash between them?",
+  "text": " Leaked space is recoverable by a scan. A block in two files is not, and by the time anybody notices, both have been written. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "filesystems",
+  "n": 4,
+  "title": "What does a journal do?",
+  "text": " There is no window where a partial change survives without the instructions to finish it, and the cost is that everything is written twice. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "filesystems",
+  "n": 5,
+  "title": "What does a journalled filesystem cover by default?",
+  "text": " Your file's contents are not in the journal at all. They are written to their final location and ordered relative to the metadata, and that ordering is the only guarantee. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "filesystems",
+  "n": 6,
+  "title": "After a crash mid-write on a metadata-journalled filesystem, what do you have?",
+  "text": " Every check the filesystem performs afterwards passes, because there are no problems of the kind it looks for. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "filesystems",
+  "n": 7,
+  "title": "What does the default write ordering actually buy?",
+  "text": " It prevents an inode pointing at blocks still holding a previous file's contents, which would be a security problem as much as a correctness one. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "filesystems",
+  "n": 8,
+  "title": "What is the only mutation in a copy-on-write update?",
+  "text": " Until it switches nothing has changed, and after it everything has, so there is no partial state to recover from and no journal to write. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "filesystems",
+  "n": 9,
+  "title": "What does copy on write get almost free?",
+  "text": " Keeping the old root keeps the whole old tree, and a block never modified in place keeps its checksum valid. It costs fragmentation and the space held by old roots. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "filesystems",
+  "n": 10,
+  "title": "How does an extent differ from a block list?",
+  "text": " A contiguous gigabyte is one extent and 262144 list entries. Fully fragmented, extents are worse than the list they replaced. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "filesystems",
+  "n": 11,
+  "title": "A device returns different bytes than were written and reports no error. Who notices?",
+  "text": " A cable, a controller bug, or a write that landed at the wrong offset all produce data that reads back fine and is wrong, and a backup of it is a corrupted backup. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "filesystems",
+  "n": 12,
+  "title": "What is delayed allocation for?",
+  "text": " It also widens the window between a write returning and anything being decided about where the data goes. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "filesystems",
+  "n": 13,
+  "title": "Why did delayed allocation break applications that were working?",
+  "text": " A crash could leave a correctly named, empty file where a complete one used to be. The guidance was always that a rename without a flush guarantees nothing. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "filesystems",
+  "n": 14,
+  "title": "What was the resolution to that argument?",
+  "text": " Both positions were defensible, and the practical outcome was that the common pattern got a special case while remaining unguaranteed. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "filesystems",
+  "n": 15,
+  "title": "What does a filesystem protect, and what is yours?",
+  "text": " That distinction is the whole unit, and it decides what you have to do yourself: flush the file, and flush the directory. ",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "storage-engines",
+  "anchor": "three-costs-and-you-cannot-have-all-three",
+  "title": "Three costs, and you cannot have all three",
+  "text": "Any structure of this kind is a trade between three quantities, and improving one worsens another. Read amplification is how much you must read to answer a query. Write amplification, which unit 039 already priced at the device level, is how much you must write per byte of update. Space amplification is how much room the structure takes beyond the data it holds. A structure that keeps everything perfectly ordered has excellent reads and pays for every update by rewriting the neighbourhood. A structure that appends everything has excellent writes and pays on every read by looking in several places. There is no arrangement with all three, and the choice is which one your workload can afford to be bad at.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "storage-engines",
+  "anchor": "ordered-in-place",
+  "title": "Ordered in place",
+  "text": "A B-tree keeps keys sorted in fixed-size pages, with interior pages of separators pointing at children. A lookup walks from the root, one page per level, and the tree is shallow: a fanout of a few hundred means a billion keys in four or five levels. Reads are close to optimal. A point lookup is a handful of page reads, and the upper levels stay cached, so in practice it is one device access. A range scan walks leaves in order, which is sequential. The cost is in updates. Changing one record means reading its page, modifying it, and writing the whole page back, so a hundred-byte update writes a page. At four kilobytes that is amplification of forty before the device's own amplification is applied on top, and unit 039 said what a small write does to a block-erased medium. And a page that fills has to split, which rewrites two pages and an ancestor, and in the worst case propagates to the root. Sorted in place against appended and merged later. The first is optimal to read and expensive to update; the second is the reverse, and the device decides which is the right mistake.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "storage-engines",
+  "anchor": "appended-and-sorted-out-later",
+  "title": "Appended, and sorted out later",
+  "text": "The other family never updates anything in place. Writes go into a sorted structure in memory, and when it fills it is written out as one immutable sorted file. Those files accumulate, and a background process merges them into fewer, larger ones. Writes are as cheap as they can be: an append to a log for durability and an insertion into memory. Nothing is read to perform an update, and nothing on the device is modified. The cost lands on reads. A key may be in the memory table or in any of the files, so a lookup that finds nothing has to check all of them. That is what the two mitigations exist for: every file carries a summary structure that can say definitely not present without a read, and a cache holds the ones consulted most. And the merging is not free. It is the write amplification, deferred and batched: each record is rewritten once per level it passes through, so a structure with seven levels rewrites everything about seven times over its life. The difference from the B-tree is that this happens in large sequential runs at a time of the system's choosing rather than in small random writes at the time of the update.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "storage-engines",
+  "anchor": "which-the-device-decides",
+  "title": "Which the device decides",
+  "text": "Now the reason this is not a taste question. On a spinning disk a random write and a random read cost about the same, both dominated by the seek, so the B-tree's page rewrite is not obviously worse than anything else. The structure was designed for that machine and it fits it. On flash the costs are not symmetric. A read is tens of microseconds; a small random write is cheap to issue and expensive downstream, because unit 039's controller must eventually erase a block hundreds of times larger. Small random writes are the one thing the medium is worst at. So the log-structured design is not a general improvement. It is a response to a device whose write path is the expensive one, converting many small random writes into few large sequential ones, which is precisely the transformation that makes the controller's garbage collection cheap. Change the device again and the answer changes again. That is the whole argument.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "storage-engines",
+  "anchor": "the-summary-that-answers-without-reading",
+  "title": "The summary that answers without reading",
+  "text": "The structure that lets a log-structured engine skip files deserves its own paragraph, because it is a good example of paying space for reads. Each file carries a compact filter over the keys it contains. Asked whether a key is present, it answers definitely not or possibly, never definitely yes. A negative answer skips the file with no device access at all; a positive answer means reading it and finding out. The cost is a few bits per key held in memory and a false positive rate that falls as you spend more. Ten bits per key gives roughly one percent, so a lookup across seven files reads about one of them unnecessarily rather than all seven. It is the third amplification being traded for the first: memory spent to avoid reads. And it only helps for keys that are absent, which is why a workload of lookups that mostly succeed gets far less from it than one checking for existence.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "storage-engines",
+  "anchor": "what-the-workload-decides",
+  "title": "What the workload decides",
+  "text": "The device narrows it and the workload picks. A read-heavy workload with occasional updates wants the B-tree: reads are optimal, and the update cost is paid rarely. A write-heavy workload with scattered keys wants the log structure, because the alternative is one page rewrite per update and the device will hate it. Range scans favour the B-tree, since leaves are already in order, where the log structure must merge several files on the fly. Point lookups of keys that do not exist favour the B-tree too, unless the summaries are doing their job. And space is the third axis. The log structure holds superseded versions until a merge removes them, so it can occupy substantially more than its live data, while a B-tree's pages are typically most of the way full and its overhead is bounded.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "storage-engines",
+  "anchor": "deleting-something-that-was-never-there",
+  "title": "Deleting something that was never there",
+  "text": "One asymmetry the log structure has and the B-tree does not, because it catches people. Nothing is modified in place, so a deletion cannot remove anything. It writes a marker saying this key is gone, and that marker has to persist until every older file that might contain the key has been merged away. Until then a lookup finds the marker first and reports absence correctly. The consequence is that deleting does not free space and can consume it, and a workload that inserts and deletes the same keys repeatedly accumulates markers faster than merging removes them. A range that was emptied still has to be walked past, so scanning a mostly deleted region reads all the markers. There is no equivalent in a B-tree, where a delete removes the record from its page and the space is immediately reusable. It is the clearest single example of the family difference: in one structure a delete is an update, and in the other it is another append.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "storage-engines",
+  "anchor": "where-the-durability-goes",
+  "title": "Where the durability goes",
+  "text": "Both families need the same thing underneath, and it is the previous two units. An update is written to a log and that log is flushed before the update is acknowledged, because unit 041 said a write that returned is only a dirty page. Recovery replays the log against whatever survived. That is the same protocol a filesystem journal uses and for the same reason. The cost is one flush per commit, which unit 041 also priced, so a system doing many small durable updates is limited by flushes per second. Grouping several commits into one flush is the standard answer, and it trades a little latency for a great deal of throughput. Which means the durability mechanism is the same whichever structure you chose. The structure decides what the steady state costs; the log decides what a crash costs.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "storage-engines",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Read, write and space amplification trade against each other and no structure is good at all three. A B-tree is ordered in place, optimal to read, and rewrites a page per update. A log-structured tree appends and merges, is optimal to write, and pays on reads that must consult several files. The device picks the family, because flash is worst at small random writes and a disk was not. The workload picks within it. And both sit on a flushed log, because that is the only durability the layers below offer.",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
+  "slug": "storage-engines",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These compute the amplification arithmetic, which is exact, where a benchmark of a real engine measures its tuning as much as its design. names the number your model got wrong. Every one follows from the structure described in the prose rather than from any particular implementation.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "storage-engines",
+  "n": 1,
+  "title": "A page for a hundred bytes",
+  "text": "A structure that keeps everything ordered in place pays for every update by rewriting the neighbourhood, whatever the update's size. Write , returning how many bytes a B-tree writes per byte of update, scaled by 100. Changing one record means reading its page, modifying it, and writing the whole page back.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "storage-engines",
+  "n": 2,
+  "title": "How deep the tree is",
+  "text": "The tree is shallow because the fanout is large, which is why a point lookup is a handful of page reads and in practice one device access. Write , returning how many levels a B-tree needs to hold a given number of keys at a given fanout. A fanout of a few hundred means a billion keys in four or five levels.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "storage-engines",
+  "n": 3,
+  "title": "Rewritten once per level",
+  "text": "The amplification does not disappear, it moves: from small random writes at update time to large sequential ones at a time of the system's choosing. Write , returning how many times a record is rewritten over its life in a log-structured tree, given the number of levels and the merge fan. The merging is the write amplification, deferred and batched.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "storage-engines",
+  "n": 4,
+  "title": "Looking in several places",
+  "text": "The filter trades memory for reads and only helps for keys that are absent, which is why it is worth far more to a workload checking existence than to one fetching known keys. Write , returning how many files a lookup must actually read, given how many exist, whether the key is present, and the summary filter's false positive rate as a percentage. A negative answer from a summary skips the file with no device access at all.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "storage-engines",
+  "n": 5,
+  "title": "Deleting is another append",
+  "text": "In one structure a delete is an update and in the other it is another append, which is the clearest single example of the family difference. Write , returning how many records a log-structured engine still holds after a deletion, given the live records and how many deletion markers are outstanding. Nothing is modified in place, so a deletion cannot remove anything.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "storage-engines",
+  "n": 6,
+  "title": "Which the device picks",
+  "text": "On a spinning disk the two costs are about equal and the B-tree fits; on flash they are not, and small random writes are what the medium is worst at. Write , deciding which family a device suits, given the cost of a random read and the eventual cost of a small random write. The log structure is a response to a device whose write path is the expensive one.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "storage-engines",
+  "n": 7,
+  "title": "Reading a range",
+  "text": "Range scans favour the ordered structure, because the log-structured one must read from every file that overlaps the range and combine them. Write , returning how many sequential runs a range scan reads, under a B-tree and under a log-structured tree with a given number of files. Leaves are already in order in one and must be merged on the fly in the other.",
+  "part": "Storage"
+ },
+ {
+  "t": "exercise",
+  "slug": "storage-engines",
+  "n": 8,
+  "title": "Flushes per second",
+  "text": "One flush per commit limits a system to flushes per second, and grouping trades a little latency for a great deal of throughput. Write , returning how many durable updates a second a system achieves, given the flush latency and how many commits are grouped into one flush. The structure decides what the steady state costs; the log decides what a crash costs.",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "storage-engines",
+  "n": 1,
+  "title": "What are the three quantities that trade against each other?",
+  "text": " Improving one worsens another, and the choice is which one your workload can afford to be bad at. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "storage-engines",
+  "n": 2,
+  "title": "A hundred-byte update to a B-tree with four kilobyte pages writes how much?",
+  "text": " The page is the unit of update, so the amplification is forty and the device applies its own on top of that. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "storage-engines",
+  "n": 3,
+  "title": "Why is a B-tree lookup usually one device access rather than four?",
+  "text": " The fanout makes the tree shallow and the interior levels tiny, so the leaf is the only part the cache cannot hold. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "storage-engines",
+  "n": 4,
+  "title": "What happens when a B-tree page fills?",
+  "text": " Which is a rare event with a large cost, and it is why write latency in a B-tree has a long tail. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "storage-engines",
+  "n": 5,
+  "title": "In a log-structured tree, what does an update read from the device?",
+  "text": " An append to a log and an insertion into memory. Nothing on the device is read, and nothing on it is modified. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "storage-engines",
+  "n": 6,
+  "title": "Where does the log structure's write amplification actually come from?",
+  "text": " It is deferred and batched rather than absent, which is the point: large sequential runs at the system's choosing, not small random writes at update time. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "storage-engines",
+  "n": 7,
+  "title": "A summary filter can answer which two ways?",
+  "text": " The one-sided error is what makes it useful and what makes it cheap: a negative skips the file entirely, and a positive costs a read that may find nothing. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "storage-engines",
+  "n": 8,
+  "title": "Ten bits per key gives roughly a one percent false positive rate. What does that buy across seven files?",
+  "text": " It is the third amplification bought with the first: memory spent to avoid reads. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "storage-engines",
+  "n": 9,
+  "title": "Who does the filter not help?",
+  "text": " A key that is present has to be read from the file holding it whatever the filters say, so the filter saves nothing on the path that matters. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "storage-engines",
+  "n": 10,
+  "title": "Why is a spinning disk a reasonable fit for a B-tree?",
+  "text": " The structure was designed for that machine. What changed was not the software. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "storage-engines",
+  "n": 11,
+  "title": "What is the log-structured design a response to?",
+  "text": " It converts many small random writes into few large sequential ones, which is exactly the transformation that makes a flash controller's garbage collection cheap. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "storage-engines",
+  "n": 12,
+  "title": "What does a deletion do in a log-structured engine?",
+  "text": " Nothing is modified in place, so a delete is another append. In a B-tree it is an update, and the space is immediately reusable. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "storage-engines",
+  "n": 13,
+  "title": "What does a workload of repeated inserts and deletes of the same keys accumulate?",
+  "text": " And a range that was emptied still has to be walked past, so scanning a mostly deleted region reads all the markers. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "storage-engines",
+  "n": 14,
+  "title": "Which structure does a range scan favour, and why?",
+  "text": " The log structure must read from every file the range overlaps and merge them on the fly, where the B-tree reads one contiguous run. ",
+  "part": "Storage"
+ },
+ {
+  "t": "drill",
+  "slug": "storage-engines",
+  "n": 15,
+  "title": "Both families sit on a flushed log. What limits a system doing many small durable updates?",
+  "text": " The structure decides what the steady state costs and the log decides what a crash costs, and grouping trades a little latency for a great deal of throughput. ",
+  "part": "Storage"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

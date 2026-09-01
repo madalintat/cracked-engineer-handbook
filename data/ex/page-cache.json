@@ -1,0 +1,310 @@
+{
+ "slug": "page-cache",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Three orders of magnitude apart",
+   "brief": "<p>Write <code>read_cost_ns</code>, returning what a read costs, given whether the page is in the cache and the two latencies.</p>\n<p>A hit is a copy from memory. A miss is a device access.</p>",
+   "kind": "output",
+   "concept": "The same call costs tens of nanoseconds or tens of microseconds depending on nothing the program did, only on whether somebody read it recently.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A miss still has to copy the page to the caller after fetching it."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A miss pays the device access and then the same copy a hit would have paid, since the data still has to reach the caller. Reporting only the device latency understates a miss by exactly a hit.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Three orders of magnitude, decided by whether the page happened to be resident. That is why the cache is the single largest factor in a filesystem workload's performance and why measuring one on a warm machine measures something different from measuring it on a cold one.</p>",
+   "starter": "unsigned long read_cost_ns(int in_cache, unsigned long copy_ns,\n                           unsigned long device_ns) {\n    return in_cache ? copy_ns : device_ns;\n}",
+   "tests": "#include <assert.h>\nunsigned long read_cost_ns(int, unsigned long, unsigned long);\nint main(void) {\n    /* A hit is the copy alone. */\n    assert(read_cost_ns(1, 50, 50000) == 50);\n    /* A miss is the device access plus the copy. */\n    assert(read_cost_ns(0, 50, 50000) == 50050);\n    assert(read_cost_ns(0, 100, 20000) == 20100);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "Guessing what comes next",
+   "brief": "<p>Write <code>readahead_window</code>, returning how many pages the kernel fetches ahead, doubling while its guess keeps being right and collapsing to one when it stops.</p>\n<p>The window is capped, and a jump resets it.</p>",
+   "kind": "output",
+   "concept": "Read-ahead is the hardware prefetcher's idea at a different scale, with the same consequence: sequential access is fast and random access gets no help.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Double on a hit up to the cap, and reset rather than halve on a miss."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A non-sequential access collapses the window to one rather than reducing it gradually, because the evidence for the pattern is gone rather than weakened. Halving it keeps fetching pages the program has stopped wanting.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A program that reads a file straight through and occasionally jumps keeps most of the benefit. One that jumps constantly disables the mechanism and pays full latency per access, which is why a program that knows its access is random should say so and stop the kernel reading pages it will never use.</p>",
+   "starter": "unsigned long readahead_window(unsigned long current, int sequential,\n                               unsigned long cap) {\n    if (sequential) {\n        unsigned long next = current * 2;\n        return next > cap ? cap : next;\n    }\n    return current / 2;\n}",
+   "tests": "#include <assert.h>\nunsigned long readahead_window(unsigned long, int, unsigned long);\nint main(void) {\n    /* Growing while the guess holds. */\n    assert(readahead_window(1, 1, 32) == 2);\n    assert(readahead_window(8, 1, 32) == 16);\n    /* Capped. */\n    assert(readahead_window(32, 1, 32) == 32);\n    assert(readahead_window(24, 1, 32) == 32);\n    /* A jump collapses it entirely. */\n    assert(readahead_window(32, 0, 32) == 1);\n    assert(readahead_window(2, 0, 32) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "When the write starts costing",
+   "brief": "<p>Write <code>write_cost_ns</code>, returning what a write costs, given how many dirty pages exist and the two thresholds.</p>\n<p>Below the second threshold a write is a memory operation. Above it, the process is made to write some out itself.</p>",
+   "kind": "output",
+   "concept": "The transition is abrupt, which is why a program writes at memory speed for several seconds and then at device speed forever with nothing having changed in it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Background writeback is invisible to the caller. Only the second threshold is felt."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Crossing the first threshold starts background writeback and the program notices nothing, so the cost is unchanged there. Only past the second does the writer do the work itself.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Nothing changed in the program. It filled the allowance, and a benchmark short enough to stay under the threshold reports a number no sustained workload will ever see, which is the same shape as the write buffer in unit 039.</p>",
+   "starter": "unsigned long write_cost_ns(unsigned long dirty_pages,\n                            unsigned long background_at, unsigned long block_at,\n                            unsigned long memory_ns, unsigned long device_ns) {\n    if (dirty_pages >= background_at) return device_ns;\n    (void)block_at;\n    return memory_ns;\n}",
+   "tests": "#include <assert.h>\nunsigned long write_cost_ns(unsigned long, unsigned long, unsigned long,\n                            unsigned long, unsigned long);\nint main(void) {\n    /* Well below both thresholds. */\n    assert(write_cost_ns(100, 1000, 2000, 50, 50000) == 50);\n    /* Past the background threshold: still invisible to the writer. */\n    assert(write_cost_ns(1500, 1000, 2000, 50, 50000) == 50);\n    /* Past the blocking threshold. */\n    assert(write_cost_ns(2000, 1000, 2000, 50, 50000) == 50000);\n    assert(write_cost_ns(5000, 1000, 2000, 50, 50000) == 50000);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Written is not there",
+   "brief": "<p>Write <code>data_survives</code>, reporting whether a file's contents survive a power loss, given whether the data was flushed and whether writeback happened to have run.</p>\n<p>A write returning means the page is dirty and nothing more.</p>",
+   "kind": "output",
+   "concept": "Durability is something you ask for, and a write that returned successfully has promised only that the data is in memory.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Either path gets the data to the medium, and neither is guaranteed by the write."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Writeback running is enough for the data to be on the medium even without a flush, and it is not something the program can rely on because nobody in the program chose when it happens. A flush guarantees it; luck sometimes provides it.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The unreliable path is the one that makes this hard to catch in testing. A program with no flush anywhere survives most crashes, because writeback usually has run, and loses data on the crashes that matter.</p>",
+   "starter": "int data_survives(int flushed, int writeback_ran) {\n    (void)writeback_ran;\n    return flushed;\n}",
+   "tests": "#include <assert.h>\nint data_survives(int, int);\nint main(void) {\n    /* Neither: the data was only ever in memory. */\n    assert(data_survives(0, 0) == 0);\n    /* Flushed: guaranteed. */\n    assert(data_survives(1, 0) == 1);\n    /* Writeback happened to run: it is there, and nobody arranged that. */\n    assert(data_survives(0, 1) == 1);\n    assert(data_survives(1, 1) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "The four steps of replacing a file",
+   "brief": "<p>Write <code>replace_is_safe</code>, reporting whether a file replacement survives a crash, given which of the four steps were performed.</p>\n<p>Write the new contents, flush the file, rename it over the original, flush the directory.</p>",
+   "kind": "output",
+   "concept": "<code>fsync</code> on a file says nothing about the directory naming it, so a fully flushed file can fail to exist after a power loss.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "All four, and the ones that are missing say what goes wrong."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Flushing the file without flushing the directory leaves a correct file that may not be named, and renaming without flushing the file first leaves a name pointing at contents that may be incomplete. Both are needed and they are needed for different reasons.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Skipping the directory flush leaves the rename undurable. Skipping the file flush leaves the file existing with the wrong contents, which is worse than not existing, because a program that finds the file assumes it is complete.</p>",
+   "starter": "int replace_is_safe(int wrote, int flushed_file, int renamed,\n                    int flushed_dir) {\n    (void)flushed_dir;\n    return wrote && flushed_file && renamed;\n}",
+   "tests": "#include <assert.h>\nint replace_is_safe(int, int, int, int);\nint main(void) {\n    /* All four. */\n    assert(replace_is_safe(1, 1, 1, 1) == 1);\n    /* No directory flush: the rename may not survive. */\n    assert(replace_is_safe(1, 1, 1, 0) == 0);\n    /* No file flush: the name may point at incomplete contents. */\n    assert(replace_is_safe(1, 0, 1, 1) == 0);\n    /* Never renamed: the original is still there. */\n    assert(replace_is_safe(1, 1, 0, 1) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Reported once, then cleared",
+   "brief": "<p>Write <code>fsync_result</code>, returning what a flush reports, given whether an error is pending. Return 0 for success and -1 for failure, and clear the pending error.</p>\n<p>The failure happened asynchronously, long after the write that caused it returned successfully.</p>",
+   "kind": "output",
+   "concept": "The error is delivered once to whoever asks first, so a retry that succeeds proves nothing about the data.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Report the pending error and clear it, so the next call sees none."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees, and it will be the retry. Reporting the error and leaving it pending would make every subsequent flush fail, which is arguably better and is not what happens. It is reported once and cleared, so the second call succeeds without anything having been written.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Several databases treated that second success as proof of durability and lost data for years. The guidance now is blunt: a flush failure is not retryable and the data it covered must be assumed lost. Some systems treat it as fatal, which sounds extreme and is the only interpretation the interface supports.</p>",
+   "starter": "int fsync_result(int *error_pending) {\n    return *error_pending ? -1 : 0;\n}",
+   "tests": "#include <assert.h>\nint fsync_result(int *);\nint main(void) {\n    int err = 0;\n    /* No error: plain success. */\n    assert(fsync_result(&err) == 0);\n    assert(err == 0);\n    /* An error is reported once. */\n    err = 1;\n    assert(fsync_result(&err) == -1);\n    /* And cleared, so the retry succeeds having written nothing. */\n    assert(err == 0);\n    assert(fsync_result(&err) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "The reference that outlived the thing",
+   "brief": "<p>Write <code>crash_consistent</code>, reporting whether a crash can leave a reference to data that was never written, given the order the two writes were issued and whether a flush separated them.</p>\n<p>Nothing orders two writes without one.</p>",
+   "kind": "output",
+   "concept": "The kernel and the device may reorder freely, so a program that writes a record and then a pointer to it can lose the record and keep the pointer.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The order they were issued in is not the order they reach the medium."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Issuing the data first is not enough on its own, because writeback may take the pointer's page and not the data's. Only a completed flush between them establishes that the data is there before the reference to it can be.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>That is exactly the corruption a journal exists to prevent, and the mechanism is always the same: write the thing, flush, write the reference. The cost is the flush in the middle, which is why a system doing many small durable updates is limited by flushes per second rather than by bandwidth, and why databases group commits.</p>",
+   "starter": "int crash_consistent(int data_written_first, int flush_between) {\n    (void)flush_between;\n    return data_written_first;\n}",
+   "tests": "#include <assert.h>\nint crash_consistent(int, int);\nint main(void) {\n    /* Data first and a flush between: safe. */\n    assert(crash_consistent(1, 1) == 1);\n    /* Data first, no flush: the pointer may reach the medium alone. */\n    assert(crash_consistent(1, 0) == 0);\n    /* Pointer first, with a flush: the reference is durable and the data is not. */\n    assert(crash_consistent(0, 1) == 0);\n    assert(crash_consistent(0, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Aligned, or refused",
+   "brief": "<p>Write <code>direct_io_ok</code>, reporting whether a direct transfer is accepted, given the offset, the length and the buffer address, and the device's block size.</p>\n<p>Get it wrong and the call fails rather than being slow.</p>",
+   "kind": "output",
+   "concept": "Bypassing the cache means the device sees your buffer directly, so its alignment requirements become yours.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Three things must be multiples of the block size, not one."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The offset in the file, the length of the transfer and the address of the memory buffer must all be multiples of the block size, because the device transfers whole blocks between the medium and the address you gave it, with nothing in between to fix up a misalignment.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>It is only correct for a program that manages its own caching and its own read-ahead, which is why databases want it and almost nothing else does. For everything else the page cache is better than what you would write, and the reason to avoid it is duplication rather than overhead.</p>",
+   "starter": "int direct_io_ok(unsigned long offset, unsigned long length,\n                 unsigned long buffer_addr, unsigned long block) {\n    (void)buffer_addr;\n    return offset % block == 0 && length % block == 0;\n}",
+   "tests": "#include <assert.h>\nint direct_io_ok(unsigned long, unsigned long, unsigned long, unsigned long);\nint main(void) {\n    /* All three aligned to 512. */\n    assert(direct_io_ok(0, 4096, 4096, 512) == 1);\n    assert(direct_io_ok(1024, 512, 8192, 512) == 1);\n    /* A misaligned offset. */\n    assert(direct_io_ok(100, 4096, 4096, 512) == 0);\n    /* A misaligned length. */\n    assert(direct_io_ok(0, 100, 4096, 512) == 0);\n    /* A misaligned buffer, which is the one people forget. */\n    assert(direct_io_ok(0, 4096, 4097, 512) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

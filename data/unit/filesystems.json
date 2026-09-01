@@ -1,0 +1,85 @@
+{
+ "slug": "filesystems",
+ "num": 42,
+ "title": "Naming bytes",
+ "blurb": "A filesystem is a crash-consistency protocol that protects its own metadata, not your data.",
+ "part": "storage",
+ "partRoman": "VIII",
+ "partTitle": "Storage",
+ "phase": "system",
+ "accent": "clay",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "page-cache",
+   "processes"
+  ],
+  "minutes": 55,
+  "one_idea": "A filesystem is a crash-consistency protocol that by default protects its own bookkeeping and not your data, and knowing which is which decides what you have to do yourself.",
+  "sources": [
+   "compilers-interpreters-terminals-unix",
+   "cpu-architectures"
+  ]
+ },
+ "html": "<p>A filesystem does two things that people conflate. It maps names to bytes, which is the part everyone thinks about. And it survives being interrupted halfway through an update, which is the part it was actually hard to build and the part that decides whether your data is there afterwards.</p>\n<h2 id=\"the-name-is-not-the-file\">The name is not the file</h2>\n<p>A file is an inode: a record holding the size, the permissions, the timestamps and where the blocks are. It has no name. A directory is a file whose contents are a list of names paired with inode numbers, and that is where names live.</p>\n<p>Which makes several familiar things follow. Two names can refer to one inode, and neither is the original, because there is nothing in the inode saying which came first. Removing a name is not deleting a file; it decrements a count, and the inode is freed when the count reaches zero.</p>\n<p>And the count is not the whole condition. A file whose last name is removed while a process still has it open continues to exist, invisibly, until that descriptor is closed. That is the mechanism behind a temporary file that cannot be found and cannot leak, and behind a disk that stays full after you deleted the log a running process was writing to.</p>\n<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 565 214\" class=\"fig-svg\" style=\"max-width:819px\" role=\"img\" aria-label=\"Two directory entries in different directories both pointing at one inode, which points at data blocks, with an open descriptor also referring to the inode.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><line x1=\"70\" y1=\"57\" x2=\"273\" y2=\"70\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"141\" y1=\"95\" x2=\"202\" y2=\"95\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"70\" y1=\"132\" x2=\"273\" y2=\"119\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"343\" y1=\"95\" x2=\"396\" y2=\"95\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><rect x=\"0.0\" y=\"8.8\" width=\"140.8\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"70.4\" y=\"37.0\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">a/report</text><rect x=\"0.0\" y=\"70.4\" width=\"140.8\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"70.4\" y=\"98.6\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">b/backup</text><rect x=\"0.0\" y=\"132.0\" width=\"140.8\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--copper-ink, var(--accent));stroke:var(--copper-ink, var(--accent))\"/><text x=\"70.4\" y=\"160.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">open fd</text><rect x=\"202.4\" y=\"70.4\" width=\"140.8\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--gold-ink, var(--accent));stroke:var(--gold-ink, var(--accent))\"/><text x=\"272.8\" y=\"98.6\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">inode</text><rect x=\"396.0\" y=\"70.4\" width=\"140.8\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"466.4\" y=\"98.6\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">blocks</text></svg><figcaption>Names point at the inode and the inode owns the blocks. Removing a name decrements a count, and the count is not the only thing keeping a file alive.</figcaption></figure>\n<h2 id=\"why-any-of-this-is-difficult\">Why any of this is difficult</h2>\n<p>Consider appending to a file. The filesystem must allocate a block, mark it used in the free map, add it to the inode's list, and update the size. Four writes to four different places, and a crash can happen between any two.</p>\n<p>Stop after the allocation and the block is marked used and belongs to nothing, which leaks space. Stop after adding it to the inode and the block is in a file and also in the free list, which is far worse: a later allocation hands it to another file and two files share a block.</p>\n<p>So the problem is not losing the update. It is that a partial update leaves a structure that is not merely out of date but self-contradictory, and every filesystem is a scheme for making sure that cannot happen.</p>\n<h2 id=\"writing-down-what-you-are-about-to-do\">Writing down what you are about to do</h2>\n<p>The common answer is a journal. Write a description of the whole change to a dedicated log, flush it, then apply the change to its real locations, then mark the log entry done.</p>\n<p>A crash before the flush loses the update entirely, which is fine: nothing was applied. A crash after it means the log holds a complete description, so recovery replays it and the change completes. There is no window where a partial change survives without the instructions to finish it.</p>\n<p>The cost is that everything is written twice. Which leads directly to the decision that matters.</p>\n<h2 id=\"what-the-journal-actually-covers\">What the journal actually covers</h2>\n<p>By default, most filesystems journal metadata only.</p>\n<p>The inode, the free map, the directory entries: all protected. Your file's actual contents: not in the journal at all. They are written to their final location and ordered relative to the metadata, and that ordering is the only guarantee.</p>\n<p>The default ordering does buy something real. Data blocks are written before the metadata that references them, so a crash cannot leave an inode pointing at blocks that still hold a previous file's contents, which would be a security problem as much as a correctness one.</p>\n<p>What it does not buy is your update being complete. A crash mid-write leaves a file that is a valid file, correctly described, containing a mixture of old and new bytes. The filesystem is consistent and your data is not, and every check the filesystem performs afterwards passes.</p>\n<p>That distinction is the whole unit. The protocol protects the structure; the contents are yours.</p>\n<h2 id=\"not-writing-anything-twice\">Not writing anything twice</h2>\n<p>The other approach never overwrites anything. A change writes new blocks somewhere free, then writes new versions of the structures pointing at them, up to a root pointer, and the last step is switching that root from the old tree to the new one.</p>\n<p>Until the root switches, nothing has changed. After it, everything has. There is no partial state because the only mutation is one pointer.</p>\n<p>That buys snapshots almost free, since keeping the old root keeps the whole old tree, and it buys checksums naturally, since a block is never modified in place so its checksum stays valid. It costs fragmentation, because updating one block in the middle of a file puts the new version somewhere else entirely, and it costs the space held by anything still referenced by an old root.</p>\n<h2 id=\"describing-where-the-blocks-are\">Describing where the blocks are</h2>\n<p>A small design decision worth knowing, because it decides how large a file can be before the bookkeeping costs more than the data.</p>\n<p>The old scheme lists every block a file uses, with the list itself spilling into blocks of pointers once it grows. That is exact and it means a large file's description is proportional to its size, and reading a byte in the middle needs several lookups to find which block it is in.</p>\n<p>The modern scheme records extents: a starting block and a length. A contiguous file of any size is one extent, so the description is tiny and the lookup is immediate. A fragmented file needs one extent per run, and in the worst case, where every block is somewhere different, it is worse than the list it replaced.</p>\n<p>Which is another reason the layers below care about contiguity, and the same reason as everywhere else in this part: a description proportional to the number of runs rewards writing in long ones.</p>\n<h2 id=\"knowing-the-bytes-are-the-bytes-you-wrote\">Knowing the bytes are the bytes you wrote</h2>\n<p>Most filesystems do not check. They trust the device to return what was stored, and a device that returns wrong bytes without reporting an error is a case they do not detect.</p>\n<p>That case is real. A cable, a controller bug, a cosmic ray in a buffer, or a write that landed at the wrong offset all produce data that reads back fine and is wrong. The filesystems that checksum data catch it and, given a redundant copy, repair it. The ones that do not will hand it to you.</p>\n<p>Which is worth knowing when choosing, because the failure it prevents is undetectable by everything above it. A backup of corrupted data is a corrupted backup, and nothing in the stack notices.</p>\n<h2 id=\"the-optimisation-that-surprised-everyone\">The optimisation that surprised everyone</h2>\n<p>One more mechanism, because it caused a public argument that clarified the whole subject.</p>\n<p>Delaying allocation until writeback lets the filesystem see the whole file and choose contiguous blocks, which is a large win. It also widens the window between a write returning and anything being decided about where the data goes.</p>\n<p>Applications that had been replacing files by writing and renaming without flushing had been getting away with it, because the old behaviour happened to write the data first. Under delayed allocation the rename could reach the disk while the contents had not been allocated, so a crash left a correctly named, empty file where a complete one used to be.</p>\n<p>The arguments were about whether the applications or the filesystem were wrong. Both positions were defensible and the resolution was practical: the filesystem added a special case for that pattern, and the guidance to applications remained that a rename without a flush guarantees nothing, because it never did.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>A name is a directory entry, an inode is the file, and removing a name decrements a count that an open descriptor also holds.</p>\n<p>A journal makes multi-part updates atomic and by default covers metadata only, so after a crash the filesystem is consistent and your file may contain a mixture of old and new bytes.</p>\n<p>Copy on write replaces the journal with one pointer switch and gets snapshots and checksums out of it. Most filesystems do not verify your data. And a rename without a flush has never been durable, whatever it happened to do.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These model the protocols rather than crashing a real filesystem, because a test that depends on when a crash happens is a test that mostly does not reproduce.</p>\n<p><code>assert-failed</code> names the outcome your model got wrong. Several of the exercises assert that data was lost while the filesystem stayed consistent, which is the distinction the unit is about rather than a bug in the model.</p>",
+ "headings": [
+  {
+   "id": "the-name-is-not-the-file",
+   "text": "The name is not the file",
+   "level": 2
+  },
+  {
+   "id": "why-any-of-this-is-difficult",
+   "text": "Why any of this is difficult",
+   "level": 2
+  },
+  {
+   "id": "writing-down-what-you-are-about-to-do",
+   "text": "Writing down what you are about to do",
+   "level": 2
+  },
+  {
+   "id": "what-the-journal-actually-covers",
+   "text": "What the journal actually covers",
+   "level": 2
+  },
+  {
+   "id": "not-writing-anything-twice",
+   "text": "Not writing anything twice",
+   "level": 2
+  },
+  {
+   "id": "describing-where-the-blocks-are",
+   "text": "Describing where the blocks are",
+   "level": 2
+  },
+  {
+   "id": "knowing-the-bytes-are-the-bytes-you-wrote",
+   "text": "Knowing the bytes are the bytes you wrote",
+   "level": 2
+  },
+  {
+   "id": "the-optimisation-that-surprised-everyone",
+   "text": "The optimisation that surprised everyone",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1430,
+ "needs": [
+  "processes",
+  "page-cache"
+ ],
+ "neededBy": [
+  "storage-engines"
+ ]
+}

@@ -72,5 +72,7 @@
  "needs": [
   "power"
  ],
- "neededBy": []
+ "neededBy": [
+  "flash"
+ ]
 }

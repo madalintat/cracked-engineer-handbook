@@ -1,0 +1,153 @@
+## Where does a file's name live?
+
+- [x] In a directory, which is a file holding names paired with inode numbers
+- [ ] In the inode
+- [ ] In the superblock's name table
+- [ ] In the first block of the file
+
+@why The inode has no name, which is why two names can refer to one file and
+neither is the original.
+
+## What does removing a name do?
+
+- [x] Decrements a count; the inode is freed when nothing refers to it
+- [ ] Frees the inode and its blocks
+- [ ] Marks the inode for deletion at the next unmount
+- [ ] Zeroes the file's blocks
+
+@why And the count is not the only reference: a descriptor holds the file too,
+which is why a deleted log can keep a disk full while a process is still writing
+to it.
+
+## Appending to a file is four separate writes. What is the danger of a crash between them?
+
+- [x] A structure that is self-contradictory, such as a block in a file and also in the free list
+- [ ] Losing the appended data
+- [ ] A file with the wrong size
+- [ ] A directory entry with no inode
+
+@why Leaked space is recoverable by a scan. A block in two files is not, and by
+the time anybody notices, both have been written.
+
+## What does a journal do?
+
+- [x] Records the whole change, flushes it, then applies it, then marks it done
+- [ ] Records every write for later auditing
+- [ ] Buffers writes until they can be done contiguously
+- [ ] Keeps a copy of the previous version of each block
+
+@why There is no window where a partial change survives without the instructions
+to finish it, and the cost is that everything is written twice.
+
+## What does a journalled filesystem cover by default?
+
+- [x] Metadata only: the inode, the free map, the directory entries
+- [ ] Metadata and data
+- [ ] Data only
+- [ ] Whatever was written since the last flush
+
+@why Your file's contents are not in the journal at all. They are written to
+their final location and ordered relative to the metadata, and that ordering is
+the only guarantee.
+
+## After a crash mid-write on a metadata-journalled filesystem, what do you have?
+
+- [x] A consistent filesystem and a file containing a mixture of old and new bytes
+- [ ] A consistent filesystem and an intact file
+- [ ] An inconsistent filesystem that needs checking
+- [ ] A truncated file
+
+@why Every check the filesystem performs afterwards passes, because there are no
+problems of the kind it looks for.
+
+## What does the default write ordering actually buy?
+
+- [x] Data blocks reach the medium before the metadata referencing them
+- [ ] That your update is complete or absent
+- [ ] That writes complete in the order issued
+- [ ] Nothing; the ordering is an implementation detail
+
+@why It prevents an inode pointing at blocks still holding a previous file's
+contents, which would be a security problem as much as a correctness one.
+
+## What is the only mutation in a copy-on-write update?
+
+- [x] The root pointer
+- [ ] The block being changed
+- [ ] The inode
+- [ ] The free map
+
+@why Until it switches nothing has changed, and after it everything has, so there
+is no partial state to recover from and no journal to write.
+
+## What does copy on write get almost free?
+
+- [x] Snapshots and data checksums
+- [ ] Contiguous allocation
+- [ ] Smaller metadata
+- [ ] Faster small writes
+
+@why Keeping the old root keeps the whole old tree, and a block never modified in
+place keeps its checksum valid. It costs fragmentation and the space held by old
+roots.
+
+## How does an extent differ from a block list?
+
+- [x] It records a start and a length, so its size follows the number of runs
+- [ ] It records the file's total size only
+- [ ] It is a compressed block list
+- [ ] It stores blocks indirectly through a tree
+
+@why A contiguous gigabyte is one extent and 262144 list entries. Fully
+fragmented, extents are worse than the list they replaced.
+
+## A device returns different bytes than were written and reports no error. Who notices?
+
+- [x] Only a filesystem that checksums data
+- [ ] The device driver
+- [ ] The page cache, on the next read
+- [ ] Nobody, ever
+
+@why A cable, a controller bug, or a write that landed at the wrong offset all
+produce data that reads back fine and is wrong, and a backup of it is a corrupted
+backup.
+
+## What is delayed allocation for?
+
+- [x] Seeing the whole file before choosing blocks, so they can be contiguous
+- [ ] Reducing the number of system calls
+- [ ] Avoiding the journal for small files
+- [ ] Deferring the durability decision to the application
+
+@why It also widens the window between a write returning and anything being
+decided about where the data goes.
+
+## Why did delayed allocation break applications that were working?
+
+- [x] They renamed without flushing, and the old behaviour happened to write the data first
+- [ ] It introduced a bug in the allocator
+- [ ] It changed the meaning of `fsync`
+- [ ] It reordered directory updates
+
+@why A crash could leave a correctly named, empty file where a complete one used
+to be. The guidance was always that a rename without a flush guarantees nothing.
+
+## What was the resolution to that argument?
+
+- [x] The filesystem special-cased the pattern, and the guidance to applications did not change
+- [ ] Delayed allocation was removed
+- [ ] Applications were required to use a new call
+- [ ] `fsync` was made implicit on rename
+
+@why Both positions were defensible, and the practical outcome was that the
+common pattern got a special case while remaining unguaranteed.
+
+## What does a filesystem protect, and what is yours?
+
+- [x] It protects its own structure; your file's contents are your responsibility
+- [ ] It protects both, once the journal is enabled
+- [ ] It protects your data and leaves metadata to the device
+- [ ] Neither, without a copy-on-write filesystem
+
+@why That distinction is the whole unit, and it decides what you have to do
+yourself: flush the file, and flush the directory.

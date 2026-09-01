@@ -83,6 +83,7 @@
   "pipeline"
  ],
  "neededBy": [
-  "scheduling"
+  "scheduling",
+  "nvme"
  ]
 }
