@@ -1,0 +1,310 @@
+{
+ "slug": "universal",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Branch on data, or compute nothing",
+   "brief": "<p><code>run_fixed</code> executes a tiny program of three opcodes: 0 adds 1, 1 doubles, 2 halts. It has no jump, so the number of steps is decided before it starts.</p>\n<p>Write it. The checks confirm what it computes and, in the last case, confirm what it cannot: a program of this shape cannot loop, so it cannot do work proportional to its input.</p>",
+   "kind": "output",
+   "concept": "Without a data-dependent branch the sequence of operations is fixed in advance, which is the difference between a calculator and a computer.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Walk the program array once. Stop at opcode 2 or at the end."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Run the first program by hand: <code>{0, 1, 2}</code> on an accumulator of 0 gives 1 after the add and 2 after the double, and the halt stops it there. The starter returns before executing anything.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Every program this machine can run takes at most as many steps as it has instructions. Adding one instruction, jump backwards if the accumulator is not zero, would remove that ceiling entirely, and that single addition is the whole subject of this unit.</p>",
+   "starter": "int run_fixed(const int *prog, int n, int acc) {\n    (void)prog; (void)n;\n    return acc;\n}",
+   "tests": "#include <assert.h>\nint main(void) {\n    int p1[] = {0, 1, 2};\n    assert(run_fixed(p1, 3, 0) == 2);\n    int p2[] = {1, 1, 1};\n    assert(run_fixed(p2, 3, 1) == 8);\n    int p3[] = {2, 0, 0};\n    assert(run_fixed(p3, 3, 7) == 7);\n    int p4[] = {0, 0, 0, 0};\n    assert(run_fixed(p4, 4, 0) == 4);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "One instruction is enough",
+   "brief": "<p>Subleq is a machine with a single instruction. Each instruction is three cells: subtract the value at address <code>a</code> from the value at address <code>b</code>, store the result at <code>b</code>, and if that result is less than or equal to zero, jump to <code>c</code>. Otherwise continue to the next instruction.</p>\n<p>Write <code>subleq_step</code>, which executes one instruction and returns the new program counter. Memory is an array you may modify.</p>",
+   "kind": "output",
+   "concept": "Loop, branch on data and unbounded memory is the whole recipe, and one instruction can supply all three.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Three cells, in order: the source, the destination, and the jump target. The condition tests the value after the subtraction."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The order matters: read <code>mem[a]</code> and <code>mem[b]</code>, store `mem[b]</p>\n<ul><li>mem[a]<code> into </code>mem[b]`, and only then compare that stored result against zero.</li></ul>\n<p>Testing the old value of <code>mem[b]</code> gives the wrong branch on exactly the cases the checks pick.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Nothing here can add, multiply, compare or call. Subtraction that jumps when it goes non-positive is universal, and real compilers targeting this machine exist. The lesson is not that you should use it: it is how little a system has to offer before it can be programmed by someone who did not design it.</p>",
+   "starter": "int subleq_step(int *mem, int pc) {\n    int a = mem[pc], b = mem[pc + 1], c = mem[pc + 2];\n    (void)a; (void)b; (void)c;\n    return pc + 3;\n}",
+   "tests": "#include <assert.h>\nint main(void) {\n    /* mem[5] -= mem[4]; 3 - 1 = 2, positive, so fall through. */\n    int m1[] = {4, 5, 99, 0, 1, 3};\n    assert(subleq_step(m1, 0) == 3);\n    assert(m1[5] == 2);\n    /* 1 - 3 = -2, non-positive, so jump to 99. */\n    int m2[] = {5, 4, 99, 0, 1, 3};\n    assert(subleq_step(m2, 0) == 99);\n    assert(m2[4] == -2);\n    /* Exactly zero also jumps. */\n    int m3[] = {4, 5, 12, 0, 3, 3};\n    assert(subleq_step(m3, 0) == 12);\n    assert(m3[5] == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "The tape",
+   "brief": "<p>A Turing machine's memory is a tape: it reads and writes the cell under the head, and it can move one cell left or right and no further.</p>\n<p>Write <code>tape_run</code>, which executes a rule table until it reaches state 255 or runs out of steps. A rule is looked up by state and by the symbol under the head, and it gives a symbol to write, a direction, and the next state.</p>",
+   "kind": "output",
+   "concept": "Random access is not part of the definition of computation, and a model without it computes the same functions at a very different cost.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Write, then move, then change state. The head is an index into the tape."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Do the three actions in order and read the rule once: the symbol written is the rule's, not the one that was there, and the state used to find the rule is the old state rather than the new one.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Everything this machine does costs a step per cell of travel. Sorting a million numbers on it is not impossible, it is slow in a way that no cleverness in the rule table repairs, which is the first hint that computable and practical are different questions.</p>",
+   "starter": "/* rules is a flat array of triples: write, move (2 right, 0 left), next state.\n   The triple for (state, symbol) starts at (state * nsym + symbol) * 3. */\nint tape_run(unsigned char *tape, const unsigned char *rules,\n             int nsym, int head, int steps) {\n    (void)rules; (void)nsym; (void)tape;\n    for (int i = 0; i < steps; i++) { }\n    return head;\n}",
+   "tests": "#include <assert.h>\nint tape_run(unsigned char *, const unsigned char *, int, int, int);\nint main(void) {\n    /* Two symbols. State 0 on symbol 0: write 1, move right, stay in state 0.\n       State 0 on symbol 1: write 1, move right, go to state 255 and halt. */\n    unsigned char rules[] = {\n        1, 2, 0,   1, 2, 255,\n        0, 0, 0,   0, 0, 0,\n    };\n    unsigned char tape[8] = {0, 0, 0, 1, 0, 0, 0, 0};\n    int end = tape_run(tape, rules, 2, 0, 20);\n    assert(end == 4);\n    assert(tape[0] == 1 && tape[1] == 1 && tape[2] == 1 && tape[3] == 1);\n    assert(tape[4] == 0);\n    /* A machine that never reaches state 255 stops when the steps run out. */\n    unsigned char spin[] = { 0, 2, 0 };\n    unsigned char t2[8] = {0};\n    assert(tape_run(t2, spin, 1, 0, 3) == 3);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Eight entries, and it computes everything",
+   "brief": "<p>Rule 110 is a cellular automaton. Each cell's next value depends on itself and its two neighbours, and the rule is the eight-bit number 110 read as a lookup table over those three bits.</p>\n<p>Write <code>rule110_step</code>. The array wraps at both ends.</p>",
+   "kind": "output",
+   "concept": "Universality is not a property of rich systems, it is a property of systems with a loop and a data-dependent choice, and it arrives uninvited.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Form a three-bit index from left, centre and right, then select that bit of 110."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The index is left times four plus centre times two plus right, and the answer is bit <code>index</code> of the constant 110. Getting the bit order backwards produces rule 124, which is a different automaton and is not universal.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Rule 110 is universal, which was conjectured in the 1980s and proved in</p>\n<ol><li>Its entire definition is the number 110. Nothing about it was designed to</li></ol>\n<p>compute anything, and it computes everything, which is the strongest statement of this unit's point available.</p>",
+   "starter": "void rule110_step(const unsigned char *in, unsigned char *out, int n) {\n    for (int i = 0; i < n; i++) out[i] = in[i];\n}",
+   "tests": "#include <assert.h>\nvoid rule110_step(const unsigned char *, unsigned char *, int);\nint main(void) {\n    unsigned char a[8] = {0, 0, 0, 0, 0, 0, 0, 1};\n    unsigned char b[8];\n    rule110_step(a, b, 8);\n    /* The single 1 grows leftwards, which is what rule 110 does. */\n    unsigned char want1[8] = {0, 0, 0, 0, 0, 0, 1, 1};\n    for (int i = 0; i < 8; i++) assert(b[i] == want1[i]);\n    rule110_step(b, a, 8);\n    unsigned char want2[8] = {0, 0, 0, 0, 0, 1, 1, 1};\n    for (int i = 0; i < 8; i++) assert(a[i] == want2[i]);\n    unsigned char z[4] = {0, 0, 0, 0}, zo[4];\n    rule110_step(z, zo, 4);\n    for (int i = 0; i < 4; i++) assert(zo[i] == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "No memory, no counting",
+   "brief": "<p>A finite-state machine has a fixed number of states and no storage beyond them. That is enough to recognise some languages and provably not enough for others.</p>\n<p>Write <code>balanced</code>, which reports whether a string of brackets is balanced, using a counter. Then read the last check, which is the point of the exercise.</p>",
+   "kind": "output",
+   "concept": "Unbounded storage is the third ingredient, and the language of balanced brackets is the standard demonstration that no fixed amount of state suffices.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "One counter. It must never go negative, and it must be zero at the end."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Two conditions, not one: the depth must end at zero, and it must never drop below zero on the way. A string like <code>)(</code> ends at depth zero and is not balanced.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Your counter is the unbounded memory. A machine with a fixed number of states can recognise up to some nesting depth and no further, and the pumping lemma turns that into a proof. It is also why a regular expression cannot match nested brackets, which is the practical form of the same fact and the subject of the next unit.</p>",
+   "starter": "int balanced(const char *s) {\n    int depth = 0;\n    for (const char *p = s; *p; p++) {\n        if (*p == '(') depth++;\n        else if (*p == ')') depth--;\n    }\n    return 1;\n}",
+   "tests": "#include <assert.h>\nint balanced(const char *);\nint main(void) {\n    assert(balanced(\"\") == 1);\n    assert(balanced(\"()\") == 1);\n    assert(balanced(\"(())\") == 1);\n    assert(balanced(\"(()(()))\") == 1);\n    assert(balanced(\"(\") == 0);\n    assert(balanced(\")\") == 0);\n    assert(balanced(\")(\") == 0);\n    assert(balanced(\"(()\") == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "The universal machine, in eighty lines",
+   "brief": "<p>An interpreter is a machine whose input is a description of another machine. Write one.</p>\n<p><code>interp</code> runs a stack language of five opcodes: 0 pushes the next cell, 1 adds the top two, 2 multiplies them, 3 duplicates the top, 4 halts. It returns the value on top of the stack when it halts.</p>",
+   "kind": "output",
+   "concept": "A universal machine takes a program as data, which is the construction that separated hardware from software.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Push takes an operand, so it advances the counter by two. The others advance by one."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Watch the program counter: opcode 0 is followed by its operand, so after handling it the counter moves two cells, and the arithmetic opcodes move one. Advancing uniformly makes the interpreter read operands as opcodes.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is Turing's universal machine with the numbers changed. Your C program is one machine, the array you handed it describes another, and the fact that the first can carry out the second is the entire result. Part IX builds this again with a parser in front of it and calls it a language.</p>",
+   "starter": "int interp(const int *prog, int n) {\n    int stack[64], sp = 0;\n    (void)n;\n    stack[sp++] = prog[0];\n    return stack[sp - 1];\n}",
+   "tests": "#include <assert.h>\nint interp(const int *, int);\nint main(void) {\n    int p1[] = {0, 2, 0, 3, 1, 4};          /* push 2, push 3, add   */\n    assert(interp(p1, 6) == 5);\n    int p2[] = {0, 4, 0, 5, 2, 4};          /* push 4, push 5, mul   */\n    assert(interp(p2, 6) == 20);\n    int p3[] = {0, 7, 3, 1, 4};             /* push 7, dup, add      */\n    assert(interp(p3, 5) == 14);\n    int p4[] = {0, 2, 3, 2, 3, 2, 4};       /* 2, dup, mul, dup, mul */\n    assert(interp(p4, 7) == 16);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "Recursion and iteration are the same thing",
+   "brief": "<p>Any loop can be written as a recursive call and any recursive call whose result is returned directly can be written as a loop. That is not a style preference, it is why models with only recursion and models with only loops compute the same functions.</p>\n<p>Write <code>collatz_len</code> iteratively. The checks include a value whose recursive version would need thousands of frames.</p>",
+   "kind": "output",
+   "concept": "A tail call is a jump with arguments, so a language with recursion and no loops is not missing anything.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Count steps until the value reaches 1. Even halves, odd triples and adds one."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The count is the number of steps taken, so a value that is already 1 has a length of 0, and each transformation adds exactly one.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names. <code>unsigned long long</code> needs no header.</p>"
+    }
+   ],
+   "after": "<p>Nobody knows whether this function terminates for every input. It has been checked to enormous values and there is no proof, which makes it a concrete example of the thing unit 018 is about: a program whose halting nobody can decide, sitting in eight lines of C.</p>",
+   "starter": "int collatz_len(unsigned long long n) {\n    int steps = 0;\n    while (n != 1) {\n        n = n / 2;\n        steps++;\n    }\n    return steps;\n}",
+   "tests": "#include <assert.h>\nint collatz_len(unsigned long long);\nint main(void) {\n    assert(collatz_len(1) == 0);\n    assert(collatz_len(2) == 1);\n    assert(collatz_len(3) == 7);\n    assert(collatz_len(6) == 8);\n    assert(collatz_len(27) == 111);\n    assert(collatz_len(97) == 118);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "The accident",
+   "brief": "<p>A configuration format that was not meant to be a language. Each entry either sets a value or, if its argument names another entry, copies from it. Following those references is the loop, and the reference itself is the data-dependent branch.</p>\n<p>Write <code>resolve</code>, which follows a chain of references and returns the value at the end. Return -1 if the chain does not terminate within <code>n</code> steps.</p>",
+   "kind": "output",
+   "concept": "A system with a loop and a data-dependent choice is programmable by whoever supplies its input, whether or not that was the intent.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A negative entry is a value. A non-negative one is an index to follow."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees, and it will be the cycle. A chain that points back at itself never reaches a value, so a resolver with no step limit runs forever on input that is eight bytes long.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is accidental universality in its smallest form, and the bug it causes is the reason so many parsers have a depth limit that looks arbitrary. The limit is not arbitrary: without it, the input decides how long the program runs, and unit 018 proves nobody can write a checker that accepts exactly the inputs that terminate.</p>",
+   "starter": "int resolve(const int *entries, int n, int start) {\n    (void)n;\n    return entries[start];\n}",
+   "tests": "#include <assert.h>\nint resolve(const int *, int, int);\nint main(void) {\n    /* Negative is a literal value; non-negative is a reference. */\n    int a[] = {-5, 0, 1};\n    assert(resolve(a, 3, 0) == -5);\n    assert(resolve(a, 3, 1) == -5);\n    assert(resolve(a, 3, 2) == -5);\n    int b[] = {1, 0};                 /* 0 -> 1 -> 0, a cycle */\n    assert(resolve(b, 2, 0) == -1);\n    int c[] = {3, 2, 3, -9};\n    assert(resolve(c, 4, 0) == -9);\n    assert(resolve(c, 4, 1) == -9);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

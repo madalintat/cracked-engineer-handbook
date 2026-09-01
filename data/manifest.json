@@ -585,7 +585,8 @@
     "encoding"
    ],
    "neededBy": [
-    "structure"
+    "structure",
+    "universal"
    ],
    "minutes": 50
   },
@@ -683,7 +684,9 @@
     "clock-edge",
     "proving"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "universal"
+   ],
    "minutes": 55
   },
   {
@@ -697,14 +700,18 @@
    "phase": "understand",
    "accent": "copper",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
+   "ready": true,
+   "words": 1481,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "control",
+    "timing"
+   ],
    "neededBy": [
     "registers"
-   ]
+   ],
+   "minutes": 50
   },
   {
    "slug": "languages",
@@ -2627,9 +2634,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 19,
-  "words": 29027,
-  "exercises": 152,
-  "drills": 285
+  "ready": 20,
+  "words": 30508,
+  "exercises": 160,
+  "drills": 300
  }
 }

@@ -4887,6 +4887,254 @@
  },
  {
   "t": "section",
+  "slug": "universal",
+  "anchor": "what-the-equivalence-means",
+  "title": "What the equivalence means",
+  "text": "Take any Turing machine and you can write a lambda term that computes the same function. Take any lambda term and you can build a Turing machine for it. The translations are constructive: somebody wrote them down, and they are tedious rather than clever. Every model proposed since has joined the same club. Register machines. Markov algorithms. Cellular automata. Every programming language anyone has shipped. None of them can compute a function the others cannot. That is a surprising empirical fact and it is the basis of the Church-Turing thesis, which says that this shared set is what we should mean by computable. The thesis is not a theorem and cannot be one, because it connects a formal notion to an informal one. It is a claim that has survived ninety years of people trying to think of an exception.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "universal",
+  "anchor": "you-already-built-one",
+  "title": "You already built one",
+  "text": "Part II ended with a machine that fetches an instruction, decodes it through a table, and executes it. The unit on control made a point of one instruction in particular: the conditional jump, where the flags become address lines on the control memory and the table has four copies with a few cells different. That was the moment the machine became universal, and the reason is worth stating precisely. Without a data-dependent branch, the sequence of instructions executed is fixed before the machine starts, so the amount of work is decided in advance. Loading, adding and printing in a fixed order is a calculator. With one, the next instruction can depend on a value the machine computed, so a loop can run until the data says stop. That is the whole difference, and it costs two address lines and four copies of a table. The other requirement is memory that is not bounded by the design. A Turing machine's tape is infinite; a real machine's is not, which technically makes every real computer a finite-state machine with an enormous number of states. That distinction is important in a proof and useless in practice, because the number of states is around 2 to the power of the number of bits in",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "universal",
+  "anchor": "a-universal-machine-is-an-interpreter",
+  "title": "A universal machine is an interpreter",
+  "text": "Turing's word for it was universal, and the construction behind the word is one you use every day without calling it that. Most Turing machines do one job. Their table of rules is the program, and a machine that adds is a different machine from one that compares. Turing's contribution was to build a single machine whose input is a description of another machine, followed by that machine's input, and which then does whatever the described machine would have done. That is an interpreter, and the description is a program. Before this construction, machine and program were the same object; afterwards they were separate, and one piece of hardware could be sold to people who had not agreed in advance on what it would do. The stored-program computer is this idea with a budget. It also explains something about the exercises here. Writing an interpreter for a small language inside C is not a toy version of the theory, it is the theory: your C program is a universal machine, its input is a program for a different machine, and the fact that this works at all is the result. And it sets up the trap in unit 018. Once a machine can be handed a description of a machine, it can be handed a descript",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "universal",
+  "anchor": "the-bar-is-embarrassingly-low",
+  "title": "The bar is embarrassingly low",
+  "text": "Here is the part that reorganises how you look at systems. Universality does not require a rich language. It requires the ability to loop, the ability to branch on data, and access to unbounded storage. Nothing else. Whenever those three appear together, whether anybody intended them to or not, you get a universal machine. One instruction is enough. There is a machine whose only instruction subtracts one value from another and jumps if the result is not positive. It has no addition, no multiplication and no other control flow, and it computes everything. Compilers for it exist. The pattern shows up constantly and usually by accident. Conway's Game of Life is universal, and so is the one-dimensional cellular automaton rule 110, whose entire definition is a table of eight entries. The x86 instruction on its own is universal, which somebody demonstrated by writing a compiler that emits nothing else. Magic: The Gathering is universal. So are several configuration formats that were not supposed to be languages at all, and several type systems whose designers wanted them to terminate. Accidental universality is a security problem rather than a curiosity. A parser that can be driven to lo",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "universal",
+  "anchor": "what-it-does-not-give-you",
+  "title": "What it does not give you",
+  "text": "The equivalence is about which functions are computable and says nothing about what they cost. A Turing machine that sorts a million numbers has to shuffle its head back and forth across the tape, and it takes vastly longer than the same sort on a machine with random access, because moving to an arbitrary position costs a step per cell rather than one step. Both machines compute the same function. One of them finishes. So \"can this system compute it\" is almost never the question worth asking. The answer is yes, and it has been yes since 1936. The questions that matter are how long it takes, how much memory it needs, whether the answer arrives before the deadline, and whether anybody can read the program afterwards. This is why the equivalence, having been established, mostly stops being useful. Its job was to tell you that the interesting differences between machines are not about capability, and having done that, it hands the subject over to the two units that follow: what cannot be computed at all, and what can be computed but not quickly.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "universal",
+  "anchor": "the-one-thing-it-does-settle",
+  "title": "The one thing it does settle",
+  "text": "There is a practical use, and it is a good one. \"Our language cannot express that\" is almost always false, and hearing it should make you ask what is really meant. Usually one of three things. That the expression would be unreadable. That it would be slow. Or that a library does not exist and writing it is work nobody wants to do. Those are real objections, and they are objections about cost, ergonomics and effort rather than about capability. Naming them correctly changes the conversation, because a capability problem has no solution and the other three have prices.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "universal",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Universality is cheap, common and mostly uninformative. Loop, branch on data, and enough memory is the entire recipe, and systems fall into it accidentally. The interesting boundaries lie elsewhere, and the next three units draw them. What a machine can recognise with no memory at all, which turns out to be exactly the regular languages and is why your lexer is what it is. What no machine can decide however long it runs. And what is decidable and still out of reach because the running time grows faster than anyone can wait.",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
+  "slug": "universal",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These exercises are C, compiled and run for real, and they build small machines rather than reasoning about them. means your machine computed the wrong thing on a case the checks name. is the interesting one here: a machine that never halts is a correct outcome for some inputs and a bug for others, and telling those apart is the subject of unit 018.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "universal",
+  "n": 1,
+  "title": "Branch on data, or compute nothing",
+  "text": "Without a data-dependent branch the sequence of operations is fixed in advance, which is the difference between a calculator and a computer. executes a tiny program of three opcodes: 0 adds 1, 1 doubles, 2 halts. It has no jump, so the number of steps is decided before it starts. Write it. The checks confirm what it computes and, in the last case, confirm what it cannot: a program of this shape cannot loop, so it cannot do work proportional to its input.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "universal",
+  "n": 2,
+  "title": "One instruction is enough",
+  "text": "Loop, branch on data and unbounded memory is the whole recipe, and one instruction can supply all three. Subleq is a machine with a single instruction. Each instruction is three cells: subtract the value at address from the value at address , store the result at , and if that result is less than or equal to zero, jump to . Otherwise continue to the next instruction. Write , which executes one instruction and returns the new program counter. Memory is an array you may modify.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "universal",
+  "n": 3,
+  "title": "The tape",
+  "text": "Random access is not part of the definition of computation, and a model without it computes the same functions at a very different cost. A Turing machine's memory is a tape: it reads and writes the cell under the head, and it can move one cell left or right and no further. Write , which executes a rule table until it reaches state 255 or runs out of steps. A rule is looked up by state and by the symbol under the head, and it gives a symbol to write, a direction, and the next state.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "universal",
+  "n": 4,
+  "title": "Eight entries, and it computes everything",
+  "text": "Universality is not a property of rich systems, it is a property of systems with a loop and a data-dependent choice, and it arrives uninvited. Rule 110 is a cellular automaton. Each cell's next value depends on itself and its two neighbours, and the rule is the eight-bit number 110 read as a lookup table over those three bits. Write . The array wraps at both ends.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "universal",
+  "n": 5,
+  "title": "No memory, no counting",
+  "text": "Unbounded storage is the third ingredient, and the language of balanced brackets is the standard demonstration that no fixed amount of state suffices. A finite-state machine has a fixed number of states and no storage beyond them. That is enough to recognise some languages and provably not enough for others. Write , which reports whether a string of brackets is balanced, using a counter. Then read the last check, which is the point of the exercise.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "universal",
+  "n": 6,
+  "title": "The universal machine, in eighty lines",
+  "text": "A universal machine takes a program as data, which is the construction that separated hardware from software. An interpreter is a machine whose input is a description of another machine. Write one. runs a stack language of five opcodes: 0 pushes the next cell, 1 adds the top two, 2 multiplies them, 3 duplicates the top, 4 halts. It returns the value on top of the stack when it halts.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "universal",
+  "n": 7,
+  "title": "Recursion and iteration are the same thing",
+  "text": "A tail call is a jump with arguments, so a language with recursion and no loops is not missing anything. Any loop can be written as a recursive call and any recursive call whose result is returned directly can be written as a loop. That is not a style preference, it is why models with only recursion and models with only loops compute the same functions. Write iteratively. The checks include a value whose recursive version would need thousands of frames.",
+  "part": "Theory"
+ },
+ {
+  "t": "exercise",
+  "slug": "universal",
+  "n": 8,
+  "title": "The accident",
+  "text": "A system with a loop and a data-dependent choice is programmable by whoever supplies its input, whether or not that was the intent. A configuration format that was not meant to be a language. Each entry either sets a value or, if its argument names another entry, copies from it. Following those references is the loop, and the reference itself is the data-dependent branch. Write , which follows a chain of references and returns the value at the end. Return -1 if the chain does not terminate within steps.",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "universal",
+  "n": 1,
+  "title": "What do the lambda calculus, Turing machines and the general recursive functions have in common?",
+  "text": " They look nothing like each other. One substitutes text, one is a machine you could build from tin, one is a family of definitions in number theory, and none can compute a function the others cannot. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "universal",
+  "n": 2,
+  "title": "Is the Church-Turing thesis a theorem?",
+  "text": " It claims that this shared set is what we should mean by computable. It has survived ninety years of people trying to think of an exception, which is evidence rather than proof. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "universal",
+  "n": 3,
+  "title": "Which instruction made your Part II machine universal?",
+  "text": " Without a data-dependent branch the sequence of instructions is fixed before the machine starts. With one, a loop can run until the data says stop, and that is the line between a calculator and a computer. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "universal",
+  "n": 4,
+  "title": "What are the three ingredients of universality?",
+  "text": " Nothing else. Whenever those three appear together, whether anybody intended them to or not, you get a universal machine. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "universal",
+  "n": 5,
+  "title": "What was Turing's universal machine?",
+  "text": " That is an interpreter, and the description is a program. Before it, machine and program were the same object; afterwards they were separate. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "universal",
+  "n": 6,
+  "title": "What does a real computer's finite memory mean for the theory?",
+  "text": " The number of states is about 2 to the power of the number of bits in your RAM. No argument that depends on running out of them says anything about the program you are writing. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "universal",
+  "n": 7,
+  "title": "Subleq's only instruction subtracts and jumps if the result is not positive. What can it compute?",
+  "text": " It has no addition, no multiplication and no other control flow, and real compilers targeting it exist. One instruction supplies the loop, the branch and the memory access. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "universal",
+  "n": 8,
+  "title": "What is rule 110?",
+  "text": " Its entire definition is the number 110. Nothing about it was designed to compute anything, it was conjectured universal in the 1980s, and it was proved in 2004. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "universal",
+  "n": 9,
+  "title": "Why is accidental universality a security problem?",
+  "text": " A surprising number of file formats, template engines and build configurations turn out to be exactly that, without anyone deciding they should be languages. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "universal",
+  "n": 10,
+  "title": "What does the equivalence of models say about performance?",
+  "text": " A Turing machine sorting a million numbers shuffles its head across the tape and takes vastly longer than the same sort with random access. Both compute the same function; one of them finishes. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "universal",
+  "n": 11,
+  "title": "Why can a regular expression not match nested brackets?",
+  "text": " A machine with a fixed number of states can recognise up to some nesting depth and no further. The pumping lemma turns that into a proof. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "universal",
+  "n": 12,
+  "title": "Somebody says \"our language cannot express that\". What is usually meant?",
+  "text": " Those are objections about cost, ergonomics and effort. Naming them correctly changes the conversation, because a capability problem has no solution and the other three have prices. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "universal",
+  "n": 13,
+  "title": "How does recursion relate to iteration?",
+  "text": " A tail call is a jump with arguments. A language with recursion and no loops is not missing anything, which is a statement about capability rather than about which one you should write. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "universal",
+  "n": 14,
+  "title": "Does the Collatz function terminate for every input?",
+  "text": " It is a concrete example of what the next unit is about: a program whose halting nobody can decide, sitting in eight lines of C. ",
+  "part": "Theory"
+ },
+ {
+  "t": "drill",
+  "slug": "universal",
+  "n": 15,
+  "title": "What is the practical upshot of universality?",
+  "text": " The answer has been yes since 1936. What matters is how long it takes, how much memory it needs, whether it beats the deadline, and whether anybody can read it afterwards. ",
+  "part": "Theory"
+ },
+ {
+  "t": "section",
   "slug": "registers",
   "anchor": "what-a-register-actually-is",
   "title": "What a register actually is",
