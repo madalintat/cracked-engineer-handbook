@@ -975,6 +975,134 @@
  },
  {
   "t": "section",
+  "slug": "clock-edge",
+  "anchor": "two-kinds-of-logic-and-only-two",
+  "title": "Two kinds of logic, and only two",
+  "text": "",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "clock-edge",
+  "anchor": "why-the-assignments-differ",
+  "title": "Why the assignments differ",
+  "text": "",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "clock-edge",
+  "anchor": "why-the-rule-exists-rather-than-just-what-it-is",
+  "title": "Why the rule exists, rather than just what it is",
+  "text": "",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "clock-edge",
+  "anchor": "reading-it-in-the-cells",
+  "title": "Reading it in the cells",
+  "text": "",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "clock-edge",
+  "anchor": "the-latch-you-did-not-ask-for",
+  "title": "The latch you did not ask for",
+  "text": "",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "clock-edge",
+  "anchor": "what-the-reset-style-does-to-the-flop",
+  "title": "What the reset style does to the flop",
+  "text": "",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "clock-edge",
+  "anchor": "where-simulation-and-synthesis-disagree",
+  "title": "Where simulation and synthesis disagree",
+  "text": "",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
+  "slug": "clock-edge",
+  "anchor": "what-to-take-from-this",
+  "title": "What to take from this",
+  "text": "",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-edge",
+  "n": 1,
+  "title": "One character, one flip-flop",
+  "text": "Non-blocking assignment reads pre-edge values, so a chain of flops",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-edge",
+  "n": 2,
+  "title": "The hole that becomes storage",
+  "text": "A signal left unassigned on some path keeps its previous value, and",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-edge",
+  "n": 3,
+  "title": "The same hole, in a case statement",
+  "text": "An unhandled case value is an unassigned path, and every unassigned",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-edge",
+  "n": 4,
+  "title": "Which flop did you ask for",
+  "text": "Where you check the reset decides whether it is one more input on the",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-edge",
+  "n": 5,
+  "title": "Two drivers, one wire",
+  "text": "A wire is a piece of metal, and two outputs connected to it are two",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-edge",
+  "n": 6,
+  "title": "Prove it, do not test it",
+  "text": "For hardware you can sometimes replace testing with proof, and the",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-edge",
+  "n": 7,
+  "title": "An adder, proved against the operator",
+  "text": "A proof over all 256 input pairs costs the same as a proof over one.",
+  "part": "Silicon"
+ },
+ {
+  "t": "exercise",
+  "slug": "clock-edge",
+  "n": 8,
+  "title": "The gate you already built, in Verilog",
+  "text": "The netlist you drew by hand in Part II and the netlist the synthesiser",
+  "part": "Silicon"
+ },
+ {
+  "t": "section",
   "slug": "integers",
   "anchor": "the-representation-briefly",
   "title": "The representation, briefly",

@@ -411,10 +411,10 @@
    "partTitle": "Silicon",
    "accent": "rust",
    "backend": "yosys",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0
+   "ready": true,
+   "words": 1433,
+   "exercises": 8,
+   "drills": 15
   },
   {
    "slug": "proving",
@@ -2046,9 +2046,9 @@
  "counts": {
   "parts": 19,
   "units": 122,
-  "ready": 2,
-  "words": 3243,
-  "exercises": 16,
-  "drills": 30
+  "ready": 3,
+  "words": 4676,
+  "exercises": 24,
+  "drills": 45
  }
 }

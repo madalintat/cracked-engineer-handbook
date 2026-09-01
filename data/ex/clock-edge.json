@@ -1,0 +1,359 @@
+{
+ "slug": "clock-edge",
+ "backend": "yosys",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "One character, one flip-flop",
+   "brief": "<p>The starter is a two-stage shift register with the wrong assignment operator. Synthesise it and read the cell count, then change the one character that fixes it.</p>\n<p>shifts instead of collapsing. same value and removed one.</p>",
+   "kind": "property",
+   "concept": "Non-blocking assignment reads pre-edge values, so a chain of flops",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "cell-budget"
+    }
+   ],
+   "hints": [
+    "The synthesiser is not confused. It noticed both flops always hold the"
+   ],
+   "diagnose": [
+    {
+     "id": "cells",
+     "judge": "verdict",
+     "key": "cell-budget",
+     "prose": "<p>One flop, where the design needs two. Blocking assignment writes immediately, so <code>q2 = q1</code> reads the value <code>q1</code> was given on the line above rather than the value it held before the edge. Both flops end up holding <code>d</code>, they always agree, and the optimiser deletes the redundant one.</p>"
+    },
+    {
+     "id": "latch",
+     "judge": "verdict",
+     "key": "latch-inferred",
+     "prose": "<p>A latch appeared, which means some path through the block leaves a signal unassigned. Check that both statements are inside the clocked block.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names. Verilog wants a semicolon after each statement and a matching <code>end</code> for every <code>begin</code>.</p>"
+    }
+   ],
+   "after": "<p>Two flops. The blocking version was not misunderstood, it was understood exactly and found to be redundant, which is why nothing warned you.</p>",
+   "starter": "module shifter(input clk, input d, output reg q2);\n  reg q1;\n  always @(posedge clk) begin\n    q1 = d;\n    q2 = q1;\n  end\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "shifter",
+    "cells": {
+     "$_DFF_P_": 2
+    }
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 2,
+   "title": "The hole that becomes storage",
+   "brief": "<p>This block is meant to be combinational. Synthesise it and the tool will tell you what it actually built.</p>\n<p>keeping a value requires storage.</p>",
+   "kind": "property",
+   "concept": "A signal left unassigned on some path keeps its previous value, and",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "latch-inferred"
+    }
+   ],
+   "hints": [
+    "What is `y` when `a` is 0? The block does not say."
+   ],
+   "diagnose": [
+    {
+     "id": "latch",
+     "judge": "verdict",
+     "key": "latch-inferred",
+     "prose": "<p>Read the warning. When <code>a</code> is 0 the block assigns nothing to <code>y</code>, so <code>y</code> must hold whatever it had before, and holding a value is storage. The synthesiser gives you a level-sensitive latch, which has no single sampling instant and makes timing analysis much harder. Add the missing <code>else</code>, or assign a default at the top of the block.</p>"
+    },
+    {
+     "id": "budget",
+     "judge": "verdict",
+     "key": "cell-budget",
+     "prose": "<p>The latch is gone. Now check the cell count against the budget: a two-way choice is a multiplexer, and this one reduces to a single gate.</p>"
+    }
+   ],
+   "after": "<p>A latch inside <code>always_comb</code> is an error rather than a warning, which is the reason to write <code>always_comb</code> instead of <code>always @(*)</code>.</p>",
+   "starter": "module sel(input a, input b, output reg y);\n  always @(*) begin\n    if (a) y = b;\n  end\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "sel",
+    "forbid": [
+     "$_DLATCH_P_",
+     "$_DLATCH_N_"
+    ],
+    "maxCells": 6
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 3,
+   "title": "The same hole, in a case statement",
+   "brief": "<p>A two-bit selector with four possible values, and a <code>case</code> that handles two of them. Count the latches before you run it, then check your count.</p>\n<p>output bit becomes its own latch.</p>",
+   "kind": "property",
+   "concept": "An unhandled case value is an unassigned path, and every unassigned",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "latch-inferred"
+    }
+   ],
+   "hints": [
+    "The output is four bits wide, but only some of them get a latch. Which?"
+   ],
+   "diagnose": [
+    {
+     "id": "latch",
+     "judge": "verdict",
+     "key": "latch-inferred",
+     "prose": "<p>The <code>case</code> covers <code>00</code> and <code>01</code> and says nothing about <code>10</code> or <code>11</code>, so <code>y</code> holds its previous value on those inputs. Note the count: the synthesiser inferred a latch for each output bit that actually needed one, not one for the whole vector. A <code>default</code> branch closes every path at once.</p>"
+    },
+    {
+     "id": "budget",
+     "judge": "verdict",
+     "key": "cell-budget",
+     "prose": "<p>No latches now. Check the cell count: a full four-way decode of a two-bit input should be small.</p>"
+    }
+   ],
+   "after": "<p><code>default</code> is not a fallback for values you forgot. It is the statement that makes the block total, and a combinational block must be total.</p>",
+   "starter": "module dec(input [1:0] s, output reg [3:0] y);\n  always @(*) begin\n    case (s)\n      2'b00: y = 4'b0001;\n      2'b01: y = 4'b0010;\n    endcase\n  end\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "dec",
+    "forbid": [
+     "$_DLATCH_P_",
+     "$_DLATCH_N_"
+    ],
+    "maxCells": 16
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 4,
+   "title": "Which flop did you ask for",
+   "brief": "<p>Both of these counters are correct designs, and they synthesise to different devices. The starter uses a synchronous reset. The specification wants the asynchronous one.</p>\n<p>flop or a separate pin on a different flop.</p>",
+   "kind": "property",
+   "concept": "Where you check the reset decides whether it is one more input on the",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "cell-budget"
+    }
+   ],
+   "hints": [
+    "The reset has to be in the sensitivity list, not only in the body."
+   ],
+   "diagnose": [
+    {
+     "id": "cells",
+     "judge": "verdict",
+     "key": "cell-budget",
+     "prose": "<p>Read the cell name in the message. A reset checked inside a block that wakes only on the clock is ordinary data, and synthesises to <code>$_SDFF_PP0_</code>, a flop with a synchronous reset input. Putting the reset in the sensitivity list makes it asynchronous, and that is a physically different device with its own reset pin: <code>$_DFF_PP0_</code>.</p>"
+    },
+    {
+     "id": "latch",
+     "judge": "verdict",
+     "key": "latch-inferred",
+     "prose": "<p>A latch appeared, which means a path through the block assigns nothing to <code>q</code>. Both branches of the <code>if</code> must assign it.</p>"
+    }
+   ],
+   "after": "<p>An asynchronous reset acts without waiting for a clock, which is what you want at power-on. Its release still has to be synchronised, or different flops leave reset on different cycles.</p>",
+   "starter": "module counter(input clk, input rst, output reg [3:0] q);\n  always @(posedge clk) begin\n    if (rst) q <= 4'b0;\n    else     q <= q + 1;\n  end\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "counter",
+    "cells": {
+     "$_DFF_PP0_": 4
+    },
+    "maxCells": 40
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 5,
+   "title": "Two drivers, one wire",
+   "brief": "<p>In software, assigning to a variable twice is fine and the second wins. Here it is not, and the reason is physical.</p>\n<p>devices fighting over the same voltage. the module is supposed to do.</p>",
+   "kind": "property",
+   "concept": "A wire is a piece of metal, and two outputs connected to it are two",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "multi-driver"
+    }
+   ],
+   "hints": [
+    "Only one of the two assignments should exist. Which one depends on what"
+   ],
+   "diagnose": [
+    {
+     "id": "driver",
+     "judge": "verdict",
+     "key": "multi-driver",
+     "prose": "<p>Read the warning. Two continuous assignments drive <code>y</code>, so in hardware two gate outputs are wired together. If they disagree, one pulls the wire high while the other pulls it low, and the result is a short from the supply to ground: undefined logically and destructive physically.</p>"
+    },
+    {
+     "id": "budget",
+     "judge": "verdict",
+     "key": "cell-budget",
+     "prose": "<p>One driver now. Check the cell count against the budget.</p>"
+    }
+   ],
+   "after": "<p>This is the same rule your Part II checker enforced when it refused a control word with two modules enabled onto the bus. It has not changed. It has only moved into a language that lets you write it.</p>",
+   "starter": "module pick(input a, input b, output y);\n  assign y = a;\n  assign y = b;\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "pick",
+    "maxCells": 4
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 6,
+   "title": "Prove it, do not test it",
+   "brief": "<p>Write a multiplexer using only AND, OR and NOT. The checker does not run test vectors against it. It proves that your design and the reference compute the same function for every possible input.</p>\n<p>tool that does it ships in the same package as the synthesiser. starter selects.</p>",
+   "kind": "property",
+   "concept": "For hardware you can sometimes replace testing with proof, and the",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "When `s` is 1 the output should follow `b`. Check which input your"
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>The solver found inputs where your design and the reference disagree, and it did not need to be told which inputs to try. Work out by hand what your expression gives for <code>s = 1</code>, then compare it against <code>s ? b : a</code>.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the line the parser names. Continuous assignments need <code>assign</code> and a semicolon.</p>"
+    }
+   ],
+   "after": "<p>This is exhaustive over every input, which for a three-input function is eight cases and for a 32-bit adder is far more than you could ever enumerate. The solver does not enumerate them either.</p>",
+   "starter": "module mux(input a, input b, input s, output y);\n  assign y = (a & s) | (b & ~s);\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "mux",
+    "gold": "module gold(input a, input b, input s, output y); assign y = s ? b : a; endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 7,
+   "title": "An adder, proved against the operator",
+   "brief": "<p>Same idea at a width where testing every case would be tedious. Build a 4-bit adder with a carry out, and the checker proves it against <code>a + b</code>.</p>\n<p>added, or the carry has nowhere to go.</p>",
+   "kind": "property",
+   "concept": "A proof over all 256 input pairs costs the same as a proof over one.",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "The sum is five bits wide. Both operands need widening before they are"
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>Your design disagrees with <code>a + b</code> on some inputs. The most common cause is adding two four-bit values and assigning to a five-bit result: the addition is performed at four bits and the carry is lost before the widening happens. Widen the operands first.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the named line. A concatenation is written with braces, as in <code>{1'b0, a}</code>.</p>"
+    }
+   ],
+   "after": "<p>Yosys proved this without running a single vector. The same command scales to designs where exhaustive testing stopped being possible a long time ago.</p>",
+   "starter": "module adder(input [3:0] a, input [3:0] b, output [4:0] s);\n  assign s = a ^ b;\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "adder",
+    "gold": "module gold(input [3:0] a, input [3:0] b, output [4:0] s); assign s = a + b; endmodule"
+   },
+   "lang": "verilog"
+  },
+  {
+   "n": 8,
+   "title": "The gate you already built, in Verilog",
+   "brief": "<p>Part II had you build XOR from NAND gates. Write it here in Verilog, structurally, using only NAND primitives, and the checker proves it against the <code>^</code> operator.</p>\n<p>produces are the same kind of object. of the next two gates.</p>",
+   "kind": "property",
+   "concept": "The netlist you drew by hand in Part II and the netlist the synthesiser",
+   "backend": "yosys",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "sat-fail"
+    }
+   ],
+   "hints": [
+    "The four-gate solution starts with `n1 = ~(a & b)` and feeds `n1` to both"
+   ],
+   "diagnose": [
+    {
+     "id": "sat",
+     "judge": "verdict",
+     "key": "sat-fail",
+     "prose": "<p>Your design does not agree with <code>a ^ b</code>. Work out the truth table of what you wrote before changing it. XOR is 1 when the inputs differ and 0 when they agree.</p>"
+    },
+    {
+     "id": "budget",
+     "judge": "verdict",
+     "key": "cell-budget",
+     "prose": "<p>Correct, and over the cell budget. The four-NAND solution shares one intermediate value between two gates rather than inverting both inputs separately.</p>"
+    },
+    {
+     "id": "syntax",
+     "judge": "verdict",
+     "key": "syntax-error",
+     "prose": "<p>Read the named line. Each <code>wire</code> needs declaring before it is assigned.</p>"
+    }
+   ],
+   "after": "<p>The same four gates you found by hand, now proved rather than checked against a table you wrote yourself.</p>",
+   "starter": "module xorgate(input a, input b, output y);\n  assign y = a & b;\nendmodule",
+   "tests": "",
+   "spec": {
+    "top": "xorgate",
+    "gold": "module gold(input a, input b, output y); assign y = a ^ b; endmodule"
+   },
+   "lang": "verilog"
+  }
+ ]
+}

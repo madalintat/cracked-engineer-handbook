@@ -1,0 +1,185 @@
+{
+ "slug": "clock-edge",
+ "drills": [
+  {
+   "n": 1,
+   "q": "Two flops in one clocked block, assigned with `<=`. What do you get?",
+   "options": [
+    "A shift register: the second flop takes the value the first held before",
+    "One flop, because the optimiser merges them",
+    "Two flops holding the same value",
+    "Undefined, because the order of the assignments is not specified"
+   ],
+   "correct": 0,
+   "why": "<p>Non-blocking assignment evaluates every right side before writing any left side, so both read pre-edge values. That models real flops, which all sample at the edge and drive shortly after.</p>"
+  },
+  {
+   "n": 2,
+   "q": "The same block written with `=` instead synthesises to how many flip-flops?",
+   "options": [
+    "Two, since the code describes two registers",
+    "One, because both would always hold the same value and the optimiser",
+    "Zero, because blocking assignment is combinational",
+    "It fails to synthesise"
+   ],
+   "correct": 1,
+   "why": "<p>Measured: two <code>$_DFF_P_</code> with <code>&lt;=</code> and one with <code>=</code>. Blocking assignment writes immediately, so the second statement reads the value just written rather than the value held before the edge.</p>"
+  },
+  {
+   "n": 3,
+   "q": "Why does the language leave the execution order of two blocks on the same edge undefined?",
+   "options": [
+    "To give simulators freedom to optimise",
+    "Because real hardware has no such order: the flops are separate devices",
+    "Because defining it would break backward compatibility",
+    "It is defined, and simulators that disagree are non-conforming"
+   ],
+   "correct": 1,
+   "why": "<p>The undefinedness is descriptive rather than permissive. Non-blocking assignment does not pick an order; it makes the order irrelevant by splitting evaluation from assignment into two phases.</p>"
+  },
+  {
+   "n": 4,
+   "q": "What makes an inferred latch appear?",
+   "options": [
+    "Using `always @(*)` instead of `always_comb`",
+    "A signal that some path through a combinational block leaves unassigned",
+    "Assigning the same signal in two places",
+    "Reading a signal before it is assigned"
+   ],
+   "correct": 1,
+   "why": "<p>A signal not assigned on some path keeps its previous value, and keeping a value requires storage. The synthesiser supplies storage in the form of a level-sensitive latch.</p>"
+  },
+  {
+   "n": 5,
+   "q": "An `always @(*)` block assigns a four-bit output, and a `case` leaves two of its four selector values unhandled. What does yosys report?",
+   "options": [
+    "One latch for the whole vector",
+    "A latch for each output bit that needed one, named individually",
+    "A syntax error",
+    "Nothing, because `case` has an implicit default"
+   ],
+   "correct": 1,
+   "why": "<p>Measured: two <code>$_DLATCH_N_</code> cells for that design. Latches are inferred per signal, not per block, and the warning names each one.</p>"
+  },
+  {
+   "n": 6,
+   "q": "Why is an inferred latch usually worse than a flip-flop?",
+   "options": [
+    "It uses more transistors",
+    "It is transparent while its enable is high, so it has no single sampling",
+    "It cannot be reset",
+    "It only works at low clock frequencies"
+   ],
+   "correct": 1,
+   "why": "<p>The lack of a single sampling edge is the problem. It also makes the circuit sensitive to glitches on the enable, which a clocked flop would simply not see.</p>"
+  },
+  {
+   "n": 7,
+   "q": "What does `always_comb` buy you over `always @(*)`?",
+   "options": [
+    "It generates faster logic",
+    "It derives the sensitivity list, which `always @(*)` does not",
+    "It states your intent, so a latch inferred inside it is an error rather",
+    "It allows non-blocking assignment in combinational logic"
+   ],
+   "correct": 2,
+   "why": "<p>Both derive the sensitivity list. The difference is that <code>always_comb</code> declares the block is meant to be combinational, which gives the tool something to check against.</p>"
+  },
+  {
+   "n": 8,
+   "q": "`if (rst) q <= 0;` inside `always @(posedge clk)` synthesises to which cell?",
+   "options": [
+    "`$_DFF_P_` with extra logic on the data input",
+    "`$_SDFF_PP0_`, a flop with a synchronous reset input",
+    "`$_DFF_PP0_`, a flop with an asynchronous reset pin",
+    "`$_DLATCH_P_`"
+   ],
+   "correct": 1,
+   "why": "<p>A reset checked inside a block that wakes only on the clock is ordinary data, so it becomes a reset input on the same flop. Measured.</p>"
+  },
+  {
+   "n": 9,
+   "q": "Moving the reset into the sensitivity list, as `always @(posedge clk or posedge rst)`, changes what?",
+   "options": [
+    "Nothing, the two are equivalent",
+    "The flop itself: it becomes `$_DFF_PP0_`, a physically different device",
+    "Only the simulation behaviour",
+    "It introduces a latch"
+   ],
+   "correct": 1,
+   "why": "<p>Measured, and it is the point of the exercise: two correct designs that synthesise to different devices. You cannot tell them apart by behaviour in a simulator; you can tell instantly by reading the cell.</p>"
+  },
+  {
+   "n": 10,
+   "q": "Why does an asynchronous reset still need its release synchronised?",
+   "options": [
+    "Because it deasserts at an arbitrary moment, and different flops would",
+    "Because asynchronous resets are not supported by most FPGAs",
+    "Because the reset signal is slower than the clock",
+    "It does not; that is the point of making it asynchronous"
+   ],
+   "correct": 0,
+   "why": "<p>Asserting without a clock is exactly what you want at power-on. Deasserting without one is not, because the recovery and removal timing is not met uniformly across the design.</p>"
+  },
+  {
+   "n": 11,
+   "q": "`always @(a) y = a & b;` What is the disagreement?",
+   "options": [
+    "The simulator and the synthesiser both build an AND gate",
+    "Simulation leaves `y` stale when only `b` changes; synthesis ignores the",
+    "Synthesis reports an error",
+    "A latch is inferred for `y`"
+   ],
+   "correct": 1,
+   "why": "<p>Measured: it synthesises to a single <code>$_AND_</code>. The hardware is right and the simulation is wrong, which produces the worst class of bug: it worked in simulation and failed on the board.</p>"
+  },
+  {
+   "n": 12,
+   "q": "Two continuous assignments drive the same wire. Why is that worse than a double assignment in software?",
+   "options": [
+    "It is not; the second assignment simply wins",
+    "A wire is metal, so two outputs on it fight over the voltage and can",
+    "It causes a race that resolves randomly at each clock edge",
+    "It infers a latch to arbitrate between them"
+   ],
+   "correct": 1,
+   "why": "<p>The failure is physical rather than logical. This is the same rule your Part II checker enforced when it refused a control word that enabled two modules onto the bus at once.</p>"
+  },
+  {
+   "n": 13,
+   "q": "`equiv_simple` proves a design matches a reference. Over what?",
+   "options": [
+    "The test vectors you supply",
+    "A random sample of the input space",
+    "Every possible input, without enumerating them",
+    "The inputs reachable from the reset state"
+   ],
+   "correct": 2,
+   "why": "<p>It is a satisfiability question, not a simulation. The solver looks for any assignment that makes the two disagree, and failing to find one is a proof that none exists.</p>"
+  },
+  {
+   "n": 14,
+   "q": "When the equivalence check fails, what has the tool found?",
+   "options": [
+    "That the design does not synthesise",
+    "At least one input assignment where the two designs produce different",
+    "That the design is slower than the reference",
+    "That the two use different numbers of cells"
+   ],
+   "correct": 1,
+   "why": "<p>It reports unproven equivalence cells. Cell count is irrelevant to equivalence: two designs with wildly different cell counts can be proved identical in function.</p>"
+  },
+  {
+   "n": 15,
+   "q": "What single question is behind blocking-versus-non-blocking, the inferred latch, and the choice of reset?",
+   "options": [
+    "Which optimisation level the synthesiser is using",
+    "Whether the design meets timing",
+    "Which of the two kinds of logic, combinational or sequential, this code",
+    "Whether the code is portable across vendors"
+   ],
+   "correct": 2,
+   "why": "<p>Each bug is that question answered accidentally rather than deliberately. Synthesising the design and reading the cells answers it precisely, every time, and costs nothing.</p>"
+  }
+ ]
+}

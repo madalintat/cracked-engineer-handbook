@@ -913,6 +913,56 @@ def validate_godbolt(exercises, where):
     return problems
 
 
+def validate_yosys(exercises, where):
+    """Synthesise every yosys starter and solution for real.
+
+    Runs assets/yosys-check.js, which the browser worker also imports. One
+    implementation of what counts as a latch, not two that can drift.
+    """
+    import subprocess, tempfile
+    items = [{
+        "n": e["n"], "title": e["title"], "spec": e["spec"],
+        "starter": e["starter"], "solution": e["solution"],
+        "want": [x["key"] for x in e["expect"] if x["judge"] == "verdict"],
+    } for e in exercises if e["backend"] == "yosys"]
+    if not items:
+        return []
+
+    with tempfile.TemporaryDirectory() as d:
+        jp, op = Path(d) / "p.json", Path(d) / "out.json"
+        jp.write_text(json.dumps({"items": items}))
+        try:
+            r = subprocess.run(
+                ["node", str(ROOT / "validate_yosys.mjs"), str(jp), str(op)],
+                capture_output=True, text=True, timeout=900, cwd=ROOT)
+        except FileNotFoundError:
+            return [f"{where}: --validate needs node on PATH"]
+        except subprocess.TimeoutExpired:
+            return [f"{where}: synthesis did not finish in fifteen minutes"]
+        if r.returncode != 0 or not op.exists():
+            tail = (r.stderr.strip() or r.stdout.strip())[-500:]
+            return [f"{where}: the synthesiser failed: {tail}"]
+        results = json.loads(op.read_text())
+
+    problems = []
+    for res in results:
+        w = f"{where} ex{res['n']} ({res['title']})"
+        if res["starterVerdict"] == "unavailable" or res["solutionVerdict"] == "unavailable":
+            problems.append(f"{w}: the synthesiser could not run: "
+                            f"{res['starterMessage'][:200]}")
+            continue
+        if res["want"] and res["starterVerdict"] not in res["want"]:
+            problems.append(
+                f"{w}: starter gives {res['starterVerdict']!r}, @expect declares "
+                f"{' or '.join(res['want'])!r}. "
+                f"({res['starterMessage'][:120]})")
+        if res["solutionVerdict"] != "ok":
+            problems.append(
+                f"{w}: solution does not pass: {res['solutionVerdict']} "
+                f"({res['solutionMessage'][:160]})")
+    return problems
+
+
 def run_validate():
     """Every backend, every exercise. Per-backend pools, not one shared pool:
     a single pool of four would queue hundreds of local simulator checks behind
@@ -936,6 +986,12 @@ def run_validate():
                 problems += validate_sim(group, where)
                 checked += len(group)
             print(f"  sim      {len(items):3} exercises checked")
+        elif backend == "yosys":
+            for where in sorted({w for w, _ in items}):
+                group = [e for w, e in items if w == where]
+                problems += validate_yosys(group, where)
+                checked += len(group)
+            print(f"  yosys    {len(items):3} exercises checked (yosys 0.68)")
         elif backend == "godbolt":
             for where in sorted({w for w, _ in items}):
                 group = [e for w, e in items if w == where]
