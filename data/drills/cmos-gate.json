@@ -1,0 +1,185 @@
+{
+ "slug": "cmos-gate",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What does the pull-up network of a static CMOS gate consist of?",
+   "options": [
+    "PMOS transistors, between the supply and the output",
+    "NMOS transistors, between the supply and the output",
+    "A resistor to the supply",
+    "Whichever flavour gives the fewest transistors"
+   ],
+   "correct": 0,
+   "why": "<p>Each network is built from the flavour that delivers its level cleanly. PMOS carries a high, NMOS carries a low, and the reverse arrangement cannot finish the job.</p>"
+  },
+  {
+   "n": 2,
+   "q": "For every input combination, how many of the two networks must conduct?",
+   "options": [
+    "Exactly one",
+    "At least one",
+    "At most one",
+    "It depends on the gate"
+   ],
+   "correct": 0,
+   "why": "<p>Both is a direct path from supply to ground through the gate. Neither leaves the output holding whatever charge is on the wire, drifting under leakage. Exactly one is the whole discipline.</p>"
+  },
+  {
+   "n": 3,
+   "q": "Series in the pull-down network corresponds to what in the pull-up?",
+   "options": [
+    "Parallel",
+    "Series",
+    "It depends on the function",
+    "Nothing; the networks are designed independently"
+   ],
+   "correct": 0,
+   "why": "<p>The two networks are complements, so the structures exchange. You already know this as De Morgan's law. Here it is not an identity, it is an instruction about where to put wires.</p>"
+  },
+  {
+   "n": 4,
+   "q": "How many transistors is an inverter?",
+   "options": [
+    "2",
+    "4",
+    "1",
+    "6"
+   ],
+   "correct": 0,
+   "why": "<p>One of each flavour, gates tied together, drains tied together. It is the cheapest possible logic gate, and the fact that the cheapest gate inverts is the subject of the unit.</p>"
+  },
+  {
+   "n": 5,
+   "q": "Why can you not build AND directly as one static CMOS gate?",
+   "options": [
+    "The truth table has too many rows",
+    "It would need a pull-up that conducts when its inputs are high, and PMOS",
+    "AND needs three inputs",
+    "You can, but it is slower"
+   ],
+   "correct": 1,
+   "why": "<p>A pull-up made of PMOS conducts on low inputs, so any gate built this way inverts. There is no arrangement in the standard configuration that comes out non-inverting.</p>"
+  },
+  {
+   "n": 6,
+   "q": "A two-input NAND and a two-input AND cost how many transistors?",
+   "options": [
+    "4 and 6",
+    "4 and 4",
+    "6 and 4",
+    "2 and 4"
+   ],
+   "correct": 0,
+   "why": "<p>AND is NAND with an inverter on the end: fifty per cent more transistors and twice the delay. In silicon NAND is the primitive and AND is derived, which is the reverse of the Boolean algebra ordering.</p>"
+  },
+  {
+   "n": 7,
+   "q": "Relative to the silicon, the textbook ordering that treats AND and OR as fundamental is:",
+   "options": [
+    "Correct, and NAND is a convenient compound",
+    "Backwards, because the inverting gates are the cheap ones",
+    "Irrelevant, since all gates cost the same",
+    "Correct for CMOS and backwards for other technologies"
+   ],
+   "correct": 1,
+   "why": "<p>Universality alone does not choose NAND over NOR, because both are universal. Cheapness does, and cheapness is a fact about the fabrication technology rather than about logic.</p>"
+  },
+  {
+   "n": 8,
+   "q": "Why is a NOR gate worse than a NAND gate with the same input count?",
+   "options": [
+    "It needs more transistors",
+    "Its series stack is made of the slower flavour, which must also be wider",
+    "It has more gate delays",
+    "Its truth table is larger"
+   ],
+   "correct": 1,
+   "why": "<p>Both are four transistors and one stage. NAND puts its NMOS in series and NOR puts its PMOS in series, and PMOS is both slower and wider, so a NOR stack costs twice on both counts.</p>"
+  },
+  {
+   "n": 9,
+   "q": "What is bubble pushing?",
+   "options": [
+    "Moving an inversion across a De Morgan boundary, which can delete",
+    "Removing bubbles from a schematic to make it readable",
+    "Adding inverters to balance path delays",
+    "A layout technique for reducing capacitance"
+   ],
+   "correct": 0,
+   "why": "<p>Rewriting <code>NOT(a) OR NOT(b)</code> as <code>NOT(a AND b)</code> takes ten transistors down to four. A synthesis tool does this thousands of times in a design, which is why a netlist looks nothing like the source.</p>"
+  },
+  {
+   "n": 10,
+   "q": "Why does a real netlist contain far more NANDs and NORs than the source mentioned?",
+   "options": [
+    "Synthesis rewrites logic into whatever the cell library makes cheap, and",
+    "The synthesiser cannot represent AND",
+    "NAND simulates faster",
+    "It is an artefact of the file format"
+   ],
+   "correct": 0,
+   "why": "<p>It is the same fact seen from the tool's side. A designer needing four inputs ANDed builds a tree of NANDs and NORs whose inversions cancel, and the tool does the same thing automatically.</p>"
+  },
+  {
+   "n": 11,
+   "q": "<code>NOT((a AND b) OR c)</code> built as a single CMOS gate costs how many transistors?",
+   "options": [
+    "6",
+    "14",
+    "8",
+    "4"
+   ],
+   "correct": 0,
+   "why": "<p>Three literals means three in the pull-down and three in the pull-up. Built from discrete AND, OR and NOT gates the same function costs fourteen and three gate delays instead of one.</p>"
+  },
+  {
+   "n": 12,
+   "q": "Why do gates have a maximum fan-in of about four?",
+   "options": [
+    "Each transistor in a series stack adds resistance, so deeper stacks get",
+    "The pull-up network runs out of supply voltage",
+    "Layout rules forbid more",
+    "Simulation time grows too quickly"
+   ],
+   "correct": 0,
+   "why": "<p>It is why an eight-input NAND is not one gate but a tree of smaller ones, and why the fan-in limit shows up as a shape in synthesised logic.</p>"
+  },
+  {
+   "n": 13,
+   "q": "What problem does a transmission gate solve?",
+   "options": [
+    "It amplifies a weak signal",
+    "It passes a full-swing level in either direction, which neither flavour",
+    "It reduces leakage",
+    "It provides isolation between clock domains"
+   ],
+   "correct": 1,
+   "why": "<p>One NMOS passes a weak high and one PMOS passes a weak low. In parallel with complementary gate signals, each covers the other's weakness.</p>"
+  },
+  {
+   "n": 14,
+   "q": "A two-way multiplexer costs roughly how many transistors, built each way?",
+   "options": [
+    "Six from transmission gates, fourteen from NAND gates",
+    "Six either way",
+    "Fourteen from transmission gates, six from NAND gates",
+    "Four from transmission gates, eight from NAND gates"
+   ],
+   "correct": 0,
+   "why": "<p>Both are correct designs and only one is what goes on a chip. Part II builds the gate version, which is the right thing to build while learning that one primitive reaches everything.</p>"
+  },
+  {
+   "n": 15,
+   "q": "Once a static CMOS gate has settled, what current flows through it?",
+   "options": [
+    "Only leakage, because exactly one network conducts and it connects the",
+    "A steady current set by the pull-up resistance",
+    "None at all",
+    "Current proportional to the clock frequency"
+   ],
+   "correct": 0,
+   "why": "<p>This is why CMOS displaced everything before it. The cost is the transition, which is the switching energy from the last unit, plus the leakage that the last unit also warned about.</p>"
+  }
+ ]
+}

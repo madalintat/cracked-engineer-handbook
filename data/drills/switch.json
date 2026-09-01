@@ -1,0 +1,185 @@
+{
+ "slug": "switch",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What does the oxide in a MOSFET do?",
+   "options": [
+    "It insulates the gate from the silicon, so no current flows through the gate",
+    "It conducts current from the gate into the channel",
+    "It protects the silicon from contamination during manufacture",
+    "It sets the threshold voltage"
+   ],
+   "correct": 0,
+   "why": "<p>The gate is not connected to what it controls. That is the structural fact every convenient property of CMOS logic follows from, and it is why one gate can drive another at no static cost.</p>"
+  },
+  {
+   "n": 2,
+   "q": "With the gate at zero volts, why does no current flow from source to drain?",
+   "options": [
+    "The channel has too much resistance",
+    "The path crosses two junctions back to back, and one of them blocks",
+    "The oxide blocks it",
+    "The source and drain are not connected to anything"
+   ],
+   "correct": 1,
+   "why": "<p>Two islands of one doping in a body of the other make two junctions in series facing opposite ways. There is no direction you can push that both will allow.</p>"
+  },
+  {
+   "n": 3,
+   "q": "What is the threshold voltage?",
+   "options": [
+    "The gate voltage at which the surface of the body inverts and a channel forms",
+    "The maximum voltage the gate can take before the oxide breaks down",
+    "The voltage across the channel when the transistor is on",
+    "The supply voltage of the circuit"
+   ],
+   "correct": 0,
+   "why": "<p>Below it, no bridge. Above it, a bridge. It is the voltage at which the gate's field has pulled enough minority carriers to the surface that the surface behaves like the islands on either side of it.</p>"
+  },
+  {
+   "n": 4,
+   "q": "Below the threshold voltage, the drain current is:",
+   "options": [
+    "Exactly zero",
+    "Small and falling exponentially, never reaching zero",
+    "Constant at a small value set by the process",
+    "Rising, but too slowly to matter"
+   ],
+   "correct": 1,
+   "why": "<p>This is the whole difficulty. The switch does not open, it becomes very resistive, and how quickly it does that is measured in millivolts of gate voltage per decade of current.</p>"
+  },
+  {
+   "n": 5,
+   "q": "What sets the floor on the subthreshold slope?",
+   "options": [
+    "Thermal energy divided by charge, so it is physics rather than",
+    "The thickness of the gate oxide",
+    "The purity of the silicon",
+    "The width of the transistor"
+   ],
+   "correct": 0,
+   "why": "<p>It is <code>kT/q</code> times the natural log of ten, about 60 millivolts per decade at room temperature. No process improvement moves it, which is why the responses have all been structural.</p>"
+  },
+  {
+   "n": 6,
+   "q": "At 60 mV per decade, lowering the threshold by 100 mV multiplies off-current by roughly:",
+   "options": [
+    "1.7",
+    "10",
+    "46",
+    "100"
+   ],
+   "correct": 2,
+   "why": "<p>A hundred divided by sixty is 1.67 decades, and ten to that is about 46. Computing this is the second exercise, and the number is why lowering the supply voltage stopped being possible.</p>"
+  },
+  {
+   "n": 7,
+   "q": "An NMOS transistor passes which level cleanly?",
+   "options": [
+    "A low",
+    "A high",
+    "Both equally",
+    "Neither, without a pull-up resistor"
+   ],
+   "correct": 0,
+   "why": "<p>Trying to pass a high, its source terminal rises with the output, so its own gate-to-source voltage falls, and it shuts itself off a threshold short of the supply.</p>"
+  },
+  {
+   "n": 8,
+   "q": "Why are pull-up networks built from PMOS rather than NMOS?",
+   "options": [
+    "PMOS is faster",
+    "It is a convention inherited from older logic families",
+    "An NMOS pull-up cannot deliver a full high, because it turns itself off",
+    "PMOS uses less area"
+   ],
+   "correct": 2,
+   "why": "<p>It is the transistor refusing rather than a designer choosing. PMOS is in fact the slower of the two, and it is used for pull-up anyway because it is the one that can finish the job.</p>"
+  },
+  {
+   "n": 9,
+   "q": "Why must a PMOS transistor be made wider than an NMOS one for the same drive?",
+   "options": [
+    "Its carriers move more slowly, so it needs more width to pass the same current",
+    "It has a higher threshold voltage",
+    "Its oxide is thicker",
+    "To balance the layout visually"
+   ],
+   "correct": 0,
+   "why": "<p>And a wider transistor presents more capacitance to whatever drives it, so stacking PMOS in series costs twice: once in speed and once in load. That is the fact that makes NAND cheap and AND expensive.</p>"
+  },
+  {
+   "n": 10,
+   "q": "Charging a gate capacitance to V and discharging it again takes about:",
+   "options": [
+    "<code>C*V</code>",
+    "<code>C*V*V</code>",
+    "<code>C*V*V/2</code>",
+    "<code>V*V/C</code>"
+   ],
+   "correct": 1,
+   "why": "<p>The supply moves a charge of <code>C*V</code> through a drop of <code>V</code>. Half of that ends up stored in the capacitor and the other half is dissipated in the transistor doing the charging, which is why the stored energy is half the delivered energy.</p>"
+  },
+  {
+   "n": 11,
+   "q": "Why did gate oxide tunnelling force a change of material?",
+   "options": [
+    "At about a nanometre the insulator was five atoms thick and electrons",
+    "Silicon dioxide melts at the temperatures modern chips reach",
+    "Thinner oxide made the threshold voltage unstable",
+    "The material was too expensive at scale"
+   ],
+   "correct": 0,
+   "why": "<p>A physically thicker layer of a higher dielectric constant gives the same capacitance with far less tunnelling. The switch to hafnium oxide with a metal gate is a leakage fix, not a speed improvement.</p>"
+  },
+  {
+   "n": 12,
+   "q": "The fin, and later the gate wrapped around the channel, exist mainly to:",
+   "options": [
+    "Increase drive current",
+    "Give the gate more control of the channel so the transistor turns off properly",
+    "Reduce manufacturing cost",
+    "Allow higher supply voltages"
+   ],
+   "correct": 1,
+   "why": "<p>All of the structural changes since 45 nm are about restoring electrostatic control. They improve speed as a side effect and they were adopted because transistors had stopped switching off.</p>"
+  },
+  {
+   "n": 13,
+   "q": "Leakage and temperature interact how?",
+   "options": [
+    "Leakage rises with temperature, and leakage is power, which raises",
+    "Leakage falls with temperature as carriers scatter more",
+    "They are independent",
+    "Leakage rises only above the rated junction temperature"
+   ],
+   "correct": 0,
+   "why": "<p>It is a feedback loop. Within what the package can remove it settles at some temperature. Outside that, it does not settle.</p>"
+  },
+  {
+   "n": 14,
+   "q": "First-order, the propagation delay of a gate is proportional to:",
+   "options": [
+    "Its width",
+    "Its on-resistance times the capacitance it drives",
+    "The supply voltage",
+    "The number of inputs it has"
+   ],
+   "correct": 1,
+   "why": "<p>About <code>ln(2)</code> times <code>R</code> times <code>C</code>, to the halfway point. Making a transistor wider lowers its resistance and raises the capacitance it presents, so speed moves from this gate to the one driving it.</p>"
+  },
+  {
+   "n": 15,
+   "q": "Static power is different from dynamic power because:",
+   "options": [
+    "It is larger",
+    "It is spent whether or not the chip is doing any work",
+    "It depends on the clock frequency",
+    "It only occurs during transitions"
+   ],
+   "correct": 1,
+   "why": "<p>Dynamic power is paid per transition and stops when the clock stops. Static power is the leakage of every transistor all the time, which is why a chip that is idle still has to be cooled.</p>"
+  }
+ ]
+}

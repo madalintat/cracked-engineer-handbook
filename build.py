@@ -1144,7 +1144,7 @@ CLIENT_FILES = ("assets/workbench.js", "assets/sim.js", "assets/yosys-check.js")
 
 # Markdown outside content/ that is still prose someone reads. The design doc
 # carried 48 em dashes because nothing looked at it.
-DOC_GLOBS = ("docs/*.md", "docs/superpowers/specs/*.md")
+DOC_GLOBS = ("docs/*.md", "docs/superpowers/specs/*.md", "README.md")
 
 
 def lint_docs():

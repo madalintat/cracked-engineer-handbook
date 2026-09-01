@@ -855,6 +855,502 @@
  },
  {
   "t": "section",
+  "slug": "switch",
+  "anchor": "what-is-actually-down-there",
+  "title": "What is actually down there",
+  "text": "Start with a slab of silicon doped to have spare positive carriers, called the body. Diffuse two islands of the opposite doping into its surface, a short distance apart, and call them the source and the drain. Grow a thin layer of silicon dioxide over the gap. Lay a conductor on top of that. The gate is the only part not touching the silicon. That gap is about a nanometre of glass, and it is the whole design. Now hold the gate at zero volts and try to push current from source to drain. The path runs from one island, through the body, into the other island, and those are two junctions back to back. Whichever direction you push, one of them is blocking. No current. The switch is open. Raise the gate voltage instead. The gate is a conductor above silicon separated by an insulator, which is the definition of a capacitor, and its field reaches through the oxide. It pushes the body's majority carriers away from the surface and pulls the minority ones toward it. Push hard enough and the surface layer stops behaving like the body it is made of and starts behaving like the islands on either side. A bridge appears. Current flows. The voltage at which the bridge forms has a name, the threshol",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "switch",
+  "anchor": "the-switch-is-not-a-switch",
+  "title": "The switch is not a switch",
+  "text": "Here is the sentence the rest of this part is about. Below the threshold, the current does not stop. It falls off exponentially, and how steeply it falls is called the subthreshold slope, measured in millivolts of gate voltage per decade of current. Less slope is better: you want the current to collapse the moment you drop below threshold. Gate voltage against current, with current on a log axis. Left of the threshold the line does not reach zero, it just keeps going down at a fixed number of millivolts per decade. That slope has a floor, and the floor is what ends Dennard scaling three units from here. The slope has a hard floor, and the floor is not an engineering shortfall that better manufacturing will fix. It is thermal energy divided by charge, times the natural log of ten, and at room temperature it works out to about 60 millivolts per decade. You will compute that number from physical constants in the first exercise, because it is worth watching it fall out of , and rather than taking it on trust. Two consequences follow immediately, and the second one is the whole problem. Lowering the threshold makes the switch faster, because what makes a transistor drive current is how ",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "switch",
+  "anchor": "two-flavours-and-neither-is-symmetric",
+  "title": "Two flavours, and neither is symmetric",
+  "text": "Everything above described a transistor that turns on when its gate goes high. Swap the dopings and you get one that turns on when its gate goes low. The names are NMOS and PMOS, and PMOS is drawn with a bubble on the gate to say so. They are not mirror images, and the asymmetries decide the shape of everything built from them. Each one passes one level well and the other badly. An NMOS transistor carries a low cleanly, and struggles to carry a high: as the output rises toward the supply, the gate-to-source voltage falls, and somewhere short of the top the transistor turns itself off. It delivers a high that is short by a threshold. PMOS has the mirror problem with lows. So pull-down networks are built from NMOS and pull-up networks from PMOS, and never the other way round. That is not a convention. It is the transistor refusing. One of them is intrinsically slower. Carriers in a PMOS channel move more slowly than in an NMOS one, by a factor of two or three. To get the same drive you make the PMOS wider, and a wider transistor presents more capacitance to whatever drives it. So a design that puts PMOS transistors in series pays twice: once in speed and once in load. Hold that. It i",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "switch",
+  "anchor": "the-gate-is-a-capacitor-and-capacitors-cost",
+  "title": "The gate is a capacitor, and capacitors cost",
+  "text": "The insulator that makes the gate free to hold at a voltage is exactly what makes it expensive to change one. Charging a capacitor to a voltage and discharging it again moves a charge of through a drop of , so every full switch costs about of energy delivered from the supply. Not per second: per switch. A gate of one femtofarad at one volt costs a femtojoule per transition, which sounds like nothing until you multiply it by billions of transistors and billions of cycles a second. That product is the whole subject of unit 3, and the in it is why the story turns in 2005.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "switch",
+  "anchor": "what-to-carry-into-the-next-unit",
+  "title": "What to carry into the next unit",
+  "text": "Three things, and you will use all three within two units. The gate draws no current, which means one gate can drive another with no static cost, and that is what makes a chain of logic possible at all. The switch leaks, exponentially, and the exponent has a floor set by temperature rather than by manufacturing. And the two flavours are asymmetric in a way that makes inverting cheap and not-inverting expensive. The next unit takes two transistors, wires one of each flavour into a complementary pair, and gets an inverter for four transistors' worth of area and almost no static power. Then it counts what NAND costs, counts what AND costs, and finds the answer this handbook is built on.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "switch",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "The exercises here are arithmetic on the physics, written in C and compiled by a real compiler. They are not simulations of a transistor; they are the equations that describe one, evaluated so you can watch the numbers move. The failures are ordinary C failures. A compile error names a file and a line. A wrong answer exits nonzero and the check prints what it wanted and what it got. Where an exercise turns on floating-point behaviour, it says so, and the comparison is written with a tolerance rather than with .",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "switch",
+  "n": 1,
+  "title": "The floor nobody can lift",
+  "text": "The 60 mV per decade floor is thermal energy divided by charge. It is physics rather than a manufacturing limit. Compute the minimum subthreshold slope in millivolts per decade at a given temperature. It is , and the checks run it at three temperatures.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "switch",
+  "n": 2,
+  "title": "What a hundred millivolts costs",
+  "text": "Leakage is exponential in threshold voltage, so a small change in threshold is a large change in power. Given a subthreshold slope in millivolts per decade, return the factor by which off-current grows when the threshold voltage is lowered by some number of millivolts.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "switch",
+  "n": 3,
+  "title": "The energy in one transition",
+  "text": "Switching energy goes as the square of the supply voltage, which is why the supply voltage is the lever everyone reached for. Return the energy in joules that a full charge and discharge of a gate capacitance costs, given the capacitance in farads and the supply in volts.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "switch",
+  "n": 4,
+  "title": "The high an NMOS cannot deliver",
+  "text": "A transistor passing the level it is bad at stops when its own gate-to-source voltage falls to the threshold. An NMOS transistor passing a high shuts itself off before reaching the supply. Return the highest output voltage it can deliver, given the supply and the threshold.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "switch",
+  "n": 5,
+  "title": "Leakage, times a billion",
+  "text": "Static power is spent whether or not the chip is doing anything, which is what makes it different from every other cost so far. Return the total static power in watts for a chip, given the off-current of one transistor in amps, the supply in volts, and how many transistors there are.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "switch",
+  "n": 6,
+  "title": "How long a gate takes",
+  "text": "Delay is resistance times capacitance, which is why making a transistor wider is not free: it drives faster and loads its own driver more. Return the propagation delay of a gate, given its on-resistance in ohms and the capacitance it drives in farads. Use the first-order estimate.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "switch",
+  "n": 7,
+  "title": "The on to off ratio",
+  "text": "The number of decades between off and on is the whole gate voltage divided by the slope, which is why a bigger supply used to buy a better switch. Return how many times more current flows at the supply voltage than at zero, given the threshold, the supply and the subthreshold slope, using only the subthreshold behaviour extrapolated across the whole range.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "switch",
+  "n": 8,
+  "title": "Where the heat comes from",
+  "text": "Static power went from a rounding error to a third of the budget in about four generations, and that is the event the next two units are about. Return the fraction of total power that is static, given dynamic watts and static watts, so the checks can walk it across four process generations.",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "switch",
+  "n": 1,
+  "title": "What does the oxide in a MOSFET do?",
+  "text": " The gate is not connected to what it controls. That is the structural fact every convenient property of CMOS logic follows from, and it is why one gate can drive another at no static cost. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "switch",
+  "n": 2,
+  "title": "With the gate at zero volts, why does no current flow from source to drain?",
+  "text": " Two islands of one doping in a body of the other make two junctions in series facing opposite ways. There is no direction you can push that both will allow. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "switch",
+  "n": 3,
+  "title": "What is the threshold voltage?",
+  "text": " Below it, no bridge. Above it, a bridge. It is the voltage at which the gate's field has pulled enough minority carriers to the surface that the surface behaves like the islands on either side of it. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "switch",
+  "n": 4,
+  "title": "Below the threshold voltage, the drain current is:",
+  "text": " This is the whole difficulty. The switch does not open, it becomes very resistive, and how quickly it does that is measured in millivolts of gate voltage per decade of current. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "switch",
+  "n": 5,
+  "title": "What sets the floor on the subthreshold slope?",
+  "text": " It is  kT/q  times the natural log of ten, about 60 millivolts per decade at room temperature. No process improvement moves it, which is why the responses have all been structural. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "switch",
+  "n": 6,
+  "title": "At 60 mV per decade, lowering the threshold by 100 mV multiplies off-current by roughly:",
+  "text": " A hundred divided by sixty is 1.67 decades, and ten to that is about 46. Computing this is the second exercise, and the number is why lowering the supply voltage stopped being possible. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "switch",
+  "n": 7,
+  "title": "An NMOS transistor passes which level cleanly?",
+  "text": " Trying to pass a high, its source terminal rises with the output, so its own gate-to-source voltage falls, and it shuts itself off a threshold short of the supply. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "switch",
+  "n": 8,
+  "title": "Why are pull-up networks built from PMOS rather than NMOS?",
+  "text": " It is the transistor refusing rather than a designer choosing. PMOS is in fact the slower of the two, and it is used for pull-up anyway because it is the one that can finish the job. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "switch",
+  "n": 9,
+  "title": "Why must a PMOS transistor be made wider than an NMOS one for the same drive?",
+  "text": " And a wider transistor presents more capacitance to whatever drives it, so stacking PMOS in series costs twice: once in speed and once in load. That is the fact that makes NAND cheap and AND expensive. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "switch",
+  "n": 10,
+  "title": "Charging a gate capacitance to V and discharging it again takes about:",
+  "text": " The supply moves a charge of  C*V  through a drop of  V . Half of that ends up stored in the capacitor and the other half is dissipated in the transistor doing the charging, which is why the stored energy is half the delivered energy. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "switch",
+  "n": 11,
+  "title": "Why did gate oxide tunnelling force a change of material?",
+  "text": " A physically thicker layer of a higher dielectric constant gives the same capacitance with far less tunnelling. The switch to hafnium oxide with a metal gate is a leakage fix, not a speed improvement. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "switch",
+  "n": 12,
+  "title": "The fin, and later the gate wrapped around the channel, exist mainly to:",
+  "text": " All of the structural changes since 45 nm are about restoring electrostatic control. They improve speed as a side effect and they were adopted because transistors had stopped switching off. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "switch",
+  "n": 13,
+  "title": "Leakage and temperature interact how?",
+  "text": " It is a feedback loop. Within what the package can remove it settles at some temperature. Outside that, it does not settle. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "switch",
+  "n": 14,
+  "title": "First-order, the propagation delay of a gate is proportional to:",
+  "text": " About  ln(2)  times  R  times  C , to the halfway point. Making a transistor wider lowers its resistance and raises the capacitance it presents, so speed moves from this gate to the one driving it. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "switch",
+  "n": 15,
+  "title": "Static power is different from dynamic power because:",
+  "text": " Dynamic power is paid per transition and stops when the clock stops. Static power is the leakage of every transistor all the time, which is why a chip that is idle still has to be cooled. ",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "cmos-gate",
+  "anchor": "two-networks-and-one-rule",
+  "title": "Two networks and one rule",
+  "text": "Every static CMOS gate is exactly two networks. A pull-up network of PMOS transistors between the supply and the output, and a pull-down network of NMOS transistors between the output and ground. Each is built from the flavour that delivers the level it is responsible for, which is the only arrangement that works. The rule connecting them is the whole discipline: For every input combination, exactly one network conducts. Never both. Both conducting is a direct path from the supply to ground through your gate, which is a short circuit that gets a name, crowbar current, and a smell. Never neither, either: that leaves the output connected to nothing, holding whatever charge happens to be on the wire, drifting toward whatever the leakage from the last unit decides. Exactly one. Which means the two networks are complements of each other, and that has a precise wiring consequence: series in one is parallel in the other. You have seen this rule before as a Boolean identity called De Morgan's law. Here it is not an identity. It is an instruction about where to put wires.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "cmos-gate",
+  "anchor": "the-cheapest-gate-there-is",
+  "title": "The cheapest gate there is",
+  "text": "Two transistors. One of each flavour, gates tied together, drains tied together. One PMOS above one NMOS. When the input is low the pull-up conducts and the output goes high; when the input is high the pull-down conducts and the output goes low. Two transistors, and the output is the opposite of the input. Drive the input low and the PMOS conducts while the NMOS is off, so the output is pulled to the supply. Drive it high and the reverse happens. Exactly one network conducts in each case, as required, and once the output has settled neither network is passing current at all. The only cost is the transition, which is the from the last unit. That is the cheapest possible logic gate, and it is an inverter. That is not a coincidence, and the rest of this unit is about why.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "cmos-gate",
+  "anchor": "counting-nand-and-counting-and",
+  "title": "Counting NAND, and counting AND",
+  "text": "For NAND the output should be low only when both inputs are high. Low means the pull-down conducts, and \"only when both\" means the two NMOS transistors are in series: current has to get through both, so both gates must be high. The pull-up is then the complement, which by the series-parallel rule means two PMOS transistors in parallel. Either one being on is enough to pull the output high, and either one is on whenever its input is low. Four transistors, one stage. Now try to build AND the same way. The output should be high only when both inputs are high. High means the pull-up conducts. So you would need a pull-up network that conducts only when both inputs are high, which means PMOS transistors that turn on when their gates are high. There are none. PMOS turns on when its gate is low. That is what the device is. Transistor counts for the standard cells. The inverting gates are the cheap ones, and every non-inverting gate is an inverting gate with an inverter bolted on. So you build NAND and put an inverter on the end. Six transistors instead of four, and two stages of delay instead of one.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "cmos-gate",
+  "anchor": "the-sentence-this-handbook-is-built-on",
+  "title": "The sentence this handbook is built on",
+  "text": "A static CMOS gate made from a PMOS pull-up and an NMOS pull-down is structurally, unavoidably inverting. There is no arrangement of the two flavours in this configuration that produces a non-inverting gate directly. Read that again with the transistor in mind. The pull-down conducts when its gate is high and drives the output low. The pull-up conducts when its gate is low and drives the output high. Both of them invert. A network of them inverts. So in silicon, NAND and NOR are primitives, and AND and OR are derived: 50% more transistors and twice the delay. The Boolean algebra ordering, where AND and OR are fundamental and NAND is a compound called not-and, is exactly backwards relative to the material. That is the engineering reason the next part builds everything from NAND, and it is a better reason than the mathematical one. NAND is universal, and so is NOR, so universality alone does not choose between them. Cheapness does.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "cmos-gate",
+  "anchor": "what-this-predicts",
+  "title": "What this predicts",
+  "text": "A claim is worth more when it predicts something you would otherwise find strange, and this one predicts three things. Real cell libraries are full of inverted-output gates, and a synthesised netlist contains far more NANDs and NORs than the source ever mentioned. Moving an inversion across a De Morgan boundary can delete two transistors and a gate delay, which is a real optimisation with a real name, bubble pushing. Real logic often looks inside out. Somebody who needs four inputs ANDed together builds a tree of NANDs and NORs whose inversions cancel, rather than three ANDs in a row. And a control bit that inverts a result is nearly free. Adding an \"invert the output\" input to a unit costs one XOR gate, where building both polarities and selecting between them costs a great deal more. When you meet an arithmetic unit with a negate-output control, that is why it is there.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "cmos-gate",
+  "anchor": "one-gate-can-be-more-complicated-than-a-gate",
+  "title": "One gate can be more complicated than a gate",
+  "text": "The duality does not stop at two inputs, and this is where a synthesised netlist starts looking nothing like the expression you wrote. Any function of the shape \"not a sum of products\" is one CMOS gate. Take . The pull-down conducts when and are both high or when is, which is two NMOS in series, that pair in parallel with a third. Three NMOS. The pull-up is the dual: and in parallel, that pair in series with . Three PMOS. Six transistors, and one gate delay. Building the same function from an AND, an OR and an inverter costs fourteen transistors and three delays. There is a limit, and it is the series stack. Every transistor in series adds resistance, so a stack deeper than about four is too slow to be worth having. That is why gates have a maximum fan-in of roughly four, and why an eight-input NAND is not one gate: it is a tree of smaller ones.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "cmos-gate",
+  "anchor": "when-you-want-a-switch-rather-than-a-gate",
+  "title": "When you want a switch rather than a gate",
+  "text": "One more arrangement, because you will meet the thing it builds in Part II and the version built from NAND will look wasteful afterwards. Sometimes what you want is not a gate driving a level but a switch that passes whatever is on one side through to the other. A single NMOS cannot do it, because of the weak high from the last unit, and a single PMOS has the mirror problem. Put one of each in parallel, with complementary signals on their gates, and each covers the other's weakness. That is a transmission gate: two transistors, plus an inverter to make the complement if you do not already have one. A two-way multiplexer built this way is two transmission gates and an inverter, about six transistors. The version Part II builds from NAND gates alone is around fourteen. Both are correct. Only one of them is what anybody actually puts on a chip, and it is worth knowing that while you build the other one.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "cmos-gate",
+  "anchor": "why-nor-is-worse-than-nand",
+  "title": "Why NOR is worse than NAND",
+  "text": "They are both four transistors and one stage, so the table above makes them look equivalent. They are not, and the reason is the second asymmetry from the last unit. In NAND, the series transistors are the NMOS ones and the parallel transistors are the PMOS ones. In NOR it is the other way round: two PMOS in series. PMOS is the slower flavour, and to get equal drive it has to be made wider. Two of them in series means twice the resistance to overcome and twice the width to pay for, so a NOR is slower and larger than a NAND with the same input count. That is why standard-cell libraries lean on NAND, and why a synthesis tool reaching for a default two-input gate reaches for that one.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "cmos-gate",
+  "anchor": "what-to-carry-into-the-next-part",
+  "title": "What to carry into the next part",
+  "text": "Inversion is free and non-inversion costs a stage. Series in one network is parallel in the other. And the gate that CMOS hands you for nothing is the one with a bubble on it. Part II takes that gate, treats it as the only thing you are allowed to use, and builds arithmetic, memory and a processor out of it. When it asks you to build AND from NAND and an inverter and notes that this costs two gates rather than one, the count you are paying is the one in this unit.",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
+  "slug": "cmos-gate",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "The exercises are the counting made executable: transistor counts, delays, and the series-parallel duality, written in C. The point is not the arithmetic, it is that the numbers come out the way the argument says they do. A failure exits nonzero and prints what it wanted against what it got. Where an exercise is about the duality, the check runs your function over every input combination rather than a sample, because a network that is right on three of four rows is a short circuit on the fourth.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "cmos-gate",
+  "n": 1,
+  "title": "Exactly one network",
+  "text": "Both networks conducting is a short circuit, and neither conducting leaves the output floating. Exactly one is the entire discipline. Given the two inputs and a description of which network conducts, return 1 if the gate is well formed for that row and 0 if it is not. Well formed means exactly one of the two networks conducts.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "cmos-gate",
+  "n": 2,
+  "title": "The dual of a network",
+  "text": "Series in one network is parallel in the other, so the deepest stack in one is the widest group count in the other. A pull-down network is described as a list of series groups wired in parallel. Return the depth of the deepest series stack in the pull-up network, which is its dual.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "cmos-gate",
+  "n": 3,
+  "title": "Counting a gate",
+  "text": "An inverting gate costs two transistors per input. A non-inverting one costs that plus an inverter. Return the transistor count of a standard cell, given the number of inputs and whether the gate inverts.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "cmos-gate",
+  "n": 4,
+  "title": "Stages, and therefore delay",
+  "text": "Delay is counted in stages, and an inversion at the end is a stage. Return the number of gate delays a function costs, given how many inverting stages it needs and whether the result has to be non-inverting.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "cmos-gate",
+  "n": 5,
+  "title": "What a complex gate saves",
+  "text": "Any inverted sum of products is one gate, which is why a synthesised netlist looks nothing like the expression that produced it. Return the transistor count of built as one CMOS gate, given the number of product terms and how many literals are in each.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "cmos-gate",
+  "n": 6,
+  "title": "Why NOR is the slower one",
+  "text": "Series resistance adds, and the PMOS flavour starts higher, so two PMOS in series is four times the resistance of two NMOS in series. Return the relative resistance of a gate's slow path, given how many transistors are in series in that path and the mobility penalty of the flavour they are made from.",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "cmos-gate",
+  "n": 7,
+  "title": "Bubble pushing",
+  "text": "Moving an inversion across a boundary can delete transistors and a gate delay, which is why real logic looks inside out. An inversion can be moved across a De Morgan boundary. Return how many transistors are saved by turning into .",
+  "part": "Physics"
+ },
+ {
+  "t": "exercise",
+  "slug": "cmos-gate",
+  "n": 8,
+  "title": "The mux nobody builds from gates",
+  "text": "A transmission gate passes a level rather than driving one, and a multiplexer built from them is less than half the size. Return the transistor count of a two-way multiplexer, given whether it is built from transmission gates or from NAND gates.",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "cmos-gate",
+  "n": 1,
+  "title": "What does the pull-up network of a static CMOS gate consist of?",
+  "text": " Each network is built from the flavour that delivers its level cleanly. PMOS carries a high, NMOS carries a low, and the reverse arrangement cannot finish the job. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "cmos-gate",
+  "n": 2,
+  "title": "For every input combination, how many of the two networks must conduct?",
+  "text": " Both is a direct path from supply to ground through the gate. Neither leaves the output holding whatever charge is on the wire, drifting under leakage. Exactly one is the whole discipline. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "cmos-gate",
+  "n": 3,
+  "title": "Series in the pull-down network corresponds to what in the pull-up?",
+  "text": " The two networks are complements, so the structures exchange. You already know this as De Morgan's law. Here it is not an identity, it is an instruction about where to put wires. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "cmos-gate",
+  "n": 4,
+  "title": "How many transistors is an inverter?",
+  "text": " One of each flavour, gates tied together, drains tied together. It is the cheapest possible logic gate, and the fact that the cheapest gate inverts is the subject of the unit. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "cmos-gate",
+  "n": 5,
+  "title": "Why can you not build AND directly as one static CMOS gate?",
+  "text": " A pull-up made of PMOS conducts on low inputs, so any gate built this way inverts. There is no arrangement in the standard configuration that comes out non-inverting. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "cmos-gate",
+  "n": 6,
+  "title": "A two-input NAND and a two-input AND cost how many transistors?",
+  "text": " AND is NAND with an inverter on the end: fifty per cent more transistors and twice the delay. In silicon NAND is the primitive and AND is derived, which is the reverse of the Boolean algebra ordering. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "cmos-gate",
+  "n": 7,
+  "title": "Relative to the silicon, the textbook ordering that treats AND and OR as fundamental is:",
+  "text": " Universality alone does not choose NAND over NOR, because both are universal. Cheapness does, and cheapness is a fact about the fabrication technology rather than about logic. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "cmos-gate",
+  "n": 8,
+  "title": "Why is a NOR gate worse than a NAND gate with the same input count?",
+  "text": " Both are four transistors and one stage. NAND puts its NMOS in series and NOR puts its PMOS in series, and PMOS is both slower and wider, so a NOR stack costs twice on both counts. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "cmos-gate",
+  "n": 9,
+  "title": "What is bubble pushing?",
+  "text": " Rewriting  NOT(a) OR NOT(b)  as  NOT(a AND b)  takes ten transistors down to four. A synthesis tool does this thousands of times in a design, which is why a netlist looks nothing like the source. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "cmos-gate",
+  "n": 10,
+  "title": "Why does a real netlist contain far more NANDs and NORs than the source mentioned?",
+  "text": " It is the same fact seen from the tool's side. A designer needing four inputs ANDed builds a tree of NANDs and NORs whose inversions cancel, and the tool does the same thing automatically. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "cmos-gate",
+  "n": 11,
+  "title": "<code>NOT((a AND b) OR c)</code> built as a single CMOS gate costs how many transistors?",
+  "text": " Three literals means three in the pull-down and three in the pull-up. Built from discrete AND, OR and NOT gates the same function costs fourteen and three gate delays instead of one. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "cmos-gate",
+  "n": 12,
+  "title": "Why do gates have a maximum fan-in of about four?",
+  "text": " It is why an eight-input NAND is not one gate but a tree of smaller ones, and why the fan-in limit shows up as a shape in synthesised logic. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "cmos-gate",
+  "n": 13,
+  "title": "What problem does a transmission gate solve?",
+  "text": " One NMOS passes a weak high and one PMOS passes a weak low. In parallel with complementary gate signals, each covers the other's weakness. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "cmos-gate",
+  "n": 14,
+  "title": "A two-way multiplexer costs roughly how many transistors, built each way?",
+  "text": " Both are correct designs and only one is what goes on a chip. Part II builds the gate version, which is the right thing to build while learning that one primitive reaches everything. ",
+  "part": "Physics"
+ },
+ {
+  "t": "drill",
+  "slug": "cmos-gate",
+  "n": 15,
+  "title": "Once a static CMOS gate has settled, what current flows through it?",
+  "text": " This is why CMOS displaced everything before it. The cost is the transition, which is the switching energy from the last unit, plus the leakage that the last unit also warned about. ",
+  "part": "Physics"
+ },
+ {
+  "t": "section",
   "slug": "nand",
   "anchor": "what-a-gate-actually-is",
   "title": "What a gate actually is",

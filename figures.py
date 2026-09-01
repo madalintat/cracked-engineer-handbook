@@ -489,8 +489,137 @@ def _strip(spec, where):
     return "".join(out)
 
 
+# -------------------------------------------------------------------- plot
+
+def _nice_ticks(lo, hi, n=5):
+    """Round tick values covering [lo, hi]. Ugly axes make a chart look wrong
+    even when the data is right."""
+    import math
+    if hi <= lo:
+        return [lo]
+    raw = (hi - lo) / max(1, n)
+    mag = 10 ** math.floor(math.log10(raw))
+    step = min((m * mag for m in (1, 2, 2.5, 5, 10)),
+               key=lambda c: abs(c - raw))
+    start = math.ceil(lo / step) * step
+    out, v = [], start
+    while v <= hi + step * 1e-9:
+        out.append(round(v, 10))
+        v += step
+    return out
+
+
+def _fmt(v):
+    if v == 0:
+        return "0"
+    a = abs(v)
+    if a >= 1e9:
+        return f"{v / 1e9:g}G"
+    if a >= 1e6:
+        return f"{v / 1e6:g}M"
+    if a >= 1e3:
+        return f"{v / 1e3:g}k"
+    if a >= 0.01:
+        return f"{v:g}"
+    return f"{v:.0e}".replace("e-0", "e-").replace("e+0", "e")
+
+
+def _plot(spec, where):
+    """A line chart on labelled axes, with an optional log y.
+
+    A handbook about hardware argues with curves as often as with numbers: a
+    leakage current against gate voltage, a clock frequency against a year.
+    Those are unreadable as a table and obvious as a shape.
+    """
+    import math
+    series = _need(spec, "series", where, list)
+    if not series:
+        raise FigureError(f"{where}: a plot with no series shows nothing")
+    ax, ay = spec.get("x") or {}, spec.get("y") or {}
+    logy = bool(ay.get("log"))
+
+    pts = [pt for s_ in series for pt in s_.get("points", [])]
+    if not pts:
+        raise FigureError(f"{where}: every series is empty")
+    for x, y in pts:
+        if logy and y <= 0:
+            raise FigureError(
+                f"{where}: a log axis cannot plot {y}, which is not positive")
+    x0 = float(ax.get("min", min(p[0] for p in pts)))
+    x1 = float(ax.get("max", max(p[0] for p in pts)))
+    y0 = float(ay.get("min", min(p[1] for p in pts)))
+    y1 = float(ay.get("max", max(p[1] for p in pts)))
+    if x1 == x0 or y1 == y0:
+        raise FigureError(f"{where}: an axis has no range to draw")
+
+    L, B, W, H = 58.0, 34.0, 420.0, 200.0    # left gutter, bottom gutter, plot
+    ty = (lambda v: H - (math.log10(v) - math.log10(y0))
+          / (math.log10(y1) - math.log10(y0)) * H) if logy \
+        else (lambda v: H - (v - y0) / (y1 - y0) * H)
+    tx = lambda v: (v - x0) / (x1 - x0) * W
+
+    out = [f'<svg viewBox="{-PAD} {-PAD} {L + W + PAD * 2:.0f} '
+           f'{H + B + PAD * 2:.0f}" class="fig-svg" role="img" '
+           f'preserveAspectRatio="xMidYMid meet">',
+           f'<g transform="translate({L},0)">']
+
+    yticks = ([10 ** e for e in range(math.floor(math.log10(y0)),
+                                      math.ceil(math.log10(y1)) + 1)]
+              if logy else _nice_ticks(y0, y1))
+    for v in yticks:
+        if not (y0 - 1e-12 <= v <= y1 * (1 + 1e-9)):
+            continue
+        y = ty(v)
+        out.append(f'<line x1="0" y1="{y:.1f}" x2="{W}" y2="{y:.1f}" '
+                   f'class="fig-grid"/>')
+        out.append(_text(-8, y + 4, _fmt(v), cls="dim", size=FONT_SM,
+                         anchor="end", mono=True))
+    for v in _nice_ticks(x0, x1):
+        if not (x0 - 1e-12 <= v <= x1 + 1e-12):
+            continue
+        x = tx(v)
+        out.append(f'<line x1="{x:.1f}" y1="0" x2="{x:.1f}" y2="{H}" '
+                   f'class="fig-grid"/>')
+        out.append(_text(x, H + 16, _fmt(v), cls="dim", size=FONT_SM, mono=True))
+
+    for s_ in series:
+        p_ = s_.get("points", [])
+        if not p_:
+            continue
+        col = _accent(s_.get("accent"), where) if s_.get("accent") else None
+        st = f' style="stroke:{col}"' if col else ""
+        d = " ".join(("M" if i == 0 else "L")
+                     + f"{tx(x):.1f} {ty(y):.1f}" for i, (x, y) in enumerate(p_))
+        out.append(f'<path d="{d}" class="fig-line"{st}/>')
+        if s_.get("label"):
+            lx, ly = tx(p_[-1][0]), ty(p_[-1][1])
+            out.append(_text(lx - 4, ly - 7, s_["label"], size=FONT_SM,
+                             anchor="end",
+                             cls="accent" if col else "fg", weight=600))
+
+    for m in spec.get("marks", []):
+        x = tx(float(_need(m, "x", where, (int, float))))
+        out.append(f'<line x1="{x:.1f}" y1="-4" x2="{x:.1f}" y2="{H}" '
+                   f'class="fig-mark"/>')
+        if m.get("label"):
+            out.append(_text(x, -8, m["label"], cls="accent", size=FONT_SM))
+
+    out.append(f'<line x1="0" y1="{H}" x2="{W}" y2="{H}" class="fig-axis"/>')
+    out.append(f'<line x1="0" y1="0" x2="0" y2="{H}" class="fig-axis"/>')
+    if ax.get("label"):
+        out.append(_text(W / 2, H + B - 2, ax["label"], cls="dim",
+                         size=FONT_SM))
+    out.append("</g>")
+    if ay.get("label"):
+        out.append(f'<text x="{-H / 2:.0f}" y="12" font-size="{FONT_SM}" '
+                   f'text-anchor="middle" transform="rotate(-90)" '
+                   f'class="fig-dim">{esc(ay["label"])}</text>')
+    out.append("</svg>")
+    return "".join(out)
+
+
 KINDS = {"bits": _bits, "gates": _gates, "timing": _timing,
-         "blocks": _blocks, "strip": _strip}
+         "blocks": _blocks, "strip": _strip, "plot": _plot}
 
 
 def render(body, where):
@@ -582,6 +711,14 @@ def _selfcheck():
           "cells": [{"label": "fp16", "on": True, "accent": "jade"},
                     {"label": "fp4", "on": False}]}, "fig-strip")
     bad({**base, "kind": "strip", "cells": []}, "no cells")
+    good({**base, "kind": "plot",
+          "x": {"label": "volts", "min": 0, "max": 1},
+          "y": {"label": "amps", "log": True},
+          "series": [{"label": "off", "accent": "clay",
+                      "points": [[0, 1e-9], [1, 1e-3]]}]}, "fig-line")
+    bad({**base, "kind": "plot", "y": {"log": True},
+         "series": [{"points": [[0, 0]]}]}, "not positive")
+    bad({**base, "kind": "plot", "series": []}, "no series")
     bad({**base, "kind": "nope"}, "unknown figure kind")
     bad({**base, "kind": "bits", "bits": 8,
          "groups": [{"from": 0, "to": 3}, {"from": 3, "to": 5}]}, "in two groups")

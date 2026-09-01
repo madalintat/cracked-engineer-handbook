@@ -1,0 +1,280 @@
+{
+ "slug": "switch",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "The floor nobody can lift",
+   "brief": "<p>Compute the minimum subthreshold slope in millivolts per decade at a given temperature. It is <code>(k*T/q) * ln(10)</code>, and the checks run it at three temperatures.</p>",
+   "kind": "output",
+   "concept": "The 60 mV per decade floor is thermal energy divided by charge. It is physics rather than a manufacturing limit.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17 -lm",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The answer is in volts per decade until you multiply by 1000."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Read the value the check prints against the one it wanted. At 300 K the answer is about 59.5, so an answer near 0.0595 means the millivolts are missing, and an answer near 25.9 means the natural log of ten is.</p>\n<p>The reason it has to be <code>ln(10)</code> and not <code>log10</code> is that the exponential decay below threshold is in <code>e</code>, and you are converting a factor of <code>e</code> into a factor of ten.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names. <code>log</code> is in <code>&lt;math.h&gt;</code>, and on this toolchain maths functions need <code>-lm</code>, which the flags already pass.</p>"
+    }
+   ],
+   "after": "<p>Notice the temperature dependence. At 85 degrees, a normal junction temperature under load, the floor is 71 rather than 59.5, so a hot chip leaks more for two separate reasons.</p>",
+   "starter": "#include <math.h>\n\n/* Boltzmann's constant, in joules per kelvin. */\n#define K 1.380649e-23\n/* The elementary charge, in coulombs. */\n#define Q 1.602176634e-19\n\ndouble min_slope_mv_per_decade(double kelvin) {\n    return K * kelvin / Q;\n}",
+   "tests": "#include <stdio.h>\n#include <stdlib.h>\nstatic int close_to(double a, double b) { return fabs(a - b) < 0.5; }\nint main(void) {\n    struct { double t, want; } c[] = {{300, 59.5}, {358, 71.0}, {273, 54.2}};\n    for (int i = 0; i < 3; i++) {\n        double got = min_slope_mv_per_decade(c[i].t);\n        if (!close_to(got, c[i].want)) {\n            printf(\"at %.0f K got %.4f, want about %.1f\\n\", c[i].t, got, c[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "What a hundred millivolts costs",
+   "brief": "<p>Given a subthreshold slope in millivolts per decade, return the factor by which off-current grows when the threshold voltage is lowered by some number of millivolts.</p>",
+   "kind": "output",
+   "concept": "Leakage is exponential in threshold voltage, so a small change in threshold is a large change in power.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17 -lm",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "A decade is a factor of ten. How many decades is the drop?"
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The drop divided by the slope is a number of decades, and the factor is ten raised to it. A result of about 1.67 means you returned the number of decades instead of the factor.</p>"
+    }
+   ],
+   "after": "<p>At 60 mV per decade, 100 mV of threshold is a factor of 46. That is the number that ended voltage scaling, and you just computed it.</p>",
+   "starter": "#include <math.h>\n\n/* slope_mv: millivolts of gate voltage per decade of current.\n   drop_mv:  how far the threshold voltage is lowered, in millivolts. */\ndouble leakage_factor(double slope_mv, double drop_mv) {\n    return drop_mv / slope_mv;\n}",
+   "tests": "#include <stdio.h>\nint main(void) {\n    struct { double s, d, want; } c[] = {\n        {60, 100, 46.4}, {60, 60, 10.0}, {90, 100, 12.9}, {60, 0, 1.0},\n    };\n    for (int i = 0; i < 4; i++) {\n        double got = leakage_factor(c[i].s, c[i].d);\n        if (fabs(got - c[i].want) > 0.2) {\n            printf(\"slope %.0f drop %.0f: got %.3f want about %.1f\\n\",\n                   c[i].s, c[i].d, got, c[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "The energy in one transition",
+   "brief": "<p>Return the energy in joules that a full charge and discharge of a gate capacitance costs, given the capacitance in farads and the supply in volts.</p>",
+   "kind": "output",
+   "concept": "Switching energy goes as the square of the supply voltage, which is why the supply voltage is the lever everyone reached for.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The charge moved is <code>C*V</code> and it falls through <code>V</code>."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Compare what the check printed against what it wanted. Half of the right answer means you used the energy stored in the capacitor, which is <code>CV squared over two</code>, rather than the energy taken from the supply to put it there.</p>\n<p>Both numbers are real and they are different. The supply delivers <code>CV squared</code>; half of it ends up in the capacitor and the other half is dissipated in the transistor doing the charging.</p>"
+    }
+   ],
+   "after": "<p>Five volts to one volt is a factor of 25 in this number, per transition. That is what made the first thirty years of scaling feel free.</p>",
+   "starter": "double switch_energy(double farads, double volts) {\n    return farads * volts;\n}",
+   "tests": "#include <stdio.h>\n#include <math.h>\nint main(void) {\n    struct { double c, v, want; } t[] = {\n        {1e-15, 1.0, 1e-15}, {1e-15, 5.0, 2.5e-14}, {2e-15, 0.8, 1.28e-15},\n    };\n    for (int i = 0; i < 3; i++) {\n        double got = switch_energy(t[i].c, t[i].v);\n        if (fabs(got - t[i].want) > t[i].want * 1e-6) {\n            printf(\"C=%g V=%g: got %g want %g\\n\", t[i].c, t[i].v, got, t[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "The high an NMOS cannot deliver",
+   "brief": "<p>An NMOS transistor passing a high shuts itself off before reaching the supply. Return the highest output voltage it can deliver, given the supply and the threshold.</p>",
+   "kind": "output",
+   "concept": "A transistor passing the level it is bad at stops when its own gate-to-source voltage falls to the threshold.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The gate is held at the supply. What is the gate-to-source voltage when the source has risen to <code>v</code>?"
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>As the output rises, the source terminal rises with it, so the gate-to-source voltage is the supply minus the output. The transistor conducts while that exceeds the threshold, and stops when it does not.</p>\n<p>This is why pull-up networks are built from PMOS. Not by convention: an NMOS pull-up physically cannot finish the job.</p>"
+    }
+   ],
+   "after": "<p>At a 1 V supply and a 0.4 V threshold the best it can do is 0.6 V, which the next stage may not read as a high at all. That is a design that works in simulation and fails on a board.</p>",
+   "starter": "double nmos_best_high(double supply, double vth) {\n    return supply;\n}",
+   "tests": "#include <stdio.h>\n#include <math.h>\nint main(void) {\n    struct { double s, t, want; } c[] = {\n        {5.0, 0.7, 4.3}, {1.0, 0.4, 0.6}, {1.8, 0.5, 1.3},\n    };\n    for (int i = 0; i < 3; i++) {\n        double got = nmos_best_high(c[i].s, c[i].t);\n        if (fabs(got - c[i].want) > 1e-9) {\n            printf(\"supply %.1f vth %.1f: got %.3f want %.3f\\n\",\n                   c[i].s, c[i].t, got, c[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Leakage, times a billion",
+   "brief": "<p>Return the total static power in watts for a chip, given the off-current of one transistor in amps, the supply in volts, and how many transistors there are.</p>",
+   "kind": "output",
+   "concept": "Static power is spent whether or not the chip is doing anything, which is what makes it different from every other cost so far.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Power is current times voltage, and the current is per transistor."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Read the numbers the check printed. Multiplying by the count is the step that turns a number too small to care about into a number that decides whether the part is buildable.</p>"
+    },
+    {
+     "id": "overflow",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>A count of ten billion in an <code>int</code> is not ten billion. Check the type of the parameter before you check the arithmetic.</p>"
+    }
+   ],
+   "after": "<p>A nanoamp is nothing. A nanoamp times ten billion is ten amps, and at one volt that is ten watts of doing nothing at all.</p>",
+   "starter": "double static_watts(double amps_per_transistor, double volts, double count) {\n    return amps_per_transistor * volts;\n}",
+   "tests": "#include <stdio.h>\n#include <math.h>\nint main(void) {\n    struct { double a, v, n, want; } c[] = {\n        {1e-9, 1.0, 1e10, 10.0}, {1e-12, 1.0, 1e9, 1e-3}, {5e-9, 0.8, 2e10, 80.0},\n    };\n    for (int i = 0; i < 3; i++) {\n        double got = static_watts(c[i].a, c[i].v, c[i].n);\n        if (fabs(got - c[i].want) > c[i].want * 1e-9) {\n            printf(\"%g A, %g V, %g transistors: got %g want %g\\n\",\n                   c[i].a, c[i].v, c[i].n, got, c[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "How long a gate takes",
+   "brief": "<p>Return the propagation delay of a gate, given its on-resistance in ohms and the capacitance it drives in farads. Use the first-order estimate.</p>",
+   "kind": "output",
+   "concept": "Delay is resistance times capacitance, which is why making a transistor wider is not free: it drives faster and loads its own driver more.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The constant is <code>ln(2)</code>, which is about 0.69, because the delay is measured to the halfway point."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>An answer exactly <code>R*C</code> means the constant is missing. Delay here is measured from an input crossing halfway to the output crossing halfway, and an exponential reaches half in <code>ln(2)</code> time constants.</p>"
+    }
+   ],
+   "after": "<p>Doubling the width halves the resistance and doubles the input capacitance. The gate gets faster and whatever drives it gets slower, which is why you cannot make a chip fast by making everything big.</p>",
+   "starter": "double prop_delay(double ohms, double farads) {\n    return ohms * farads;\n}",
+   "tests": "#include <stdio.h>\n#include <math.h>\nint main(void) {\n    struct { double r, c, want; } t[] = {\n        {1000, 1e-15, 6.93e-13}, {5000, 2e-15, 6.93e-12}, {200, 1e-14, 1.386e-12},\n    };\n    for (int i = 0; i < 3; i++) {\n        double got = prop_delay(t[i].r, t[i].c);\n        if (fabs(got - t[i].want) > t[i].want * 0.01) {\n            printf(\"R=%g C=%g: got %g want %g\\n\", t[i].r, t[i].c, got, t[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "The on to off ratio",
+   "brief": "<p>Return how many times more current flows at the supply voltage than at zero, given the threshold, the supply and the subthreshold slope, using only the subthreshold behaviour extrapolated across the whole range.</p>",
+   "kind": "output",
+   "concept": "The number of decades between off and on is the whole gate voltage divided by the slope, which is why a bigger supply used to buy a better switch.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17 -lm",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The exponent is a count of decades, and the answer is ten to it."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The gate voltage swing is the supply in millivolts. Divide by the slope for a number of decades and raise ten to it. Returning the exponent instead of the power gives about 16.7 where the answer is nearly ten to the seventeenth.</p>"
+    }
+   ],
+   "after": "<p>A one volt supply at 60 mV per decade gives roughly seventeen decades of range. Halve the supply and you halve the decades, which is not a small change to a switch: it is the difference between off and nearly off.</p>",
+   "starter": "#include <math.h>\n\ndouble on_off_ratio(double supply_v, double slope_mv) {\n    return supply_v * 1000.0 / slope_mv;\n}",
+   "tests": "#include <stdio.h>\n#include <math.h>\nint main(void) {\n    struct { double v, s, want_log; } c[] = {\n        {1.0, 60, 16.667}, {0.5, 60, 8.333}, {1.8, 90, 20.0},\n    };\n    for (int i = 0; i < 3; i++) {\n        double got = on_off_ratio(c[i].v, c[i].s);\n        if (got <= 0 || fabs(log10(got) - c[i].want_log) > 0.02) {\n            printf(\"supply %.1f slope %.0f: got %g, want about 1e%.2f\\n\",\n                   c[i].v, c[i].s, got, c[i].want_log);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Where the heat comes from",
+   "brief": "<p>Return the fraction of total power that is static, given dynamic watts and static watts, so the checks can walk it across four process generations.</p>",
+   "kind": "output",
+   "concept": "Static power went from a rounding error to a third of the budget in about four generations, and that is the event the next two units are about.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "A fraction of the total, not a ratio of one to the other."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The denominator is the total, which is both terms added together. Dividing static by dynamic gives a number that exceeds one when static wins, and a fraction cannot.</p>"
+    },
+    {
+     "id": "divzero",
+     "judge": "verdict",
+     "key": "signal",
+     "prose": "<p>Both inputs were zero, so the total is zero. Decide what a fraction of nothing should be and say so explicitly rather than dividing and hoping.</p>"
+    }
+   ],
+   "after": "<p>The last row is a part where leakage is a third of the power before any work is done. Nothing in the instruction set changed to cause that, and nothing in the instruction set could fix it.</p>",
+   "starter": "double static_fraction(double dynamic_w, double static_w) {\n    return static_w / dynamic_w;\n}",
+   "tests": "#include <stdio.h>\n#include <math.h>\nint main(void) {\n    struct { double d, s, want; } c[] = {\n        {100, 1, 0.0099}, {100, 25, 0.2}, {60, 30, 0.3333}, {50, 50, 0.5},\n    };\n    for (int i = 0; i < 4; i++) {\n        double got = static_fraction(c[i].d, c[i].s);\n        if (fabs(got - c[i].want) > 0.002) {\n            printf(\"dynamic %.0f static %.0f: got %.4f want %.4f\\n\",\n                   c[i].d, c[i].s, got, c[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

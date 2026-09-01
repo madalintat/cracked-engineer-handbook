@@ -1,0 +1,262 @@
+{
+ "slug": "cmos-gate",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Exactly one network",
+   "brief": "<p>Given the two inputs and a description of which network conducts, return 1 if the gate is well formed for that row and 0 if it is not. Well formed means exactly one of the two networks conducts.</p>",
+   "kind": "output",
+   "concept": "Both networks conducting is a short circuit, and neither conducting leaves the output floating. Exactly one is the entire discipline.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Exactly one is true. There is a single operator for that."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Read the row the check names. Returning <code>pu || pd</code> accepts the case where both conduct, which is a short from the supply to ground through your gate. Returning <code>pu &amp;&amp; !pd</code> is right for one ordering and silently wrong for the other.</p>"
+    }
+   ],
+   "after": "<p>Exclusive or is the well-formedness condition for every static CMOS gate there is. A cell library's verification runs exactly this over every input combination.</p>",
+   "starter": "/* pu: does the pull-up network conduct for this input row?\n   pd: does the pull-down network conduct? */\nint well_formed(int pu, int pd) {\n    return pu || pd;\n}",
+   "tests": "#include <stdio.h>\nint main(void) {\n    struct { int pu, pd, want; } c[] = {\n        {0, 0, 0},   /* output floats */\n        {1, 0, 1},   /* pulled high  */\n        {0, 1, 1},   /* pulled low   */\n        {1, 1, 0},   /* crowbar      */\n    };\n    for (int i = 0; i < 4; i++) {\n        int got = well_formed(c[i].pu, c[i].pd);\n        if (!!got != c[i].want) {\n            printf(\"pu=%d pd=%d: got %d want %d\\n\", c[i].pu, c[i].pd, got, c[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "The dual of a network",
+   "brief": "<p>A pull-down network is described as a list of series groups wired in parallel. Return the depth of the deepest series stack in the pull-up network, which is its dual.</p>",
+   "kind": "output",
+   "concept": "Series in one network is parallel in the other, so the deepest stack in one is the widest group count in the other.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The dual swaps series and parallel. What was a count of parallel groups becomes a depth."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Duality exchanges the two structures. A pull-down of three groups in parallel becomes a pull-up of three transistors in series, whatever the sizes of the groups were, so the answer depends on how many groups there are and not on how deep any of them is.</p>"
+    }
+   ],
+   "after": "<p>A stack deeper than about four is too slow to build, which is why gates have a fan-in limit of roughly four and an eight-input NAND is a tree.</p>",
+   "starter": "/* groups: how many series groups the pull-down wires in parallel.\n   sizes:  how many transistors are in each of those groups. */\nint dual_max_stack(int groups, const int *sizes) {\n    int best = 0;\n    for (int i = 0; i < groups; i++)\n        if (sizes[i] > best) best = sizes[i];\n    return best;\n}",
+   "tests": "#include <stdio.h>\nint main(void) {\n    int a[] = {2, 1};        /* NAND-ish: two in series, parallel with one */\n    int b[] = {1, 1, 1};     /* three in parallel */\n    int c[] = {3};           /* one group of three in series */\n    struct { int n; const int *s; int want; } t[] = {\n        {2, a, 2}, {3, b, 3}, {1, c, 1},\n    };\n    for (int i = 0; i < 3; i++) {\n        int got = dual_max_stack(t[i].n, t[i].s);\n        if (got != t[i].want) {\n            printf(\"case %d: got %d want %d\\n\", i, got, t[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Counting a gate",
+   "brief": "<p>Return the transistor count of a standard cell, given the number of inputs and whether the gate inverts.</p>",
+   "kind": "output",
+   "concept": "An inverting gate costs two transistors per input. A non-inverting one costs that plus an inverter.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Two per input, and an inverter is two more."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Each input needs one transistor in the pull-up and one in the pull-down, so an inverting gate of <code>n</code> inputs is <code>2n</code>. A non-inverting gate is that plus an inverter on the output, which is two more.</p>"
+    }
+   ],
+   "after": "<p>Two-input NAND is four and two-input AND is six. That fifty per cent is the whole reason the next part starts where it does.</p>",
+   "starter": "int transistors(int inputs, int inverting) {\n    return inputs * 2;\n}",
+   "tests": "#include <stdio.h>\nint main(void) {\n    struct { int n, inv, want; } c[] = {\n        {1, 1, 2},   /* NOT  */\n        {2, 1, 4},   /* NAND */\n        {2, 0, 6},   /* AND  */\n        {3, 1, 6},   /* 3-input NAND */\n        {3, 0, 8},   /* 3-input AND  */\n    };\n    for (int i = 0; i < 5; i++) {\n        int got = transistors(c[i].n, c[i].inv);\n        if (got != c[i].want) {\n            printf(\"%d inputs, inverting=%d: got %d want %d\\n\",\n                   c[i].n, c[i].inv, got, c[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Stages, and therefore delay",
+   "brief": "<p>Return the number of gate delays a function costs, given how many inverting stages it needs and whether the result has to be non-inverting.</p>",
+   "kind": "output",
+   "concept": "Delay is counted in stages, and an inversion at the end is a stage.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The inverter is a stage like any other."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>An output inverter is not free in time any more than it is in area. If the result has to come out the other way round, that is one more stage between the input changing and the output settling.</p>"
+    }
+   ],
+   "after": "<p>This is why a designer builds a tree of NANDs and NORs whose inversions cancel rather than a chain of ANDs. Cancelling an inversion removes a stage.</p>",
+   "starter": "int delay_stages(int inverting_stages, int needs_noninverting) {\n    return inverting_stages;\n}",
+   "tests": "#include <stdio.h>\nint main(void) {\n    struct { int s, n, want; } c[] = {\n        {1, 0, 1}, {1, 1, 2}, {3, 0, 3}, {3, 1, 4},\n    };\n    for (int i = 0; i < 4; i++) {\n        int got = delay_stages(c[i].s, c[i].n);\n        if (got != c[i].want) {\n            printf(\"stages %d noninv %d: got %d want %d\\n\",\n                   c[i].s, c[i].n, got, c[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "What a complex gate saves",
+   "brief": "<p>Return the transistor count of <code>NOT(sum of products)</code> built as one CMOS gate, given the number of product terms and how many literals are in each.</p>",
+   "kind": "output",
+   "concept": "Any inverted sum of products is one gate, which is why a synthesised netlist looks nothing like the expression that produced it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "One transistor per literal in the pull-down, and the dual has the same count in the pull-up."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Every literal appears once in each network. Count the literals across all the product terms and double it. Adding an inverter is wrong here: the gate is already inverting, which is what the NOT in the name is.</p>"
+    }
+   ],
+   "after": "<p>Six transistors and one delay, against fourteen and three for the same function built from discrete gates. This is where synthesis earns its keep.</p>",
+   "starter": "/* terms: how many product terms are summed.\n   widths: how many literals in each term. */\nint aoi_transistors(int terms, const int *widths) {\n    int n = 0;\n    for (int i = 0; i < terms; i++) n += widths[i];\n    return n;\n}",
+   "tests": "#include <stdio.h>\nint main(void) {\n    int a[] = {2, 1};       /* NOT((A AND B) OR C) */\n    int b[] = {1, 1};       /* NOR */\n    int c[] = {2, 2};       /* NOT((A AND B) OR (C AND D)) */\n    struct { int n; const int *w; int want; } t[] = {\n        {2, a, 6}, {2, b, 4}, {2, c, 8},\n    };\n    for (int i = 0; i < 3; i++) {\n        int got = aoi_transistors(t[i].n, t[i].w);\n        if (got != t[i].want) {\n            printf(\"case %d: got %d want %d\\n\", i, got, t[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Why NOR is the slower one",
+   "brief": "<p>Return the relative resistance of a gate's slow path, given how many transistors are in series in that path and the mobility penalty of the flavour they are made from.</p>",
+   "kind": "output",
+   "concept": "Series resistance adds, and the PMOS flavour starts higher, so two PMOS in series is four times the resistance of two NMOS in series.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Resistances in series add, and each one is already scaled by the penalty."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The penalty applies to every transistor in the stack, not once to the stack. Two in series at a penalty of two is four, not three.</p>"
+    }
+   ],
+   "after": "<p>NAND stacks its NMOS and parallels its PMOS. NOR does the opposite, so its slow path is two of the slow flavour in series. Same transistor count, worse gate.</p>",
+   "starter": "double slow_path(int in_series, double mobility_penalty) {\n    return in_series + mobility_penalty;\n}",
+   "tests": "#include <stdio.h>\n#include <math.h>\nint main(void) {\n    struct { int n; double p, want; } c[] = {\n        {2, 1.0, 2.0},   /* NAND: two NMOS in series */\n        {2, 2.0, 4.0},   /* NOR:  two PMOS in series  */\n        {3, 2.5, 7.5},\n        {1, 1.0, 1.0},\n    };\n    for (int i = 0; i < 4; i++) {\n        double got = slow_path(c[i].n, c[i].p);\n        if (fabs(got - c[i].want) > 1e-9) {\n            printf(\"%d in series, penalty %.1f: got %.2f want %.2f\\n\",\n                   c[i].n, c[i].p, got, c[i].want);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "Bubble pushing",
+   "brief": "<p>An inversion can be moved across a De Morgan boundary. Return how many transistors are saved by turning <code>NOT(a) OR NOT(b)</code> into <code>NOT(a AND b)</code>.</p>",
+   "kind": "output",
+   "concept": "Moving an inversion across a boundary can delete transistors and a gate delay, which is why real logic looks inside out.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Count both sides. Two inverters and an OR against one NAND."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The left side is two inverters at two transistors each plus a two-input OR at six, which is ten. The right side is a two-input NAND at four. The saving is the difference.</p>"
+    }
+   ],
+   "after": "<p>Six transistors and a gate delay, from applying an identity you already knew as algebra. A synthesis tool does this thousands of times per design.</p>",
+   "starter": "/* Returns transistors saved by rewriting NOT(a) OR NOT(b) as NOT(a AND b). */\nint bubble_saving(void) {\n    return 0;\n}",
+   "tests": "#include <stdio.h>\nint main(void) {\n    int got = bubble_saving();\n    if (got != 6) { printf(\"got %d, want 6\\n\", got); return 1; }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "The mux nobody builds from gates",
+   "brief": "<p>Return the transistor count of a two-way multiplexer, given whether it is built from transmission gates or from NAND gates.</p>",
+   "kind": "output",
+   "concept": "A transmission gate passes a level rather than driving one, and a multiplexer built from them is less than half the size.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -std=c17",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Two transmission gates at two transistors each, plus one inverter for the complement of the select signal."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The transmission-gate version is two switches of two transistors, plus an inverter to produce the complementary select, which is six. The gate version is about fourteen.</p>"
+    }
+   ],
+   "after": "<p>The version Part II asks you to build is the fourteen-transistor one, and that is the right thing to build while learning that one primitive reaches everything. It is worth knowing it is not what goes on a chip.</p>",
+   "starter": "int mux2_transistors(int use_transmission_gates) {\n    return 14;\n}",
+   "tests": "#include <stdio.h>\nint main(void) {\n    if (mux2_transistors(1) != 6)  { printf(\"transmission: got %d want 6\\n\",  mux2_transistors(1)); return 1; }\n    if (mux2_transistors(0) != 14) { printf(\"gates: got %d want 14\\n\", mux2_transistors(0)); return 1; }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

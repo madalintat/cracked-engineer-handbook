@@ -314,12 +314,14 @@
    "phase": "build",
    "accent": "gold",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
+   "ready": true,
+   "words": 1415,
+   "exercises": 8,
+   "drills": 15,
    "needs": [],
-   "neededBy": []
+   "neededBy": [
+    "cmos-gate"
+   ]
   },
   {
    "slug": "cmos-gate",
@@ -332,11 +334,13 @@
    "phase": "build",
    "accent": "gold",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
+   "ready": true,
+   "words": 1611,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "switch"
+   ],
    "neededBy": [
     "nand",
     "integers"
@@ -2546,9 +2550,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 5,
-  "words": 8377,
-  "exercises": 40,
-  "drills": 75
+  "ready": 7,
+  "words": 11403,
+  "exercises": 56,
+  "drills": 105
  }
 }

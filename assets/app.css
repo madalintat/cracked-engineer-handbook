@@ -1792,3 +1792,6 @@ a.gl:hover { text-decoration-style: solid; color: var(--accent-ink); }
   margin-left: 2px;
 }
 .track .part h3 { margin-top: 2px; }
+.fig-line { fill: none; stroke: var(--accent); stroke-width: 2;
+            stroke-linejoin: round; stroke-linecap: round; }
+.fig-axis { stroke: var(--border); stroke-width: 1.2; }
