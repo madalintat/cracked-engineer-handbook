@@ -37,7 +37,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [ ] Editor: transparent textarea over a highlighted `<pre>`, 15 shared metrics
 - [ ] Tokenizers: C/C++, CUDA, Verilog, Python, and a per-line pass for x86-64
 - [ ] Backend interface: one shape, four implementations
-- [ ] `sim` — in-page logic simulator, in a Worker
+- [x] `sim` — in-page logic simulator, 24 tests, Worker-ready
 - [ ] `godbolt` — Compiler Explorer client, nonce in `userArguments`
 - [ ] `yosys` — `yowasp-yosys` in a Worker
 - [ ] `modal` — submit and poll against the learner's own endpoint
