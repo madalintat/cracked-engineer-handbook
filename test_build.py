@@ -26,8 +26,10 @@ def check(name, fn):
         print(f"  ERROR {name}: {type(e).__name__}: {e}")
 
 
-def ex_file(body, n=build.N_EXERCISES):
+def ex_file(body, n=build.N_EXERCISES, backend="godbolt"):
     """A file with n exercises, the first being `body`."""
+    spec = ('```spec\n{"chip": "Not", "inputs": ["a"], "outputs": ["out"], '
+            '"table": [[0,1],[1,0]]}\n```\n') if backend == "sim" else ""
     filler = """
 ## Filler {i}
 A brief that says something real about the exercise at hand.
@@ -42,7 +44,7 @@ int main(){}
 ```solution
 int main(){return 0;}
 ```
-"""
+""" + spec
     rest = "".join(filler.replace("{i}", str(i)) for i in range(2, n + 1))
     return "## First\n" + body + rest
 
@@ -110,10 +112,60 @@ def t_diagnose_prose_does_not_leak_into_the_brief():
     assert "let b = a" not in e["brief"], "diagnose fence leaked into the brief"
 
 
+SPEC = """```spec
+{"chip": "Not", "inputs": ["a"], "outputs": ["out"],
+ "table": [[0,1],[1,0]], "minGates": 1}
+```
+"""
+
+
 def t_backend_defaults_to_the_unit():
-    body = GOOD.replace("@backend godbolt\n", "")
-    ex = build.parse_exercises(ex_file(body), "t", "sim")
+    body = GOOD.replace("@backend godbolt\n", "") + SPEC
+    ex = build.parse_exercises(ex_file(body, backend="sim"), "t", "sim")
     assert ex[0]["backend"] == "sim", ex[0]["backend"]
+    assert ex[0]["spec"]["chip"] == "Not"
+
+
+def t_sim_without_a_spec_is_an_error():
+    expect_problem(ex_file(GOOD.replace("@backend godbolt", "@backend sim")),
+                   "needs a ```spec block")
+
+
+def t_spec_outside_sim_is_an_error():
+    expect_problem(ex_file(GOOD + SPEC),
+                   "only means something on the sim backend")
+
+
+def t_spec_table_must_be_exhaustive():
+    short = SPEC.replace('"table": [[0,1],[1,0]]', '"table": [[0,1]]')
+    body = GOOD.replace("@backend godbolt", "@backend sim") + short
+    expect_problem(ex_file(body, backend="sim"), "must be exhaustive", default="sim")
+
+
+def t_spec_row_width_is_checked():
+    bad = SPEC.replace('"table": [[0,1],[1,0]]', '"table": [[0,1,1],[1,0,0]]')
+    body = GOOD.replace("@backend godbolt", "@backend sim") + bad
+    expect_problem(ex_file(body, backend="sim"), "want 1 inputs plus 1 outputs",
+                   default="sim")
+
+
+def t_spec_rejects_a_repeated_input_row():
+    dup = SPEC.replace('"table": [[0,1],[1,0]]', '"table": [[0,1],[0,0]]')
+    body = GOOD.replace("@backend godbolt", "@backend sim") + dup
+    expect_problem(ex_file(body, backend="sim"), "repeats the input row",
+                   default="sim")
+
+
+def t_spec_rejects_an_impossible_gate_budget():
+    imp = SPEC.replace('"minGates": 1', '"minGates": 4, "maxGates": 2')
+    body = GOOD.replace("@backend godbolt", "@backend sim") + imp
+    expect_problem(ex_file(body, backend="sim"), "below minGates", default="sim")
+
+
+def t_spec_must_be_valid_json():
+    body = (GOOD.replace("@backend godbolt", "@backend sim")
+            + "```spec\n{not json}\n```\n")
+    expect_problem(ex_file(body, backend="sim"), "not valid JSON", default="sim")
 
 
 # -------------------------------------------------------------- the error cases

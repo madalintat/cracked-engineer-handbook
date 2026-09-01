@@ -1,5 +1,567 @@
 {
  "slug": "nand",
  "backend": "sim",
- "exercises": []
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Inversion, from one gate",
+   "brief": "<p>Tie both inputs of a nand together and it inverts. Work out why from the truth table before you write it: when both inputs carry the same value, only two rows of the table are reachable.</p>\n<p>The starter reaches for a built-in. There is no built-in.</p>",
+   "kind": "property",
+   "concept": "The only primitive is nand, and inversion costs one of them.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "non-nand-part"
+    }
+   ],
+   "hints": [
+    "A nand has two inputs. Nothing says they have to be different wires."
+   ],
+   "diagnose": [
+    {
+     "id": "non-nand-part",
+     "judge": "verdict",
+     "key": "non-nand-part",
+     "prose": "<p>There is no <code>not</code> to call. The checker walks your design down to its leaves and the only leaf it accepts is <code>nand</code>. That restriction is the whole point of the unit: if you could reach for a gate you had not built, the claim that everything comes from one primitive would be untested.</p>"
+    },
+    {
+     "id": "table",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Your circuit builds, but it computes the wrong function. Check the row the table names against what a nand does when both its inputs are the same.</p>"
+    }
+   ],
+   "after": "<p>One gate, and you have inversion. Two of the three constructions in the proof are now within reach.</p>",
+   "starter": "chip Not(a) -> out {\n  out = not(a)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Not",
+    "inputs": [
+     "a"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "minGates": 1,
+    "maxGates": 2
+   }
+  },
+  {
+   "n": 2,
+   "title": "And, the expensive way round",
+   "brief": "<p>A nand is an and with the answer inverted. You already have an inverter. Put them together.</p>\n<p>Notice what this costs: two gates for AND against one for NAND. That ratio is not an accident of this exercise, it is what CMOS charges, and it is why the part you are building everything from is the inverted one.</p>",
+   "kind": "property",
+   "concept": "AND is not a primitive. It is NAND with an inverter bolted on.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "You are one inversion away. The starter gives you the nand already."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Compare your output column against the specification's. If yours is the exact opposite on every row, you have built the nand and stopped one gate early.</p>"
+    },
+    {
+     "id": "floating",
+     "judge": "verdict",
+     "key": "floating-input",
+     "prose": "<p>A wire in your design is never driven by anything. Every name you read from must be either an input of the chip or the target of an assignment.</p>"
+    }
+   ],
+   "after": "<p>Two gates. On silicon this is six transistors against four, and slower, which is exactly why the primitive is nand.</p>",
+   "starter": "chip And(a, b) -> out {\n  out = nand(a, b)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "And",
+    "inputs": [
+     "a",
+     "b"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1
+     ]
+    ],
+    "minGates": 2,
+    "maxGates": 4
+   }
+  },
+  {
+   "n": 3,
+   "title": "Or, by De Morgan",
+   "brief": "<p>This is the one that surprises people. <code>a OR b</code> is <code>NOT(NOT a AND NOT b)</code>, and written in nands that is: invert both inputs, then nand them.</p>\n<p>Read that again and count. Inverting twice and nanding once gives OR, in three gates, with no OR anywhere in the construction.</p>\n<p>The starter leaves a wire dangling.</p>",
+   "kind": "property",
+   "concept": "De Morgan turns an OR into a NAND of two inversions.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "floating-input"
+    }
+   ],
+   "hints": [
+    "The starter inverts `a` and never inverts `b`."
+   ],
+   "diagnose": [
+    {
+     "id": "floating-input",
+     "judge": "verdict",
+     "key": "floating-input",
+     "prose": "<p>The wire named in the message is read but never written. An unconnected wire is not 0. It has no value at all, and a simulator that quietly called it 0 would let you ship a design that behaves differently on real silicon.</p>"
+    },
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Both inputs need inverting before the final nand. Inverting one of them gives you something else entirely.</p>"
+    }
+   ],
+   "after": "<p>Three gates for OR. Notice you never needed an OR gate to build one.</p>",
+   "starter": "chip Or(a, b) -> out {\n  na = nand(a, a)\n  out = nand(na, nb)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Or",
+    "inputs": [
+     "a",
+     "b"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1
+     ]
+    ],
+    "minGates": 3,
+    "maxGates": 5
+   }
+  },
+  {
+   "n": 4,
+   "title": "A loop is not a shortcut",
+   "brief": "<p>The starter looks clever. It feeds a wire back into the gate that produces it, which in a language with statements would be an ordinary assignment.</p>\n<p>Here it is not. Run it and read what the checker says.</p>",
+   "kind": "property",
+   "concept": "Nothing in this part has a clock, so a value cannot depend on itself.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "cycle"
+    }
+   ],
+   "hints": [
+    "Follow `x` backwards. What has to be known before it can be computed?"
+   ],
+   "diagnose": [
+    {
+     "id": "cycle",
+     "judge": "verdict",
+     "key": "cycle",
+     "prose": "<p>The wires named in the message form a loop, so the value of each one depends on itself. That is not a function of the inputs, it is a function of time, and nothing here has a clock yet to say when. Feedback is exactly what makes a bit stay put, and you get it four units from now. It needs a clock first.</p>"
+    },
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Your design has no loop now, but it computes the wrong function. Two nands in series invert twice, which gets you back where you started.</p>"
+    }
+   ],
+   "after": "<p>The restriction lifts in the unit on feedback, and the moment it lifts is the moment you get memory.</p>",
+   "starter": "chip Not(a) -> out {\n  x = nand(a, x)\n  out = nand(x, x)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Not",
+    "inputs": [
+     "a"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ],
+    "minGates": 1,
+    "maxGates": 3
+   }
+  },
+  {
+   "n": 5,
+   "title": "Exclusive or",
+   "brief": "<p>True when the inputs differ. Build it however you can get it working first, then look at the gate count the checker reports.</p>\n<p>The obvious route is to write out the sum of products and translate it gate by gate. That works and it costs five or six. A four-gate solution exists.</p>\n<p>separates them.</p>",
+   "kind": "property",
+   "concept": "Correctness and efficiency are separate questions, and this unit",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "There are two rows where the answer is 1. Handle each, then combine."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>The failing row is named in the message. XOR is 1 when the inputs differ and 0 when they agree, so check both agreeing rows and both differing rows against what you built.</p>"
+    },
+    {
+     "id": "cycle",
+     "judge": "verdict",
+     "key": "cycle",
+     "prose": "<p>A wire in your design feeds itself. Follow the name in the message backwards through your assignments until you reach it a second time.</p>"
+    }
+   ],
+   "after": "<p>Whatever you found, it is correct. The next exercise asks for it in four.</p>",
+   "starter": "chip Xor(a, b) -> out {\n  out = nand(a, b)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Xor",
+    "inputs": [
+     "a",
+     "b"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0
+     ]
+    ],
+    "minGates": 4
+   }
+  },
+  {
+   "n": 6,
+   "title": "Exclusive or, in four",
+   "brief": "<p>Same function, and now there is a budget. Five gates will be rejected.</p>\n<p>The trick is that the sum-of-products route computes <code>nand(a, b)</code> twice without noticing. Compute it once and feed it to both branches.</p>\n<p>gates the difference between them is the whole game.</p>",
+   "kind": "property",
+   "concept": "The same function has many circuits, and on a chip with billions of",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "gate-budget"
+    }
+   ],
+   "hints": [
+    "Start with `n1 = nand(a, b)`. Then ask what `nand(a, n1)` gives you."
+   ],
+   "diagnose": [
+    {
+     "id": "gate-budget",
+     "judge": "verdict",
+     "key": "gate-budget",
+     "prose": "<p>Correct, and over budget. Look for a value you compute twice. In the sum-of-products version, inverting both inputs separately does work that a single shared <code>nand(a, b)</code> already does.</p>"
+    },
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>The row named in the message is wrong. Four gates is achievable, but not by dropping one from a five-gate design at random.</p>"
+    }
+   ],
+   "after": "<p>Four gates. Both versions are correct; only one of them is what you would put on silicon.</p>",
+   "starter": "chip Xor(a, b) -> out {\n  na = nand(a, a)\n  nb = nand(b, b)\n  t1 = nand(a, nb)\n  t2 = nand(na, b)\n  out = nand(t1, t2)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Xor",
+    "inputs": [
+     "a",
+     "b"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0
+     ]
+    ],
+    "minGates": 4,
+    "maxGates": 4
+   }
+  },
+  {
+   "n": 7,
+   "title": "Choosing between two wires",
+   "brief": "<p>A multiplexer passes one of its data inputs through, chosen by a third. When <code>sel</code> is 0 the output follows <code>a</code>; when it is 1 it follows <code>b</code>.</p>\n<p>This is the first circuit whose behaviour depends on a control signal rather than only on data, and there is no difference in the hardware between the two. A control wire is an ordinary wire routed into selector logic.</p>\n<p>somewhere that changes what the rest of the circuit does.</p>",
+   "kind": "property",
+   "concept": "Control is data. A control signal is an ordinary input, routed",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Gate each input with `sel` in the polarity you want, then combine the two."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>The message names a row where <code>sel</code> picked the wrong input. Check the two rows where <code>a</code> and <code>b</code> disagree, since those are the only rows where <code>sel</code> matters at all.</p>"
+    },
+    {
+     "id": "floating",
+     "judge": "verdict",
+     "key": "floating-input",
+     "prose": "<p>A wire is read but never written. Inverting <code>sel</code> needs its own assignment before you can use the inverted value.</p>"
+    }
+   ],
+   "after": "<p>Every addressed memory you build from here on is this circuit, repeated and given more select bits.</p>",
+   "starter": "chip Mux(a, b, sel) -> out {\n  out = nand(a, sel)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Mux",
+    "inputs": [
+     "a",
+     "b",
+     "sel"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1
+     ]
+    ],
+    "minGates": 4,
+    "maxGates": 8
+   }
+  },
+  {
+   "n": 8,
+   "title": "The last of the sixteen",
+   "brief": "<p>There are exactly sixteen functions of two bits. You have built five of them. This one is true when the inputs agree, which makes it the inverse of the one you built two exercises ago.</p>\n<p>You may use any chip you have already defined in this file. Define it above and call it by name, and the checker counts the nands inside it.</p>\n<p>have the machinery to reach any of them.</p>",
+   "kind": "property",
+   "concept": "Every one of the sixteen two-input functions is reachable, and you now",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "You built XOR already. What does inverting it give you?"
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>The named row disagrees. XNOR is 1 on the two rows where the inputs are equal, which is exactly the rows where XOR is 0.</p>"
+    },
+    {
+     "id": "non-nand-part",
+     "judge": "verdict",
+     "key": "non-nand-part",
+     "prose": "<p>You called a part that is neither <code>nand</code> nor a chip defined in this file. Define it above the chip that uses it.</p>"
+    }
+   ],
+   "after": "<p>Five gates. That is XOR plus an inverter, and it completes the argument: one primitive, arranged carefully, reaches everything.</p>",
+   "starter": "chip Xnor(a, b) -> out {\n  out = nand(a, b)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Xnor",
+    "inputs": [
+     "a",
+     "b"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1
+     ]
+    ],
+    "minGates": 5
+   }
+  }
+ ]
 }

@@ -48,7 +48,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 
 ## 4. Content
 
-- [~] Unit `nand`: note written (1541 words, lint clean); exercises and drills next
+- [~] Unit `nand`: note + 8 exercises done and validated; drills next
 - [ ] Unit `registers` complete (proves `godbolt`)
 - [ ] Unit `clock-edge` complete (proves `yosys`)
 - [ ] Unit `execution-model` complete (proves `modal`)
@@ -81,7 +81,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 
 ## 6. Ship
 
-- [ ] `build.py --validate` against the real toolchains
+- [~] `build.py --validate`: wired and proven for `sim`; other backends pending
 - [ ] `release.sh --check`, staleness gate on `data/`
 - [ ] `runner/app.py` and the learner onboarding doc
 - [ ] `docs/AUTHORING.md`

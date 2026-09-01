@@ -908,5 +908,69 @@
   "title": "Reading the errors you are about to see",
   "text": "",
   "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "nand",
+  "n": 1,
+  "title": "Inversion, from one gate",
+  "text": "The only primitive is nand, and inversion costs one of them.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "nand",
+  "n": 2,
+  "title": "And, the expensive way round",
+  "text": "AND is not a primitive. It is NAND with an inverter bolted on.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "nand",
+  "n": 3,
+  "title": "Or, by De Morgan",
+  "text": "De Morgan turns an OR into a NAND of two inversions.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "nand",
+  "n": 4,
+  "title": "A loop is not a shortcut",
+  "text": "Nothing in this part has a clock, so a value cannot depend on itself.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "nand",
+  "n": 5,
+  "title": "Exclusive or",
+  "text": "Correctness and efficiency are separate questions, and this unit",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "nand",
+  "n": 6,
+  "title": "Exclusive or, in four",
+  "text": "The same function has many circuits, and on a chip with billions of",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "nand",
+  "n": 7,
+  "title": "Choosing between two wires",
+  "text": "Control is data. A control signal is an ordinary input, routed",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "nand",
+  "n": 8,
+  "title": "The last of the sixteen",
+  "text": "Every one of the sixteen two-input functions is reachable, and you now",
+  "part": "Logic"
  }
 ]

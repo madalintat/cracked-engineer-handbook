@@ -278,7 +278,7 @@
    "backend": "sim",
    "ready": true,
    "words": 1541,
-   "exercises": 0,
+   "exercises": 8,
    "drills": 0
   },
   {
@@ -2048,7 +2048,7 @@
   "units": 122,
   "ready": 1,
   "words": 1541,
-  "exercises": 0,
+  "exercises": 8,
   "drills": 0
  }
 }

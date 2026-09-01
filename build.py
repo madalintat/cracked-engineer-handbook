@@ -293,6 +293,7 @@ def parse_exercises(text, where, default_backend):
             "concept": "", "backend": default_backend, "gpu": None,
             "flags": "", "expect": [], "hints": [], "diagnose": [],
             "after": "", "starter": "", "tests": "", "solution": "",
+            "spec": None,
         }
 
         sink = ["brief"]          # where free prose currently goes
@@ -312,6 +313,11 @@ def parse_exercises(text, where, default_backend):
                 body = "\n".join(buf)
                 if name in ("starter", "tests", "solution"):
                     ex[name] = body
+                elif name == "spec":
+                    try:
+                        ex["spec"] = json.loads(body)
+                    except json.JSONDecodeError as e:
+                        problems.append(f"{w}: spec block is not valid JSON: {e}")
                 elif sink[0] == "diagnose" and dbuf is not None:
                     dbuf["prose"].append(f"```\n{body}\n```")
                 elif sink[0] == "after":
@@ -376,6 +382,10 @@ def _check_exercise_shape(ex, w):
         p.append(f"{w}: unknown backend {ex['backend']!r}")
     if ex["gpu"] and ex["backend"] != "modal":
         p.append(f"{w}: @gpu only means something on the modal backend")
+    if ex["backend"] == "sim":
+        p += _check_sim_spec(ex.get("spec"), w)
+    elif ex.get("spec") is not None:
+        p.append(f"{w}: a spec block only means something on the sim backend")
     if not ex["starter"].strip():
         p.append(f"{w}: no starter block")
     if not ex["solution"].strip():
@@ -413,6 +423,55 @@ def _check_exercise_shape(ex, w):
 
 
 # --------------------------------------------------------------------- drills
+
+def _check_sim_spec(spec, w):
+    """The simulator's contract, checked at build time rather than in the
+    browser. A malformed spec would otherwise surface as a confusing runtime
+    error in front of the learner."""
+    p = []
+    if spec is None:
+        p.append(f"{w}: the sim backend needs a ```spec block")
+        return p
+    for k in ("chip", "inputs", "outputs", "table"):
+        if k not in spec:
+            p.append(f"{w}: spec has no {k!r}")
+    if p:
+        return p
+    if not isinstance(spec["inputs"], list) or not spec["inputs"]:
+        p.append(f"{w}: spec inputs must be a non-empty list")
+    if not isinstance(spec["outputs"], list) or not spec["outputs"]:
+        p.append(f"{w}: spec outputs must be a non-empty list")
+    if p:
+        return p
+
+    n_in, n_out = len(spec["inputs"]), len(spec["outputs"])
+    want_rows = 2 ** n_in
+    if not isinstance(spec["table"], list):
+        p.append(f"{w}: spec table must be a list of rows")
+        return p
+    if len(spec["table"]) != want_rows:
+        p.append(f"{w}: spec table has {len(spec['table'])} rows; "
+                 f"{n_in} inputs means {want_rows} rows, and the table must "
+                 f"be exhaustive")
+    seen = set()
+    for i, row in enumerate(spec["table"]):
+        if not isinstance(row, list) or len(row) != n_in + n_out:
+            p.append(f"{w}: spec table row {i} has {len(row) if isinstance(row, list) else '?'} "
+                     f"values; want {n_in} inputs plus {n_out} outputs")
+            continue
+        if any(v not in (0, 1) for v in row):
+            p.append(f"{w}: spec table row {i} has a value that is not 0 or 1")
+        key = tuple(row[:n_in])
+        if key in seen:
+            p.append(f"{w}: spec table repeats the input row {list(key)}")
+        seen.add(key)
+    for k in ("minGates", "maxGates"):
+        if k in spec and not isinstance(spec[k], int):
+            p.append(f"{w}: spec {k} must be a whole number")
+    if "minGates" in spec and "maxGates" in spec and spec["maxGates"] < spec["minGates"]:
+        p.append(f"{w}: spec maxGates is below minGates, so nothing can pass")
+    return p
+
 
 def _check_judged(e, backend, w):
     """One @expect or @diagnose, checked against its backend's vocabulary."""
@@ -601,6 +660,98 @@ def write(path, obj):
 
 # ----------------------------------------------------------------------- main
 
+# ------------------------------------------------------------------ validate
+
+def validate_sim(exercises, where):
+    """Run every sim starter and solution through the real simulator.
+
+    Two round trips per exercise. The starter must fail in the way its @expect
+    declares, and the solution must pass. Without this, a change to the
+    simulator silently turns an exercise into one that teaches nothing, and
+    nobody finds out until a learner is confused by it.
+
+    Uses node, which the simulator already targets so its tests can run.
+    """
+    import subprocess, tempfile
+    payload = [{
+        "n": e["n"], "title": e["title"],
+        "want": [x["key"] for x in e["expect"] if x["judge"] == "verdict"],
+        "starter": e["starter"], "solution": e["solution"], "spec": e["spec"],
+    } for e in exercises if e["backend"] == "sim"]
+    if not payload:
+        return []
+
+    driver = r"""
+const SIM = require(process.argv[2]);
+const items = JSON.parse(require('fs').readFileSync(process.argv[3], 'utf8'));
+const out = items.map(e => {
+  const s = SIM.check(e.starter, e.spec);
+  const sol = SIM.check(e.solution, e.spec);
+  return { n: e.n, title: e.title, want: e.want,
+           starter: s.verdict, starterMsg: s.message,
+           solution: sol.verdict, solutionMsg: sol.message, gates: sol.gates };
+});
+console.log(JSON.stringify(out));
+"""
+    with tempfile.TemporaryDirectory() as d:
+        dp, jp = Path(d) / "d.js", Path(d) / "p.json"
+        dp.write_text(driver)
+        jp.write_text(json.dumps(payload))
+        try:
+            r = subprocess.run(
+                ["node", str(dp), str(ROOT / "assets" / "sim.js"), str(jp)],
+                capture_output=True, text=True, timeout=120)
+        except FileNotFoundError:
+            return [f"{where}: --validate needs node on PATH"]
+        if r.returncode != 0:
+            return [f"{where}: the simulator driver failed: {r.stderr.strip()[:400]}"]
+        results = json.loads(r.stdout)
+
+    problems = []
+    for res in results:
+        w = f"{where} ex{res['n']} ({res['title']})"
+        if res["want"] and res["starter"] not in res["want"]:
+            problems.append(
+                f"{w}: starter gives {res['starter']!r}, @expect declares "
+                f"{' or '.join(res['want'])!r}. The explanation the reader will "
+                f"see does not describe the error they will get.")
+        if res["solution"] != "ok":
+            problems.append(
+                f"{w}: solution does not pass: {res['solution']} "
+                f"({res['solutionMsg']})")
+    return problems
+
+
+def run_validate():
+    """Every backend, every exercise. Per-backend pools, not one shared pool:
+    a single pool of four would queue hundreds of local simulator checks behind
+    three network round trips."""
+    track.validate()
+    by_backend, total = {}, 0
+    for slug, part, title, blurb, backend in track.TRACK:
+        f = CONTENT / "ex" / f"{slug}.md"
+        if not f.exists():
+            continue
+        exercises = parse_exercises(f.read_text(), f"ex/{slug}", backend)
+        total += len(exercises)
+        for e in exercises:
+            by_backend.setdefault(e["backend"], []).append((f"ex/{slug}", e))
+
+    problems, checked = [], 0
+    for backend, items in sorted(by_backend.items()):
+        if backend == "sim":
+            for where in {w for w, _ in items}:
+                group = [e for w, e in items if w == where]
+                problems += validate_sim(group, where)
+                checked += len(group)
+            print(f"  sim      {len(items):3} exercises checked")
+        else:
+            print(f"  {backend:<8} {len(items):3} exercises skipped "
+                  f"(backend client not wired yet)")
+    print(f"\n{checked} of {total} exercises validated against a real tool")
+    return problems
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--check", metavar="FILE", help="check one exercise file")
@@ -631,8 +782,15 @@ def main():
                 mark = "ok  " if u["ready"] else "  . "
                 print(f"  {mark}{u['partRoman']:<5} {u['slug']:<24} {u['backend']}")
         if a.validate:
-            print("\n--validate is not wired yet: needs the backend clients")
-            return 1
+            print("\nvalidating against real tools:")
+            problems = run_validate()
+            if problems:
+                print(f"\n{len(problems)} problem(s):", file=sys.stderr)
+                for p in problems:
+                    print(f"  {p}", file=sys.stderr)
+                return 1
+            print("every checked starter fails as declared, "
+                  "every checked solution passes")
         return 0
     except BuildError as e:
         print(f"build failed:\n{e}", file=sys.stderr)
