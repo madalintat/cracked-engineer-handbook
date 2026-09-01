@@ -1,0 +1,310 @@
+{
+ "slug": "scheduling",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Run whoever has had least",
+   "brief": "<p>Write <code>pick_next</code>, returning the index of the thread the scheduler runs: the runnable one with the smallest accumulated virtual runtime.</p>\n<p>Blocked threads are not in the queue at all, which is the whole reason blocking costs nothing.</p>",
+   "kind": "output",
+   "concept": "Fairness is accounting rather than priority ordering, and a thread that has been blocked has fallen behind, so it runs first when it wakes.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Skip anything not runnable before comparing."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A blocked thread with a tiny runtime is not a candidate: it is waiting for something that is not a processor, so it is not on the queue and must not be considered. Comparing every thread picks one that cannot run.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A thread that has just woken has the smallest runtime, so it runs immediately, which is what makes interactive programs feel responsive without anybody classifying them as interactive. Nothing in the scheduler knows which programs a person is looking at.</p>",
+   "starter": "#include <stddef.h>\nint pick_next(const long *vruntime, const unsigned char *runnable, size_t n) {\n    (void)runnable;\n    int best = -1;\n    for (size_t i = 0; i < n; i++)\n        if (best < 0 || vruntime[i] < vruntime[best]) best = (int)i;\n    return best;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nint pick_next(const long *, const unsigned char *, size_t);\nint main(void) {\n    long v[4] = {40, 12, 55, 3};\n    unsigned char r[4] = {1, 1, 1, 0};\n    /* Thread 3 has the least time and is blocked, so thread 1 runs. */\n    assert(pick_next(v, r, 4) == 1);\n    /* Unblock it and it runs immediately, having fallen behind. */\n    unsigned char r2[4] = {1, 1, 1, 1};\n    assert(pick_next(v, r2, 4) == 3);\n    /* Nothing runnable at all. */\n    unsigned char none[4] = {0, 0, 0, 0};\n    assert(pick_next(v, none, 4) == -1);\n    unsigned char one[4] = {0, 0, 1, 0};\n    assert(pick_next(v, one, 4) == 2);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "Weight, not order",
+   "brief": "<p>Write <code>charge</code>, returning how much virtual runtime a thread accumulates for a given amount of real time at a given weight.</p>\n<p>A heavier thread accumulates more slowly, so it comes up for selection more often and gets more real time.</p>",
+   "kind": "output",
+   "concept": "Priority is a divisor on the accounting rather than a position in an ordering, which is why nothing starves whatever its nice value.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Divide by the weight, using the baseline weight as the scale."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A thread of twice the baseline weight should accumulate half the virtual time for the same real time, so the weight divides rather than multiplies. Getting it the wrong way round gives more processor time to the threads that asked for less.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Nothing starves, whatever the weights, because everybody's runtime still grows and the smallest still wins eventually. That is the difference between a weight and a priority, and it is why a background job at the lowest nice value still finishes rather than waiting for the machine to go idle.</p>",
+   "starter": "long charge(long real_time, long weight, long baseline) {\n    return real_time * weight / baseline;\n}",
+   "tests": "#include <assert.h>\nlong charge(long, long, long);\nint main(void) {\n    /* Baseline weight: virtual time equals real time. */\n    assert(charge(100, 1024, 1024) == 100);\n    /* Twice the weight: half the virtual time for the same real time. */\n    assert(charge(100, 2048, 1024) == 50);\n    /* Half the weight: twice the virtual time, so it comes up half as often. */\n    assert(charge(100, 512, 1024) == 200);\n    assert(charge(0, 512, 1024) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "What a switch really costs",
+   "brief": "<p>Write <code>switch_cost</code>, returning the total cost of a context switch: the fixed register save and restore, plus the cache and translation misses the incoming thread pays while warming up.</p>\n<p>The second part is larger and is charged to the thread switched to.</p>",
+   "kind": "output",
+   "concept": "The cost of a switch is cold caches paid by the incoming thread, which is why it is hard to attribute and why a system doing many switches is slow for reasons no profile line explains.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Add the warm-up to the fixed part rather than taking whichever is larger."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Both costs are paid: the registers are saved and restored, and then the incoming thread misses on everything it touches. Reporting only the larger of the two understates a switch by the amount that is hardest to see.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A few hundred nanoseconds of register work and one to several microseconds of degraded execution afterwards. Migrating to a different core makes the second part worse, because none of the caches the thread warmed are the ones it now has, which is why the load balancer is deliberately reluctant.</p>",
+   "starter": "long switch_cost(long fixed_ns, long misses, long miss_ns) {\n    long warm = misses * miss_ns;\n    return fixed_ns > warm ? fixed_ns : warm;\n}",
+   "tests": "#include <assert.h>\nlong switch_cost(long, long, long);\nint main(void) {\n    /* 300 ns of register work plus 40 misses at 80 ns each. */\n    assert(switch_cost(300, 40, 80) == 3500);\n    /* A thread whose working set is already warm pays only the fixed part. */\n    assert(switch_cost(300, 0, 80) == 300);\n    /* Migration to a cold core: many more misses. */\n    assert(switch_cost(300, 500, 80) == 40300);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Reluctant to move",
+   "brief": "<p>Write <code>should_migrate</code>, deciding whether to move a runnable thread from a busy processor to an idle one.</p>\n<p>Moving costs the cold caches from the previous exercise, so it is worth it only when the thread would wait longer than the move costs.</p>",
+   "kind": "output",
+   "concept": "The balancer is deliberately reluctant, which is why a thread can sit runnable on a busy processor while another sits idle, on purpose.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Compare what waiting costs against what moving costs."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Moving a thread that would only have waited briefly makes it slower, because the migration cost exceeds the wait it avoided. The comparison has to be between the two, not a rule that idle processors must always be filled.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Which is why a machine with an idle core and a queued thread is sometimes behaving correctly. On a system with several memory controllers the reluctance is stronger still, because a thread scheduled away from its memory pays on every access rather than only while warming up.</p>",
+   "starter": "int should_migrate(long wait_ns, long migrate_ns) {\n    (void)wait_ns; (void)migrate_ns;\n    return 1;\n}",
+   "tests": "#include <assert.h>\nint should_migrate(long, long);\nint main(void) {\n    /* A long wait avoided by a cheap move. */\n    assert(should_migrate(50000, 3000) == 1);\n    /* A short wait, and moving costs more than staying. */\n    assert(should_migrate(1000, 3000) == 0);\n    /* Equal is not worth the disruption. */\n    assert(should_migrate(3000, 3000) == 0);\n    assert(should_migrate(0, 3000) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Blocked, and holding the lock",
+   "brief": "<p>Write <code>blocked_by</code>, returning how many threads are stopped by one thread that holds a lock and then blocks on storage.</p>\n<p>A thread that does I/O inside a lock has stopped everybody who wants that lock, for the duration of a disk access.</p>",
+   "kind": "output",
+   "concept": "Holding a lock across a blocking operation converts one thread's wait into everybody's, which is the commoner of the two contention shapes.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Only threads wanting this particular lock are affected, and only while the holder is blocked."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A holder that is running rather than blocked will release the lock shortly, so nobody is stopped for a meaningful time, and threads waiting on a different lock are unaffected either way. Counting all waiters regardless overstates the damage and misses which case is the problem.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The rule is short enough to remember: do not do I/O inside a lock. The duration of the block is a disk access, which unit 024's table prices at tens of microseconds, and it is multiplied by every thread that wanted the same lock.</p>",
+   "starter": "#include <stddef.h>\nint blocked_by(const int *wants_lock, size_t n, int held_lock,\n               int holder_blocked) {\n    (void)held_lock; (void)holder_blocked;\n    return (int)n;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nint blocked_by(const int *, size_t, int, int);\nint main(void) {\n    /* Four threads: three want lock 1, one wants lock 2. */\n    int wants[4] = {1, 1, 2, 1};\n    /* The holder of lock 1 is blocked on storage: three are stopped. */\n    assert(blocked_by(wants, 4, 1, 1) == 3);\n    /* The holder is running, so it will release shortly. */\n    assert(blocked_by(wants, 4, 1, 0) == 0);\n    /* A blocked holder of lock 2 stops the one thread that wants it. */\n    assert(blocked_by(wants, 4, 2, 1) == 1);\n    /* A lock nobody wants stops nobody. */\n    assert(blocked_by(wants, 4, 3, 1) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Blocked by somebody unrelated",
+   "brief": "<p>Write <code>effective_priority</code>, implementing priority inheritance: a thread holding a lock temporarily takes the priority of the highest thread waiting for it.</p>\n<p>Without it, a medium priority thread that never blocks prevents a low priority lock holder from finishing, and the high priority waiter never runs.</p>",
+   "kind": "output",
+   "concept": "Priority inversion is a high priority thread blocked transitively by a medium one, and nothing in the stated priorities describes that relationship.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Take the maximum of the holder's own priority and every waiter's."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The holder keeps its own priority when that is already the highest, and is raised when a waiter outranks it, so the answer is a maximum rather than a replacement. Lowering a holder to match a waiter makes the problem worse.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Mars Pathfinder shipped with this disabled and rebooted repeatedly on the surface, until the flag was set remotely. The bug was not in any thread's logic: each behaved exactly as designed, and the relationship between them was not expressible in the priorities they had been given.</p>",
+   "starter": "#include <stddef.h>\nint effective_priority(int holder_prio, const int *waiter_prio, size_t n) {\n    if (n == 0) return holder_prio;\n    return waiter_prio[0];\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nint effective_priority(int, const int *, size_t);\nint main(void) {\n    /* Nobody waiting: the holder keeps its own priority. */\n    assert(effective_priority(3, 0, 0) == 3);\n    /* A higher priority waiter raises the holder. */\n    int w1[2] = {9, 5};\n    assert(effective_priority(3, w1, 2) == 9);\n    /* A lower priority waiter does not lower it. */\n    int w2[2] = {1, 2};\n    assert(effective_priority(7, w2, 2) == 7);\n    /* The highest waiter wins, wherever it sits in the list. */\n    int w3[3] = {2, 8, 4};\n    assert(effective_priority(1, w3, 3) == 8);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "How many threads",
+   "brief": "<p>Write <code>pool_size</code>, returning how many threads a pool should have, given the core count and the ratio of time spent waiting to time spent computing.</p>\n<p>One thread per core is right for one case, and the case is work that never blocks.</p>",
+   "kind": "output",
+   "concept": "A blocked thread is not using a core, so work that waits needs more threads than cores in exactly the proportion that it waits.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Cores times one plus the ratio."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Work that spends nine tenths of its time waiting has a ratio of nine, which wants ten threads per core rather than one. Sizing to the core count leaves the machine idle while requests queue, which is the commonest way a pool is misconfigured.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The measurement that decides it is the fraction of time your threads are runnable rather than blocked, and it is directly observable. The rule people remember, one thread per core, is the special case where that fraction is one.</p>",
+   "starter": "int pool_size(int cores, int wait_to_compute_ratio) {\n    (void)wait_to_compute_ratio;\n    return cores;\n}",
+   "tests": "#include <assert.h>\nint pool_size(int, int);\nint main(void) {\n    /* Pure computation: one per core. */\n    assert(pool_size(8, 0) == 8);\n    /* Half waiting, half computing. */\n    assert(pool_size(8, 1) == 16);\n    /* Nine tenths waiting on a database. */\n    assert(pool_size(8, 9) == 80);\n    assert(pool_size(1, 3) == 4);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Waking everybody to disappoint them",
+   "brief": "<p>Write <code>wasted_wakeups</code>, counting how many threads are woken for a resource that can serve only some of them.</p>\n<p>Every thread woken becomes runnable, is scheduled, discovers there is nothing for it, and goes back to sleep. The cost is the switches.</p>",
+   "kind": "output",
+   "concept": "Load that looks like the scheduler's fault is usually something making threads runnable that have nothing to do.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Waking one wastes none. Waking all wastes everybody who is not served."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Waking all of them wastes the difference between the number woken and the number the resource can serve, and waking exactly as many as can be served wastes none. More waiters than the resource can serve is the situation the pattern is named for.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The repairs are to wake one when the resource serves one, and to let the kernel choose when several processes wait on the same descriptor. Accepting connections was the standard example: every process in a pool woke on every connection, and the fix was a flag telling the kernel to wake exactly one.</p>",
+   "starter": "int wasted_wakeups(int waiters, int can_serve, int wake_all) {\n    (void)wake_all;\n    return waiters - can_serve;\n}",
+   "tests": "#include <assert.h>\nint wasted_wakeups(int, int, int);\nint main(void) {\n    /* Ten waiting, one can proceed, all woken: nine wasted. */\n    assert(wasted_wakeups(10, 1, 1) == 9);\n    /* Waking exactly one wastes nothing. */\n    assert(wasted_wakeups(10, 1, 0) == 0);\n    /* Waking all when all can proceed wastes nothing either. */\n    assert(wasted_wakeups(10, 10, 1) == 0);\n    /* More can be served than are waiting. */\n    assert(wasted_wakeups(3, 10, 1) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

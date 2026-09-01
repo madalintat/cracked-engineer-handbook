@@ -84,5 +84,8 @@
   "syscalls",
   "elf"
  ],
- "neededBy": []
+ "neededBy": [
+  "virtual-memory",
+  "scheduling"
+ ]
 }

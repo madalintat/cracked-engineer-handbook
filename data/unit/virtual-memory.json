@@ -1,0 +1,88 @@
+{
+ "slug": "virtual-memory",
+ "num": 35,
+ "title": "Virtual memory",
+ "blurb": "Memory is manufactured lazily in response to hardware faults. Allocation is nearly free; the faults are not.",
+ "part": "systems",
+ "partRoman": "VII",
+ "partTitle": "Systems",
+ "phase": "system",
+ "accent": "clay",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "processes",
+   "cache"
+  ],
+  "minutes": 55,
+  "one_idea": "Allocation reserves addresses and nothing else, and the memory appears one page at a time in response to faults the hardware raises as you touch it.",
+  "sources": [
+   "cpu-architectures",
+   "x86-64-assembly"
+  ]
+ },
+ "html": "<p>Every address your program has ever printed is a lie, in the specific sense that no wire in the machine carries it. It is translated on the way to memory, by hardware, using tables the kernel wrote, and almost everything people find confusing about memory usage is a consequence of that translation being lazy.</p>\n<h2 id=\"two-addresses-for-everything\">Two addresses for everything</h2>\n<p>The processor issues a virtual address. Between it and the memory controller sits the memory management unit, which splits that address into a page number and an offset, looks the page number up, and produces a physical page number to which the offset is appended.</p>\n<p>Pages are 4096 bytes on x86-64, so the low twelve bits are the offset and never change during translation. Everything above them is what gets looked up.</p>\n<p>The lookup is not one table. A 48-bit address space with 4 KB pages would need a table of 2 to the 36 entries per process, which is impossible, so the page number is split into four groups of nine bits and each group indexes one level of a tree. Levels that describe nothing are simply absent, which is why a process with a sparse address space costs almost nothing to describe.</p>\n<figure class=\"fig\" data-kind=\"bits\"><svg viewBox=\"-14 -14 668.0 76.0\" class=\"fig-svg\" style=\"max-width:969px\" role=\"img\" aria-label=\"A 48-bit virtual address split into four nine-bit page table indices and a twelve-bit offset.\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"0\" y=\"20\" width=\"640.0\" height=\"28\" rx=\"3\" class=\"fig-panel\"/><rect x=\"480.0\" y=\"20\" width=\"160.0\" height=\"28\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--gold-ink, var(--accent));stroke:var(--gold-ink, var(--accent))\"/><text x=\"560.0\" y=\"38.3\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"600\">offset</text><rect x=\"360.0\" y=\"20\" width=\"120.0\" height=\"28\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"420.0\" y=\"38.3\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"600\">level 1</text><rect x=\"240.0\" y=\"20\" width=\"120.0\" height=\"28\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"300.0\" y=\"38.3\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"600\">level 2</text><rect x=\"120.0\" y=\"20\" width=\"120.0\" height=\"28\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"180.0\" y=\"38.3\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"600\">level 3</text><rect x=\"0.0\" y=\"20\" width=\"120.0\" height=\"28\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"60.0\" y=\"38.3\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"600\">level 4</text><text x=\"6.7\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">47</text><text x=\"113.3\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">39</text><text x=\"233.3\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">30</text><text x=\"353.3\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">21</text><text x=\"473.3\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">12</text><text x=\"633.3\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">0</text></svg><figcaption>Four indices and an offset. Each nine-bit group selects an entry in one level of the tree, and the low twelve bits pass through untouched.</figcaption></figure>\n<h2 id=\"the-cache-that-makes-it-affordable\">The cache that makes it affordable</h2>\n<p>Four levels means four memory accesses to resolve one address, before the access you wanted. That would be catastrophic, so the result is cached.</p>\n<p>The translation lookaside buffer holds recent translations, and it is small, typically a few thousand entries. A hit costs nothing measurable. A miss costs a walk of the tree, which is up to four dependent loads, each of which may itself miss in the data cache.</p>\n<p>A few thousand entries at 4 KB each covers a few megabytes. A program with a working set larger than that misses in the TLB regularly, which is a cost that appears in no instruction count and is invisible unless you look for it.</p>\n<p>Huge pages are the answer: map 2 MB at a time, and one entry covers five hundred times as much. The cost is that the whole 2 MB is committed at once and that finding contiguous physical memory for it gets hard on a fragmented system.</p>\n<h2 id=\"allocation-does-not-allocate\">Allocation does not allocate</h2>\n<p>Here is the fact that reorganises how you read memory numbers.</p>\n<p>Asking for a gigabyte succeeds immediately and consumes no memory. What you get is a range of addresses marked as belonging to you, with no physical pages behind them. The page table entries are absent.</p>\n<p>The memory appears when you touch it. The first write to each page traps into the kernel, which finds a physical page, zeroes it, installs the mapping, and returns to the instruction that faulted as though nothing happened. One fault per page, four thousand and ninety six bytes at a time.</p>\n<p>That is why the first pass over a freshly allocated array is slower than the second, why a benchmark that skips the warm-up measures the fault handler, and why the memory a process is using has two different numbers.</p>\n<h2 id=\"two-numbers-and-which-one-matters\">Two numbers, and which one matters</h2>\n<p>Virtual size is how much address space the process has reserved. Resident set size is how much physical memory is actually behind it.</p>\n<p>They can differ by orders of magnitude and both are correct. A program that maps a hundred gigabyte file and reads two pages of it has a virtual size of a hundred gigabytes and a resident set of eight kilobytes. Nothing is wrong.</p>\n<p>Which explains why memory profilers disagree with each other and with the operating system. They are measuring different things: bytes requested from the allocator, bytes the allocator obtained from the kernel, address space reserved, and pages actually resident. All four are legitimate and only the last is memory in the sense of a resource that runs out.</p>\n<h2 id=\"promising-what-you-do-not-have\">Promising what you do not have</h2>\n<p>Because allocation is lazy, the kernel can promise more than it has, and by default it does.</p>\n<p>This is overcommit, and it is why a fork of a large process succeeds, why a sparse array is practical, and why almost every program that allocates optimistically works. It is also why an allocation almost never fails: the failure has been deferred to the moment the page is touched, at which point there is no way to report it to the code that asked.</p>\n<p>So when the machine genuinely runs out, the kernel picks a process and kills it. The heuristic prefers large recent allocators, which is usually the culprit and is occasionally your database. Turning overcommit off makes allocations fail honestly and makes a great deal of ordinary software stop working, which is why almost nobody does.</p>\n<h2 id=\"faults-that-are-not-errors\">Faults that are not errors</h2>\n<p>A page fault is a trap, and most of them are routine.</p>\n<p>A minor fault means the page is in memory and this process's table does not point at it yet: a first touch of allocated memory, a shared library page another process already loaded, a copy-on-write page being written. It costs a trip into the kernel and no I/O.</p>\n<p>A major fault means the contents have to be read from disk. That costs a disk access, which unit 024's table priced at tens of microseconds for flash and milliseconds for a spinning disk, against tens of nanoseconds for a cache miss.</p>\n<p>The distinction is the one to look for in a profile. High minor fault counts mean the program is touching new memory, which may be fine. High major fault counts mean it is waiting for storage, which is almost never fine.</p>\n<h2 id=\"mapping-instead-of-reading\">Mapping instead of reading</h2>\n<p><code>mmap</code> puts a file's contents in your address space, so reading it is a load and the pages arrive on fault.</p>\n<p>Private mappings are copy on write: your writes are yours alone. Shared mappings write through, and two processes mapping the same file shared see each other's changes with no system call involved, which is the fastest inter-process communication there is.</p>\n<p>The reasons to use it are avoiding a copy through a buffer and letting the kernel manage what stays resident. The reasons not to are that an I/O error becomes a signal rather than a return value, that the mapping cost is per page and shows up as fault latency spread through your code, and that files being written by somebody else underneath you produce results with no defined behaviour.</p>\n<h2 id=\"the-other-thing-the-table-entry-holds\">The other thing the table entry holds</h2>\n<p>A page table entry is not just a physical address. It carries permission bits, and those are the enforcement behind several things earlier units treated as given.</p>\n<p>Readable, writable and executable are separate bits, which is why unit 023's exercises could write to <code>.data</code> and not <code>.rodata</code>, and could execute <code>.text</code> and not a data page. The linker recorded the intent, the loader set the bits, and the processor checks them on every access with no cost, because the check happens in the same lookup that produces the address.</p>\n<p>There is also a bit saying whether the page has been written since it was last cleared. That is what lets the kernel know a page is clean and can simply be dropped rather than written out, which is the difference between evicting a page of a mapped executable and evicting a page of your heap.</p>\n<p>And a bit saying whether it has been accessed at all, which is what the replacement policy reads to decide what to evict. Nothing tracks how often a page is used; there is one bit, cleared periodically, and every eviction decision on your machine is made from that.</p>\n<h2 id=\"swap-is-not-extra-memory\">Swap is not extra memory</h2>\n<p>When physical memory is short, pages that have not been used recently are written to storage and their table entries cleared. Touching one later takes a major fault and reads it back.</p>\n<p>The important thing is what this is for. Swap does not extend memory in a useful way, because a working set larger than physical memory means constant major faults and a system that appears to have stopped. What swap is genuinely good at is evicting pages that were allocated and never used again, which real programs have plenty of, and freeing that space for the page cache.</p>\n<p>A machine that is swapping steadily is not using extra memory. It is dying slowly.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>Addresses are translated by hardware through a tree the kernel wrote, and the TLB is what makes that affordable.</p>\n<p>Allocation reserves addresses. Memory appears one page at a time on first touch, which is why virtual size and resident set are different numbers and why both are correct.</p>\n<p>Minor faults are routine and major faults are storage. And swap is a way of reclaiming pages nobody wanted, not a way of having more memory than you bought.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These compute translations, fault outcomes and coverage arithmetic, which is exact and reproducible where a measurement of resident set on a shared machine would be neither.</p>\n<p><code>assert-failed</code> names the address or the count your model got wrong. The page size is 4096 throughout and the huge page size is 2 MB, which are the values on every x86-64 machine you will meet.</p>",
+ "headings": [
+  {
+   "id": "two-addresses-for-everything",
+   "text": "Two addresses for everything",
+   "level": 2
+  },
+  {
+   "id": "the-cache-that-makes-it-affordable",
+   "text": "The cache that makes it affordable",
+   "level": 2
+  },
+  {
+   "id": "allocation-does-not-allocate",
+   "text": "Allocation does not allocate",
+   "level": 2
+  },
+  {
+   "id": "two-numbers-and-which-one-matters",
+   "text": "Two numbers, and which one matters",
+   "level": 2
+  },
+  {
+   "id": "promising-what-you-do-not-have",
+   "text": "Promising what you do not have",
+   "level": 2
+  },
+  {
+   "id": "faults-that-are-not-errors",
+   "text": "Faults that are not errors",
+   "level": 2
+  },
+  {
+   "id": "mapping-instead-of-reading",
+   "text": "Mapping instead of reading",
+   "level": 2
+  },
+  {
+   "id": "the-other-thing-the-table-entry-holds",
+   "text": "The other thing the table entry holds",
+   "level": 2
+  },
+  {
+   "id": "swap-is-not-extra-memory",
+   "text": "Swap is not extra memory",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1558,
+ "needs": [
+  "cache",
+  "processes"
+ ],
+ "neededBy": []
+}

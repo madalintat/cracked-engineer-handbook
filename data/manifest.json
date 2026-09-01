@@ -903,7 +903,8 @@
    ],
    "neededBy": [
     "pipeline",
-    "object-model"
+    "object-model",
+    "virtual-memory"
    ],
    "minutes": 55
   },
@@ -948,7 +949,9 @@
    "needs": [
     "pipeline"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "scheduling"
+   ],
    "minutes": 55
   },
   {
@@ -1131,7 +1134,10 @@
     "syscalls",
     "elf"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "virtual-memory",
+    "scheduling"
+   ],
    "minutes": 55
   },
   {
@@ -1145,12 +1151,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1558,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "cache",
+    "processes"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "scheduling",
@@ -1163,12 +1173,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1443,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "atomics",
+    "processes"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "abi",
@@ -2723,9 +2737,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 36,
-  "words": 54756,
-  "exercises": 288,
-  "drills": 540
+  "ready": 38,
+  "words": 57757,
+  "exercises": 304,
+  "drills": 570
  }
 }

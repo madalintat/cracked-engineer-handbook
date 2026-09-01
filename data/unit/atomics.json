@@ -82,5 +82,7 @@
  "needs": [
   "pipeline"
  ],
- "neededBy": []
+ "neededBy": [
+  "scheduling"
+ ]
 }

@@ -9871,6 +9871,542 @@
  },
  {
   "t": "section",
+  "slug": "virtual-memory",
+  "anchor": "two-addresses-for-everything",
+  "title": "Two addresses for everything",
+  "text": "The processor issues a virtual address. Between it and the memory controller sits the memory management unit, which splits that address into a page number and an offset, looks the page number up, and produces a physical page number to which the offset is appended. Pages are 4096 bytes on x86-64, so the low twelve bits are the offset and never change during translation. Everything above them is what gets looked up. The lookup is not one table. A 48-bit address space with 4 KB pages would need a table of 2 to the 36 entries per process, which is impossible, so the page number is split into four groups of nine bits and each group indexes one level of a tree. Levels that describe nothing are simply absent, which is why a process with a sparse address space costs almost nothing to describe. Four indices and an offset. Each nine-bit group selects an entry in one level of the tree, and the low twelve bits pass through untouched.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "virtual-memory",
+  "anchor": "the-cache-that-makes-it-affordable",
+  "title": "The cache that makes it affordable",
+  "text": "Four levels means four memory accesses to resolve one address, before the access you wanted. That would be catastrophic, so the result is cached. The translation lookaside buffer holds recent translations, and it is small, typically a few thousand entries. A hit costs nothing measurable. A miss costs a walk of the tree, which is up to four dependent loads, each of which may itself miss in the data cache. A few thousand entries at 4 KB each covers a few megabytes. A program with a working set larger than that misses in the TLB regularly, which is a cost that appears in no instruction count and is invisible unless you look for it. Huge pages are the answer: map 2 MB at a time, and one entry covers five hundred times as much. The cost is that the whole 2 MB is committed at once and that finding contiguous physical memory for it gets hard on a fragmented system.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "virtual-memory",
+  "anchor": "allocation-does-not-allocate",
+  "title": "Allocation does not allocate",
+  "text": "Here is the fact that reorganises how you read memory numbers. Asking for a gigabyte succeeds immediately and consumes no memory. What you get is a range of addresses marked as belonging to you, with no physical pages behind them. The page table entries are absent. The memory appears when you touch it. The first write to each page traps into the kernel, which finds a physical page, zeroes it, installs the mapping, and returns to the instruction that faulted as though nothing happened. One fault per page, four thousand and ninety six bytes at a time. That is why the first pass over a freshly allocated array is slower than the second, why a benchmark that skips the warm-up measures the fault handler, and why the memory a process is using has two different numbers.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "virtual-memory",
+  "anchor": "two-numbers-and-which-one-matters",
+  "title": "Two numbers, and which one matters",
+  "text": "Virtual size is how much address space the process has reserved. Resident set size is how much physical memory is actually behind it. They can differ by orders of magnitude and both are correct. A program that maps a hundred gigabyte file and reads two pages of it has a virtual size of a hundred gigabytes and a resident set of eight kilobytes. Nothing is wrong. Which explains why memory profilers disagree with each other and with the operating system. They are measuring different things: bytes requested from the allocator, bytes the allocator obtained from the kernel, address space reserved, and pages actually resident. All four are legitimate and only the last is memory in the sense of a resource that runs out.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "virtual-memory",
+  "anchor": "promising-what-you-do-not-have",
+  "title": "Promising what you do not have",
+  "text": "Because allocation is lazy, the kernel can promise more than it has, and by default it does. This is overcommit, and it is why a fork of a large process succeeds, why a sparse array is practical, and why almost every program that allocates optimistically works. It is also why an allocation almost never fails: the failure has been deferred to the moment the page is touched, at which point there is no way to report it to the code that asked. So when the machine genuinely runs out, the kernel picks a process and kills it. The heuristic prefers large recent allocators, which is usually the culprit and is occasionally your database. Turning overcommit off makes allocations fail honestly and makes a great deal of ordinary software stop working, which is why almost nobody does.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "virtual-memory",
+  "anchor": "faults-that-are-not-errors",
+  "title": "Faults that are not errors",
+  "text": "A page fault is a trap, and most of them are routine. A minor fault means the page is in memory and this process's table does not point at it yet: a first touch of allocated memory, a shared library page another process already loaded, a copy-on-write page being written. It costs a trip into the kernel and no I/O. A major fault means the contents have to be read from disk. That costs a disk access, which unit 024's table priced at tens of microseconds for flash and milliseconds for a spinning disk, against tens of nanoseconds for a cache miss. The distinction is the one to look for in a profile. High minor fault counts mean the program is touching new memory, which may be fine. High major fault counts mean it is waiting for storage, which is almost never fine.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "virtual-memory",
+  "anchor": "mapping-instead-of-reading",
+  "title": "Mapping instead of reading",
+  "text": "puts a file's contents in your address space, so reading it is a load and the pages arrive on fault. Private mappings are copy on write: your writes are yours alone. Shared mappings write through, and two processes mapping the same file shared see each other's changes with no system call involved, which is the fastest inter-process communication there is. The reasons to use it are avoiding a copy through a buffer and letting the kernel manage what stays resident. The reasons not to are that an I/O error becomes a signal rather than a return value, that the mapping cost is per page and shows up as fault latency spread through your code, and that files being written by somebody else underneath you produce results with no defined behaviour.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "virtual-memory",
+  "anchor": "the-other-thing-the-table-entry-holds",
+  "title": "The other thing the table entry holds",
+  "text": "A page table entry is not just a physical address. It carries permission bits, and those are the enforcement behind several things earlier units treated as given. Readable, writable and executable are separate bits, which is why unit 023's exercises could write to and not , and could execute and not a data page. The linker recorded the intent, the loader set the bits, and the processor checks them on every access with no cost, because the check happens in the same lookup that produces the address. There is also a bit saying whether the page has been written since it was last cleared. That is what lets the kernel know a page is clean and can simply be dropped rather than written out, which is the difference between evicting a page of a mapped executable and evicting a page of your heap. And a bit saying whether it has been accessed at all, which is what the replacement policy reads to decide what to evict. Nothing tracks how often a page is used; there is one bit, cleared periodically, and every eviction decision on your machine is made from that.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "virtual-memory",
+  "anchor": "swap-is-not-extra-memory",
+  "title": "Swap is not extra memory",
+  "text": "When physical memory is short, pages that have not been used recently are written to storage and their table entries cleared. Touching one later takes a major fault and reads it back. The important thing is what this is for. Swap does not extend memory in a useful way, because a working set larger than physical memory means constant major faults and a system that appears to have stopped. What swap is genuinely good at is evicting pages that were allocated and never used again, which real programs have plenty of, and freeing that space for the page cache. A machine that is swapping steadily is not using extra memory. It is dying slowly.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "virtual-memory",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Addresses are translated by hardware through a tree the kernel wrote, and the TLB is what makes that affordable. Allocation reserves addresses. Memory appears one page at a time on first touch, which is why virtual size and resident set are different numbers and why both are correct. Minor faults are routine and major faults are storage. And swap is a way of reclaiming pages nobody wanted, not a way of having more memory than you bought.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "virtual-memory",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These compute translations, fault outcomes and coverage arithmetic, which is exact and reproducible where a measurement of resident set on a shared machine would be neither. names the address or the count your model got wrong. The page size is 4096 throughout and the huge page size is 2 MB, which are the values on every x86-64 machine you will meet.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "virtual-memory",
+  "n": 1,
+  "title": "Splitting an address",
+  "text": "The offset passes through untranslated, which is why translation happens at page granularity and why a page is the unit everything else in this unit counts in. Write , separating a virtual address into its page number and its offset within the page. Pages are 4096 bytes, so the low twelve bits are the offset and never change during translation.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "virtual-memory",
+  "n": 2,
+  "title": "Four indices in a row",
+  "text": "The page number is split into groups of nine because a 512-entry table fits exactly in one page, which is why the tree has that shape. Write , extracting the nine-bit index a given level of the page table uses. Level 1 starts at bit 12, and each level above it starts nine bits higher.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "virtual-memory",
+  "n": 3,
+  "title": "The pages that appear",
+  "text": "Allocation reserves addresses and the memory appears one page at a time, so the cost of first use is the number of pages rather than the number of bytes. Write , counting how many first-touch faults a walk over a range of bytes causes, starting at for bytes, on memory nothing has touched yet. One fault per page, and a range that straddles a boundary touches two.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "virtual-memory",
+  "n": 4,
+  "title": "How much the lookaside buffer covers",
+  "text": "The buffer's reach is entries times page size, so a working set larger than that misses regularly, at a cost that appears in no instruction count. Write , returning how many bytes a translation buffer of covers, at a given page size. A few thousand entries at 4 KB covers a few megabytes, which is smaller than most people assume.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "virtual-memory",
+  "n": 5,
+  "title": "Minor, major, or neither",
+  "text": "The distinction is the one to look for in a profile, because one costs a trip into the kernel and the other costs a disk access. Write , classifying an access: 0 for no fault, 1 for a minor fault where the page is in memory and this process cannot reach it yet, and 2 for a major fault where the contents have to be read from storage.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "virtual-memory",
+  "n": 6,
+  "title": "The two numbers",
+  "text": "The two differ by orders of magnitude and both are correct, which is why memory profilers disagree with each other and with the operating system. Write , returning how much physical memory a process actually holds, given how many pages of its reservation it has touched. Virtual size is what was reserved. Resident set is what is behind it.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "virtual-memory",
+  "n": 7,
+  "title": "The bits beside the address",
+  "text": "Read, write and execute are separate bits, which is the enforcement behind the read-only section and the non-executable data page from unit 023. A page table entry carries permissions as well as an address, and the processor checks them in the same lookup that produces the address. Write , reporting whether an access is permitted: 0 is a read, 1 a write, 2 an execute.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "virtual-memory",
+  "n": 8,
+  "title": "What may simply be dropped",
+  "text": "One bit records whether a page has been modified, and it is the difference between evicting a page of a mapped executable and evicting a page of your heap. When memory is short the kernel evicts pages, and a page that has not been written since it was loaded can be discarded rather than written out. Write , returning 0 if the page can be dropped and 1 if it has to be written to storage first.",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "virtual-memory",
+  "n": 1,
+  "title": "What happens to the low twelve bits of a virtual address?",
+  "text": " Which is why translation happens at page granularity, and why a page is the unit of permission, residency and faulting. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "virtual-memory",
+  "n": 2,
+  "title": "Why is the page table a four-level tree rather than one array?",
+  "text": " Levels describing nothing are simply absent, which is why a process with a sparse address space costs almost nothing to describe. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "virtual-memory",
+  "n": 3,
+  "title": "Why nine bits per level?",
+  "text": " Allocating a level costs the same as allocating anything else, which is what makes the sparse case cheap. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "virtual-memory",
+  "n": 4,
+  "title": "What does a TLB miss cost?",
+  "text": " And it appears in no instruction count, which is why it is invisible unless you look for it. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "virtual-memory",
+  "n": 5,
+  "title": "Roughly how much memory does a typical TLB cover with 4 KB pages?",
+  "text": " A few thousand entries at 4 KB each. Working sets larger than that miss regularly, which is the entire argument for huge pages. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "virtual-memory",
+  "n": 6,
+  "title": "What does asking for a gigabyte of memory consume?",
+  "text": " The memory appears on first touch, one fault per page, which is why allocating a gigabyte costs nothing and touching it costs 262144 faults. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "virtual-memory",
+  "n": 7,
+  "title": "Why is the first pass over a freshly allocated array slower than the second?",
+  "text": " Both cache and prefetcher effects exist too, and the fault is the larger one and the one that appears in no instruction count. A benchmark that skips the warm-up measures the fault handler. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "virtual-memory",
+  "n": 8,
+  "title": "A program maps a hundred gigabyte file and reads two pages. What is its resident set?",
+  "text": " Virtual size and resident set can differ by orders of magnitude and both are correct, which is why memory profilers disagree with each other and with the operating system. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "virtual-memory",
+  "n": 9,
+  "title": "What is overcommit?",
+  "text": " It is why forking a large process succeeds and why an allocation almost never fails: the failure was deferred to the moment a page is touched, where there is no way to report it. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "virtual-memory",
+  "n": 10,
+  "title": "Why does the OOM killer exist?",
+  "text": " Turning overcommit off makes allocations fail honestly and makes a great deal of ordinary software stop working, which is why almost nobody does. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "virtual-memory",
+  "n": 11,
+  "title": "What is the difference between a minor and a major fault?",
+  "text": " High minor counts mean the program is touching new memory, which may be fine. High major counts mean it is waiting for storage, which almost never is. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "virtual-memory",
+  "n": 12,
+  "title": "Two processes map the same file shared. What do they see?",
+  "text": " It is the fastest inter-process communication there is, and a private mapping is the copy-on-write case instead. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "virtual-memory",
+  "n": 13,
+  "title": "What enforces that <code>.rodata</code> cannot be written?",
+  "text": " The linker recorded the intent and the loader set the bits, and the check costs nothing because it happens inside a lookup that was going to happen anyway. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "virtual-memory",
+  "n": 14,
+  "title": "Which page can be evicted without writing anything?",
+  "text": " Anonymous memory has nothing on disk holding its contents, clean or not, so even an untouched anonymous page has to go to swap. That is why swapping costs a write where dropping page cache costs nothing. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "virtual-memory",
+  "n": 15,
+  "title": "What is swap actually good for?",
+  "text": " A working set larger than physical memory means constant major faults and a system that appears to have stopped. A machine swapping steadily is not using extra memory, it is dying slowly. ",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "scheduling",
+  "anchor": "three-states-and-only-one-of-them-costs-anything",
+  "title": "Three states, and only one of them costs anything",
+  "text": "A thread is running, runnable, or blocked. Running means it is on a processor now. Runnable means it could be and is waiting for a turn. Blocked means it is waiting for something that is not a processor: a read to complete, a lock to be released, a timer to expire. The important part is that a blocked thread costs nothing. It is not on any run queue, it is not considered when choosing what to run, and it consumes no time until whatever it waited for happens. Ten thousand threads blocked on sockets are ten thousand stacks of memory and no scheduling cost at all. Which reframes the usual worry. Threads are expensive in memory, because each needs a stack, and they are not expensive in scheduling unless they are actually runnable. A server with too many threads has a memory problem or a contention problem, and rarely a scheduler problem.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "scheduling",
+  "anchor": "fairness-as-a-debt",
+  "title": "Fairness as a debt",
+  "text": "The obvious scheduler runs the highest priority thread that is ready. The obvious scheduler starves everything below the top priority, so real ones do not work that way. Linux's approach is to track, per thread, how much processor time it has had, scaled by its weight, and always run whichever has had least. A thread that has been blocked has fallen behind, so it runs immediately when it wakes, which is what makes interactive programs feel responsive without anybody classifying them as interactive. Priority, spelled as a nice value, is a weight on that accounting rather than an ordering. A thread at a lower nice value accumulates virtual time more slowly, so it gets more real time, and everything still runs. The scale is roughly ten percent of processor share per step, so the difference between adjacent values is meaningful and no value starves anything. The queue holds runnable threads ordered by time already had. A blocked thread is not in it, which is why blocking costs nothing and why waking puts you at the front.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "scheduling",
+  "anchor": "what-a-switch-actually-costs",
+  "title": "What a switch actually costs",
+  "text": "Saving registers and loading another set is fast, a few hundred nanoseconds. The cost that matters is what happens afterwards. The new thread's data is not in cache, so it runs slowly until it has pulled its working set back in. Its translations are not in the buffer, so it misses there too. If it landed on a different core than last time, none of the caches it warmed are the ones it now has. So the real cost of a context switch is somewhere between one and several microseconds of degraded execution, and it is paid by the thread that was switched to rather than by the one that yielded. That is why it is hard to attribute and why a system doing hundreds of thousands of switches per second is slow for reasons no single profile line explains.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "scheduling",
+  "anchor": "one-queue-per-processor",
+  "title": "One queue per processor",
+  "text": "A single global queue would be a contended lock on every scheduling decision, so each processor has its own and threads are balanced between them periodically. Migration is what balancing does, and it is not free: it is the case above where the caches are somebody else's. So the balancer is deliberately reluctant, which means a thread can sit runnable on a busy processor while another sits idle, for a short time, on purpose. This is also where memory topology enters. On a machine with several memory controllers, a thread's memory is attached to one of them, and being scheduled far from it makes every access slower. Pinning a thread and its allocations to the same node is a real technique with real gains, and it is the kind of thing that is worth measuring rather than assuming.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "scheduling",
+  "anchor": "the-two-ways-to-wait-badly",
+  "title": "The two ways to wait badly",
+  "text": "Most contention problems are one of two shapes. The first is holding a lock while blocking. A thread that acquires a lock and then waits for storage has stopped every other thread that wants that lock, for the duration of a disk access. The rule that follows is short: do not do I/O inside a lock. The second is priority inversion. A low priority thread holds a lock, a high priority thread needs it, and a medium priority thread is happy to run forever and prevents the low one from finishing. The high priority thread is blocked by the medium one, transitively, and nothing in the system's stated priorities describes that. The fix is priority inheritance: a thread holding a lock temporarily gets the priority of the highest thread waiting for it. Mars Pathfinder famously shipped without it enabled and rebooted repeatedly on the surface until the flag was set remotely.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "scheduling",
+  "anchor": "real-time-and-how-to-hang-a-machine",
+  "title": "Real time, and how to hang a machine",
+  "text": "There are scheduling classes above the fair one, and a thread in them runs until it blocks or yields. That is what real time means here: not fast, but not preempted by ordinary work. It is exactly as dangerous as it sounds. A real-time thread with a bug that spins will occupy a processor forever, and on a single-processor system it will occupy the only one, including the shell you would use to kill it. Linux reserves a small fraction of each period for ordinary threads specifically so this is survivable. The useful version is narrow: a thread with a genuine deadline, doing a bounded amount of work, that yields promptly. Audio callbacks and motor control loops qualify. Anything that allocates or takes a lock does not, because both can block for an unbounded time.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "scheduling",
+  "anchor": "waking-everybody-to-disappoint-them",
+  "title": "Waking everybody to disappoint them",
+  "text": "One more pattern, because it produces load that looks like the scheduler's fault and is not. A condition that many threads wait on, signalled to all of them, wakes all of them. They each become runnable, each gets scheduled, each discovers that only one of them can proceed, and the rest go back to sleep. That is a thundering herd, and its cost is the switches rather than the work. The two repairs are to wake one rather than all, when the resource genuinely serves one waiter, and to have the kernel do the choosing when several processes are waiting on the same descriptor. Accepting connections used to be the standard example: every process in a pool woke on every connection, and the fix was a flag that tells the kernel to wake exactly one. The general shape is worth recognising. When a system is spending its time in the scheduler, the cause is usually that something is making threads runnable that have nothing to do, and the fix is upstream of anything the scheduler could decide.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "scheduling",
+  "anchor": "sizing-a-pool",
+  "title": "Sizing a pool",
+  "text": "The rule people remember is one thread per core, and it is right for exactly one case. For work that is purely computation, more threads than cores adds context switches and no throughput, so the core count is the answer. For work that blocks, the right number is larger, because a blocked thread is not using a core, and the useful figure is roughly cores times one plus the ratio of waiting to computing. A pool serving requests that spend ninety percent of their time waiting on a database wants about ten threads per core, and sizing it to the core count leaves the machine idle while requests queue. The measurement that decides it is the fraction of time your threads are runnable rather than blocked, and it is directly observable.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "scheduling",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "The scheduler deals in threads, and a blocked thread costs nothing, so the question to ask about a slow system is who is runnable and who is waiting. Fairness is accounting rather than priority ordering, and a thread that has been blocked runs first because it has fallen behind, which is what makes interactivity work without anybody declaring it. A context switch costs cold caches paid by the thread switched to. Do not block while holding a lock. And pool size follows from how much your work waits, not from the core count.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "scheduling",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the scheduler's decisions rather than measuring a real one, because a measurement of scheduling on a shared machine is a measurement of the other tenants. names the decision your model got wrong. The rules being modelled are the ones above, and every case in the tests corresponds to a situation described in the prose.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "scheduling",
+  "n": 1,
+  "title": "Run whoever has had least",
+  "text": "Fairness is accounting rather than priority ordering, and a thread that has been blocked has fallen behind, so it runs first when it wakes. Write , returning the index of the thread the scheduler runs: the runnable one with the smallest accumulated virtual runtime. Blocked threads are not in the queue at all, which is the whole reason blocking costs nothing.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "scheduling",
+  "n": 2,
+  "title": "Weight, not order",
+  "text": "Priority is a divisor on the accounting rather than a position in an ordering, which is why nothing starves whatever its nice value. Write , returning how much virtual runtime a thread accumulates for a given amount of real time at a given weight. A heavier thread accumulates more slowly, so it comes up for selection more often and gets more real time.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "scheduling",
+  "n": 3,
+  "title": "What a switch really costs",
+  "text": "The cost of a switch is cold caches paid by the incoming thread, which is why it is hard to attribute and why a system doing many switches is slow for reasons no profile line explains. Write , returning the total cost of a context switch: the fixed register save and restore, plus the cache and translation misses the incoming thread pays while warming up. The second part is larger and is charged to the thread switched to.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "scheduling",
+  "n": 4,
+  "title": "Reluctant to move",
+  "text": "The balancer is deliberately reluctant, which is why a thread can sit runnable on a busy processor while another sits idle, on purpose. Write , deciding whether to move a runnable thread from a busy processor to an idle one. Moving costs the cold caches from the previous exercise, so it is worth it only when the thread would wait longer than the move costs.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "scheduling",
+  "n": 5,
+  "title": "Blocked, and holding the lock",
+  "text": "Holding a lock across a blocking operation converts one thread's wait into everybody's, which is the commoner of the two contention shapes. Write , returning how many threads are stopped by one thread that holds a lock and then blocks on storage. A thread that does I/O inside a lock has stopped everybody who wants that lock, for the duration of a disk access.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "scheduling",
+  "n": 6,
+  "title": "Blocked by somebody unrelated",
+  "text": "Priority inversion is a high priority thread blocked transitively by a medium one, and nothing in the stated priorities describes that relationship. Write , implementing priority inheritance: a thread holding a lock temporarily takes the priority of the highest thread waiting for it. Without it, a medium priority thread that never blocks prevents a low priority lock holder from finishing, and the high priority waiter never runs.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "scheduling",
+  "n": 7,
+  "title": "How many threads",
+  "text": "A blocked thread is not using a core, so work that waits needs more threads than cores in exactly the proportion that it waits. Write , returning how many threads a pool should have, given the core count and the ratio of time spent waiting to time spent computing. One thread per core is right for one case, and the case is work that never blocks.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "scheduling",
+  "n": 8,
+  "title": "Waking everybody to disappoint them",
+  "text": "Load that looks like the scheduler's fault is usually something making threads runnable that have nothing to do. Write , counting how many threads are woken for a resource that can serve only some of them. Every thread woken becomes runnable, is scheduled, discovers there is nothing for it, and goes back to sleep. The cost is the switches.",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "scheduling",
+  "n": 1,
+  "title": "What does the kernel schedule?",
+  "text": " A thread is a process with the sharing flags set differently, so there is one scheduler and one kind of object for it to choose between. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "scheduling",
+  "n": 2,
+  "title": "What does a blocked thread cost the scheduler?",
+  "text": " Ten thousand threads blocked on sockets are ten thousand stacks of memory and no scheduling cost. Threads are expensive in memory and not in scheduling unless they are runnable. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "scheduling",
+  "n": 3,
+  "title": "How does Linux decide which runnable thread to run?",
+  "text": " A thread that has been blocked has fallen behind, so it runs immediately when it wakes, which is what makes interactive programs responsive without anybody classifying them as interactive. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "scheduling",
+  "n": 4,
+  "title": "What is a nice value?",
+  "text": " A heavier thread accumulates virtual time more slowly and so gets more real time, and nothing starves at any value because everybody's runtime still grows. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "scheduling",
+  "n": 5,
+  "title": "What is the dominant cost of a context switch?",
+  "text": " A few hundred nanoseconds of register work and one to several microseconds of degraded execution afterwards, which is why it is hard to attribute. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "scheduling",
+  "n": 6,
+  "title": "Why does each processor have its own run queue?",
+  "text": " Threads are balanced between them periodically instead, and the balancer is deliberately reluctant because migration costs the cold caches above. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "scheduling",
+  "n": 7,
+  "title": "Why might a thread sit runnable while another processor is idle?",
+  "text": " It is on purpose, and on a machine with several memory controllers the reluctance is stronger still, because a thread scheduled away from its memory pays on every access rather than only while warming up. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "scheduling",
+  "n": 8,
+  "title": "What is wrong with doing I/O while holding a lock?",
+  "text": " It converts one thread's wait into everybody's, multiplied by the number of threads that wanted the same lock. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "scheduling",
+  "n": 9,
+  "title": "What is priority inversion?",
+  "text": " Nothing in the stated priorities describes that relationship, which is what makes it hard to see in a design that looks correct. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "scheduling",
+  "n": 10,
+  "title": "What is priority inheritance?",
+  "text": " Mars Pathfinder shipped with it disabled and rebooted repeatedly on the surface until the flag was set remotely. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "scheduling",
+  "n": 11,
+  "title": "What does a real-time scheduling class mean?",
+  "text": " A real-time thread that spins occupies a processor forever, which is why Linux reserves a fraction of each period for ordinary threads so the situation is survivable. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "scheduling",
+  "n": 12,
+  "title": "What kind of work belongs in a real-time thread?",
+  "text": " Anything that allocates or takes a lock does not qualify, because both can block for an unbounded time. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "scheduling",
+  "n": 13,
+  "title": "A pool serves requests that spend ninety percent of their time waiting. How many threads per core?",
+  "text": " A blocked thread is not using a core, so the figure is cores times one plus the ratio of waiting to computing. Sizing to the core count leaves the machine idle while requests queue. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "scheduling",
+  "n": 14,
+  "title": "What is a thundering herd?",
+  "text": " The cost is the switches rather than the work, and the repairs are to wake one, or to let the kernel choose when several processes wait on one descriptor. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "scheduling",
+  "n": 15,
+  "title": "A system is spending its time in the scheduler. What is the usual cause?",
+  "text": " The fix is upstream of anything the scheduler could decide, which is the general shape of scheduling problems. ",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",
