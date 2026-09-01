@@ -562,7 +562,8 @@
    ],
    "neededBy": [
     "control",
-    "structure"
+    "structure",
+    "addressing"
    ],
    "minutes": 45
   },
@@ -804,7 +805,9 @@
     "clock-bus",
     "universal"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "addressing"
+   ],
    "minutes": 50
   },
   {
@@ -818,12 +821,16 @@
    "phase": "understand",
    "accent": "copper",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1406,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "encoding",
+    "registers"
+   ],
+   "neededBy": [],
+   "minutes": 50
   },
   {
    "slug": "syscalls",
@@ -2652,9 +2659,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 23,
-  "words": 35194,
-  "exercises": 184,
-  "drills": 345
+  "ready": 24,
+  "words": 36600,
+  "exercises": 192,
+  "drills": 360
  }
 }

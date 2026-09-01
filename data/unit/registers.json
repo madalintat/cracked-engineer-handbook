@@ -69,5 +69,7 @@
   "clock-bus",
   "universal"
  ],
- "neededBy": []
+ "neededBy": [
+  "addressing"
+ ]
 }

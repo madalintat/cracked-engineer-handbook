@@ -6,6 +6,7 @@
   "who": "You read assembly occasionally and mostly guess. You want to stop guessing.",
   "assumes": [
     "clock-bus",
+    "encoding",
     "universal"
   ],
   "stages": [

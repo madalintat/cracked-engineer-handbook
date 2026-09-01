@@ -7,9 +7,10 @@
    "blurb": "The shortest honest route from knowing C to knowing why your kernel is at 30 percent of peak.",
    "who": "You can write CUDA that compiles and runs. You cannot yet say, before running it, whether a change will make it faster.",
    "assumes": [
-    "cmos-gate",
     "arithmetic",
     "clock-bus",
+    "cmos-gate",
+    "encoding",
     "universal"
    ],
    "stages": [
@@ -69,8 +70,8 @@
     }
    ],
    "unitCount": 24,
-   "readyCount": 3,
-   "minutes": 155
+   "readyCount": 4,
+   "minutes": 205
   },
   {
    "id": "from-scratch",
@@ -136,6 +137,7 @@
    "who": "You read assembly occasionally and mostly guess. You want to stop guessing.",
    "assumes": [
     "clock-bus",
+    "encoding",
     "universal"
    ],
    "stages": [
@@ -180,8 +182,8 @@
     }
    ],
    "unitCount": 15,
-   "readyCount": 1,
-   "minutes": 50
+   "readyCount": 2,
+   "minutes": 100
   },
   {
    "id": "moving-things",

@@ -5,9 +5,10 @@
   "blurb": "The shortest honest route from knowing C to knowing why your kernel is at 30 percent of peak.",
   "who": "You can write CUDA that compiles and runs. You cannot yet say, before running it, whether a change will make it faster.",
   "assumes": [
-    "cmos-gate",
     "arithmetic",
     "clock-bus",
+    "cmos-gate",
+    "encoding",
     "universal"
   ],
   "stages": [

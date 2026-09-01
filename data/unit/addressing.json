@@ -1,0 +1,83 @@
+{
+ "slug": "addressing",
+ "num": 21,
+ "title": "Addressing and flags",
+ "blurb": "Addressing modes, the flags register, and why lea is not a load.",
+ "part": "machine",
+ "partRoman": "V",
+ "partTitle": "The machine",
+ "phase": "understand",
+ "accent": "copper",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "registers",
+   "encoding"
+  ],
+  "minutes": 50,
+  "one_idea": "One instruction can compute base plus index times scale plus displacement, and a comparison is a subtraction whose result is thrown away.",
+  "sources": [
+   "x86-64-assembly",
+   "cpu-architectures"
+  ]
+ },
+ "html": "<p>Two pieces of machinery sit under almost every line of compiled code, and neither of them looks like a feature when you first meet it.</p>\n<p>The first is how the processor works out which byte you meant. The second is how a comparison turns into a branch, which involves a register nobody named in the source and four bits that answer different questions about the same subtraction.</p>\n<h2 id=\"the-address-that-arrives-for-free\">The address that arrives for free</h2>\n<p>x86-64 lets an operand name a memory location like this:</p>\n<pre class=\"cb\" data-lang=\"text\"><code>mov rax, [rbx + rcx*8 + 16]</code></pre>\n<p>That is base plus index times scale plus displacement, and the processor computes it as part of the load. Not a separate add and a separate shift: the address generation unit does it while the instruction is in flight, and the whole thing costs one instruction.</p>\n<p>The scale is restricted to 1, 2, 4 or 8, and the reason is visible the moment you write out an array access. If <code>rbx</code> holds the base of an array of eight-byte values and <code>rcx</code> holds the index, that line is <code>array[i]</code>, and the displacement handles a field offset inside a struct at the same time. One instruction for what the source spells as a multiply, an add and a dereference.</p>\n<p>This is why array indexing on this machine is close to free, and it is worth remembering when Part X compares data layouts. The cost of <code>a[i]</code> is not the arithmetic.</p>\n<figure class=\"fig\" data-kind=\"bits\"><svg viewBox=\"-14 -14 668.0 76.0\" class=\"fig-svg\" style=\"max-width:969px\" role=\"img\" aria-label=\"The four parts of a memory operand shown as fields: base register, index register, scale of one two four or eight, and a signed displacement.\" preserveAspectRatio=\"xMidYMid meet\"><rect x=\"0\" y=\"20\" width=\"640.0\" height=\"28\" rx=\"3\" class=\"fig-panel\"/><rect x=\"480.0\" y=\"20\" width=\"160.0\" height=\"28\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--gold-ink, var(--accent));stroke:var(--gold-ink, var(--accent))\"/><text x=\"560.0\" y=\"38.3\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"600\">displacement</text><rect x=\"320.0\" y=\"20\" width=\"160.0\" height=\"28\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--copper-ink, var(--accent));stroke:var(--copper-ink, var(--accent))\"/><text x=\"400.0\" y=\"38.3\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"600\">scale</text><rect x=\"160.0\" y=\"20\" width=\"160.0\" height=\"28\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"240.0\" y=\"38.3\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"600\">index</text><rect x=\"0.0\" y=\"20\" width=\"160.0\" height=\"28\" rx=\"3\" class=\"fig-field\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"80.0\" y=\"38.3\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"600\">base</text><text x=\"10.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">31</text><text x=\"150.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">24</text><text x=\"170.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">23</text><text x=\"310.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">16</text><text x=\"330.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">15</text><text x=\"470.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">8</text><text x=\"490.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">7</text><text x=\"630.0\" y=\"14.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">0</text></svg><figcaption>Every memory operand is these four parts, and any of them may be omitted. The processor adds them before the load, at no cost you can measure.</figcaption></figure>\n<h2 id=\"the-instruction-that-does-arithmetic-by-accident\">The instruction that does arithmetic by accident</h2>\n<p>Because the address calculation is general, somebody noticed you could ask for the address and never do the load.</p>\n<pre class=\"cb\" data-lang=\"text\"><code>lea rax, [rdi + rdi*4]      ; rax = rdi * 5</code></pre>\n<p><code>lea</code> means load effective address, and it is the closest thing x86-64 has to a three-operand arithmetic instruction. It adds two registers, scales one of them, adds a constant, and writes the result somewhere that is not either input.</p>\n<p>Compilers use it constantly and not for addresses. It multiplies by 3, 5 and 9 in one instruction. It adds two registers without destroying either. And it does all of that without touching the flags, which turns out to matter.</p>\n<h2 id=\"flags-and-the-register-nobody-declares\">Flags, and the register nobody declares</h2>\n<p>Now the second piece. A comparison in your source becomes two instructions, and the value that connects them is not in any register you named.</p>\n<pre class=\"cb\" data-lang=\"text\"><code>cmp rax, rbx        ; compute rax - rbx, throw the answer away\njl  somewhere       ; jump based on what that subtraction set</code></pre>\n<p><code>cmp</code> is a subtraction whose result is discarded. What survives is the flags: a handful of bits in a status register that record properties of the result. <code>test</code> is the same trick with a bitwise and, which is why <code>test rax, rax</code> is how you ask whether a value is zero.</p>\n<p>Four flags matter here.</p>\n<p>The zero flag is set when the result was zero, which means the operands were equal. The sign flag is the top bit of the result. The carry flag is set when the subtraction borrowed, which is unsigned overflow. The overflow flag is set when the result's sign is wrong for the operands' signs, which is signed overflow.</p>\n<h2 id=\"two-questions-two-answers-one-pair-of-bits\">Two questions, two answers, one pair of bits</h2>\n<p>Here is the part that produces real bugs.</p>\n<p>The processor does not know whether your bytes are signed. It performs one subtraction and sets all four flags, and it is the branch you choose afterwards that decides which interpretation you meant.</p>\n<p><code>jb</code> jumps if below, which reads the carry flag, and it is the unsigned comparison. <code>jl</code> jumps if less, which compares the sign and overflow flags, and it is the signed one. Same <code>cmp</code>, same bits, different question.</p>\n<p>Take <code>cmp</code> between 0xFF and 0x01 in a byte. As unsigned that is 255 against 1, so 0xFF is above. As signed it is -1 against 1, so 0xFF is below. Both answers are correct and they disagree, and only the jump you wrote records which you wanted.</p>\n<p>This is exactly the bug from unit 015, where a comparator that treated its operands as unsigned disagreed with a signed reference on half the input space. Here it is one letter in a mnemonic.</p>\n<h2 id=\"carry-against-overflow\">Carry against overflow</h2>\n<p>These two get confused because both mean \"the answer did not fit\".</p>\n<p>Carry is about unsigned arithmetic. Add 0xFF and 0x01 in a byte and the true answer is 256, which needs a ninth bit. The carry flag is that ninth bit, and it is why multi-word addition works: add the low words, then add the high words plus the carry.</p>\n<p>Overflow is about signed arithmetic. Add 0x7F and 0x01 in a byte and the result is 0x80, which as signed is -128. Two positives produced a negative, which is impossible, so the overflow flag says the answer is wrong.</p>\n<p>The same addition sets carry and not overflow, or overflow and not carry, or both, or neither, depending only on the values. The processor computes both every time because it has no idea which one you care about.</p>\n<h2 id=\"the-branch-you-can-avoid\">The branch you can avoid</h2>\n<p>Once flags exist, there is another thing to do with them besides jumping.</p>\n<pre class=\"cb\" data-lang=\"text\"><code>cmp  rdi, rsi\ncmovl rax, rdx      ; move only if the comparison said less</code></pre>\n<p>A conditional move reads the flags and either performs the move or does not. No branch, so nothing to predict and nothing to mispredict, which unit 025 will show costs around fifteen cycles when it goes wrong.</p>\n<p>That makes conditional moves attractive for unpredictable conditions and a loss for predictable ones, because a correctly predicted branch is nearly free while a conditional move always waits for its input.</p>\n<p>It also has a property Part XV depends on. A conditional move takes the same time whichever way the condition goes, so it does not leak which way through timing. Cryptographic code is written this way on purpose.</p>\n<h2 id=\"flags-are-shared-state\">Flags are shared state</h2>\n<p>The awkward part of this design is that the flags are one register and almost every arithmetic instruction writes them.</p>\n<p>So the distance between setting a flag and using it is not free to choose. Put an <code>add</code> between the <code>cmp</code> and the <code>jl</code> and the branch tests the wrong subtraction, silently, because nothing in the syntax connects them.</p>\n<p>This is also why <code>inc</code> and <code>add 1</code> are not interchangeable. <code>inc</code> updates every flag except carry, which means the processor has to merge the old carry with the new flags, and on several generations that merge cost a stall. Compilers emit <code>add</code> for that reason, and a hand-written <code>inc</code> in a hot loop has been a measurable regression more than once.</p>\n<p><code>lea</code> avoiding the flags entirely, mentioned above, is the same design pressure seen from the other side: an instruction that does arithmetic without disturbing a comparison in progress is more useful than one that does not.</p>\n<h2 id=\"where-the-code-itself-lives\">Where the code itself lives</h2>\n<p>One last mode, because it is in every function you will disassemble.</p>\n<pre class=\"cb\" data-lang=\"text\"><code>mov rax, [rip + offset]</code></pre>\n<p>The address is relative to the instruction pointer. Nothing in the encoding names an absolute address, so the whole block can be loaded anywhere and still work, which is what makes position-independent executables possible and is why address space layout randomisation can move things.</p>\n<p>The 32-bit predecessor had no such mode, and position independence there cost a register and a helper call per access. Adding this one addressing mode removed a whole category of overhead, and it is the reason it is the default everywhere now.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>An address is base plus index times scale plus displacement, computed as part of the instruction, which is why indexing costs nothing and why <code>lea</code> is an arithmetic instruction.</p>\n<p>A comparison is a subtraction that keeps only its side effects, and the same four bits answer both the signed and the unsigned question. Which one you asked is recorded in the jump, not in the compare.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These are raw x86-64, assembled and run with no library underneath, so a function returns its value in <code>rax</code> because the convention says so and nothing enforces it.</p>\n<p><code>nonzero-exit</code> means the checks ran and your answer was wrong. <code>signal</code> usually means an address you computed pointed somewhere real memory is not. <code>compile-error</code> is the assembler, and it names the line.</p>",
+ "headings": [
+  {
+   "id": "the-address-that-arrives-for-free",
+   "text": "The address that arrives for free",
+   "level": 2
+  },
+  {
+   "id": "the-instruction-that-does-arithmetic-by-accident",
+   "text": "The instruction that does arithmetic by accident",
+   "level": 2
+  },
+  {
+   "id": "flags-and-the-register-nobody-declares",
+   "text": "Flags, and the register nobody declares",
+   "level": 2
+  },
+  {
+   "id": "two-questions-two-answers-one-pair-of-bits",
+   "text": "Two questions, two answers, one pair of bits",
+   "level": 2
+  },
+  {
+   "id": "carry-against-overflow",
+   "text": "Carry against overflow",
+   "level": 2
+  },
+  {
+   "id": "the-branch-you-can-avoid",
+   "text": "The branch you can avoid",
+   "level": 2
+  },
+  {
+   "id": "flags-are-shared-state",
+   "text": "Flags are shared state",
+   "level": 2
+  },
+  {
+   "id": "where-the-code-itself-lives",
+   "text": "Where the code itself lives",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1406,
+ "needs": [
+  "encoding",
+  "registers"
+ ],
+ "neededBy": []
+}

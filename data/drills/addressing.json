@@ -1,0 +1,185 @@
+{
+ "slug": "addressing",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What are the four parts of an x86-64 memory operand?",
+   "options": [
+    "Base register, index register, scale, and displacement",
+    "Segment, page, offset, and permission",
+    "Base, limit, index, and stride",
+    "Register, immediate, shift, and extend"
+   ],
+   "correct": 0,
+   "why": "<p>The processor adds them as part of the load, so one instruction covers what the source spells as a multiply, an add and a dereference.</p>"
+  },
+  {
+   "n": 2,
+   "q": "Which scale factors does the encoding allow?",
+   "options": [
+    "1, 2, 4 and 8",
+    "Any power of two up to 128",
+    "Any value from 1 to 15",
+    "Only 1 and 8"
+   ],
+   "correct": 0,
+   "why": "<p>They are the sizes that matter for arrays of bytes, shorts, ints and pointers. Anything else costs an extra instruction, which is why struct sizes get rounded up in code that indexes them hard.</p>"
+  },
+  {
+   "n": 3,
+   "q": "What does <code>lea</code> do?",
+   "options": [
+    "Computes an address and writes it to a register, without any memory access",
+    "Loads a value from an address into a register",
+    "Loads the address of the next instruction",
+    "Computes an address and prefetches the cache line"
+   ],
+   "correct": 0,
+   "why": "<p>It is the closest thing x86-64 has to a three-operand arithmetic instruction: it adds, scales, adds a constant, and writes somewhere that is not either input.</p>"
+  },
+  {
+   "n": 4,
+   "q": "Why do compilers use <code>lea</code> for arithmetic that has nothing to do with addresses?",
+   "options": [
+    "It multiplies by 3, 5 or 9 in one instruction and leaves the flags alone",
+    "It is shorter to encode than <code>add</code>",
+    "It executes on a port <code>add</code> cannot use",
+    "It avoids a dependency on the destination register"
+   ],
+   "correct": 0,
+   "why": "<p>An instruction that does arithmetic without disturbing a comparison in progress is more useful than one that does not, and that is the same design pressure the flags create everywhere else.</p>"
+  },
+  {
+   "n": 5,
+   "q": "What is <code>cmp</code>?",
+   "options": [
+    "A subtraction whose result is discarded, keeping only the flags",
+    "A dedicated comparison unit separate from the adder",
+    "An exclusive or followed by a zero test",
+    "A subtraction that saturates rather than wrapping"
+   ],
+   "correct": 0,
+   "why": "<p><code>test</code> is the same trick with a bitwise and, which is why <code>test rax, rax</code> is how every compiler asks whether a value is zero.</p>"
+  },
+  {
+   "n": 6,
+   "q": "After one <code>cmp</code>, how does the processor know whether you meant signed or unsigned?",
+   "options": [
+    "It does not; the jump you write afterwards picks the interpretation",
+    "From the register widths involved",
+    "From a mode bit set by the operating system",
+    "From whether the operands were loaded with sign extension"
+   ],
+   "correct": 0,
+   "why": "<p>It performs one subtraction and sets every flag. <code>jb</code> reads carry and asks the unsigned question; <code>jl</code> compares sign against overflow and asks the signed one.</p>"
+  },
+  {
+   "n": 7,
+   "q": "Comparing 0xFF against 0x01 in a byte. Which is larger?",
+   "options": [
+    "Both answers are correct: 0xFF is above as unsigned and below as signed",
+    "0xFF, because the comparison is unsigned by default",
+    "0x01, because the top bit makes 0xFF negative",
+    "It is undefined without a signedness annotation"
+   ],
+   "correct": 0,
+   "why": "<p>As unsigned that is 255 against 1; as signed it is -1 against 1. The bits are identical and only the jump records which you wanted.</p>"
+  },
+  {
+   "n": 8,
+   "q": "What does the carry flag mean after an addition?",
+   "options": [
+    "The unsigned result did not fit, and this is the bit that did not",
+    "The signed result had the wrong sign",
+    "The result was zero",
+    "A borrow occurred from a lower word"
+   ],
+   "correct": 0,
+   "why": "<p>It is why multi-word addition works: add the low words, then add the high words plus the carry.</p>"
+  },
+  {
+   "n": 9,
+   "q": "What does the overflow flag mean after an addition?",
+   "options": [
+    "Two operands of one sign produced a result of the other, so the signed answer is wrong",
+    "The result exceeded the register width",
+    "The result required a carry out of the top bit",
+    "The operation saturated"
+   ],
+   "correct": 0,
+   "why": "<p>Add 0x7F and 0x01 in a byte and you get 0x80, which as signed is -128. Two positives cannot produce a negative, so the flag says the answer is wrong.</p>"
+  },
+  {
+   "n": 10,
+   "q": "What is the advantage of a conditional move over a branch?",
+   "options": [
+    "Nothing to predict, and it takes the same time whichever way the condition goes",
+    "It is always faster",
+    "It uses fewer registers",
+    "It can be executed speculatively where a branch cannot"
+   ],
+   "correct": 0,
+   "why": "<p>That makes it a win for unpredictable conditions and a loss for predictable ones, since a correctly predicted branch is nearly free while a conditional move always waits for its input.</p>"
+  },
+  {
+   "n": 11,
+   "q": "Why is cryptographic code written with conditional moves?",
+   "options": [
+    "Constant time either way means the timing does not leak which branch was taken",
+    "They cannot be reordered by the processor",
+    "They are immune to speculative execution attacks",
+    "They avoid touching the flags"
+   ],
+   "correct": 0,
+   "why": "<p>It is the same property that makes them useful for unpredictable branches, used for a different reason, and Part XV depends on it.</p>"
+  },
+  {
+   "n": 12,
+   "q": "What happens if an <code>add</code> sits between a <code>cmp</code> and the branch that reads it?",
+   "options": [
+    "The branch tests the addition's flags, silently, because nothing in the syntax connects them",
+    "The assembler warns about a flag dependency",
+    "The processor preserves the older flags for the branch",
+    "Nothing, since <code>add</code> writes only the carry flag"
+   ],
+   "correct": 0,
+   "why": "<p>The flags are one register written by almost every arithmetic instruction, so the distance between setting them and using them is not free to choose.</p>"
+  },
+  {
+   "n": 13,
+   "q": "Why do compilers emit <code>add 1</code> rather than <code>inc</code>?",
+   "options": [
+    "<code>inc</code> updates every flag except carry, and merging the old carry has cost a stall",
+    "<code>inc</code> is longer to encode",
+    "<code>inc</code> cannot address memory",
+    "<code>inc</code> is deprecated in 64-bit mode"
+   ],
+   "correct": 0,
+   "why": "<p>A hand-written <code>inc</code> in a hot loop has been a measurable regression more than once, for exactly this reason.</p>"
+  },
+  {
+   "n": 14,
+   "q": "What does <code>mov rax, [rip + offset]</code> buy you?",
+   "options": [
+    "The block can be loaded anywhere, since nothing in the encoding names an absolute address",
+    "Faster loads, since the address needs no register",
+    "Access to memory above the four gigabyte boundary",
+    "Automatic bounds checking against the code segment"
+   ],
+   "correct": 0,
+   "why": "<p>It is what makes position-independent executables possible and address space layout randomisation able to move things.</p>"
+  },
+  {
+   "n": 15,
+   "q": "How did position independence work on 32-bit x86?",
+   "options": [
+    "It cost a register and a helper call per access, because there was no such addressing mode",
+    "It was not supported at all",
+    "The loader rewrote every absolute address at load time",
+    "A segment register held the base and was added automatically"
+   ],
+   "correct": 0,
+   "why": "<p>Adding one addressing mode removed a whole category of overhead, which is why position independence is the default everywhere now.</p>"
+  }
+ ]
+}

@@ -73,6 +73,7 @@
  ],
  "neededBy": [
   "control",
-  "structure"
+  "structure",
+  "addressing"
  ]
 }

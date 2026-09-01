@@ -1,0 +1,310 @@
+{
+ "slug": "addressing",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Base, index, scale, displacement",
+   "brief": "<p>Write <code>elem</code>, which is given the base of an array of eight-byte values in <code>rdi</code> and an index in <code>rsi</code>, and returns the element at that index.</p>\n<p>One instruction. The address arithmetic is part of the load.</p>",
+   "kind": "output",
+   "concept": "The processor computes base plus index times scale as part of the memory operand, so indexing an array costs nothing beyond the load itself.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The scale goes inside the brackets, next to the index register."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The checks read the wrong element. Eight-byte values are eight bytes apart, so the index has to be scaled by 8 before it is added to the base. The starter uses a scale of 1, which reads the byte at that offset rather than the element at that index.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names. Intel syntax puts the destination first and the memory operand goes in square brackets.</p>"
+    }
+   ],
+   "after": "<p>One instruction for what the source spells as a multiply, an add and a dereference. This is why <code>a[i]</code> is not where your time goes, and it is worth remembering when Part X starts comparing layouts.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global elem\nelem:\n    mov rax, [rdi + rsi]\n    ret",
+   "tests": ".data\narr: .quad 10, 20, 30, 40\n.text\n.global _start\n_start:\n    lea rdi, [rip + arr]\n    mov rsi, 0\n    call elem\n    cmp rax, 10\n    jne fail\n    lea rdi, [rip + arr]\n    mov rsi, 2\n    call elem\n    cmp rax, 30\n    jne fail\n    lea rdi, [rip + arr]\n    mov rsi, 3\n    call elem\n    cmp rax, 40\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 2,
+   "title": "Arithmetic, without the memory",
+   "brief": "<p><code>lea</code> computes an address and does not use it, which makes it a three-operand arithmetic instruction that leaves the flags alone.</p>\n<p>Write <code>times5</code>, returning five times the argument in <code>rdi</code>, in one <code>lea</code>.</p>",
+   "kind": "output",
+   "concept": "An addressing mode general enough to be useful is also general enough to compute things that are not addresses.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Five is one plus four. Both terms can be the same register."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The result is the wrong multiple. <code>lea rax, [rdi + rdi*4]</code> is <code>rdi</code> plus four <code>rdi</code>, which is five of them. The starter scales by 8 and adds one more, giving nine.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>Compilers emit this constantly and almost never for addresses. Three, five and nine are one instruction each, the destination need not be either input, and none of it disturbs a comparison in progress.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global times5\ntimes5:\n    lea rax, [rdi + rdi*8]\n    ret",
+   "tests": ".global _start\n_start:\n    mov rdi, 0\n    call times5\n    cmp rax, 0\n    jne fail\n    mov rdi, 1\n    call times5\n    cmp rax, 5\n    jne fail\n    mov rdi, 7\n    call times5\n    cmp rax, 35\n    jne fail\n    mov rdi, 100\n    call times5\n    cmp rax, 500\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 3,
+   "title": "The letter that decides the interpretation",
+   "brief": "<p>Write <code>less_signed</code>, returning 1 when <code>rdi</code> is less than <code>rsi</code> treating both as signed, and 0 otherwise.</p>\n<p>The starter uses the unsigned comparison. It is right for half the input space, and the checks include the other half.</p>",
+   "kind": "output",
+   "concept": "One subtraction sets every flag, and the jump you choose afterwards is the only record of whether you meant signed or unsigned.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "<code>jb</code> reads the carry flag. <code>jl</code> compares sign against overflow."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The comparison disagrees on a case involving a negative number. As unsigned, -1 is the largest 64-bit value; as signed it is below everything positive. The <code>cmp</code> is identical in both readings, and <code>setb</code> asks the unsigned question where <code>setl</code> asks the signed one.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>This is the bug from unit 015 with the width changed. The processor never knew which interpretation you wanted, it computed both answers, and one letter in a mnemonic picked between them.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global less_signed\nless_signed:\n    xor eax, eax\n    cmp rdi, rsi\n    setb al\n    ret",
+   "tests": ".global _start\n_start:\n    mov rdi, 1\n    mov rsi, 2\n    call less_signed\n    cmp rax, 1\n    jne fail\n    mov rdi, 2\n    mov rsi, 1\n    call less_signed\n    cmp rax, 0\n    jne fail\n    mov rdi, -1\n    mov rsi, 1\n    call less_signed\n    cmp rax, 1\n    jne fail\n    mov rdi, -5\n    mov rsi, -2\n    call less_signed\n    cmp rax, 1\n    jne fail\n    mov rdi, 3\n    mov rsi, -3\n    call less_signed\n    cmp rax, 0\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 4,
+   "title": "Carry is not overflow",
+   "brief": "<p>Write <code>add_carried</code>, which adds <code>rdi</code> and <code>rsi</code> as unsigned 64-bit values and returns 1 if the true sum did not fit, 0 otherwise.</p>\n<p>The starter reports signed overflow instead. The two flags answer different questions about the same addition.</p>",
+   "kind": "output",
+   "concept": "Carry is unsigned overflow and the overflow flag is signed overflow, and the processor computes both because it does not know which you meant.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The carry flag is the bit that did not fit. <code>setc</code> reads it."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The check that fails involves two large positive values whose sum wraps, or two values whose signed interpretation overflows and whose unsigned sum fits. <code>seto</code> reads the overflow flag, which asks whether two operands of one sign produced a result of the other. Unsigned overflow is the carry out, and <code>setc</code> reads that.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>The same addition sets carry and not overflow, or overflow and not carry, or both, or neither, depending only on the values. The carry flag is also what makes multi-word addition work: add the low halves, then add the high halves plus the carry.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global add_carried\nadd_carried:\n    xor eax, eax\n    add rdi, rsi\n    seto al\n    ret",
+   "tests": ".global _start\n_start:\n    mov rdi, 1\n    mov rsi, 2\n    call add_carried\n    cmp rax, 0\n    jne fail\n    mov rdi, -1\n    mov rsi, 1\n    call add_carried\n    cmp rax, 1\n    jne fail\n    mov rdi, -1\n    mov rsi, -1\n    call add_carried\n    cmp rax, 1\n    jne fail\n    mov rdi, 0x7FFFFFFFFFFFFFFF\n    mov rsi, 1\n    call add_carried\n    cmp rax, 0\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 5,
+   "title": "The flags are one register",
+   "brief": "<p>Write <code>is_bigger</code>, returning 1 when <code>rdi</code> is greater than <code>rsi</code> as signed values.</p>\n<p>The starter compares correctly and then does something between the comparison and the branch. Nothing in the syntax connects those two instructions, so nothing warns you.</p>",
+   "kind": "output",
+   "concept": "The flags are shared state written by almost every arithmetic instruction, so the distance between setting them and using them is not free.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Look at what sits between the <code>cmp</code> and the <code>setg</code>, and ask what it does to the flags."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The <code>add</code> between the comparison and the read overwrote the flags, so <code>setg</code> answers a question about that addition rather than about the comparison. Either move the clearing of <code>rax</code> before the <code>cmp</code>, or clear it with something that does not touch the flags.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p><code>xor eax, eax</code> also writes the flags, which is why the fix puts it before the comparison rather than after. <code>lea</code> is the instruction that would let you do arithmetic in this gap without disturbing anything, and this is the pressure that made it useful.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global is_bigger\nis_bigger:\n    cmp rdi, rsi\n    xor eax, eax\n    add eax, 0\n    setg al\n    ret",
+   "tests": ".global _start\n_start:\n    mov rdi, 5\n    mov rsi, 3\n    call is_bigger\n    cmp rax, 1\n    jne fail\n    mov rdi, 3\n    mov rsi, 5\n    call is_bigger\n    cmp rax, 0\n    jne fail\n    mov rdi, 4\n    mov rsi, 4\n    call is_bigger\n    cmp rax, 0\n    jne fail\n    mov rdi, 1\n    mov rsi, -1\n    call is_bigger\n    cmp rax, 1\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 6,
+   "title": "A branch that is not a branch",
+   "brief": "<p>Write <code>max_signed</code>, returning the larger of <code>rdi</code> and <code>rsi</code> as signed values, using a conditional move rather than a jump.</p>",
+   "kind": "output",
+   "concept": "A conditional move reads the flags and takes the same time whichever way the condition goes, which is why it is used both for unpredictable branches and for constant-time code.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Put one candidate in the destination, compare, then move the other one in only if it is larger."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The wrong value survives. The condition on the <code>cmov</code> has to match the order of the operands in the <code>cmp</code>: after <code>cmp rax, rsi</code>, <code>cmovl rax, rsi</code> overwrites <code>rax</code> exactly when <code>rax</code> was the smaller one.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names. A conditional move needs a register destination.</p>"
+    }
+   ],
+   "after": "<p>No branch means nothing to predict, which is a win when the condition is unpredictable and a loss when it is not, because a correctly predicted branch is nearly free and a conditional move always waits for its input. It also takes the same time either way, which is why Part XV writes comparisons like this on purpose.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global max_signed\nmax_signed:\n    mov rax, rdi\n    cmp rax, rsi\n    cmovg rax, rsi\n    ret",
+   "tests": ".global _start\n_start:\n    mov rdi, 3\n    mov rsi, 9\n    call max_signed\n    cmp rax, 9\n    jne fail\n    mov rdi, 9\n    mov rsi, 3\n    call max_signed\n    cmp rax, 9\n    jne fail\n    mov rdi, -4\n    mov rsi, -9\n    call max_signed\n    cmp rax, -4\n    jne fail\n    mov rdi, 7\n    mov rsi, 7\n    call max_signed\n    cmp rax, 7\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 7,
+   "title": "Testing without subtracting",
+   "brief": "<p>Write <code>is_zero</code>, returning 1 when <code>rdi</code> is zero.</p>\n<p><code>test</code> performs a bitwise and and discards the result, keeping only the flags, so <code>test rdi, rdi</code> sets the zero flag exactly when <code>rdi</code> is zero.</p>",
+   "kind": "output",
+   "concept": "A comparison against zero needs no second operand, because a value anded with itself is zero only when the value is.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The zero flag, not the sign flag."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p><code>sets</code> reads the sign flag, which is the top bit of the result, so it reports whether the value is negative rather than whether it is zero. <code>sete</code> reads the zero flag.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p><code>test rax, rax</code> is the idiom for a zero check on every x86-64 compiler's output, and it exists because it is shorter to encode than a comparison against an immediate. The result of the and is thrown away and only the side effect is wanted, which is the same shape as <code>cmp</code>.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global is_zero\nis_zero:\n    xor eax, eax\n    test rdi, rdi\n    sets al\n    ret",
+   "tests": ".global _start\n_start:\n    mov rdi, 0\n    call is_zero\n    cmp rax, 1\n    jne fail\n    mov rdi, 1\n    call is_zero\n    cmp rax, 0\n    jne fail\n    mov rdi, -1\n    call is_zero\n    cmp rax, 0\n    jne fail\n    mov rdi, 0x8000000000000000\n    call is_zero\n    cmp rax, 0\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 8,
+   "title": "The whole operand at once",
+   "brief": "<p>Write <code>field</code>, which reads a field from an array of structs. Each struct is 16 bytes and the field is at offset 8. The base is in <code>rdi</code> and the struct index in <code>rsi</code>.</p>\n<p>Base, index, scale and displacement, all in one operand.</p>",
+   "kind": "output",
+   "concept": "The displacement handles the field offset while the scale handles the array stride, so a struct member of an array element is one instruction.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Sixteen bytes per struct is a scale of 8 on twice the index, or a scale of 8 with the index doubled first. The field offset is the displacement."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The address is off. The stride is 16 bytes per struct, and the largest scale the encoding offers is 8, so the index has to be doubled before it is scaled, or scaled by 8 after being added to itself. Then the displacement of 8 selects the field within the struct.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names. The scale must be 1, 2, 4 or 8.</p>"
+    }
+   ],
+   "after": "<p>The scale is limited to those four values because they are the sizes that matter, and anything else costs an extra instruction. That is the whole reason struct sizes get rounded up to powers of two in code that indexes them hard, and Part X returns to it as a layout decision rather than an encoding one.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global field\nfield:\n    mov rax, [rdi + rsi*8 + 8]\n    ret",
+   "tests": ".data\nrecs: .quad 1, 100\n      .quad 2, 200\n      .quad 3, 300\n.text\n.global _start\n_start:\n    lea rdi, [rip + recs]\n    mov rsi, 0\n    call field\n    cmp rax, 100\n    jne fail\n    lea rdi, [rip + recs]\n    mov rsi, 1\n    call field\n    cmp rax, 200\n    jne fail\n    lea rdi, [rip + recs]\n    mov rsi, 2\n    call field\n    cmp rax, 300\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  }
+ ]
+}

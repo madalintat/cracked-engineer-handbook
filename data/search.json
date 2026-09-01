@@ -6159,6 +6159,270 @@
  },
  {
   "t": "section",
+  "slug": "addressing",
+  "anchor": "the-address-that-arrives-for-free",
+  "title": "The address that arrives for free",
+  "text": "x86-64 lets an operand name a memory location like this: That is base plus index times scale plus displacement, and the processor computes it as part of the load. Not a separate add and a separate shift: the address generation unit does it while the instruction is in flight, and the whole thing costs one instruction. The scale is restricted to 1, 2, 4 or 8, and the reason is visible the moment you write out an array access. If holds the base of an array of eight-byte values and holds the index, that line is , and the displacement handles a field offset inside a struct at the same time. One instruction for what the source spells as a multiply, an add and a dereference. This is why array indexing on this machine is close to free, and it is worth remembering when Part X compares data layouts. The cost of is not the arithmetic. Every memory operand is these four parts, and any of them may be omitted. The processor adds them before the load, at no cost you can measure.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "addressing",
+  "anchor": "the-instruction-that-does-arithmetic-by-accident",
+  "title": "The instruction that does arithmetic by accident",
+  "text": "Because the address calculation is general, somebody noticed you could ask for the address and never do the load. means load effective address, and it is the closest thing x86-64 has to a three-operand arithmetic instruction. It adds two registers, scales one of them, adds a constant, and writes the result somewhere that is not either input. Compilers use it constantly and not for addresses. It multiplies by 3, 5 and 9 in one instruction. It adds two registers without destroying either. And it does all of that without touching the flags, which turns out to matter.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "addressing",
+  "anchor": "flags-and-the-register-nobody-declares",
+  "title": "Flags, and the register nobody declares",
+  "text": "Now the second piece. A comparison in your source becomes two instructions, and the value that connects them is not in any register you named. is a subtraction whose result is discarded. What survives is the flags: a handful of bits in a status register that record properties of the result. is the same trick with a bitwise and, which is why is how you ask whether a value is zero. Four flags matter here. The zero flag is set when the result was zero, which means the operands were equal. The sign flag is the top bit of the result. The carry flag is set when the subtraction borrowed, which is unsigned overflow. The overflow flag is set when the result's sign is wrong for the operands' signs, which is signed overflow.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "addressing",
+  "anchor": "two-questions-two-answers-one-pair-of-bits",
+  "title": "Two questions, two answers, one pair of bits",
+  "text": "Here is the part that produces real bugs. The processor does not know whether your bytes are signed. It performs one subtraction and sets all four flags, and it is the branch you choose afterwards that decides which interpretation you meant. jumps if below, which reads the carry flag, and it is the unsigned comparison. jumps if less, which compares the sign and overflow flags, and it is the signed one. Same , same bits, different question. Take between 0xFF and 0x01 in a byte. As unsigned that is 255 against 1, so 0xFF is above. As signed it is -1 against 1, so 0xFF is below. Both answers are correct and they disagree, and only the jump you wrote records which you wanted. This is exactly the bug from unit 015, where a comparator that treated its operands as unsigned disagreed with a signed reference on half the input space. Here it is one letter in a mnemonic.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "addressing",
+  "anchor": "carry-against-overflow",
+  "title": "Carry against overflow",
+  "text": "These two get confused because both mean \"the answer did not fit\". Carry is about unsigned arithmetic. Add 0xFF and 0x01 in a byte and the true answer is 256, which needs a ninth bit. The carry flag is that ninth bit, and it is why multi-word addition works: add the low words, then add the high words plus the carry. Overflow is about signed arithmetic. Add 0x7F and 0x01 in a byte and the result is 0x80, which as signed is -128. Two positives produced a negative, which is impossible, so the overflow flag says the answer is wrong. The same addition sets carry and not overflow, or overflow and not carry, or both, or neither, depending only on the values. The processor computes both every time because it has no idea which one you care about.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "addressing",
+  "anchor": "the-branch-you-can-avoid",
+  "title": "The branch you can avoid",
+  "text": "Once flags exist, there is another thing to do with them besides jumping. A conditional move reads the flags and either performs the move or does not. No branch, so nothing to predict and nothing to mispredict, which unit 025 will show costs around fifteen cycles when it goes wrong. That makes conditional moves attractive for unpredictable conditions and a loss for predictable ones, because a correctly predicted branch is nearly free while a conditional move always waits for its input. It also has a property Part XV depends on. A conditional move takes the same time whichever way the condition goes, so it does not leak which way through timing. Cryptographic code is written this way on purpose.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "addressing",
+  "anchor": "flags-are-shared-state",
+  "title": "Flags are shared state",
+  "text": "The awkward part of this design is that the flags are one register and almost every arithmetic instruction writes them. So the distance between setting a flag and using it is not free to choose. Put an between the and the and the branch tests the wrong subtraction, silently, because nothing in the syntax connects them. This is also why and are not interchangeable. updates every flag except carry, which means the processor has to merge the old carry with the new flags, and on several generations that merge cost a stall. Compilers emit for that reason, and a hand-written in a hot loop has been a measurable regression more than once. avoiding the flags entirely, mentioned above, is the same design pressure seen from the other side: an instruction that does arithmetic without disturbing a comparison in progress is more useful than one that does not.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "addressing",
+  "anchor": "where-the-code-itself-lives",
+  "title": "Where the code itself lives",
+  "text": "One last mode, because it is in every function you will disassemble. The address is relative to the instruction pointer. Nothing in the encoding names an absolute address, so the whole block can be loaded anywhere and still work, which is what makes position-independent executables possible and is why address space layout randomisation can move things. The 32-bit predecessor had no such mode, and position independence there cost a register and a helper call per access. Adding this one addressing mode removed a whole category of overhead, and it is the reason it is the default everywhere now.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "addressing",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "An address is base plus index times scale plus displacement, computed as part of the instruction, which is why indexing costs nothing and why is an arithmetic instruction. A comparison is a subtraction that keeps only its side effects, and the same four bits answer both the signed and the unsigned question. Which one you asked is recorded in the jump, not in the compare.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "addressing",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These are raw x86-64, assembled and run with no library underneath, so a function returns its value in because the convention says so and nothing enforces it. means the checks ran and your answer was wrong. usually means an address you computed pointed somewhere real memory is not. is the assembler, and it names the line.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "addressing",
+  "n": 1,
+  "title": "Base, index, scale, displacement",
+  "text": "The processor computes base plus index times scale as part of the memory operand, so indexing an array costs nothing beyond the load itself. Write , which is given the base of an array of eight-byte values in and an index in , and returns the element at that index. One instruction. The address arithmetic is part of the load.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "addressing",
+  "n": 2,
+  "title": "Arithmetic, without the memory",
+  "text": "An addressing mode general enough to be useful is also general enough to compute things that are not addresses. computes an address and does not use it, which makes it a three-operand arithmetic instruction that leaves the flags alone. Write , returning five times the argument in , in one .",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "addressing",
+  "n": 3,
+  "title": "The letter that decides the interpretation",
+  "text": "One subtraction sets every flag, and the jump you choose afterwards is the only record of whether you meant signed or unsigned. Write , returning 1 when is less than treating both as signed, and 0 otherwise. The starter uses the unsigned comparison. It is right for half the input space, and the checks include the other half.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "addressing",
+  "n": 4,
+  "title": "Carry is not overflow",
+  "text": "Carry is unsigned overflow and the overflow flag is signed overflow, and the processor computes both because it does not know which you meant. Write , which adds and as unsigned 64-bit values and returns 1 if the true sum did not fit, 0 otherwise. The starter reports signed overflow instead. The two flags answer different questions about the same addition.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "addressing",
+  "n": 5,
+  "title": "The flags are one register",
+  "text": "The flags are shared state written by almost every arithmetic instruction, so the distance between setting them and using them is not free. Write , returning 1 when is greater than as signed values. The starter compares correctly and then does something between the comparison and the branch. Nothing in the syntax connects those two instructions, so nothing warns you.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "addressing",
+  "n": 6,
+  "title": "A branch that is not a branch",
+  "text": "A conditional move reads the flags and takes the same time whichever way the condition goes, which is why it is used both for unpredictable branches and for constant-time code. Write , returning the larger of and as signed values, using a conditional move rather than a jump.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "addressing",
+  "n": 7,
+  "title": "Testing without subtracting",
+  "text": "A comparison against zero needs no second operand, because a value anded with itself is zero only when the value is. Write , returning 1 when is zero. performs a bitwise and and discards the result, keeping only the flags, so sets the zero flag exactly when is zero.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "addressing",
+  "n": 8,
+  "title": "The whole operand at once",
+  "text": "The displacement handles the field offset while the scale handles the array stride, so a struct member of an array element is one instruction. Write , which reads a field from an array of structs. Each struct is 16 bytes and the field is at offset 8. The base is in and the struct index in . Base, index, scale and displacement, all in one operand.",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "addressing",
+  "n": 1,
+  "title": "What are the four parts of an x86-64 memory operand?",
+  "text": " The processor adds them as part of the load, so one instruction covers what the source spells as a multiply, an add and a dereference. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "addressing",
+  "n": 2,
+  "title": "Which scale factors does the encoding allow?",
+  "text": " They are the sizes that matter for arrays of bytes, shorts, ints and pointers. Anything else costs an extra instruction, which is why struct sizes get rounded up in code that indexes them hard. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "addressing",
+  "n": 3,
+  "title": "What does <code>lea</code> do?",
+  "text": " It is the closest thing x86-64 has to a three-operand arithmetic instruction: it adds, scales, adds a constant, and writes somewhere that is not either input. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "addressing",
+  "n": 4,
+  "title": "Why do compilers use <code>lea</code> for arithmetic that has nothing to do with addresses?",
+  "text": " An instruction that does arithmetic without disturbing a comparison in progress is more useful than one that does not, and that is the same design pressure the flags create everywhere else. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "addressing",
+  "n": 5,
+  "title": "What is <code>cmp</code>?",
+  "text": "  test  is the same trick with a bitwise and, which is why  test rax, rax  is how every compiler asks whether a value is zero. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "addressing",
+  "n": 6,
+  "title": "After one <code>cmp</code>, how does the processor know whether you meant signed or unsigned?",
+  "text": " It performs one subtraction and sets every flag.  jb  reads carry and asks the unsigned question;  jl  compares sign against overflow and asks the signed one. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "addressing",
+  "n": 7,
+  "title": "Comparing 0xFF against 0x01 in a byte. Which is larger?",
+  "text": " As unsigned that is 255 against 1; as signed it is -1 against 1. The bits are identical and only the jump records which you wanted. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "addressing",
+  "n": 8,
+  "title": "What does the carry flag mean after an addition?",
+  "text": " It is why multi-word addition works: add the low words, then add the high words plus the carry. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "addressing",
+  "n": 9,
+  "title": "What does the overflow flag mean after an addition?",
+  "text": " Add 0x7F and 0x01 in a byte and you get 0x80, which as signed is -128. Two positives cannot produce a negative, so the flag says the answer is wrong. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "addressing",
+  "n": 10,
+  "title": "What is the advantage of a conditional move over a branch?",
+  "text": " That makes it a win for unpredictable conditions and a loss for predictable ones, since a correctly predicted branch is nearly free while a conditional move always waits for its input. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "addressing",
+  "n": 11,
+  "title": "Why is cryptographic code written with conditional moves?",
+  "text": " It is the same property that makes them useful for unpredictable branches, used for a different reason, and Part XV depends on it. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "addressing",
+  "n": 12,
+  "title": "What happens if an <code>add</code> sits between a <code>cmp</code> and the branch that reads it?",
+  "text": " The flags are one register written by almost every arithmetic instruction, so the distance between setting them and using them is not free to choose. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "addressing",
+  "n": 13,
+  "title": "Why do compilers emit <code>add 1</code> rather than <code>inc</code>?",
+  "text": " A hand-written  inc  in a hot loop has been a measurable regression more than once, for exactly this reason. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "addressing",
+  "n": 14,
+  "title": "What does <code>mov rax, [rip + offset]</code> buy you?",
+  "text": " It is what makes position-independent executables possible and address space layout randomisation able to move things. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "addressing",
+  "n": 15,
+  "title": "How did position independence work on 32-bit x86?",
+  "text": " Adding one addressing mode removed a whole category of overhead, which is why position independence is the default everywhere now. ",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
   "slug": "integers",
   "anchor": "the-representation-briefly",
   "title": "The representation, briefly",
