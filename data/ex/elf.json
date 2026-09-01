@@ -1,0 +1,316 @@
+{
+ "slug": "elf",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "A name nobody supplies",
+   "brief": "<p>The starter calls a function that does not exist. Every instruction is legal and the assembler is happy.</p>\n<p>Define <code>helper</code> so the reference resolves. It should return 7.</p>",
+   "kind": "compile-error",
+   "concept": "An undefined symbol is not a syntax error; the assembler emitted a hole and a note saying somebody must fill it, and nobody did.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "link-error"
+    }
+   ],
+   "hints": [
+    "The message names the symbol. Give it a definition in the same file."
+   ],
+   "diagnose": [
+    {
+     "id": "link",
+     "judge": "verdict",
+     "key": "link-error",
+     "prose": "<p>The linker names the symbol it could not find. <code>call helper</code> produced a relocation, which is a request to write an address here once somebody supplies one, and no file in the link supplied it. Defining the label is enough.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>This is the most common error in this part of the toolchain and it says exactly what happened once you know what a symbol is. A typo, a missing file, a library named before the code that uses it: all three produce this message and all three mean nobody supplied the name.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global use_helper\nuse_helper:\n    call helper\n    ret",
+   "tests": ".global _start\n_start:\n    call use_helper\n    cmp rax, 7\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 2,
+   "title": "A hole in the data, not the code",
+   "brief": "<p>Relocations are not only in instructions. A data word can hold the address of a symbol, and that address is written when the linker knows it.</p>\n<p>The starter stores the address of a name nothing defines. Point it at the function beside it instead.</p>",
+   "kind": "compile-error",
+   "concept": "A relocation is a request to write an address somewhere, and the somewhere can be a data word as easily as an instruction operand.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "link-error"
+    }
+   ],
+   "hints": [
+    "The linker names the symbol. There is a defined function in the same file."
+   ],
+   "diagnose": [
+    {
+     "id": "link",
+     "judge": "verdict",
+     "key": "link-error",
+     "prose": "<p>The linker names a symbol with no definition, and this time the reference is a <code>.quad</code> rather than a <code>call</code>. The mechanism is the same: the assembler wrote eight zero bytes and a note saying fill these in, and nobody supplied a value.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>This is the shape of every function pointer table, every virtual table and every entry in the global offset table. A slot with a relocation attached, filled in by whoever knows the address, which for a static link is the linker and for a dynamic one is the loader.</p>",
+   "starter": ".intel_syntax noprefix\n.data\n.global slot\nslot: .quad nowhere\n.text\n.global target\ntarget:\n    mov rax, 5\n    ret",
+   "tests": ".global _start\n_start:\n    lea rcx, [rip + slot]\n    mov rcx, [rcx]\n    call rcx\n    cmp rax, 5\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 3,
+   "title": "The section decides what you may do",
+   "brief": "<p><code>bump</code> increments a counter and returns the new value. The counter lives in a section the starter chose badly.</p>",
+   "kind": "property",
+   "concept": "A section carries permissions, and the loader enforces them, so where a variable lives decides whether writing to it is legal.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "signal"
+    }
+   ],
+   "hints": [
+    "Constants and variables do not live in the same place."
+   ],
+   "diagnose": [
+    {
+     "id": "sig",
+     "judge": "verdict",
+     "key": "signal",
+     "prose": "<p>The program was killed writing to memory it may read and not modify. <code>.rodata</code> is mapped read-only, and the loader enforces the permission the linker recorded. A variable that changes belongs in <code>.data</code>, or in <code>.bss</code> if it starts at zero.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>Nothing in the instruction was wrong and nothing in the assembler complained. The permission was decided by which section the bytes went into, was recorded in the file, and was enforced by the processor's page tables at the moment of the write.</p>",
+   "starter": ".intel_syntax noprefix\n.section .rodata\ncounter: .quad 0\n.text\n.global bump\nbump:\n    lea rcx, [rip + counter]\n    mov rax, [rcx]\n    inc rax\n    mov [rcx], rax\n    ret",
+   "tests": ".global _start\n_start:\n    call bump\n    cmp rax, 1\n    jne fail\n    call bump\n    cmp rax, 2\n    jne fail\n    call bump\n    cmp rax, 3\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 4,
+   "title": "Zero without occupying the file",
+   "brief": "<p><code>.bss</code> holds variables that start at zero. They take no space in the file, only a recorded length, and the loader supplies pages of zeroes.</p>\n<p>Write <code>sum_slots</code>, which adds four values into a <code>.bss</code> array and returns the total. The array must be in <code>.bss</code> and must start at zero.</p>",
+   "kind": "output",
+   "concept": "A section that is entirely zero needs no bytes on disk, only a length, which is why a program with a large zeroed array is not a large file.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "<code>.bss</code> reserves space with <code>.space</code> or <code>.zero</code>, not with <code>.quad</code>."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The total is wrong, which means the array did not start at zero or the stride is off. <code>.bss</code> guarantees zeroes; eight-byte slots are eight bytes apart, so the index scales by 8.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names. <code>.bss</code> reserves rather than initialises, so <code>.space 32</code> is the form.</p>"
+    }
+   ],
+   "after": "<p>A program with a ten megabyte zeroed array is not a ten megabyte file. The section header says how much space is needed and the loader maps pages that are already zero, which is also why touching them for the first time costs a page fault rather than a read.</p>",
+   "starter": ".intel_syntax noprefix\n.bss\nslots: .space 32\n.text\n.global sum_slots\nsum_slots:\n    lea rcx, [rip + slots]\n    xor rax, rax\n    mov qword ptr [rcx + 0], 1\n    mov qword ptr [rcx + 8], 2\n    add rax, [rcx + 0]\n    add rax, [rcx + 8]\n    ret",
+   "tests": ".global _start\n_start:\n    call sum_slots\n    cmp rax, 10\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 5,
+   "title": "A dependency that may not be there",
+   "brief": "<p>A weak undefined symbol is a reference that is allowed to go unresolved. If nothing defines it, its address is zero rather than an error, and the program can check at run time whether the thing exists.</p>\n<p>Write <code>has_optional</code>, returning 1 when <code>optional_feature</code> is defined and 0 when it is not. Nothing defines it here.</p>",
+   "kind": "compile-error",
+   "concept": "A weak reference turns a link error into a run-time question, which is how a program uses an optional dependency without requiring it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "link-error"
+    }
+   ],
+   "hints": [
+    "One directive tells the linker that this reference may go unresolved."
+   ],
+   "diagnose": [
+    {
+     "id": "link",
+     "judge": "verdict",
+     "key": "link-error",
+     "prose": "<p>The linker refuses, because an ordinary undefined reference must be satisfied. <code>.weak optional_feature</code> says this one need not be: if nothing defines it the address is left at zero, which the code can then test.</p>"
+    },
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The reference is weak now and the test is backwards. A zero address means absent, so the answer is 1 exactly when the address is not zero.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>This is how a library detects that an optional component was linked in, with no configuration file and no registration function. The check is a comparison against zero, and the answer was decided by whether anything in the link happened to supply the name.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global has_optional\nhas_optional:\n    lea rcx, [rip + optional_feature]\n    xor eax, eax\n    test rcx, rcx\n    setnz al\n    ret",
+   "tests": ".global _start\n_start:\n    call has_optional\n    cmp rax, 0\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 6,
+   "title": "Data is not executable",
+   "brief": "<p><code>.text</code> may be executed and not written. <code>.data</code> may be written and not executed. Both permissions are recorded by the linker and enforced by the processor.</p>\n<p>The starter copies a valid <code>ret</code> instruction into a data buffer and jumps to it. Every byte is correct. Run the real function instead.</p>",
+   "kind": "property",
+   "concept": "Write and execute are separate permissions on separate pages, and a region that has one is deliberately denied the other.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "signal"
+    }
+   ],
+   "hints": [
+    "There is nothing wrong with the bytes. There is something wrong with where they are."
+   ],
+   "diagnose": [
+    {
+     "id": "sig",
+     "judge": "verdict",
+     "key": "signal",
+     "prose": "<p>The program was killed jumping into a data page. The byte in the buffer really is a valid <code>ret</code>, and the processor refused to fetch it because the page it lives on is not marked executable. This is the same enforcement that stopped the write in the previous exercise, applied to the other permission.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>A page that is both writable and executable is what an attacker who can write bytes wants, so modern systems refuse to map one. A just-in-time compiler therefore has to write its code into a writable page and then ask the kernel to change the permission before jumping to it, which is a syscall in the middle of what looks like ordinary code generation.</p>",
+   "starter": ".intel_syntax noprefix\n.data\nbuf: .byte 0xC3\n.text\n.global run_it\nrun_it:\n    mov rax, 7\n    lea rcx, [rip + buf]\n    jmp rcx",
+   "tests": ".global _start\n_start:\n    call run_it\n    cmp rax, 7\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 7,
+   "title": "Alignment is a section property too",
+   "brief": "<p>Write <code>read_aligned</code>, returning the eight-byte value stored at <code>aligned</code>.</p>\n<p>The starter places a byte before the value and does not realign, so the value does not begin on an eight-byte boundary and the offsets no longer line up.</p>",
+   "kind": "output",
+   "concept": "The assembler emits bytes in order, so a declaration's address depends on everything declared before it, and alignment is something you ask for.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "There is a directive that pads to the next boundary."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The value read is not the one stored. The stray byte before it shifted everything by one, so the eight bytes at the label are seven bytes of the value and one byte of whatever follows. <code>.align 8</code> pads to the next boundary before the label.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>On x86-64 a misaligned load works and costs a little; on several other architectures it faults. The reason the directive exists at all is that the assembler lays out bytes in the order you wrote them and has no idea which of them you intended to be addressable.</p>",
+   "starter": ".intel_syntax noprefix\n.data\npad:     .byte 1\naligned: .quad 0x1122334455667788\n.text\n.global read_aligned\nread_aligned:\n    lea rcx, [rip + aligned]\n    mov rax, [rcx]\n    ret",
+   "tests": ".global _start\n_start:\n    call read_aligned\n    mov rcx, 0x1122334455667788\n    cmp rax, rcx\n    jne fail\n    call check_align\n    cmp rax, 0\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall\n.global check_align\ncheck_align:\n    lea rax, [rip + aligned]\n    and rax, 7\n    ret",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 8,
+   "title": "The address of a name",
+   "brief": "<p>Write <code>pick</code>, which returns the address of <code>first</code> when <code>rdi</code> is zero and the address of <code>second</code> otherwise, then calls through it and returns the result.</p>\n<p>Both names are functions in this file. Obtaining a symbol's address is a relocation like any other, and there are two spellings.</p>",
+   "kind": "output",
+   "concept": "Taking the address of a symbol is a relocation the linker fills, and it is the same mechanism whether the target is code or data.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Select the address first, then call through the register."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The wrong function ran. <code>lea rcx, [rip + name]</code> puts the address of <code>name</code> into <code>rcx</code> without reading anything; the conditional move then picks between two such addresses, and the call goes through whichever survived.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names.</p>"
+    }
+   ],
+   "after": "<p>Every virtual dispatch is this: an address selected at run time and called through a register. What the linker contributed was knowing where <code>first</code> and <code>second</code> ended up, which nothing in the compiled instruction stream could have known.</p>",
+   "starter": ".intel_syntax noprefix\n.text\nfirst:\n    mov rax, 11\n    ret\nsecond:\n    mov rax, 22\n    ret\n.global pick\npick:\n    lea rcx, [rip + first]\n    call rcx\n    ret",
+   "tests": ".global _start\n_start:\n    mov rdi, 0\n    call pick\n    cmp rax, 11\n    jne fail\n    mov rdi, 1\n    call pick\n    cmp rax, 22\n    jne fail\n    mov rdi, 99\n    call pick\n    cmp rax, 22\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  }
+ ]
+}

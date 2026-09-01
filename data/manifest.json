@@ -852,7 +852,9 @@
    "needs": [
     "addressing"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "elf"
+   ],
    "minutes": 50
   },
   {
@@ -866,12 +868,15 @@
    "phase": "understand",
    "accent": "copper",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1467,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "syscalls"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "cache",
@@ -2664,9 +2669,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 25,
-  "words": 38094,
-  "exercises": 200,
-  "drills": 375
+  "ready": 26,
+  "words": 39561,
+  "exercises": 208,
+  "drills": 390
  }
 }

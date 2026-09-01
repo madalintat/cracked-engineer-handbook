@@ -1,0 +1,81 @@
+{
+ "slug": "elf",
+ "num": 23,
+ "title": "ELF, linking and loading",
+ "blurb": "What runs between execve and main, and who chose the address of the function you are about to call.",
+ "part": "machine",
+ "partRoman": "V",
+ "partTitle": "The machine",
+ "phase": "understand",
+ "accent": "copper",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "syscalls"
+  ],
+  "minutes": 55,
+  "one_idea": "An object file is sections, symbols and relocations, and linking is filling in addresses that nobody knew when the code was compiled.",
+  "sources": [
+   "x86-64-assembly",
+   "compilers-interpreters-terminals-unix"
+  ]
+ },
+ "html": "<p>Something has to happen between the compiler emitting instructions and the kernel running them. That something is two programs, a linker and a loader, and the errors they produce are the ones people find most opaque because the objects they operate on are never seen.</p>\n<h2 id=\"what-is-in-an-object-file\">What is in an object file</h2>\n<p>Three things, and understanding the three explains most of the errors.</p>\n<p>Sections are named blocks of bytes. <code>.text</code> holds instructions, <code>.rodata</code> holds constants, <code>.data</code> holds initialised variables, <code>.bss</code> holds variables that start at zero and therefore occupy no space in the file at all, only a length. A section carries permissions: <code>.text</code> is executable and not writable, <code>.rodata</code> is neither, <code>.data</code> is writable.</p>\n<p>Symbols are names with addresses. Each one is either defined here, meaning this file supplies it, or undefined, meaning this file uses it and somebody else must supply it. A symbol also has visibility: global means other files may see it, and local means the name exists only for this file's own use.</p>\n<p>Relocations are the interesting part. When the compiler emits a call to a function in another file, it does not know the address, so it emits a placeholder and records an entry saying: at this offset, once you know where that symbol landed, write it here. An object file is full of holes and a list of how to fill them.</p>\n<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 635 157\" class=\"fig-svg\" style=\"max-width:921px\" role=\"img\" aria-label=\"An object file containing sections, a symbol table and a relocation list, feeding into a linker that produces an executable with segments.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><line x1=\"176\" y1=\"88\" x2=\"229\" y2=\"88\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"378\" y1=\"88\" x2=\"431\" y2=\"88\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><rect x=\"0.0\" y=\"52.8\" width=\"176.0\" height=\"70.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"88.0\" y=\"87.0\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">object file</text><text x=\"88.0\" y=\"103.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">sections, symbols, holes</text><rect x=\"228.8\" y=\"52.8\" width=\"149.6\" height=\"70.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--copper-ink, var(--accent));stroke:var(--copper-ink, var(--accent))\"/><text x=\"303.6\" y=\"87.0\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">linker</text><text x=\"303.6\" y=\"103.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">fills the holes</text><rect x=\"431.2\" y=\"52.8\" width=\"176.0\" height=\"70.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"519.2\" y=\"87.0\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">executable</text><text x=\"519.2\" y=\"103.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">segments and permissions</text></svg><figcaption>The linker&#x27;s view is sections and symbols. The loader&#x27;s view is segments and permissions. The same bytes, grouped twice for two different jobs.</figcaption></figure>\n<h2 id=\"sections-against-segments\">Sections against segments</h2>\n<p>The same file is grouped twice, for two readers.</p>\n<p>The linker cares about sections, because it merges them: every input file's <code>.text</code> becomes part of one output <code>.text</code>. The loader does not care about names at all. It cares about segments, which are contiguous runs of the file to be mapped into memory with a particular set of permissions.</p>\n<p>So several sections with the same permissions end up in one segment. <code>.text</code> and <code>.rodata</code> are often mapped together as read and execute, or as two segments if the linker was told to keep writable and executable strictly apart.</p>\n<p>That is why the section headers can be stripped from a binary and it still runs. The loader never reads them.</p>\n<h2 id=\"the-name-is-not-the-name\">The name is not the name</h2>\n<p>A symbol name in the object file is not always the name in the source.</p>\n<p>C leaves names mostly alone. C++ does not, because it has overloading and namespaces and a linker that only knows about flat strings, so the argument types are encoded into the name. That is mangling, and it is why a C++ link error names something unreadable and why <code>extern \"C\"</code> exists: it says do not do that, because something outside is going to look for the plain name.</p>\n<p>It is also why linking a C++ library into C requires care, and why changing a function's parameter types is a binary-incompatible change even when every caller still compiles.</p>\n<h2 id=\"static-and-dynamic\">Static and dynamic</h2>\n<p>Two things can happen with an undefined symbol.</p>\n<p>Static linking resolves it now. The linker finds the definition in another object file or in an archive, copies the code in, fills the hole with a real address, and produces an image with no unresolved references. The result is large, self-contained, and starts instantly.</p>\n<p>Dynamic linking defers it. The executable records that it needs a symbol from a named library, and the resolution happens at load time. The result is smaller, shares one copy of libc across every process on the machine, and can pick up a security fix without relinking anything.</p>\n<p>The cost of the second is that the addresses are unknown when the code is compiled, which is the problem the next section is about.</p>\n<h2 id=\"the-two-tables\">The two tables</h2>\n<p>A call to a dynamic function cannot be a direct call, because the address is not known. Two tables solve it.</p>\n<p>The global offset table is an array of addresses, filled in by the loader. Code that needs a dynamic symbol loads its address from a slot in this table rather than embedding it, which means the code itself never has to be modified and can stay shared and read-only across every process using it.</p>\n<p>The procedure linkage table is a small stub per function. Calling a dynamic function calls its stub, and the stub jumps through the corresponding table slot.</p>\n<p>Historically the slots started out pointing back into the loader, so the first call to each function resolved it and patched the slot, and subsequent calls went straight through. That is lazy binding, and it made startup cheaper for programs that used a fraction of what they linked.</p>\n<p>It is mostly gone now. A table that gets written during execution has to stay writable, and a writable table full of function pointers is a target. Modern builds resolve everything at load time and mark the table read-only afterwards, which costs a little startup time and removes the target.</p>\n<h2 id=\"weak-and-the-archive-rule\">Weak, and the archive rule</h2>\n<p>Two smaller rules that between them explain most confusing link outcomes.</p>\n<p>A symbol can be weak, which means it is a definition that yields. If a strong definition of the same name exists anywhere, the strong one wins and no error is reported. If none does, the weak one is used. This is how a library ships a default that an application can replace by simply defining the name, with no configuration and no registration.</p>\n<p>It is also how a program tests whether an optional dependency is present: declare a weak undefined symbol, and if nothing supplies it the address is zero, which you can check at run time.</p>\n<p>The archive rule is stranger. A static library is not a unit; it is a bag of object files with an index. When the linker reaches one, it pulls in only the members that resolve symbols still outstanding at that moment, and it does not revisit it afterwards.</p>\n<p>So link order matters. Put a library before the code that uses it and its members are considered when nothing needs them yet, so nothing is pulled in, and the resulting error names symbols that were sitting in a file the linker had already read and discarded. That is why the convention is objects first and libraries last, and why circular dependencies between static libraries are sometimes resolved by naming one of them twice.</p>\n<h2 id=\"the-rule-that-makes-preloading-work\">The rule that makes preloading work</h2>\n<p>When several libraries define the same symbol, the first one found wins, and the search order can be influenced from outside the program.</p>\n<p>That is the whole mechanism behind <code>LD_PRELOAD</code>: name a library, it is searched first, and its definitions displace the ones the program expected. It is how memory checkers intercept <code>malloc</code>, how tracers wrap network calls, and how a great deal of debugging gets done without recompiling anything.</p>\n<p>It is also why a program that runs as another user ignores the variable entirely, and why the same flexibility appears on every list of ways to compromise a process.</p>\n<h2 id=\"what-the-loader-does\">What the loader does</h2>\n<p>Then the last step, which is smaller than people expect.</p>\n<p>The kernel maps the segments at the addresses the file asks for, or at a random offset if the binary was built to allow it. If the binary is dynamic, control goes first to the interpreter named inside the file, which is itself a shared library, and which loads the other libraries, applies relocations, and runs each one's initialisers. Then it jumps to the entry point.</p>\n<p>By the time your first instruction runs, several thousand relocations may have been applied and a dozen constructors may have run. A statically linked binary skips all of it, which is why it starts in a fraction of the time and why that matters for anything spawning processes in a loop.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>An object file is sections, symbols and relocations. A section is bytes with permissions, a symbol is a name that is either supplied or wanted, and a relocation is a hole with instructions for filling it.</p>\n<p>Undefined symbol means nobody supplied it. Duplicate symbol means two files did. Both errors name the symbol, and once you know what a symbol is, both say exactly what happened.</p>\n<p>Unit 024 goes back under the software entirely, to what happens when the address the loader chose turns out to be far away from the last one you touched.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p><code>link-error</code> is the new one here and it is the whole subject. It means the assembler was happy, every instruction was legal, and something the program refers to has no address. The message names the symbol.</p>\n<p><code>signal</code> in this unit usually means a write to a section that is not writable, which is a permission the linker recorded and the loader enforced.</p>",
+ "headings": [
+  {
+   "id": "what-is-in-an-object-file",
+   "text": "What is in an object file",
+   "level": 2
+  },
+  {
+   "id": "sections-against-segments",
+   "text": "Sections against segments",
+   "level": 2
+  },
+  {
+   "id": "the-name-is-not-the-name",
+   "text": "The name is not the name",
+   "level": 2
+  },
+  {
+   "id": "static-and-dynamic",
+   "text": "Static and dynamic",
+   "level": 2
+  },
+  {
+   "id": "the-two-tables",
+   "text": "The two tables",
+   "level": 2
+  },
+  {
+   "id": "weak-and-the-archive-rule",
+   "text": "Weak, and the archive rule",
+   "level": 2
+  },
+  {
+   "id": "the-rule-that-makes-preloading-work",
+   "text": "The rule that makes preloading work",
+   "level": 2
+  },
+  {
+   "id": "what-the-loader-does",
+   "text": "What the loader does",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1467,
+ "needs": [
+  "syscalls"
+ ],
+ "neededBy": []
+}
