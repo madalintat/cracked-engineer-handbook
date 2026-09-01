@@ -161,6 +161,13 @@ cycle", so the build rejects a spec that has both.
     { "chip": "Bit", "inputs": ["in","load"], "outputs": ["out"],
       "trace": [[1,1,0],[0,0,1],[1,0,1],[0,1,1],[0,0,0]] }
 
+A part with several outputs is assigned to several names:
+
+    sum, carry = FullAdder(a, b, cin)
+
+Without that, a sub-chip's second output is unreachable, which makes every
+adder past the first bit impossible to write.
+
 There are two primitives. `nand` is the one everything is built from. `dff` is
 an axiom: its output this cycle is its input from the previous one, every flop
 starts at 0, and a loop is legal exactly when it passes through one. A `dff` is

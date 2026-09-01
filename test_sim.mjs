@@ -422,3 +422,51 @@ t('a dff chain delays by its length', () => {
   is(r.verdict === 'ok', r.message);
 });
 
+t('a sub-chip with two outputs gives both of them', () => {
+  // Before this, evaluate() returned outs[0] for every sub-chip, so a demux's
+  // second output and an adder's carry were unreachable and silently became
+  // the first output instead. Every adder past bit 0 needs the carry.
+  const src = `chip Not(a) -> out { out = nand(a,a) }
+chip And(a,b) -> out { n = nand(a,b)  out = Not(n) }
+chip Or(a,b) -> out { na=Not(a)  nb=Not(b)  out=nand(na,nb) }
+chip Xor(a,b) -> out {
+  n1 = nand(a,b)  n2 = nand(a,n1)  n3 = nand(b,n1)  out = nand(n2,n3)
+}
+chip HalfAdder(a,b) -> sum, carry {
+  sum = Xor(a,b)
+  carry = And(a,b)
+}
+chip FullAdder(a,b,cin) -> sum, carry {
+  s1, c1 = HalfAdder(a, b)
+  sum, c2 = HalfAdder(s1, cin)
+  carry = Or(c1, c2)
+}`;
+  const table = [];
+  for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) for (let c = 0; c < 2; c++) {
+    const t = a + b + c;
+    table.push([a, b, c, t & 1, t >> 1]);
+  }
+  const r = SIM.check(src, { chip: 'FullAdder', inputs: ['a', 'b', 'cin'],
+                             outputs: ['sum', 'carry'], table });
+  is(r.verdict === 'ok', r.message);
+});
+
+t('assigning more names than a part has outputs is an error', () => {
+  const src = `chip Not(a) -> out { out = nand(a,a) }
+chip Two(a) -> x, y { x = Not(a)  y = nand(a,a) }
+chip Bad(a) -> o { p, q, z = Two(a)  o = nand(p, q) }`;
+  const r = SIM.check(src, { chip: 'Bad', inputs: ['a'], outputs: ['o'],
+                             table: [[0, 1], [1, 1]] });
+  is(r.verdict === 'parse-error', r.verdict);
+  is(/2 outputs and you assigned 3 names/.test(r.message), r.message);
+});
+
+t('a name bound by a multi-output assignment is not floating', () => {
+  const src = `chip Not(a) -> out { out = nand(a,a) }
+chip Two(a) -> x, y { x = Not(a)  y = nand(a,a) }
+chip Use(a) -> o { p, q = Two(a)  o = nand(p, q) }`;
+  const r = SIM.check(src, { chip: 'Use', inputs: ['a'], outputs: ['o'],
+                             table: [[0, 0], [1, 1]] });
+  is(r.verdict !== 'floating-input', `q was reported floating: ${r.message}`);
+});
+

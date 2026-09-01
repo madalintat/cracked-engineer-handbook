@@ -43,7 +43,12 @@
 /* --------------------------------------------------------------- parsing */
 
 const RE_CHIP = /^chip\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*->\s*([^{]+)\{$/;
-const RE_ASSIGN = /^([A-Za-z_]\w*)\s*=\s*([A-Za-z_]\w*)\s*\(([^)]*)\)$/;
+/* A part with several outputs is assigned to several names:
+ *     sum, carry = FullAdder(a, b, cin)
+ * Without this a sub-chip's second output is unreachable, and a design that
+ * needs both -- every adder past the first bit -- cannot be written at all. */
+const RE_ASSIGN =
+  /^([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)\s*=\s*([A-Za-z_]\w*)\s*\(([^)]*)\)$/;
 
 /* Layout is not meaning. A learner may write a chip on one line, or put the
  * brace anywhere, and the netlist is the same graph either way. Normalise
@@ -102,9 +107,10 @@ function parse(src) {
     const asn = RE_ASSIGN.exec(line);
     if (asn) {
       if (!cur) throw new SimError('assignment outside a chip', ln + 1);
-      const [, target, part, args] = asn;
+      const [, targets, part, args] = asn;
+      const names = splitNames(targets, ln + 1);
       cur.stmts.push({
-        target, part,
+        target: names[0], targets: names, part,
         args: splitNames(args, ln + 1),
         line: ln + 1,
       });
@@ -156,7 +162,8 @@ function checkParts(chip, library) {
  *  are the genuinely undefined ones. */
 function findCycle(chip) {
   const producer = new Map();
-  chip.stmts.forEach(s => producer.set(s.target, s));
+  chip.stmts.forEach(s => (s.targets || [s.target]).forEach(
+    t => producer.set(t, s)));
 
   const WHITE = 0, GREY = 1, BLACK = 2;
   const colour = new Map();
@@ -192,7 +199,8 @@ function findCycle(chip) {
 /** An unconnected wire is not 0. It has no value, and a simulator that
  *  quietly treated it as 0 would let a design ship that fails on silicon. */
 function findFloating(chip) {
-  const defined = new Set([...chip.inputs, ...chip.stmts.map(s => s.target)]);
+  const defined = new Set([...chip.inputs,
+    ...chip.stmts.flatMap(s => s.targets || [s.target])]);
   const out = [];
   for (const s of chip.stmts) {
     for (const a of s.args) {
@@ -221,7 +229,8 @@ function evaluate(chip, inputs, library, state, pending, path = '') {
   chip.inputs.forEach((n, i) => wires.set(n, inputs[i] ? 1 : 0));
 
   const producer = new Map();
-  chip.stmts.forEach(s => producer.set(s.target, s));
+  chip.stmts.forEach(s => (s.targets || [s.target]).forEach(
+    t => producer.set(t, s)));
 
   const resolve = (wire, depth) => {
     if (wires.has(wire)) return wires.get(wire);
@@ -252,8 +261,18 @@ function evaluate(chip, inputs, library, state, pending, path = '') {
       const sub = library[s.part];
       if (!sub) throw new SimError(`unknown part ${s.part}`, s.line);
       const args = s.args.map(a => resolve(a, depth + 1));
-      v = evaluate(sub, args, library, state, pending,
-                   path + '/' + wire + ':' + s.part)[0];
+      const outs = evaluate(sub, args, library, state, pending,
+                            path + '/' + s.target + ':' + s.part);
+      const names = s.targets || [s.target];
+      if (names.length > outs.length) {
+        throw new SimError(
+          `${s.part} has ${outs.length} output${outs.length === 1 ? '' : 's'} ` +
+          `and you assigned ${names.length} names`, s.line);
+      }
+      // Bind every output at once, so the second one is reachable rather than
+      // silently the first.
+      names.forEach((n, i) => wires.set(n, outs[i]));
+      v = wires.get(wire);
     }
     wires.set(wire, v);
     return v;
