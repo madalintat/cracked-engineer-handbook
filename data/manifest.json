@@ -433,7 +433,8 @@
    ],
    "neededBy": [
     "arithmetic",
-    "feedback"
+    "feedback",
+    "memory"
    ]
   },
   {
@@ -480,6 +481,7 @@
    ],
    "neededBy": [
     "clock-bus",
+    "memory",
     "clock-edge"
    ]
   },
@@ -502,6 +504,7 @@
     "feedback"
    ],
    "neededBy": [
+    "memory",
     "clock-edge",
     "registers"
    ]
@@ -517,11 +520,15 @@
    "phase": "build",
    "accent": "gold",
    "backend": "sim",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
+   "ready": true,
+   "words": 1471,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "selection",
+    "feedback",
+    "clock-bus"
+   ],
    "neededBy": []
   },
   {
@@ -2575,9 +2582,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 13,
-  "words": 20355,
-  "exercises": 104,
-  "drills": 195
+  "ready": 14,
+  "words": 21826,
+  "exercises": 112,
+  "drills": 210
  }
 }

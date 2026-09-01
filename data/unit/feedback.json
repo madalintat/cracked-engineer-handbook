@@ -71,6 +71,7 @@
  ],
  "neededBy": [
   "clock-bus",
+  "memory",
   "clock-edge"
  ]
 }

@@ -68,6 +68,7 @@
   "feedback"
  ],
  "neededBy": [
+  "memory",
   "clock-edge",
   "registers"
  ]

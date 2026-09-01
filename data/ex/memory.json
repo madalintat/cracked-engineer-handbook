@@ -1,0 +1,1864 @@
+{
+ "slug": "memory",
+ "backend": "sim",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Four registers behind an address",
+   "brief": "<p>Build <code>Mem4</code>, a memory of four one-bit locations. The two address bits select one, <code>load</code> writes <code>din</code> to it, and the output is always whatever that location held coming into the cycle.</p>",
+   "kind": "property",
+   "concept": "A memory is a decoder gating the loads, a row of registers, and a multiplexer choosing the output. There is no fourth idea.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "The decoder gives four lines. Each register's load is <code>load</code> ANDed with its own line."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Read the address on the failing cycle. Wrong at one address and right at the others is a decoder problem. Wrong everywhere at once usually means the load signal reaches every register ungated, so a write to any address writes to all of them.</p>"
+    },
+    {
+     "id": "cycle",
+     "judge": "verdict",
+     "key": "cycle",
+     "prose": "<p>Each register's output feeds only the multiplexer, and the multiplexer's output does not feed back to any register's input. Check what you connected to the data inputs.</p>"
+    }
+   ],
+   "after": "<p>Every location costs the same here: the same wires carry a different pattern into the same gates. That stops being true the moment there is a cache, and Part V is largely about it stopping.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip Mux(a, b, sel) -> out {\n  nsel = Not(sel)\n  ga = nand(a, nsel)\n  gb = nand(b, sel)\n  out = nand(ga, gb)\n}\nchip Mux4(a, b, c, d, s1, s0) -> out {\n  lo = Mux(a, b, s0)\n  hi = Mux(c, d, s0)\n  out = Mux(lo, hi, s1)\n}\nchip Dec2(s1, s0) -> o0, o1, o2, o3 {\n  n1 = Not(s1)\n  n0 = Not(s0)\n  o0 = And(n1, n0)\n  o1 = And(n1, s0)\n  o2 = And(s1, n0)\n  o3 = And(s1, s0)\n}\nchip Bit(in, load) -> out {\n  m = Mux(out, in, load)\n  out = dff(m)\n}\nchip Mem4(a1, a0, din, load) -> out {\n  r0 = Bit(din, load)\n  r1 = Bit(din, load)\n  r2 = Bit(din, load)\n  r3 = Bit(din, load)\n  out = Mux4(r0, r1, r2, r3, a1, a0)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Mem4",
+    "inputs": [
+     "a1",
+     "a0",
+     "din",
+     "load"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "trace": [
+     [
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      1
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      1
+     ]
+    ]
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 2,
+   "title": "A counter that can be told where to go",
+   "brief": "<p>Build <code>PC</code>, a two-bit program counter. It increments when <code>en</code> is high, and when <code>jmp</code> is high it loads the address on <code>j1</code> and <code>j0</code> instead. The output is the value it held coming into the cycle.</p>",
+   "kind": "property",
+   "concept": "A jump is the load input of a counter you already built, not a mechanism of its own.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Compute the incremented value, then choose between it and the jump target before storing."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Read the cycle after the one where <code>jmp</code> was high. A jump takes effect on the next cycle like every other stored value, so the counter shows the target one cycle later, not immediately.</p>"
+    },
+    {
+     "id": "cycle",
+     "judge": "verdict",
+     "key": "cycle",
+     "prose": "<p>The next value depends on the current one, which is legal only through the flip-flops. The increment and the multiplexer both belong between the register's output and its input.</p>"
+    }
+   ],
+   "after": "<p>A jump costs the same as not jumping: both are one edge into the same register, and the multiplexer decided which value arrived.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip Mux(a, b, sel) -> out {\n  nsel = Not(sel)\n  ga = nand(a, nsel)\n  gb = nand(b, sel)\n  out = nand(ga, gb)\n}\nchip Mux4(a, b, c, d, s1, s0) -> out {\n  lo = Mux(a, b, s0)\n  hi = Mux(c, d, s0)\n  out = Mux(lo, hi, s1)\n}\nchip Dec2(s1, s0) -> o0, o1, o2, o3 {\n  n1 = Not(s1)\n  n0 = Not(s0)\n  o0 = And(n1, n0)\n  o1 = And(n1, s0)\n  o2 = And(s1, n0)\n  o3 = And(s1, s0)\n}\nchip Bit(in, load) -> out {\n  m = Mux(out, in, load)\n  out = dff(m)\n}\nchip PC(en, jmp, j1, j0) -> q1, q0 {\n  q1 = Bit(j1, jmp)\n  q0 = Bit(j0, jmp)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "PC",
+    "inputs": [
+     "en",
+     "jmp",
+     "j1",
+     "j0"
+    ],
+    "outputs": [
+     "q1",
+     "q0"
+    ],
+    "trace": [
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+     ]
+    ]
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 3,
+   "title": "Jumping only if",
+   "brief": "<p>Build <code>CondPC</code>, the same counter where the jump happens only when both <code>want</code> and <code>flag</code> are high.</p>",
+   "kind": "property",
+   "concept": "A conditional branch is the same load with its enable gated by a flag. There is no branch hardware.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "One AND in front of the jump control, and everything else is the previous exercise."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>The cycle where <code>want</code> is high and <code>flag</code> is low is the one that separates a correct design from one that always jumps. It should carry on counting.</p>"
+    }
+   ],
+   "after": "<p>Two more wires and a machine can make a decision. The flags those wires read are the leftovers of an arithmetic operation that already happened, which is unit 007 arriving where it was going.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip Mux(a, b, sel) -> out {\n  nsel = Not(sel)\n  ga = nand(a, nsel)\n  gb = nand(b, sel)\n  out = nand(ga, gb)\n}\nchip Mux4(a, b, c, d, s1, s0) -> out {\n  lo = Mux(a, b, s0)\n  hi = Mux(c, d, s0)\n  out = Mux(lo, hi, s1)\n}\nchip Dec2(s1, s0) -> o0, o1, o2, o3 {\n  n1 = Not(s1)\n  n0 = Not(s0)\n  o0 = And(n1, n0)\n  o1 = And(n1, s0)\n  o2 = And(s1, n0)\n  o3 = And(s1, s0)\n}\nchip Bit(in, load) -> out {\n  m = Mux(out, in, load)\n  out = dff(m)\n}\nchip CondPC(en, want, flag, j1, j0) -> q1, q0 {\n  n0 = Not(q0)\n  i0 = Mux(q0, n0, en)\n  t1 = Xor(q1, q0)\n  i1 = Mux(q1, t1, en)\n  d0 = Mux(i0, j0, want)\n  d1 = Mux(i1, j1, want)\n  one = Or(en, want)\n  q0 = Bit(d0, one)\n  q1 = Bit(d1, one)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "CondPC",
+    "inputs": [
+     "en",
+     "want",
+     "flag",
+     "j1",
+     "j0"
+    ],
+    "outputs": [
+     "q1",
+     "q0"
+    ],
+    "trace": [
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    ]
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 4,
+   "title": "Reading what was there before",
+   "brief": "<p>Build <code>ReadBeforeWrite</code>, a single location that is read and written in the same cycle. The output must be the value it held coming in, never the value being written.</p>",
+   "kind": "property",
+   "concept": "A read in the same cycle as a write returns the old value, and that is what makes a whole class of instruction possible rather than being a quirk.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "The register you already have does this. The mistake is routing the input to the output."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>If the output equals the value being written on the same cycle, the input is reaching the output combinationally. The register's output is what should be read, and it shows the previous value by construction.</p>"
+    }
+   ],
+   "after": "<p>A value can be read from a register, sent through an adder, and written back into the same register in one cycle precisely because the read sees the old value. Every accumulator instruction in every machine depends on it.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip Mux(a, b, sel) -> out {\n  nsel = Not(sel)\n  ga = nand(a, nsel)\n  gb = nand(b, sel)\n  out = nand(ga, gb)\n}\nchip Mux4(a, b, c, d, s1, s0) -> out {\n  lo = Mux(a, b, s0)\n  hi = Mux(c, d, s0)\n  out = Mux(lo, hi, s1)\n}\nchip Dec2(s1, s0) -> o0, o1, o2, o3 {\n  n1 = Not(s1)\n  n0 = Not(s0)\n  o0 = And(n1, n0)\n  o1 = And(n1, s0)\n  o2 = And(s1, n0)\n  o3 = And(s1, s0)\n}\nchip Bit(in, load) -> out {\n  m = Mux(out, in, load)\n  out = dff(m)\n}\nchip ReadBeforeWrite(din, load) -> out {\n  stored = Bit(din, load)\n  out = Mux(stored, din, load)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "ReadBeforeWrite",
+    "inputs": [
+     "din",
+     "load"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "trace": [
+     [
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1
+     ]
+    ]
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 5,
+   "title": "Where the top is",
+   "brief": "<p>Build <code>StackPointer</code>, a two-bit counter that increments on <code>push</code>, decrements on <code>pop</code>, and holds otherwise. Push wins if both arrive.</p>",
+   "kind": "property",
+   "concept": "A stack is a memory and a register holding a number, plus an agreement about what the number means.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Decrementing by one is adding the all-ones value, which for two bits is adding three."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Read the cycle where <code>pop</code> is high. Going down from 0 wraps to 3, the same way going up from 3 wraps to 0, because nothing is checking the range.</p>"
+    }
+   ],
+   "after": "<p>There is no stack in the hardware. There is a number and an agreement, and nothing enforces what it points to, which is where a whole category of security unit later comes from.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip Mux(a, b, sel) -> out {\n  nsel = Not(sel)\n  ga = nand(a, nsel)\n  gb = nand(b, sel)\n  out = nand(ga, gb)\n}\nchip Mux4(a, b, c, d, s1, s0) -> out {\n  lo = Mux(a, b, s0)\n  hi = Mux(c, d, s0)\n  out = Mux(lo, hi, s1)\n}\nchip Dec2(s1, s0) -> o0, o1, o2, o3 {\n  n1 = Not(s1)\n  n0 = Not(s0)\n  o0 = And(n1, n0)\n  o1 = And(n1, s0)\n  o2 = And(s1, n0)\n  o3 = And(s1, s0)\n}\nchip Bit(in, load) -> out {\n  m = Mux(out, in, load)\n  out = dff(m)\n}\nchip StackPointer(push, pop) -> q1, q0 {\n  n0 = Not(q0)\n  q0 = Bit(n0, push)\n  q1 = Bit(q1, push)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "StackPointer",
+    "inputs": [
+     "push",
+     "pop"
+    ],
+    "outputs": [
+     "q1",
+     "q0"
+    ],
+    "trace": [
+     [
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      1
+     ]
+    ]
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 6,
+   "title": "The decoder on its own",
+   "brief": "<p>Build <code>WriteEnables</code>, which takes an address and a write signal and produces the four per-register load lines.</p>",
+   "kind": "property",
+   "concept": "The write half of a memory is a decoder ANDed with the write signal, and separating it out makes the whole arrangement obvious.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Four lines from the address, each gated by the write signal."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>With <code>write</code> low every output is 0 whatever the address is, because nothing is being written. A design that leaves the decoder ungated raises a line even when nobody asked for a write.</p>"
+    }
+   ],
+   "after": "<p>One AND per row is the entire difference between a decoder and the write port of a memory.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip Mux(a, b, sel) -> out {\n  nsel = Not(sel)\n  ga = nand(a, nsel)\n  gb = nand(b, sel)\n  out = nand(ga, gb)\n}\nchip Mux4(a, b, c, d, s1, s0) -> out {\n  lo = Mux(a, b, s0)\n  hi = Mux(c, d, s0)\n  out = Mux(lo, hi, s1)\n}\nchip Dec2(s1, s0) -> o0, o1, o2, o3 {\n  n1 = Not(s1)\n  n0 = Not(s0)\n  o0 = And(n1, n0)\n  o1 = And(n1, s0)\n  o2 = And(s1, n0)\n  o3 = And(s1, s0)\n}\nchip WriteEnables(a1, a0, write) -> w0, w1, w2, w3 {\n  w0, w1, w2, w3 = Dec2(a1, a0)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "WriteEnables",
+    "inputs": [
+     "a1",
+     "a0",
+     "write"
+    ],
+    "outputs": [
+     "w0",
+     "w1",
+     "w2",
+     "w3"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1
+     ]
+    ],
+    "maxGates": 30
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 7,
+   "title": "The read half",
+   "brief": "<p>Build <code>ReadPort</code>, which selects one of four stored values using the same address the write half uses.</p>",
+   "kind": "property",
+   "concept": "The read half is a multiplexer on the same address, which is why one number serves both directions.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "You built this in unit 006 under another name."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>The address bits have a high one and a low one, and swapping them passes half the rows. Check which value an address of 2 should select.</p>"
+    }
+   ],
+   "after": "<p>The same number lights one write line and steers one read path. That is the whole reason an address works.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip Mux(a, b, sel) -> out {\n  nsel = Not(sel)\n  ga = nand(a, nsel)\n  gb = nand(b, sel)\n  out = nand(ga, gb)\n}\nchip Mux4(a, b, c, d, s1, s0) -> out {\n  lo = Mux(a, b, s0)\n  hi = Mux(c, d, s0)\n  out = Mux(lo, hi, s1)\n}\nchip Dec2(s1, s0) -> o0, o1, o2, o3 {\n  n1 = Not(s1)\n  n0 = Not(s0)\n  o0 = And(n1, n0)\n  o1 = And(n1, s0)\n  o2 = And(s1, n0)\n  o3 = And(s1, s0)\n}\nchip ReadPort(v0, v1, v2, v3, a1, a0) -> out {\n  out = Mux(v0, v1, a0)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "ReadPort",
+    "inputs": [
+     "v0",
+     "v1",
+     "v2",
+     "v3",
+     "a1",
+     "a0"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 30
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 8,
+   "title": "Splitting the address",
+   "brief": "<p>Build <code>TwoLevel</code>, which selects one of four values using a two-level tree: the low bit chooses within a pair and the high bit chooses between the pairs.</p>",
+   "kind": "property",
+   "concept": "Real memories are trees, because a flat decode of any real width is a fan-in nobody can build.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Three two-way multiplexers, and the high bit decides last."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>The two halves are chosen by the low bit and the result by the high bit. Doing it the other way round passes the rows where both bits agree and fails the rest.</p>"
+    }
+   ],
+   "after": "<p>Depth grows with the logarithm of the size rather than the size, which is why the address of a byte in a real machine is split into pieces at several levels before it reaches anything that stores a bit.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip Mux(a, b, sel) -> out {\n  nsel = Not(sel)\n  ga = nand(a, nsel)\n  gb = nand(b, sel)\n  out = nand(ga, gb)\n}\nchip Mux4(a, b, c, d, s1, s0) -> out {\n  lo = Mux(a, b, s0)\n  hi = Mux(c, d, s0)\n  out = Mux(lo, hi, s1)\n}\nchip Dec2(s1, s0) -> o0, o1, o2, o3 {\n  n1 = Not(s1)\n  n0 = Not(s0)\n  o0 = And(n1, n0)\n  o1 = And(n1, s0)\n  o2 = And(s1, n0)\n  o3 = And(s1, s0)\n}\nchip TwoLevel(v0, v1, v2, v3, a1, a0) -> out {\n  lo = Mux(v0, v1, a1)\n  hi = Mux(v2, v3, a1)\n  out = Mux(lo, hi, a0)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "TwoLevel",
+    "inputs": [
+     "v0",
+     "v1",
+     "v2",
+     "v3",
+     "a1",
+     "a0"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 20
+   },
+   "lang": "netlist"
+  }
+ ]
+}

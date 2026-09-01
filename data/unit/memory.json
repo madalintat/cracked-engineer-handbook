@@ -1,0 +1,79 @@
+{
+ "slug": "memory",
+ "num": 9,
+ "title": "Addressable storage and the counter",
+ "blurb": "An address is a position, not a name. And since the counter defaults to +1, a jump is a parallel load rather than a special mechanism.",
+ "part": "logic",
+ "partRoman": "II",
+ "partTitle": "Logic",
+ "phase": "build",
+ "accent": "gold",
+ "backend": "sim",
+ "meta": {
+  "needs": [
+   "selection",
+   "feedback",
+   "clock-bus"
+  ],
+  "minutes": "50",
+  "one_idea": "A memory is a decoder, a row of registers and a multiplexer, and a jump is a load into the counter you already built.",
+  "sources": [
+   "nand2tetris-eater-scott"
+  ]
+ },
+ "html": "<p>Four units ago you built a decoder that raises one of several lines from a number. Two units ago you built a register. Last unit you built the routing that gets a value from one place to another.</p>\n<p>A memory is those three things arranged in one order, and that is the whole mechanism. There is no fourth idea.</p>\n<h2 id=\"the-arrangement\">The arrangement</h2>\n<p>Take some registers. Run the address bits into a decoder, so exactly one of its outputs is high. And the two halves fall out.</p>\n<p>To write, gate the write signal with the decoder outputs: each register's load input is the write signal ANDed with its own line. Exactly one line is high, so exactly one register loads, and the rest hold.</p>\n<p>To read, run all the register outputs into a multiplexer with the same address on its select. Exactly one value comes out.</p>\n<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 714 219\" class=\"fig-svg\" style=\"max-width:1035px\" role=\"img\" aria-label=\"An address feeding a decoder whose one-hot outputs gate the load signal to four registers, with the same address selecting between the register outputs through a multiplexer.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><line x1=\"97\" y1=\"92\" x2=\"141\" y2=\"92\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"194\" y1=\"70\" x2=\"348\" y2=\"88\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><text x=\"270.6\" y=\"73.2\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">load, gated per row</text><line x1=\"348\" y1=\"88\" x2=\"502\" y2=\"70\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"348\" y1=\"97\" x2=\"502\" y2=\"114\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"554\" y1=\"92\" x2=\"598\" y2=\"92\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><rect x=\"0.0\" y=\"70.4\" width=\"96.8\" height=\"44.0\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--gold-ink, var(--accent));stroke:var(--gold-ink, var(--accent))\"/><text x=\"48.4\" y=\"96.4\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"600\">address</text><rect x=\"140.8\" y=\"70.4\" width=\"105.6\" height=\"44.0\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--copper-ink, var(--accent));stroke:var(--copper-ink, var(--accent))\"/><text x=\"193.6\" y=\"91.4\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">decoder</text><text x=\"193.6\" y=\"107.4\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">one line high</text><rect x=\"299.2\" y=\"0.0\" width=\"96.8\" height=\"39.6\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"347.6\" y=\"23.8\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">reg 0</text><rect x=\"299.2\" y=\"48.4\" width=\"96.8\" height=\"39.6\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"347.6\" y=\"72.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">reg 1</text><rect x=\"299.2\" y=\"96.8\" width=\"96.8\" height=\"39.6\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"347.6\" y=\"120.6\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">reg 2</text><rect x=\"299.2\" y=\"145.2\" width=\"96.8\" height=\"39.6\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"347.6\" y=\"169.0\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">reg 3</text><rect x=\"448.8\" y=\"70.4\" width=\"105.6\" height=\"44.0\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"501.6\" y=\"91.4\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">mux</text><text x=\"501.6\" y=\"107.4\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim\">same address</text><rect x=\"598.4\" y=\"70.4\" width=\"88.0\" height=\"44.0\" rx=\"4\" class=\"fig-box\"/><text x=\"642.4\" y=\"96.4\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg mono\" font-weight=\"600\">out</text></svg><figcaption>The decoder chooses who is written and the multiplexer chooses who is read, both from the same address. There is nothing else in a memory.</figcaption></figure>\n<p>That is a memory. Registers you have, a decoder you have, a multiplexer you have, and one AND per row.</p>\n<h2 id=\"what-an-address-is-not\">What an address is not</h2>\n<p>It is worth saying again with the circuit in front of you.</p>\n<p>Nothing in that picture stores an address. No register knows its own number. There is no table anywhere mapping numbers to locations. The address bits are wires into a decoder and wires into a multiplexer, and the number identifies a register only in the sense that it is the number that lights that register's line.</p>\n<p>Scott's image is sixteen unnumbered streets with sixteen unnumbered houses on each. \"The fourth house on the seventh street\" locates a house exactly, and no house needs a plaque. Address is position.</p>\n<p>That has a consequence people find surprising the first time. Reading location zero is not faster or more special than reading location a thousand: the same number of wires carry a different pattern into the same decoder, and the same gates settle. Every location costs the same, which stops being true the moment there is a cache, and Part V is largely about that stopping.</p>\n<h2 id=\"making-it-bigger\">Making it bigger</h2>\n<p>Four registers took a two-bit address. A thousand takes ten bits, and the same arrangement with a thousand-way decoder and a thousand-way multiplexer would be enormous and slow, because a wide flat decode is a huge fan-in and a wide flat multiplexer is a long chain.</p>\n<p>So real memories are trees. Split the address: the high bits choose a block and the low bits choose within it. Each level is a small decoder or multiplexer, and the depth grows with the logarithm of the size rather than the size.</p>\n<p>That is the same gates-against-delay trade from unit 006, and it is why the address of a byte in a modern machine is split into pieces at several levels before it reaches anything that stores a bit. Part V takes that apart properly. The shape is already here.</p>\n<h2 id=\"the-register-that-counts\">The register that counts</h2>\n<p>Now a small addition that turns out to be the whole of control flow.</p>\n<p>You built a counter two units ago: an increment wired to a register, holding the next value each cycle. Give that register a second way to be loaded, from an outside value, chosen by a multiplexer, and it becomes a program counter.</p>\n<p>Think about what those two inputs mean. The increment path is \"carry on to the next instruction\". The load path is \"go somewhere else\". A jump is not a mechanism. It is the load input of a register you already had.</p>\n<p>That is why a jump costs the same as not jumping, in a simple machine: both are one edge into the same register, and the multiplexer chose which value arrived. Eater's machine makes it visible, where the jump instruction is one step and the control bits for it are the same load line every other register has.</p>\n<p>And a conditional jump needs no branch hardware either. It is the same load, with its enable ANDed with a flag. Two more wires.</p>\n<h2 id=\"two-kinds-of-storage-and-why-both-exist\">Two kinds of storage, and why both exist</h2>\n<p>The registers you have built store a bit in a loop: a multiplexer feeding a flip-flop, which is several transistors, and it holds its value for as long as the power is on. That is static memory, and it is what a processor's registers and caches are made of.</p>\n<p>There is a cheaper way. Put a charge on a capacitor and a single transistor to let you at it. One bit becomes one transistor and one capacitor instead of a dozen transistors, which is why you can have gigabytes of it rather than kilobytes.</p>\n<p>The catch is in the name of the thing storing the value. A capacitor leaks, which you already know from unit 001, so the charge drains in milliseconds. The memory has to be read and written back continuously, row by row, forever, just to keep saying the same thing. That is what the word dynamic means, and it is why this kind of memory is busy even when nothing is using it.</p>\n<p>Neither is better. One is fast and expensive per bit, the other is slow and cheap, and a real machine has a hierarchy of both. Part V is about what that hierarchy does to the cost of reading a number, and it starts from the fact that every location in this unit costs the same.</p>\n<h2 id=\"what-order-things-happen-in\">What order things happen in</h2>\n<p>One detail that trips people, and it is the reading-before-writing rule from unit 008 wearing different clothes.</p>\n<p>If a memory is read and written in the same cycle at the same address, what does the read return? The old value, because every register in the design captures at the same edge and shows what it held coming into the cycle. The write takes effect for the next cycle.</p>\n<p>That is not a quirk to work around. It is what makes a whole machine possible: a value can be read out of a register, sent through an adder, and written back into the same register in one cycle, precisely because the read sees the old value while the write prepares the new one.</p>\n<p>Every accumulator instruction in every machine relies on that.</p>\n<h2 id=\"the-stack-which-is-not-a-new-part-either\">The stack, which is not a new part either</h2>\n<p>One more use of a counter, because it is the last piece of machinery most people assume is special and is not.</p>\n<p>A stack needs somewhere to put things and a way to remember how far up you are. The first is memory, which you have. The second is a counter with a load input, which you also have. Point it at a location, increment it on a push, decrement it on a pop, and read or write memory at wherever it points.</p>\n<p>There is no stack in the hardware. There is a register holding a number, and an agreement that the number means \"the top\". Everything that follows from that, including the whole idea of a call frame in Part V and the reason a runaway recursion damages something it was not pointing at, comes from the number being ordinary and nothing enforcing what it points to.</p>\n<p>The same is true of every data structure you will meet later. A linked list is an agreement about what some of the bits in a location mean. Nothing in memory knows about lists, and nothing in memory knows about anything.</p>\n<h2 id=\"what-to-carry-into-the-next-unit\">What to carry into the next unit</h2>\n<p>A memory is a decoder, a row of registers, a multiplexer and one gate per row. An address is a position rather than a name. A program counter is a counter with a load input, so a jump is a parallel load and a conditional jump is that load with its enable gated by a flag.</p>\n<p>You now have everything a machine is made of except a reason for the control signals to take particular values at particular times. The next unit is about where those values come from: an instruction is a bit pattern chosen so that its fields line up with the wires that need driving, and the unit after that is the loop that fetches one and does what it says.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These exercises are mostly traces, and several of them have an address input, so the failing cycle tells you both when and where. Read the address first: a design that is wrong at one address and right at the others has a decoder problem, and one that is wrong everywhere at once usually has the load signal ungated.</p>\n<p>The memory exercises are small on purpose. Four one-bit registers is enough to be a memory and small enough that an exhaustive trace still reads as something a person can follow.</p>",
+ "headings": [
+  {
+   "id": "the-arrangement",
+   "text": "The arrangement",
+   "level": 2
+  },
+  {
+   "id": "what-an-address-is-not",
+   "text": "What an address is not",
+   "level": 2
+  },
+  {
+   "id": "making-it-bigger",
+   "text": "Making it bigger",
+   "level": 2
+  },
+  {
+   "id": "the-register-that-counts",
+   "text": "The register that counts",
+   "level": 2
+  },
+  {
+   "id": "two-kinds-of-storage-and-why-both-exist",
+   "text": "Two kinds of storage, and why both exist",
+   "level": 2
+  },
+  {
+   "id": "what-order-things-happen-in",
+   "text": "What order things happen in",
+   "level": 2
+  },
+  {
+   "id": "the-stack-which-is-not-a-new-part-either",
+   "text": "The stack, which is not a new part either",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-into-the-next-unit",
+   "text": "What to carry into the next unit",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1471,
+ "needs": [
+  "selection",
+  "feedback",
+  "clock-bus"
+ ],
+ "neededBy": []
+}
