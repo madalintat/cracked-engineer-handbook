@@ -79,6 +79,7 @@
  ],
  "neededBy": [
   "elf",
-  "processes"
+  "processes",
+  "terminal"
  ]
 }

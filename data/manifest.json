@@ -859,7 +859,8 @@
    ],
    "neededBy": [
     "elf",
-    "processes"
+    "processes",
+    "terminal"
    ],
    "minutes": 50
   },
@@ -1143,7 +1144,9 @@
    "neededBy": [
     "virtual-memory",
     "scheduling",
-    "filesystems"
+    "filesystems",
+    "terminal",
+    "shell"
    ],
    "minutes": 55
   },
@@ -1369,12 +1372,18 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1427,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "syscalls",
+    "processes"
+   ],
+   "neededBy": [
+    "shell"
+   ],
+   "minutes": 55
   },
   {
    "slug": "shell",
@@ -1387,12 +1396,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1429,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "processes",
+    "terminal"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "parsing",
@@ -2785,9 +2798,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 45,
-  "words": 68077,
-  "exercises": 360,
-  "drills": 675
+  "ready": 47,
+  "words": 70933,
+  "exercises": 376,
+  "drills": 705
  }
 }

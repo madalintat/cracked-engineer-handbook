@@ -87,6 +87,8 @@
  "neededBy": [
   "virtual-memory",
   "scheduling",
-  "filesystems"
+  "filesystems",
+  "terminal",
+  "shell"
  ]
 }

@@ -1,0 +1,185 @@
+{
+ "slug": "shell",
+ "drills": [
+  {
+   "n": 1,
+   "q": "Who expands a glob?",
+   "options": [
+    "The shell, before the program starts",
+    "The program, using a library function",
+    "The kernel, during execve",
+    "The filesystem, when the path is opened"
+   ],
+   "correct": 0,
+   "why": "<p>Which is why every program agrees about globbing without any of them implementing it, and why a program wanting the pattern makes you quote it.</p>"
+  },
+  {
+   "n": 2,
+   "q": "What does the argument vector contain for a pattern matching three files?",
+   "options": [
+    "Three arguments, one per file",
+    "One argument, the pattern",
+    "Four arguments, the pattern and the files",
+    "One argument, the files joined by spaces"
+   ],
+   "correct": 0,
+   "why": "<p>Measured with a program that prints its own arguments. By the time it runs there is no pattern anywhere.</p>"
+  },
+  {
+   "n": 3,
+   "q": "Why does a directory with very many files produce an argument list too long?",
+   "options": [
+    "The limit is on the vector the shell is building",
+    "The program cannot allocate that many strings",
+    "The filesystem cannot list that many names",
+    "The kernel refuses to open that many files"
+   ],
+   "correct": 0,
+   "why": "<p>The program never gets far enough to have an opinion, because the failure is in handing the vector over.</p>"
+  },
+  {
+   "n": 4,
+   "q": "A pattern matches nothing. What happens?",
+   "options": [
+    "It depends on the shell: one passes the literal through, another refuses to run",
+    "Every shell passes the literal through",
+    "Every shell refuses to run",
+    "The command runs with no argument in its place"
+   ],
+   "correct": 0,
+   "why": "<p>Measured: bash passes <code>*.nope</code> through as an argument and zsh reports no matches found. Both are defensible policy decided in the gap.</p>"
+  },
+  {
+   "n": 5,
+   "q": "When does word splitting happen?",
+   "options": [
+    "After variable substitution, on the result",
+    "Before substitution, on the literal text",
+    "Inside the program, on its arguments",
+    "Only for values containing a glob character"
+   ],
+   "correct": 0,
+   "why": "<p>Which is exactly why a filename with a space breaks a script written without quotes.</p>"
+  },
+  {
+   "n": 6,
+   "q": "What does quoting a variable reference do?",
+   "options": [
+    "Skips the splitting step, so the value arrives as one argument",
+    "Prevents the substitution",
+    "Escapes any special characters in the value",
+    "Nothing, unless the value contains a glob"
+   ],
+   "correct": 0,
+   "why": "<p>A value of three words gives three arguments unquoted and one quoted, which the argument printer confirms directly.</p>"
+  },
+  {
+   "n": 7,
+   "q": "Where does a redirection appear in the argument vector?",
+   "options": [
+    "Nowhere",
+    "As two arguments, the operator and the target",
+    "As one argument, the whole phrase",
+    "As an extra entry after the last argument"
+   ],
+   "correct": 0,
+   "why": "<p>It is an instruction to the shell, and instructions to the shell do not survive into the vector.</p>"
+  },
+  {
+   "n": 8,
+   "q": "A command that does not exist is redirected into a file. What happens to the file?",
+   "options": [
+    "It is created and left empty, because the open happened first",
+    "Nothing; the command failed before anything opened",
+    "It keeps its old contents",
+    "It is created only if the shell reports no error"
+   ],
+   "correct": 0,
+   "why": "<p>That ordering is why a failing command still truncates its output file, and why reading and writing the same file in one command destroys it.</p>"
+  },
+  {
+   "n": 9,
+   "q": "In the gap between fork and exec, what is the child?",
+   "options": [
+    "Still the shell, running shell code",
+    "Already the requested program",
+    "A stub the kernel provides",
+    "An empty process with no code"
+   ],
+   "correct": 0,
+   "why": "<p>It opens the redirections, moves descriptors, sets its process group and restores signal handling, and only then calls execve.</p>"
+  },
+  {
+   "n": 10,
+   "q": "Why does redirection need no cooperation from the program?",
+   "options": [
+    "The program writes to descriptor 1 and somebody else decided what it refers to",
+    "Programs are compiled with redirection support",
+    "The kernel intercepts writes and reroutes them",
+    "The shell rewrites the program's output afterwards"
+   ],
+   "correct": 0,
+   "why": "<p>Which is the whole reason the mechanism composes with every program ever written, including ones older than the shell you are using.</p>"
+  },
+  {
+   "n": 11,
+   "q": "How many processes does a three-stage pipeline create?",
+   "options": [
+    "Three, running at once",
+    "One, running the stages in turn",
+    "Two, since the shell runs the last stage itself",
+    "Four, one per stage and one to coordinate"
+   ],
+   "correct": 0,
+   "why": "<p>Counted directly while it ran. The second stage consumes while the first is still producing, which is why a slow filter still shows output early.</p>"
+  },
+  {
+   "n": 12,
+   "q": "What is the exit status of a pipeline?",
+   "options": [
+    "The last stage's",
+    "The first failure's",
+    "The largest of the stages'",
+    "Zero if any stage succeeded"
+   ],
+   "correct": 0,
+   "why": "<p>Measured: false into true gives 0 and exit 7 into exit 9 gives 9, so a script can report success after the important half failed.</p>"
+  },
+  {
+   "n": 13,
+   "q": "Why can cd not be a separate program?",
+   "options": [
+    "The working directory is per-process state and there is no call to change another process's",
+    "It would be too slow to fork for it",
+    "The shell needs to update its prompt",
+    "Programs are not permitted to change directory"
+   ],
+   "correct": 0,
+   "why": "<p>A child shell that changes directory reports the new one while the parent still reports the old one.</p>"
+  },
+  {
+   "n": 14,
+   "q": "Why can a script not change your shell's directory?",
+   "options": [
+    "Running it forks, and sourcing it does not",
+    "Scripts are denied that permission",
+    "The change is undone when the script exits",
+    "Only builtins may appear in scripts"
+   ],
+   "correct": 0,
+   "why": "<p>Same mechanism as the previous one, seen from the other side.</p>"
+  },
+  {
+   "n": 15,
+   "q": "Which of these does a program see after execve?",
+   "options": [
+    "An exported variable and an inherited open descriptor",
+    "Every shell variable and every open descriptor",
+    "Only the arguments",
+    "Exported variables only, since descriptors are closed"
+   ],
+   "correct": 0,
+   "why": "<p>An unexported variable was never put in the copy handed over. A descriptor survives unless it was marked close-on-exec, which is the mechanism every redirection depends on and a real bug class besides.</p>"
+  }
+ ]
+}

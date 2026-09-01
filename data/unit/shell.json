@@ -1,0 +1,82 @@
+{
+ "slug": "shell",
+ "num": 45,
+ "title": "The shell forks, and the tradition follows",
+ "blurb": "Globbing, redirection and pipes all happen in the gap between fork and exec, before your command runs one instruction.",
+ "part": "tools",
+ "partRoman": "IX",
+ "partTitle": "Tools",
+ "phase": "system",
+ "accent": "clay",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "processes",
+   "terminal"
+  ],
+  "minutes": 55,
+  "one_idea": "Globbing, word splitting and redirection all happen in the shell before your program runs, in the gap between fork and exec, and knowing what happens in that gap explains every surprise the shell has.",
+  "sources": [
+   "compilers-interpreters-terminals-unix"
+  ]
+ },
+ "html": "<p>A shell reads a line and runs a program. Between those two things it does a surprising amount of work, and all of it is finished before your program executes its first instruction. Almost everything people find confusing about shells is a consequence of where that boundary falls.</p>\n<p>The measurements below come from a small C program that prints its own argument vector, which is the only honest way to see what a shell handed over.</p>\n<h2 id=\"the-program-never-saw-the-asterisk\">The program never saw the asterisk</h2>\n<p>Put three files in a directory, <code>a.txt</code>, <code>b.txt</code> and <code>c.txt</code>, and run <code>echo <em>.txt</code>. The program receives three arguments: <code>a.txt</code>, <code>b.txt</code> and <code>c.txt</code>. Quote it, <code>echo '</em>.txt'</code>, and the program receives one argument, the literal asterisk and suffix.</p>\n<p>So the expansion is not a feature of <code>echo</code>. The shell read the pattern, listed the directory, matched, sorted, and built an argument vector out of the results. By the time <code>echo</code> runs there is no pattern left anywhere.</p>\n<p>Which explains why every program agrees about globbing without any of them implementing it, and why a program that wants the pattern itself, like <code>find</code>, makes you quote it. It also explains why a directory with a great many matching files produces an argument list too long, since the limit is on the vector the shell is building, not on anything the program does.</p>\n<h2 id=\"what-an-unmatched-pattern-becomes\">What an unmatched pattern becomes</h2>\n<p>Now run <code>echo <em>.nope</code> in a directory with no match. Under bash the program receives one argument, the literal <code></em>.nope</code>. Under zsh the command does not run at all: <code>no matches found</code>.</p>\n<p>Both are defensible and they are policy rather than mechanism. Passing the pattern through means a script that loops over <code>*.log</code> gets one iteration with a filename that does not exist, which is a well-known source of confusing errors. Refusing means the same script stops.</p>\n<p>The lesson is not which is right. It is that the shell decided, in the gap, and the program you were running never had an opinion.</p>\n<h2 id=\"splitting-is-separate-from-quoting\">Splitting is separate from quoting</h2>\n<p>Set a variable to <code>x y z</code> and pass it unquoted. The program receives three arguments. Pass it quoted and the program receives one.</p>\n<p>That is word splitting, and it happens after variable substitution, which is why a filename with a space in it breaks a script that was written without quotes. The shell substituted the value, then split the result on whitespace, and handed over more arguments than anyone intended.</p>\n<p>Quoting is the instruction to skip that step. <code>a\\ b</code>, <code>\"c d\"</code> and <code>'e f'</code> all arrive as single arguments with a space inside them, which the argument printer confirms: four arguments, three of them containing spaces.</p>\n<h2 id=\"the-redirection-is-not-an-argument\">The redirection is not an argument</h2>\n<p>Run the argument printer with <code>one</code> and a redirection of standard output. It reports two arguments: its own name and <code>one</code>. The redirection is nowhere in the vector.</p>\n<p>Two measurements show when the redirection happens. Redirect to a path in a directory that does not exist and the shell reports the failure and returns a non-zero status, and the program never runs. Redirect the output of a command that does not exist and the file is created anyway, empty.</p>\n<p>Descriptor duplication behaves the same way. Run the printer with two arguments and <code>2&gt;&amp;1</code> appended, and it still reports three: its name and the two arguments. The duplication was an instruction to the shell, and instructions to the shell do not survive into the vector.</p>\n<p>So the file is opened first and the program is launched second. That ordering is the reason <code>cmd &gt; file</code> truncates the file even when <code>cmd</code> fails, and the reason reading and writing the same file in one command destroys it: the shell truncated it before the reader opened it.</p>\n<h2 id=\"the-gap-between-fork-and-exec\">The gap between fork and exec</h2>\n<p>Everything above happens in one place, and it is the most useful thing to understand about a shell.</p>\n<p>To run a program the shell forks, producing a child that is a copy of itself. The child is still the shell, running shell code, with the shell's descriptors and environment. It then rearranges its own world: opens the redirections and moves them onto descriptors 0, 1 and 2, closes what should not survive, sets its process group so the terminal knows who is in the foreground, and restores signal handling to the default. Only then does it call <code>execve</code>, which replaces the program while keeping everything the child just arranged.</p>\n<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 644 153\" class=\"fig-svg\" style=\"max-width:934px\" role=\"img\" aria-label=\"A shell forking into a child that opens redirections, moves descriptors and sets its process group, and only then calls execve to become the requested program.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><line x1=\"123\" y1=\"95\" x2=\"158\" y2=\"95\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"282\" y1=\"95\" x2=\"317\" y2=\"95\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"458\" y1=\"95\" x2=\"493\" y2=\"95\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><rect x=\"0.0\" y=\"70.4\" width=\"123.2\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"61.6\" y=\"98.6\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">shell</text><rect x=\"158.4\" y=\"70.4\" width=\"123.2\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--gold-ink, var(--accent));stroke:var(--gold-ink, var(--accent))\"/><text x=\"220.0\" y=\"98.6\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">fork</text><rect x=\"316.8\" y=\"70.4\" width=\"140.8\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--copper-ink, var(--accent));stroke:var(--copper-ink, var(--accent))\"/><text x=\"387.2\" y=\"98.6\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">open, dup2, setpgid</text><rect x=\"492.8\" y=\"70.4\" width=\"123.2\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"554.4\" y=\"98.6\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">execve</text></svg><figcaption>The child is still the shell until execve. Every redirection, every descriptor move and the process group are arranged by shell code running in a process that is about to stop being a shell.</figcaption></figure>\n<p>That is why redirection does not need cooperation from the program. The program opens descriptor 1 and writes to it, exactly as it always does, and somebody else decided what descriptor 1 refers to before it started.</p>\n<h2 id=\"a-pipeline-is-several-processes\">A pipeline is several processes</h2>\n<p>Run a three-stage pipeline of sleeps and count the processes while it is running: three. The shell forked once per stage, created a pipe between each adjacent pair, and moved the ends onto the right descriptors in each child.</p>\n<p>Nothing waits for anything. All three run at once, and the second stage starts consuming while the first is still producing, which is why a pipeline through a slow filter still shows output early and why a producer stops when its consumer stops reading.</p>\n<p>The exit status is the surprise. Run a failing command into a succeeding one and the status is zero. Run a succeeding command into a failing one and the status is one. Exit 7 into exit 9 and the status is 9. The pipeline's status is the last stage's, and every earlier failure is discarded unless you ask for it, which is why a script with a pipeline can report success after the important half failed.</p>\n<h2 id=\"why-cd-cannot-be-a-program\">Why cd cannot be a program</h2>\n<p>Run a child shell, have it change directory, and print the working directory in both. The child reports the new directory and the parent reports the old one.</p>\n<p>The working directory is per-process state. A program that changed its own and exited would achieve nothing, and there is no call to change somebody else's. So <code>cd</code> has to run in the shell's own process rather than in a fork, which is what makes it a builtin.</p>\n<p>The same reasoning explains the rest of the list. Setting a variable, exporting it, defining a function, and changing a shell option all modify the shell, so they cannot be programs. And it explains one of the oldest confusions, that a script cannot change your directory unless you source it, because running it forks and sourcing it does not.</p>\n<h2 id=\"what-crosses-into-the-child\">What crosses into the child</h2>\n<p>Two kinds of state survive <code>execve</code> and it is worth knowing which.</p>\n<p>The environment does, but only what was exported. Set a variable and run a child shell: it sees nothing. Export it and run the same child: it sees the value. The distinction exists because the environment is a copy handed to the new program, and an unexported variable was never put in it.</p>\n<p>Open descriptors do too. Open descriptor 9 in the shell and a child can see it open. That is the mechanism behind every redirection, and it is also the source of a real bug class, where a long-lived daemon inherits a descriptor it never knew about and holds a deleted file or a listening socket open indefinitely.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>Globbing, word splitting and quoting are the shell's, finished before your program starts, which is why the argument vector never contains a pattern.</p>\n<p>A redirection is not an argument. The file is opened before the program runs, which is why a failing command still truncates its output file.</p>\n<p>The work happens in the gap between fork and exec, in a child that is still the shell. A pipeline is one process per stage running concurrently, and its exit status is the last stage's. And <code>cd</code> is a builtin because the working directory is per-process state, along with everything else that modifies the shell itself.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These model the expansion and the pipeline rules rather than forking real processes, because a test that depends on process scheduling is a test that sometimes fails for no reason.</p>\n<p><code>assert-failed</code> names the behaviour your model got wrong. Several exercises assert that a pattern survives into the argument vector, which is quoting working rather than expansion failing.</p>",
+ "headings": [
+  {
+   "id": "the-program-never-saw-the-asterisk",
+   "text": "The program never saw the asterisk",
+   "level": 2
+  },
+  {
+   "id": "what-an-unmatched-pattern-becomes",
+   "text": "What an unmatched pattern becomes",
+   "level": 2
+  },
+  {
+   "id": "splitting-is-separate-from-quoting",
+   "text": "Splitting is separate from quoting",
+   "level": 2
+  },
+  {
+   "id": "the-redirection-is-not-an-argument",
+   "text": "The redirection is not an argument",
+   "level": 2
+  },
+  {
+   "id": "the-gap-between-fork-and-exec",
+   "text": "The gap between fork and exec",
+   "level": 2
+  },
+  {
+   "id": "a-pipeline-is-several-processes",
+   "text": "A pipeline is several processes",
+   "level": 2
+  },
+  {
+   "id": "why-cd-cannot-be-a-program",
+   "text": "Why cd cannot be a program",
+   "level": 2
+  },
+  {
+   "id": "what-crosses-into-the-child",
+   "text": "What crosses into the child",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1429,
+ "needs": [
+  "processes",
+  "terminal"
+ ],
+ "neededBy": []
+}

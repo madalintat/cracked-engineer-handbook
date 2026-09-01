@@ -1,0 +1,185 @@
+{
+ "slug": "terminal",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What sits between the emulator and your program?",
+   "options": [
+    "The line discipline, which is kernel code",
+    "Nothing; they are connected directly",
+    "A library in your process",
+    "The shell"
+   ],
+   "correct": 0,
+   "why": "<p>It holds a buffer, edits it, echoes it, and turns certain bytes into signals, and neither program did any of that.</p>"
+  },
+  {
+   "n": 2,
+   "q": "In canonical mode, when does a read return?",
+   "options": [
+    "When a newline reaches the buffer",
+    "As soon as any byte arrives",
+    "After a short timeout",
+    "When the buffer is full"
+   ],
+   "correct": 0,
+   "why": "<p>Which is why a program asking for one keypress appears to hang. The key was delivered and it is waiting in a kernel buffer.</p>"
+  },
+  {
+   "n": 3,
+   "q": "Why does backspace work before your program runs?",
+   "options": [
+    "The discipline holds the line and can take a character back off it",
+    "The emulator deletes the character locally",
+    "The shell intercepts it",
+    "The keyboard sends a correction sequence"
+   ],
+   "correct": 0,
+   "why": "<p>And on this machine the byte it treats as erase is 0x7f, which is delete rather than backspace.</p>"
+  },
+  {
+   "n": 4,
+   "q": "A pseudoterminal with no process attached receives four bytes of input. What comes back?",
+   "options": [
+    "Four bytes, because ECHO is set and echo does not need a reader",
+    "Nothing, because nothing is reading",
+    "Nothing, because nothing printed them",
+    "Four bytes, but only after a program attaches"
+   ],
+   "correct": 0,
+   "why": "<p>Measured directly: write abc and a newline into the master and read back abc, a carriage return, and a newline, with no program in the picture.</p>"
+  },
+  {
+   "n": 5,
+   "q": "How does a program stop a password appearing on screen?",
+   "options": [
+    "It clears ECHO, reads, and sets it back",
+    "It avoids printing what it read",
+    "It writes spaces over the characters",
+    "It reads from a different descriptor"
+   ],
+   "correct": 0,
+   "why": "<p>It was never printing the password. If it crashes between clearing and restoring, your shell stays silent until you fix the flag by hand.</p>"
+  },
+  {
+   "n": 6,
+   "q": "The Enter key sends 0x0D. What does your program read by default?",
+   "options": [
+    "0x0A, because ICRNL translates it",
+    "0x0D",
+    "Both bytes",
+    "Whichever the emulator was configured for"
+   ],
+   "correct": 0,
+   "why": "<p>The terminal speaks carriage return and the program speaks newline, and the kernel translates in both directions without either one knowing.</p>"
+  },
+  {
+   "n": 7,
+   "q": "A program writes five bytes ending in a newline. How many reach the terminal?",
+   "options": [
+    "Six, because ONLCR expands it",
+    "Five",
+    "Six, but only if the program asked for it",
+    "It depends on the emulator"
+   ],
+   "correct": 0,
+   "why": "<p>And turning the output translation off is what produces the staircase, where every line starts where the previous one ended.</p>"
+  },
+  {
+   "n": 8,
+   "q": "Which flag has to be set for ONLCR to do anything?",
+   "options": [
+    "OPOST",
+    "ICANON",
+    "ISIG",
+    "IEXTEN"
+   ],
+   "correct": 0,
+   "why": "<p>Raw mode clears OPOST, so the expansion stops even though ONLCR itself is still set, which is what a raw pseudoterminal reports when measured.</p>"
+  },
+  {
+   "n": 9,
+   "q": "What is special about the byte 0x03 to the hardware?",
+   "options": [
+    "Nothing; a flag and a table decide what happens to it",
+    "The keyboard controller raises an interrupt for it",
+    "The CPU treats it as a trap",
+    "It is delivered on a separate channel"
+   ],
+   "correct": 0,
+   "why": "<p>With ISIG set, a child reading a terminal dies of signal 2 when it arrives. With ISIG clear, the same child reads a byte with value 3.</p>"
+  },
+  {
+   "n": 10,
+   "q": "Ctrl-C does nothing in an editor. What is the most likely reason?",
+   "options": [
+    "The program cleared ISIG, so it receives the byte",
+    "The emulator did not send anything",
+    "The signal cannot reach a program in the foreground",
+    "The terminal was in canonical mode"
+   ],
+   "correct": 0,
+   "why": "<p>The other possibility is that the signal arrived correctly and the program ignores SIGINT, which looks identical from outside.</p>"
+  },
+  {
+   "n": 11,
+   "q": "What is raw mode?",
+   "options": [
+    "A name for clearing ICANON, ECHO, ISIG, ICRNL and OPOST together",
+    "A separate mode in the kernel driver",
+    "A mode where the emulator stops interpreting bytes",
+    "Direct access to the keyboard device"
+   ],
+   "correct": 0,
+   "why": "<p>There is no raw bit. The convenience function clears a set of flags, and every consequence follows from which ones.</p>"
+  },
+  {
+   "n": 12,
+   "q": "What does a program owe the terminal once it is in raw mode?",
+   "options": [
+    "Echoing, line editing, interpreting 0x03, and emitting carriage returns",
+    "Nothing extra; the kernel still handles those",
+    "Only echoing",
+    "Restoring the flags, and nothing else"
+   ],
+   "correct": 0,
+   "why": "<p>That is the deal: every keystroke the instant it arrives, in exchange for doing the discipline's work yourself.</p>"
+  },
+  {
+   "n": 13,
+   "q": "VMIN and VTIME default to one and zero. What does that mean?",
+   "options": [
+    "Return as soon as one byte exists, and never time out",
+    "Return after one tenth of a second",
+    "Return when one byte exists or a tenth of a second passes",
+    "Block until at least one byte and one tenth of a second"
+   ],
+   "correct": 0,
+   "why": "<p>A VTIME of zero is no timer at all rather than a timer that already expired, which is why a read with nothing available blocks.</p>"
+  },
+  {
+   "n": 14,
+   "q": "What are VMIN and VTIME actually used for in a full-screen program?",
+   "options": [
+    "Telling an escape key pressed alone from an escape sequence still arriving",
+    "Throttling how fast input is processed",
+    "Setting the repeat rate",
+    "Batching writes to the screen"
+   ],
+   "correct": 0,
+   "why": "<p>A tenth of a second is long enough for the rest of a sequence and short enough that a lone escape key does not feel stuck.</p>"
+  },
+  {
+   "n": 15,
+   "q": "Where does the window size live?",
+   "options": [
+    "In the kernel device, readable from either end",
+    "In an environment variable",
+    "In the emulator only",
+    "In the shell's memory"
+   ],
+   "correct": 0,
+   "why": "<p>A fresh pseudoterminal measures zero by zero. Set 40 by 132 on the master and the slave reads 40 by 132, because there is one pair of numbers.</p>"
+  }
+ ]
+}

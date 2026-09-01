@@ -1,0 +1,310 @@
+{
+ "slug": "terminal",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Nothing until the newline",
+   "brief": "<p>Write <code>readable_bytes</code>, returning how many bytes a read on the slave end can return, given what is in the line discipline's buffer and whether <code>ICANON</code> is set.</p>\n<p>In canonical mode nothing leaves the buffer until a newline arrives.</p>",
+   "kind": "output",
+   "concept": "A read for one keypress does not return because the byte is sitting in a kernel buffer waiting for a newline, not because the key was lost.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Canonical mode returns everything up to and including the first newline, or nothing at all."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. With <code>ICANON</code> set the answer is zero until a newline is in the buffer, and then it is the length of the line including that newline. Returning the buffer length ignores the buffering entirely, which is the behaviour of the other mode.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Five bytes in the buffer and no newline reads as nothing. Add the newline and all six arrive at once, which is what a fresh pseudoterminal does when you measure it.</p>",
+   "starter": "#include <string.h>\nunsigned long readable_bytes(const char *buf, unsigned long len, int icanon) {\n    (void)icanon;\n    return len;\n}",
+   "tests": "#include <assert.h>\nunsigned long readable_bytes(const char *, unsigned long, int);\nint main(void) {\n    /* Canonical, no newline: nothing is readable. */\n    assert(readable_bytes(\"hello\", 5, 1) == 0);\n    /* Canonical, a newline: the whole line including it. */\n    assert(readable_bytes(\"hello\\n\", 6, 1) == 6);\n    /* Only the first line. */\n    assert(readable_bytes(\"ab\\ncd\\n\", 6, 1) == 3);\n    /* Not canonical: whatever is there. */\n    assert(readable_bytes(\"hello\", 5, 0) == 5);\n    assert(readable_bytes(\"\", 0, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "The erase byte",
+   "brief": "<p>Write <code>apply_erase</code>, applying the discipline's line editing to a buffer, given the byte it treats as erase.</p>\n<p>Editing happens in the kernel before any program sees the line.</p>",
+   "kind": "output",
+   "concept": "Backspace works before your program runs because the discipline holds the line and can take a character off it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "An erase byte removes the previous character and itself. Erasing an empty buffer removes nothing."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The erase byte never appears in the result and neither does the character before it, so two erases in a row on one character leave nothing rather than a negative length. Copying the erase byte through models a program that receives it, which only happens with the flag cleared.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>On this machine the erase byte is 0x7f, which is delete rather than backspace. That mismatch is why a terminal configured for one and a program expecting the other produces a key that prints a strange character instead of deleting.</p>",
+   "starter": "unsigned long apply_erase(const char *in, unsigned long len,\n                          char erase, char *out) {\n    unsigned long n = 0;\n    for (unsigned long i = 0; i < len; i++) {\n        (void)erase;\n        out[n++] = in[i];\n    }\n    return n;\n}",
+   "tests": "#include <assert.h>\n#include <string.h>\nunsigned long apply_erase(const char *, unsigned long, char, char *);\nint main(void) {\n    char out[32];\n    unsigned long n;\n    n = apply_erase(\"abc\", 3, 0x7f, out);\n    assert(n == 3 && memcmp(out, \"abc\", 3) == 0);\n    n = apply_erase(\"abc\\x7f\", 4, 0x7f, out);\n    assert(n == 2 && memcmp(out, \"ab\", 2) == 0);\n    n = apply_erase(\"ab\\x7f\" \"\\x7f\" \"c\", 5, 0x7f, out);\n    assert(n == 1 && memcmp(out, \"c\", 1) == 0);\n    /* Erasing nothing. */\n    n = apply_erase(\"\\x7f\\x7f\", 2, 0x7f, out);\n    assert(n == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Bytes nobody printed",
+   "brief": "<p>Write <code>echo_bytes</code>, returning how many bytes travel back towards the display when input arrives, given the input length and whether <code>ECHO</code> is set.</p>\n<p>There need not be a program on the other end at all.</p>",
+   "kind": "output",
+   "concept": "The echo is the line discipline copying input back, which is why a password prompt clears a flag rather than avoiding a print.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "With the flag set every input byte comes back. With it clear, none do, whatever a program does."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Echo depends only on the flag, not on whether anything is reading the terminal, so an unattended pseudoterminal still echoes. Making the answer depend on a reader models the program doing the printing, which it never was.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Writing three characters and a newline into a pseudoterminal with no process attached to it returns four bytes on the other end. Nobody printed them.</p>",
+   "starter": "unsigned long echo_bytes(unsigned long input_len, int echo_flag,\n                         int reader_present) {\n    (void)echo_flag;\n    return reader_present ? input_len : 0;\n}",
+   "tests": "#include <assert.h>\nunsigned long echo_bytes(unsigned long, int, int);\nint main(void) {\n    /* No reader at all, and the bytes still come back. */\n    assert(echo_bytes(4, 1, 0) == 4);\n    assert(echo_bytes(4, 1, 1) == 4);\n    /* Flag cleared: nothing, whoever is reading. */\n    assert(echo_bytes(4, 0, 1) == 0);\n    assert(echo_bytes(4, 0, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "What the key sends and what you read",
+   "brief": "<p>Write <code>translate_input</code>, applying <code>ICRNL</code> to a byte arriving from the terminal.</p>\n<p>The key sends carriage return and the program expects a newline.</p>",
+   "kind": "output",
+   "concept": "The translation is in the kernel, so the terminal speaks carriage return and the program speaks newline and neither of them knows.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Only 0x0D changes, and only when the flag is set."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The flag translates carriage return to newline on input and leaves every other byte alone, including a newline that was already a newline. Translating in the other direction is what the output flag does.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Write 0x0D into a pseudoterminal and the program reads 0x0A. Clear the flag and it reads 0x0D, which is why some programs see a line that never seems to end.</p>",
+   "starter": "int translate_input(int byte, int icrnl) {\n    (void)icrnl;\n    if (byte == '\\n') return '\\r';\n    return byte;\n}",
+   "tests": "#include <assert.h>\nint translate_input(int, int);\nint main(void) {\n    assert(translate_input('\\r', 1) == '\\n');\n    assert(translate_input('\\r', 0) == '\\r');\n    assert(translate_input('\\n', 1) == '\\n');\n    assert(translate_input('a', 1) == 'a');\n    assert(translate_input(0x03, 1) == 0x03);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "What you write and what the screen gets",
+   "brief": "<p>Write <code>output_bytes</code>, returning how many bytes reach the terminal when a program writes a buffer, given whether <code>OPOST</code> and <code>ONLCR</code> are set.</p>\n<p>Each newline becomes two bytes on the way out.</p>",
+   "kind": "output",
+   "concept": "The output translation is the other half of the same mechanism, and turning it off is what produces the staircase effect.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Both flags have to be set for the expansion to happen, since <code>ONLCR</code> acts under <code>OPOST</code>."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Raw mode clears <code>OPOST</code>, and with it cleared the newline expansion does not happen even though <code>ONLCR</code> is still set in the flags, which is exactly what a pseudoterminal reports when you measure it.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A program writes five bytes ending in a newline and the terminal receives six. In raw mode it receives five, and every line after the first starts where the previous one ended unless the program emits the carriage return itself.</p>",
+   "starter": "unsigned long output_bytes(const char *buf, unsigned long len,\n                           int opost, int onlcr) {\n    (void)opost;\n    unsigned long n = len;\n    for (unsigned long i = 0; i < len; i++)\n        if (buf[i] == '\\n' && onlcr) n++;\n    return n;\n}",
+   "tests": "#include <assert.h>\nunsigned long output_bytes(const char *, unsigned long, int, int);\nint main(void) {\n    /* Both set: the newline expands. */\n    assert(output_bytes(\"line\\n\", 5, 1, 1) == 6);\n    /* Post-processing off: no expansion, whatever ONLCR says. */\n    assert(output_bytes(\"line\\n\", 5, 0, 1) == 5);\n    assert(output_bytes(\"line\\n\", 5, 0, 0) == 5);\n    /* Post-processing on, expansion off. */\n    assert(output_bytes(\"line\\n\", 5, 1, 0) == 5);\n    /* Two newlines. */\n    assert(output_bytes(\"a\\nb\\n\", 4, 1, 1) == 6);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "A byte, or a signal",
+   "brief": "<p>Write <code>dispatch_byte</code>, deciding what the line discipline does with an incoming byte, given the control character table and whether <code>ISIG</code> is set.</p>\n<p>Return the signal number to raise, or zero to mean deliver the byte.</p>",
+   "kind": "output",
+   "concept": "Nothing about 0x03 is special to the hardware or to your program. A flag decides whether it becomes a signal or arrives as an ordinary byte.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "With the flag clear, every byte is delivered, including the ones in the table."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Clearing <code>ISIG</code> does not change the table, it stops the discipline consulting it, so 0x03 arrives as a byte with value 3. Checking the byte before the flag gets that case backwards.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Measured on a real pseudoterminal, a child with the default flags dies of signal 2 when 0x03 arrives, and the same child on a terminal with <code>ISIG</code> cleared reads a byte with value 3. Same byte, same child, different flag.</p>",
+   "starter": "int dispatch_byte(int byte, int isig, int vintr, int vsusp, int vquit) {\n    (void)isig;\n    if (byte == vintr) return 2;\n    if (byte == vsusp) return 20;\n    if (byte == vquit) return 3;\n    return 0;\n}",
+   "tests": "#include <assert.h>\nint dispatch_byte(int, int, int, int, int);\nint main(void) {\n    /* The measured table: interrupt 0x03, suspend 0x1a, quit 0x1c. */\n    assert(dispatch_byte(0x03, 1, 0x03, 0x1a, 0x1c) == 2);\n    assert(dispatch_byte(0x1a, 1, 0x03, 0x1a, 0x1c) == 20);\n    assert(dispatch_byte(0x1c, 1, 0x03, 0x1a, 0x1c) == 3);\n    assert(dispatch_byte('a',  1, 0x03, 0x1a, 0x1c) == 0);\n    /* Flag cleared: the table is not consulted at all. */\n    assert(dispatch_byte(0x03, 0, 0x03, 0x1a, 0x1c) == 0);\n    assert(dispatch_byte(0x1c, 0, 0x03, 0x1a, 0x1c) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "When a read is allowed to return",
+   "brief": "<p>Write <code>read_returns</code>, deciding whether a non-canonical read returns yet, given the bytes available, how long it has waited in tenths of a second, and <code>VMIN</code> and <code>VTIME</code>.</p>\n<p>The defaults are one and zero, which is why a raw read returns on the first byte.</p>",
+   "kind": "output",
+   "concept": "These two numbers are how a program tells an escape key pressed alone from an escape sequence still arriving.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "With <code>VTIME</code> zero there is no deadline, so the read waits for <code>VMIN</code> bytes however long that takes."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A <code>VTIME</code> of zero means no timer at all rather than a timer that has already expired, so a read with nothing available blocks instead of returning empty. Treating the waited time as satisfying a zero deadline inverts the default case.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>One and zero says return as soon as one byte exists and never time out, which is what a fresh terminal in raw mode does. Setting <code>VTIME</code> to one gives a read a tenth of a second, which is long enough for the rest of an escape sequence and short enough that a lone escape key does not feel stuck.</p>",
+   "starter": "int read_returns(unsigned long available, unsigned long waited_tenths,\n                 unsigned long vmin, unsigned long vtime) {\n    if (available >= vmin) return 1;\n    return waited_tenths >= vtime;\n}",
+   "tests": "#include <assert.h>\nint read_returns(unsigned long, unsigned long, unsigned long, unsigned long);\nint main(void) {\n    /* The defaults: one byte is enough, and no timer. */\n    assert(read_returns(1, 0, 1, 0) == 1);\n    assert(read_returns(0, 0, 1, 0) == 0);\n    /* No timer means waiting does not help. */\n    assert(read_returns(0, 50, 1, 0) == 0);\n    /* A deadline, not yet reached. */\n    assert(read_returns(0, 0, 1, 1) == 0);\n    /* A deadline, reached, and something arrived. */\n    assert(read_returns(1, 1, 4, 1) == 1);\n    /* A deadline reached with nothing at all. */\n    assert(read_returns(0, 1, 4, 1) == 1);\n    /* Enough bytes, before the deadline. */\n    assert(read_returns(4, 0, 4, 1) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Two ends, one pair of numbers",
+   "brief": "<p>Write <code>winsize_after</code>, modelling the window size stored in the driver, given what the master sets and what a program later reads.</p>\n<p>The size is kernel state, not an environment variable.</p>",
+   "kind": "output",
+   "concept": "The emulator sets it on its end, the kernel stores it, and a signal tells the program to ask again. A program that does not ask keeps drawing at the old width.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A fresh pseudoterminal reports zero until something sets it, and after that both ends see the same numbers."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Setting the size on the master changes what the slave reads, because there is one pair of numbers in the driver rather than one per end. A default of eighty columns is the emulator's convention and not the device's initial state, which measures as zero.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A fresh pseudoterminal measures zero by zero. Set 40 by 132 on the master and the slave reads 40 by 132. That is the whole mechanism behind resizing, plus a signal to say the numbers changed.</p>",
+   "starter": "void winsize_after(int set_called, unsigned short set_rows,\n                   unsigned short set_cols,\n                   unsigned short *rows, unsigned short *cols) {\n    (void)set_called; (void)set_rows; (void)set_cols;\n    *rows = 24;\n    *cols = 80;\n}",
+   "tests": "#include <assert.h>\nvoid winsize_after(int, unsigned short, unsigned short,\n                   unsigned short *, unsigned short *);\nint main(void) {\n    unsigned short r, c;\n    /* Nothing has told it yet. */\n    winsize_after(0, 0, 0, &r, &c);\n    assert(r == 0 && c == 0);\n    /* The master sets it; the slave reads the same numbers. */\n    winsize_after(1, 40, 132, &r, &c);\n    assert(r == 40 && c == 132);\n    winsize_after(1, 24, 80, &r, &c);\n    assert(r == 24 && c == 80);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

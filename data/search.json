@@ -12271,6 +12271,526 @@
  },
  {
   "t": "section",
+  "slug": "terminal",
+  "anchor": "two-ends-of-one-device",
+  "title": "Two ends of one device",
+  "text": "A pseudoterminal is a pair. One end, the master, is held by whatever is drawing the window or carrying the connection. The other, the slave, is the file your program has on descriptors 0, 1 and 2. Between them sits the line discipline, which is kernel code, not code in either program. It holds a buffer, it edits that buffer when you press backspace, it copies characters back towards the screen, and it turns certain bytes into signals. None of that is in the emulator and none of it is in your program. So there are three participants and people usually think there are two. When a program behaves strangely at the terminal it is almost always the middle one doing exactly what its flags say. The line discipline is kernel code between the two ends. It buffers a line, echoes what you type, and converts bytes into signals, none of which either program did.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "terminal",
+  "anchor": "why-your-read-does-not-return",
+  "title": "Why your read does not return",
+  "text": "Open a fresh pseudoterminal and the flag is set. That is canonical mode, and it means the line discipline collects bytes until it sees a newline before letting any of them through. Write into the master end and then ask whether the slave has anything readable. It does not. Write one more byte, a newline, and the slave becomes readable and returns , all six bytes at once. Which explains the thing every beginner hits. A program that wants a single keypress writes a read, presses a key, and nothing happens. The read is correct and the key was delivered. It is sitting in a kernel buffer waiting for a newline, and the program will not see it until one arrives. Canonical mode is also where line editing lives. Backspace works before your program runs because the discipline is holding the line and can take a character back off it. The byte it treats as erase is 0x7f on this machine, which is delete rather than backspace, and that mismatch is the origin of a whole genre of terminal configuration.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "terminal",
+  "anchor": "the-characters-you-did-not-print",
+  "title": "The characters you did not print",
+  "text": "Open another pseudoterminal, write into the master, and start no program at all. Read the master back and you get . Nobody printed that. There is no process on the slave end. The echo is the line discipline copying input back towards the display because is set, and it happens whether or not anything is reading. That is why a password prompt has to turn a flag off rather than avoid printing something. The program was never printing the password in the first place. It clears , reads, and sets it back, and if it crashes in between your shell stays silent until you fix it by hand.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "terminal",
+  "anchor": "enter-is-not-a-newline",
+  "title": "Enter is not a newline",
+  "text": "The key sends carriage return, 0x0D. Programs expect line feed, 0x0A. The conversion is another flag. Write 0x0D into the master and read the slave: it returns 0x0A. That is , which is on by default, translating input carriage returns to newlines. The reverse happens on output. A program writes , five bytes ending in 0x0A, and the master receives , six bytes. That is under , translating a newline into carriage return and newline on the way out. So the terminal you are talking to speaks carriage return and your program speaks newline, and neither of them knows, because the kernel is translating in both directions. Turn the output side off and every line after the first starts where the previous one ended, which is the staircase effect people recognise without knowing its cause.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "terminal",
+  "anchor": "the-interrupt-that-is-a-byte-first",
+  "title": "The interrupt that is a byte first",
+  "text": "Pressing Ctrl-C sends the byte 0x03. Nothing about that byte is special to the hardware or to your program. The line discipline holds a table of control characters, and on this machine the entry for interrupt is 0x03, for end of file 0x04, for suspend 0x1a and for quit 0x1c. When is set and one of those bytes arrives, the discipline raises the corresponding signal at the foreground process group rather than delivering the byte. Both halves are measurable. Give a child a controlling terminal with the default flags, write 0x03, and the child dies of signal 2, which is . Clear on the same terminal, write the same byte, and the child reads it: an ordinary byte with value 3, and no signal anywhere. Which is why Ctrl-C does not work in some programs. They cleared the flag, so the byte reaches them and they decide what it means. And it is why Ctrl-C reaches a program that ignored as nothing at all: the discipline raised the signal correctly and the target threw it away.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "terminal",
+  "anchor": "turning-all-of-it-off",
+  "title": "Turning all of it off",
+  "text": "Raw mode is not a mode in the kernel. It is a name for clearing the flags above in one go. Put a pseudoterminal into raw mode and measure what changed: cleared, cleared, cleared, cleared, and cleared, which disables the output translation as a whole. Write one byte with no newline and the read returns immediately with that byte. Have the program write and the master receives exactly five bytes, with no carriage return added. That is the deal an editor or a full-screen program takes. It gets every keystroke the instant it arrives, and in exchange it owns everything: echoing what you type, handling backspace, noticing that 0x03 means you want out, and emitting carriage returns itself. What it draws with that control is escape sequences, which are ordinary bytes the emulator interprets rather than prints. Two more settings decide what immediately means. and are one and zero by default, which says a read returns as soon as one byte exists and never times out. Raising makes a read wait for that many bytes, and setting gives it a deadline in tenths of a second, which is how a program distinguishes an escape key pressed alone from an escape sequence still arriving.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "terminal",
+  "anchor": "where-the-size-of-the-window-lives",
+  "title": "Where the size of the window lives",
+  "text": "The width and height are not the emulator's private business and they are not an environment variable, whatever your shell suggests. They are fields in the kernel device. A fresh pseudoterminal reports zero rows and zero columns, because nothing has told it. Set 40 rows by 132 columns on the master and ask the slave: it reports 40 by 132. One number, two ends, held between them by the driver. That is the mechanism behind resizing. The emulator sets the new size on its end, the kernel stores it and raises at the foreground process group, and a program that cares asks the device for the new value. A program that does not care carries on drawing at the old width, which is why some output stays broken until you rerun it.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "terminal",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "The terminal your program talks to is a kernel device, and the line discipline between the two ends is doing the buffering, the echoing, the translation and the signal generation. Canonical mode holds your input until a newline, which is why a read for one keypress does not return. Echo happens with no program involved. Input carriage returns become newlines and output newlines become carriage return and newline, in the kernel, in both directions. Ctrl-C is the byte 0x03 turned into a signal by a flag that can be cleared, and raw mode is clearing that flag along with the rest. The window size is a pair of numbers in the driver, and a signal tells you they changed.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "terminal",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the line discipline rather than opening a real terminal, because a test that needs a controlling terminal is a test that does not run under most build systems. names the behaviour your model got wrong. Several exercises assert that a read returns nothing, which is the point of canonical mode rather than a hang in the test.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "terminal",
+  "n": 1,
+  "title": "Nothing until the newline",
+  "text": "A read for one keypress does not return because the byte is sitting in a kernel buffer waiting for a newline, not because the key was lost. Write , returning how many bytes a read on the slave end can return, given what is in the line discipline's buffer and whether is set. In canonical mode nothing leaves the buffer until a newline arrives.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "terminal",
+  "n": 2,
+  "title": "The erase byte",
+  "text": "Backspace works before your program runs because the discipline holds the line and can take a character off it. Write , applying the discipline's line editing to a buffer, given the byte it treats as erase. Editing happens in the kernel before any program sees the line.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "terminal",
+  "n": 3,
+  "title": "Bytes nobody printed",
+  "text": "The echo is the line discipline copying input back, which is why a password prompt clears a flag rather than avoiding a print. Write , returning how many bytes travel back towards the display when input arrives, given the input length and whether is set. There need not be a program on the other end at all.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "terminal",
+  "n": 4,
+  "title": "What the key sends and what you read",
+  "text": "The translation is in the kernel, so the terminal speaks carriage return and the program speaks newline and neither of them knows. Write , applying to a byte arriving from the terminal. The key sends carriage return and the program expects a newline.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "terminal",
+  "n": 5,
+  "title": "What you write and what the screen gets",
+  "text": "The output translation is the other half of the same mechanism, and turning it off is what produces the staircase effect. Write , returning how many bytes reach the terminal when a program writes a buffer, given whether and are set. Each newline becomes two bytes on the way out.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "terminal",
+  "n": 6,
+  "title": "A byte, or a signal",
+  "text": "Nothing about 0x03 is special to the hardware or to your program. A flag decides whether it becomes a signal or arrives as an ordinary byte. Write , deciding what the line discipline does with an incoming byte, given the control character table and whether is set. Return the signal number to raise, or zero to mean deliver the byte.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "terminal",
+  "n": 7,
+  "title": "When a read is allowed to return",
+  "text": "These two numbers are how a program tells an escape key pressed alone from an escape sequence still arriving. Write , deciding whether a non-canonical read returns yet, given the bytes available, how long it has waited in tenths of a second, and and . The defaults are one and zero, which is why a raw read returns on the first byte.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "terminal",
+  "n": 8,
+  "title": "Two ends, one pair of numbers",
+  "text": "The emulator sets it on its end, the kernel stores it, and a signal tells the program to ask again. A program that does not ask keeps drawing at the old width. Write , modelling the window size stored in the driver, given what the master sets and what a program later reads. The size is kernel state, not an environment variable.",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "terminal",
+  "n": 1,
+  "title": "What sits between the emulator and your program?",
+  "text": " It holds a buffer, edits it, echoes it, and turns certain bytes into signals, and neither program did any of that. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "terminal",
+  "n": 2,
+  "title": "In canonical mode, when does a read return?",
+  "text": " Which is why a program asking for one keypress appears to hang. The key was delivered and it is waiting in a kernel buffer. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "terminal",
+  "n": 3,
+  "title": "Why does backspace work before your program runs?",
+  "text": " And on this machine the byte it treats as erase is 0x7f, which is delete rather than backspace. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "terminal",
+  "n": 4,
+  "title": "A pseudoterminal with no process attached receives four bytes of input. What comes back?",
+  "text": " Measured directly: write abc and a newline into the master and read back abc, a carriage return, and a newline, with no program in the picture. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "terminal",
+  "n": 5,
+  "title": "How does a program stop a password appearing on screen?",
+  "text": " It was never printing the password. If it crashes between clearing and restoring, your shell stays silent until you fix the flag by hand. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "terminal",
+  "n": 6,
+  "title": "The Enter key sends 0x0D. What does your program read by default?",
+  "text": " The terminal speaks carriage return and the program speaks newline, and the kernel translates in both directions without either one knowing. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "terminal",
+  "n": 7,
+  "title": "A program writes five bytes ending in a newline. How many reach the terminal?",
+  "text": " And turning the output translation off is what produces the staircase, where every line starts where the previous one ended. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "terminal",
+  "n": 8,
+  "title": "Which flag has to be set for ONLCR to do anything?",
+  "text": " Raw mode clears OPOST, so the expansion stops even though ONLCR itself is still set, which is what a raw pseudoterminal reports when measured. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "terminal",
+  "n": 9,
+  "title": "What is special about the byte 0x03 to the hardware?",
+  "text": " With ISIG set, a child reading a terminal dies of signal 2 when it arrives. With ISIG clear, the same child reads a byte with value 3. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "terminal",
+  "n": 10,
+  "title": "Ctrl-C does nothing in an editor. What is the most likely reason?",
+  "text": " The other possibility is that the signal arrived correctly and the program ignores SIGINT, which looks identical from outside. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "terminal",
+  "n": 11,
+  "title": "What is raw mode?",
+  "text": " There is no raw bit. The convenience function clears a set of flags, and every consequence follows from which ones. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "terminal",
+  "n": 12,
+  "title": "What does a program owe the terminal once it is in raw mode?",
+  "text": " That is the deal: every keystroke the instant it arrives, in exchange for doing the discipline's work yourself. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "terminal",
+  "n": 13,
+  "title": "VMIN and VTIME default to one and zero. What does that mean?",
+  "text": " A VTIME of zero is no timer at all rather than a timer that already expired, which is why a read with nothing available blocks. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "terminal",
+  "n": 14,
+  "title": "What are VMIN and VTIME actually used for in a full-screen program?",
+  "text": " A tenth of a second is long enough for the rest of a sequence and short enough that a lone escape key does not feel stuck. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "terminal",
+  "n": 15,
+  "title": "Where does the window size live?",
+  "text": " A fresh pseudoterminal measures zero by zero. Set 40 by 132 on the master and the slave reads 40 by 132, because there is one pair of numbers. ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "shell",
+  "anchor": "the-program-never-saw-the-asterisk",
+  "title": "The program never saw the asterisk",
+  "text": "Put three files in a directory, , and , and run . The program receives three arguments: , and . Quote it, , and the program receives one argument, the literal asterisk and suffix. So the expansion is not a feature of . The shell read the pattern, listed the directory, matched, sorted, and built an argument vector out of the results. By the time runs there is no pattern left anywhere. Which explains why every program agrees about globbing without any of them implementing it, and why a program that wants the pattern itself, like , makes you quote it. It also explains why a directory with a great many matching files produces an argument list too long, since the limit is on the vector the shell is building, not on anything the program does.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "shell",
+  "anchor": "what-an-unmatched-pattern-becomes",
+  "title": "What an unmatched pattern becomes",
+  "text": "Now run in a directory with no match. Under bash the program receives one argument, the literal . Under zsh the command does not run at all: . Both are defensible and they are policy rather than mechanism. Passing the pattern through means a script that loops over gets one iteration with a filename that does not exist, which is a well-known source of confusing errors. Refusing means the same script stops. The lesson is not which is right. It is that the shell decided, in the gap, and the program you were running never had an opinion.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "shell",
+  "anchor": "splitting-is-separate-from-quoting",
+  "title": "Splitting is separate from quoting",
+  "text": "Set a variable to and pass it unquoted. The program receives three arguments. Pass it quoted and the program receives one. That is word splitting, and it happens after variable substitution, which is why a filename with a space in it breaks a script that was written without quotes. The shell substituted the value, then split the result on whitespace, and handed over more arguments than anyone intended. Quoting is the instruction to skip that step. , and all arrive as single arguments with a space inside them, which the argument printer confirms: four arguments, three of them containing spaces.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "shell",
+  "anchor": "the-redirection-is-not-an-argument",
+  "title": "The redirection is not an argument",
+  "text": "Run the argument printer with and a redirection of standard output. It reports two arguments: its own name and . The redirection is nowhere in the vector. Two measurements show when the redirection happens. Redirect to a path in a directory that does not exist and the shell reports the failure and returns a non-zero status, and the program never runs. Redirect the output of a command that does not exist and the file is created anyway, empty. Descriptor duplication behaves the same way. Run the printer with two arguments and appended, and it still reports three: its name and the two arguments. The duplication was an instruction to the shell, and instructions to the shell do not survive into the vector. So the file is opened first and the program is launched second. That ordering is the reason truncates the file even when fails, and the reason reading and writing the same file in one command destroys it: the shell truncated it before the reader opened it.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "shell",
+  "anchor": "the-gap-between-fork-and-exec",
+  "title": "The gap between fork and exec",
+  "text": "Everything above happens in one place, and it is the most useful thing to understand about a shell. To run a program the shell forks, producing a child that is a copy of itself. The child is still the shell, running shell code, with the shell's descriptors and environment. It then rearranges its own world: opens the redirections and moves them onto descriptors 0, 1 and 2, closes what should not survive, sets its process group so the terminal knows who is in the foreground, and restores signal handling to the default. Only then does it call , which replaces the program while keeping everything the child just arranged. The child is still the shell until execve. Every redirection, every descriptor move and the process group are arranged by shell code running in a process that is about to stop being a shell. That is why redirection does not need cooperation from the program. The program opens descriptor 1 and writes to it, exactly as it always does, and somebody else decided what descriptor 1 refers to before it started.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "shell",
+  "anchor": "a-pipeline-is-several-processes",
+  "title": "A pipeline is several processes",
+  "text": "Run a three-stage pipeline of sleeps and count the processes while it is running: three. The shell forked once per stage, created a pipe between each adjacent pair, and moved the ends onto the right descriptors in each child. Nothing waits for anything. All three run at once, and the second stage starts consuming while the first is still producing, which is why a pipeline through a slow filter still shows output early and why a producer stops when its consumer stops reading. The exit status is the surprise. Run a failing command into a succeeding one and the status is zero. Run a succeeding command into a failing one and the status is one. Exit 7 into exit 9 and the status is 9. The pipeline's status is the last stage's, and every earlier failure is discarded unless you ask for it, which is why a script with a pipeline can report success after the important half failed.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "shell",
+  "anchor": "why-cd-cannot-be-a-program",
+  "title": "Why cd cannot be a program",
+  "text": "Run a child shell, have it change directory, and print the working directory in both. The child reports the new directory and the parent reports the old one. The working directory is per-process state. A program that changed its own and exited would achieve nothing, and there is no call to change somebody else's. So has to run in the shell's own process rather than in a fork, which is what makes it a builtin. The same reasoning explains the rest of the list. Setting a variable, exporting it, defining a function, and changing a shell option all modify the shell, so they cannot be programs. And it explains one of the oldest confusions, that a script cannot change your directory unless you source it, because running it forks and sourcing it does not.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "shell",
+  "anchor": "what-crosses-into-the-child",
+  "title": "What crosses into the child",
+  "text": "Two kinds of state survive and it is worth knowing which. The environment does, but only what was exported. Set a variable and run a child shell: it sees nothing. Export it and run the same child: it sees the value. The distinction exists because the environment is a copy handed to the new program, and an unexported variable was never put in it. Open descriptors do too. Open descriptor 9 in the shell and a child can see it open. That is the mechanism behind every redirection, and it is also the source of a real bug class, where a long-lived daemon inherits a descriptor it never knew about and holds a deleted file or a listening socket open indefinitely.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "shell",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Globbing, word splitting and quoting are the shell's, finished before your program starts, which is why the argument vector never contains a pattern. A redirection is not an argument. The file is opened before the program runs, which is why a failing command still truncates its output file. The work happens in the gap between fork and exec, in a child that is still the shell. A pipeline is one process per stage running concurrently, and its exit status is the last stage's. And is a builtin because the working directory is per-process state, along with everything else that modifies the shell itself.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "shell",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the expansion and the pipeline rules rather than forking real processes, because a test that depends on process scheduling is a test that sometimes fails for no reason. names the behaviour your model got wrong. Several exercises assert that a pattern survives into the argument vector, which is quoting working rather than expansion failing.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "shell",
+  "n": 1,
+  "title": "Building the vector",
+  "text": "The expansion is finished before the program starts, so the argument count is decided by the shell and never by the program. Write , returning how many arguments a command receives, given the words on the line and how many files each glob matched. A pattern that matched three files contributes three arguments.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "shell",
+  "n": 2,
+  "title": "When nothing matches",
+  "text": "Both behaviours are policy rather than mechanism, decided in the gap, and the program you were running never had an opinion. Write , returning what a shell does with a pattern that matched nothing, given which policy the shell follows. Return 1 to pass the pattern through as a literal, and 0 to refuse the command.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "shell",
+  "n": 3,
+  "title": "Substitute, then split",
+  "text": "A filename with a space breaks an unquoted script because the shell substituted the value and then split the result, handing over more arguments than anyone intended. Write , returning how many arguments a variable substitution produces, given the value and whether the reference was quoted. Splitting happens after substitution, which is the whole problem.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "shell",
+  "n": 4,
+  "title": "Which words reach the program",
+  "text": "The redirection is an instruction to the shell, and instructions to the shell do not survive into the vector. Write , removing the redirection operators and their targets from a word list and returning how many arguments are left. A word is an operator if it is , , or .",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "shell",
+  "n": 5,
+  "title": "Truncated before anything ran",
+  "text": "That ordering is why a failing command still truncates its output file, and why reading and writing the same file in one command destroys it. Write , returning the size of a redirection target after the command finishes, given its size before, whether the command exists, and how many bytes it wrote. The file is opened before the program is launched.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "shell",
+  "n": 6,
+  "title": "The status of a pipeline",
+  "text": "A script with a pipeline reports success after the important half failed, which is the default and not a bug. Write , returning the exit status of a pipeline given each stage's status. Every earlier failure is discarded unless you ask for it.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "shell",
+  "n": 7,
+  "title": "What has to run in the shell itself",
+  "text": "The working directory, the variables and the shell's options are all state a forked child cannot change on the parent's behalf. Write , deciding whether a command has to run in the shell's own process, given what state it modifies. A program that changed its own copy and exited would achieve nothing.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "shell",
+  "n": 8,
+  "title": "What the new program starts with",
+  "text": "An unexported variable was never put in the copy handed to the new program, and an open descriptor survives unless somebody arranged otherwise. Write , deciding whether a piece of state is visible to a program after , given whether it is an exported variable, an unexported one, or an open descriptor. Two kinds of state survive and one does not.",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "shell",
+  "n": 1,
+  "title": "Who expands a glob?",
+  "text": " Which is why every program agrees about globbing without any of them implementing it, and why a program wanting the pattern makes you quote it. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "shell",
+  "n": 2,
+  "title": "What does the argument vector contain for a pattern matching three files?",
+  "text": " Measured with a program that prints its own arguments. By the time it runs there is no pattern anywhere. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "shell",
+  "n": 3,
+  "title": "Why does a directory with very many files produce an argument list too long?",
+  "text": " The program never gets far enough to have an opinion, because the failure is in handing the vector over. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "shell",
+  "n": 4,
+  "title": "A pattern matches nothing. What happens?",
+  "text": " Measured: bash passes  *.nope  through as an argument and zsh reports no matches found. Both are defensible policy decided in the gap. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "shell",
+  "n": 5,
+  "title": "When does word splitting happen?",
+  "text": " Which is exactly why a filename with a space breaks a script written without quotes. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "shell",
+  "n": 6,
+  "title": "What does quoting a variable reference do?",
+  "text": " A value of three words gives three arguments unquoted and one quoted, which the argument printer confirms directly. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "shell",
+  "n": 7,
+  "title": "Where does a redirection appear in the argument vector?",
+  "text": " It is an instruction to the shell, and instructions to the shell do not survive into the vector. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "shell",
+  "n": 8,
+  "title": "A command that does not exist is redirected into a file. What happens to the file?",
+  "text": " That ordering is why a failing command still truncates its output file, and why reading and writing the same file in one command destroys it. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "shell",
+  "n": 9,
+  "title": "In the gap between fork and exec, what is the child?",
+  "text": " It opens the redirections, moves descriptors, sets its process group and restores signal handling, and only then calls execve. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "shell",
+  "n": 10,
+  "title": "Why does redirection need no cooperation from the program?",
+  "text": " Which is the whole reason the mechanism composes with every program ever written, including ones older than the shell you are using. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "shell",
+  "n": 11,
+  "title": "How many processes does a three-stage pipeline create?",
+  "text": " Counted directly while it ran. The second stage consumes while the first is still producing, which is why a slow filter still shows output early. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "shell",
+  "n": 12,
+  "title": "What is the exit status of a pipeline?",
+  "text": " Measured: false into true gives 0 and exit 7 into exit 9 gives 9, so a script can report success after the important half failed. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "shell",
+  "n": 13,
+  "title": "Why can cd not be a separate program?",
+  "text": " A child shell that changes directory reports the new one while the parent still reports the old one. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "shell",
+  "n": 14,
+  "title": "Why can a script not change your shell's directory?",
+  "text": " Same mechanism as the previous one, seen from the other side. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "shell",
+  "n": 15,
+  "title": "Which of these does a program see after execve?",
+  "text": " An unexported variable was never put in the copy handed over. A descriptor survives unless it was marked close-on-exec, which is the mechanism every redirection depends on and a real bug class besides. ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

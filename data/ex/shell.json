@@ -1,0 +1,310 @@
+{
+ "slug": "shell",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Building the vector",
+   "brief": "<p>Write <code>argv_count</code>, returning how many arguments a command receives, given the words on the line and how many files each glob matched.</p>\n<p>A pattern that matched three files contributes three arguments.</p>",
+   "kind": "output",
+   "concept": "The expansion is finished before the program starts, so the argument count is decided by the shell and never by the program.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A quoted word contributes one whatever it looks like. An unquoted pattern contributes its match count."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A pattern that matched three files becomes three separate arguments rather than one, and a quoted pattern is not expanded at all. Counting the words on the line gives the shell's view rather than the program's.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Running the argument printer on three text files with a pattern gives three arguments, and quoting the same pattern gives one. Neither result involved the program.</p>",
+   "starter": "unsigned long argv_count(const int *is_glob, const unsigned long *matches,\n                         unsigned long words) {\n    (void)is_glob; (void)matches;\n    return words;\n}",
+   "tests": "#include <assert.h>\nunsigned long argv_count(const int *, const unsigned long *, unsigned long);\nint main(void) {\n    /* One plain word. */\n    { int g[] = {0}; unsigned long m[] = {0};\n      assert(argv_count(g, m, 1) == 1); }\n    /* A pattern that matched three files. */\n    { int g[] = {1}; unsigned long m[] = {3};\n      assert(argv_count(g, m, 1) == 3); }\n    /* A plain word and a pattern matching two. */\n    { int g[] = {0, 1}; unsigned long m[] = {0, 2};\n      assert(argv_count(g, m, 2) == 3); }\n    /* Two patterns. */\n    { int g[] = {1, 1}; unsigned long m[] = {3, 4};\n      assert(argv_count(g, m, 2) == 7); }\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "When nothing matches",
+   "brief": "<p>Write <code>unmatched_result</code>, returning what a shell does with a pattern that matched nothing, given which policy the shell follows.</p>\n<p>Return 1 to pass the pattern through as a literal, and 0 to refuse the command.</p>",
+   "kind": "output",
+   "concept": "Both behaviours are policy rather than mechanism, decided in the gap, and the program you were running never had an opinion.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A pattern that did match is expanded under either policy. Only the empty case differs."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. When the pattern matched something, both shells expand it normally and neither refuses, so the policy only decides the empty case. Returning the policy directly ignores the match count, which is the input the decision actually depends on.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Measured on this machine: bash runs the command with the literal pattern as an argument, and zsh reports no matches found and does not run it at all. A script looping over log files behaves completely differently under the two, and neither is wrong. Under the passing-through policy a loop over a pattern with no matches runs once with a filename that does not exist, which is where the confusing errors come from.</p>",
+   "starter": "int unmatched_result(unsigned long match_count, int passes_through) {\n    (void)match_count;\n    return passes_through;\n}",
+   "tests": "#include <assert.h>\nint unmatched_result(unsigned long, int);\nint main(void) {\n    /* Nothing matched: the policy decides. */\n    assert(unmatched_result(0, 1) == 1);\n    assert(unmatched_result(0, 0) == 0);\n    /* Something matched: both shells run the command. */\n    assert(unmatched_result(3, 1) == 1);\n    assert(unmatched_result(3, 0) == 1);\n    assert(unmatched_result(1, 0) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Substitute, then split",
+   "brief": "<p>Write <code>expand_words</code>, returning how many arguments a variable substitution produces, given the value and whether the reference was quoted.</p>\n<p>Splitting happens after substitution, which is the whole problem.</p>",
+   "kind": "output",
+   "concept": "A filename with a space breaks an unquoted script because the shell substituted the value and then split the result, handing over more arguments than anyone intended.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Quoted is always one, even when the value is empty. Unquoted is the number of whitespace-separated runs."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. An unquoted empty value produces no argument at all rather than one, which is why a script testing an unset variable without quotes gets a syntax error instead of a comparison. Counting separators rather than runs also miscounts a value with repeated spaces.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Measured: a variable holding three words gives three arguments unquoted and one quoted. The quoting is the instruction to skip the splitting step, not a style preference.</p>",
+   "starter": "#include <string.h>\nunsigned long expand_words(const char *value, int quoted) {\n    if (quoted) return 1;\n    unsigned long n = 1;\n    for (const char *p = value; *p; p++)\n        if (*p == ' ') n++;\n    return n;\n}",
+   "tests": "#include <assert.h>\nunsigned long expand_words(const char *, int);\nint main(void) {\n    assert(expand_words(\"x y z\", 0) == 3);\n    assert(expand_words(\"x y z\", 1) == 1);\n    /* An empty value: nothing at all unquoted, one argument quoted. */\n    assert(expand_words(\"\", 0) == 0);\n    assert(expand_words(\"\", 1) == 1);\n    /* Repeated and leading spaces collapse. */\n    assert(expand_words(\"a   b\", 0) == 2);\n    assert(expand_words(\"  a b  \", 0) == 2);\n    assert(expand_words(\"  a b  \", 1) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Which words reach the program",
+   "brief": "<p>Write <code>strip_redirections</code>, removing the redirection operators and their targets from a word list and returning how many arguments are left.</p>\n<p>A word is an operator if it is <code>&gt;</code>, <code>&lt;</code>, <code>&gt;&gt;</code> or <code>2&gt;&amp;1</code>.</p>",
+   "kind": "output",
+   "concept": "The redirection is an instruction to the shell, and instructions to the shell do not survive into the vector.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A duplication like <code>2&gt;&amp;1</code> has no target word. The others consume the word after them."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. An operator with a target removes two words and a duplication removes one, so removing a fixed number for every operator overcounts or undercounts depending on which kind appeared. The program's own name is always the first argument and is never removed.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Measured: the argument printer given one argument and a redirection reports two arguments, and given two arguments and a descriptor duplication reports three. Nothing about the redirection is visible from inside.</p>",
+   "starter": "#include <string.h>\nunsigned long strip_redirections(const char **words, unsigned long n) {\n    unsigned long kept = 0;\n    for (unsigned long i = 0; i < n; i++) {\n        if (strcmp(words[i], \">\") == 0 || strcmp(words[i], \"<\") == 0 ||\n            strcmp(words[i], \">>\") == 0 || strcmp(words[i], \"2>&1\") == 0)\n            continue;\n        kept++;\n    }\n    return kept;\n}",
+   "tests": "#include <assert.h>\nunsigned long strip_redirections(const char **, unsigned long);\nint main(void) {\n    { const char *w[] = {\"prog\", \"one\"};\n      assert(strip_redirections(w, 2) == 2); }\n    /* An operator and its target both go. */\n    { const char *w[] = {\"prog\", \"one\", \">\", \"out.txt\"};\n      assert(strip_redirections(w, 4) == 2); }\n    { const char *w[] = {\"prog\", \"<\", \"in.txt\", \"one\"};\n      assert(strip_redirections(w, 4) == 2); }\n    /* A duplication has no target. */\n    { const char *w[] = {\"prog\", \"one\", \"two\", \"2>&1\"};\n      assert(strip_redirections(w, 4) == 3); }\n    /* Both kinds together. */\n    { const char *w[] = {\"prog\", \"a\", \">\", \"f\", \"2>&1\"};\n      assert(strip_redirections(w, 5) == 2); }\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Truncated before anything ran",
+   "brief": "<p>Write <code>file_after</code>, returning the size of a redirection target after the command finishes, given its size before, whether the command exists, and how many bytes it wrote.</p>\n<p>The file is opened before the program is launched.</p>",
+   "kind": "output",
+   "concept": "That ordering is why a failing command still truncates its output file, and why reading and writing the same file in one command destroys it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Truncation happens whether or not the command exists, because the shell opened the file first."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A command that does not exist still leaves an empty file, because the open happened in the child before the failed <code>execve</code>. Leaving the old contents in place models a shell that launches the program first, which is the opposite order.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Measured both ways: redirecting into a directory that does not exist fails before the program runs, and redirecting the output of a command that does not exist creates the file anyway, empty. One order explains both.</p>",
+   "starter": "unsigned long file_after(unsigned long size_before, int command_exists,\n                         unsigned long bytes_written) {\n    if (!command_exists) return size_before;\n    return bytes_written;\n}",
+   "tests": "#include <assert.h>\nunsigned long file_after(unsigned long, int, unsigned long);\nint main(void) {\n    /* A normal run: truncated, then written. */\n    assert(file_after(5000, 1, 12) == 12);\n    /* The command does not exist: the file is empty anyway. */\n    assert(file_after(5000, 0, 0) == 0);\n    /* A command that exists and writes nothing. */\n    assert(file_after(5000, 1, 0) == 0);\n    assert(file_after(0, 0, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "The status of a pipeline",
+   "brief": "<p>Write <code>pipeline_status</code>, returning the exit status of a pipeline given each stage's status.</p>\n<p>Every earlier failure is discarded unless you ask for it.</p>",
+   "kind": "output",
+   "concept": "A script with a pipeline reports success after the important half failed, which is the default and not a bug.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The last stage's status is the pipeline's, whatever happened upstream."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A failing command into a succeeding one gives zero, because the status comes from the last stage alone rather than from the worst or the first failure. Taking the maximum is the behaviour you usually want and not the behaviour you get.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Measured: false into true gives 0, true into false gives 1, and exit 7 into exit 9 gives 9. The shells offer an option that reports the first failure instead, and it is off by default in both.</p>",
+   "starter": "int pipeline_status(const int *stages, unsigned long n) {\n    int worst = 0;\n    for (unsigned long i = 0; i < n; i++)\n        if (stages[i] > worst) worst = stages[i];\n    return worst;\n}",
+   "tests": "#include <assert.h>\nint pipeline_status(const int *, unsigned long);\nint main(void) {\n    /* false | true */\n    { int s[] = {1, 0}; assert(pipeline_status(s, 2) == 0); }\n    /* true | false */\n    { int s[] = {0, 1}; assert(pipeline_status(s, 2) == 1); }\n    /* exit 7 | exit 9 */\n    { int s[] = {7, 9}; assert(pipeline_status(s, 2) == 9); }\n    /* Three stages, the middle one failing. */\n    { int s[] = {0, 3, 0}; assert(pipeline_status(s, 3) == 0); }\n    { int s[] = {5}; assert(pipeline_status(s, 1) == 5); }\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "What has to run in the shell itself",
+   "brief": "<p>Write <code>must_be_builtin</code>, deciding whether a command has to run in the shell's own process, given what state it modifies.</p>\n<p>A program that changed its own copy and exited would achieve nothing.</p>",
+   "kind": "output",
+   "concept": "The working directory, the variables and the shell's options are all state a forked child cannot change on the parent's behalf.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The question is whether the effect has to be visible in the parent after the command finishes."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Something that only reads shell state, like printing the working directory, works perfectly well as a separate program, so modifying is the condition rather than touching. That is why one of the two commands in the tests exists both ways on a real system.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Measured: a child shell that changes directory reports the new one and the parent still reports the old one. It is also why a script cannot change your directory unless you source it, because running it forks and sourcing it does not.</p>",
+   "starter": "int must_be_builtin(int reads_shell_state, int modifies_shell_state) {\n    (void)modifies_shell_state;\n    return reads_shell_state;\n}",
+   "tests": "#include <assert.h>\nint must_be_builtin(int, int);\nint main(void) {\n    /* cd: reads and modifies. */\n    assert(must_be_builtin(1, 1) == 1);\n    /* export: modifies. */\n    assert(must_be_builtin(0, 1) == 1);\n    /* pwd: reads only, and exists as a program. */\n    assert(must_be_builtin(1, 0) == 0);\n    /* ls: neither. */\n    assert(must_be_builtin(0, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "What the new program starts with",
+   "brief": "<p>Write <code>child_sees</code>, deciding whether a piece of state is visible to a program after <code>execve</code>, given whether it is an exported variable, an unexported one, or an open descriptor.</p>\n<p>Two kinds of state survive and one does not.</p>",
+   "kind": "output",
+   "concept": "An unexported variable was never put in the copy handed to the new program, and an open descriptor survives unless somebody arranged otherwise.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The environment is a copy, and only exported variables are in it. Descriptors are in the process, and stay open across the replacement."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A descriptor stays open across <code>execve</code> unless it was marked close-on-exec, so the default for a plain open is that the child inherits it. Treating descriptors like unexported variables misses the mechanism every redirection depends on.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Measured: a variable set but not exported is empty in a child shell, and the same variable after exporting has its value. A descriptor opened in the shell is visible as open in the child. That inheritance is also a real bug class, where a daemon holds a deleted file or a listening socket it never knew it had.</p>",
+   "starter": "int child_sees(int is_variable, int exported, int close_on_exec) {\n    (void)close_on_exec;\n    return is_variable ? exported : 0;\n}",
+   "tests": "#include <assert.h>\nint child_sees(int, int, int);\nint main(void) {\n    /* An exported variable. */\n    assert(child_sees(1, 1, 0) == 1);\n    /* An unexported one. */\n    assert(child_sees(1, 0, 0) == 0);\n    /* A plain descriptor: inherited. */\n    assert(child_sees(0, 0, 0) == 1);\n    /* One marked close-on-exec. */\n    assert(child_sees(0, 0, 1) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}
