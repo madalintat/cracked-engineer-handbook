@@ -472,7 +472,8 @@
    "drills": 0,
    "needs": [],
    "neededBy": [
-    "clock-edge"
+    "clock-edge",
+    "registers"
    ]
   },
   {
@@ -623,7 +624,9 @@
    "exercises": 0,
    "drills": 0,
    "needs": [],
-   "neededBy": []
+   "neededBy": [
+    "registers"
+   ]
   },
   {
    "slug": "languages",
@@ -690,11 +693,14 @@
    "phase": "understand",
    "accent": "amber",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
+   "ready": true,
+   "words": 1542,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "clock-bus",
+    "universal"
+   ],
    "neededBy": []
   },
   {
@@ -2539,9 +2545,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 4,
-  "words": 6231,
-  "exercises": 32,
-  "drills": 60
+  "ready": 5,
+  "words": 7773,
+  "exercises": 40,
+  "drills": 75
  }
 }

@@ -1,0 +1,292 @@
+{
+ "slug": "registers",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Return a value in the right place",
+   "brief": "<p>Write <code>answer</code>, a function taking no arguments that returns 42. The checks call it and compare what comes back.</p>",
+   "kind": "output",
+   "concept": "A function returns its value in <code>rax</code> because the calling convention says so, and nothing in the hardware enforces that.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The return value goes in <code>rax</code>. The starter puts it somewhere else."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The checks read <code>rax</code> after calling you, because that is where the System V convention says a return value lives. Putting 42 in another register is not wrong in any way the processor can detect, which is exactly the point: the convention is a contract, and both sides have to keep it.</p>"
+    },
+    {
+     "id": "asm",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the assembler names. Intel syntax puts the destination first, and every instruction here needs a comma between its two operands.</p>"
+    }
+   ],
+   "after": "<p>Notice there is no type, no signature and no declaration. The agreement that <code>rax</code> holds the answer exists only in a document.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global answer\nanswer:\n    mov rbx, 42\n    ret",
+   "tests": ".global _start\n_start:\n    call answer\n    cmp rax, 42\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 2,
+   "title": "The width that clears the top",
+   "brief": "<p><code>clear_top</code> is given a 64-bit value in <code>rdi</code> with every bit set. Return a value whose upper 32 bits are zero and whose lower 32 bits are 5, using a single move into the right name.</p>",
+   "kind": "output",
+   "concept": "Writing a 32-bit register name zero-extends into the full 64 bits. Writing a 16-bit name does not.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The starter uses <code>ax</code>. There is a wider name for the same register."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Writing through <code>ax</code> changes 16 bits and leaves the other 48 exactly as they were, so the upper half of <code>rdi</code> survives into your answer. Writing through <code>eax</code> clears the upper 32 bits as a side effect. That asymmetry is the whole exercise, and it exists because zero-extension breaks the dependency on the register's previous value, which lets the processor start the instruction immediately.</p>"
+    }
+   ],
+   "after": "<p>The 8-bit and 16-bit forms behave the old way because code from 1985 depended on it. The 32-bit form was new in 2000 and could be defined freshly.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global clear_top\nclear_top:\n    mov rax, rdi\n    mov ax, 5\n    ret",
+   "tests": ".global _start\n_start:\n    mov rdi, -1\n    call clear_top\n    cmp rax, 5\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 3,
+   "title": "Two values through the stack",
+   "brief": "<p><code>swap_diff</code> takes two values in <code>rdi</code> and <code>rsi</code>. Push both, then pop them into the opposite registers, and return the first minus the second. With 30 and 12 the answer is negative 18.</p>",
+   "kind": "output",
+   "concept": "A stack reverses order, so pushing two values and popping two values swaps them.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The last thing pushed is the first thing popped."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Work the stack by hand. After <code>push rdi</code> then <code>push rsi</code>, the top of the stack holds what was in <code>rsi</code>. So the first <code>pop</code> takes that one. The starter pops them back into the registers they came from, which swaps nothing.</p>"
+    }
+   ],
+   "after": "<p><code>push</code> and <code>pop</code> are not stack instructions in any deep sense. They are <code>sub rsp, 8</code> with a store, and a load with <code>add rsp, 8</code>.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global swap_diff\nswap_diff:\n    push rdi\n    push rsi\n    pop rsi\n    pop rdi\n    mov rax, rdi\n    sub rax, rsi\n    ret",
+   "tests": ".global _start\n_start:\n    mov rdi, 30\n    mov rsi, 12\n    call swap_diff\n    cmp rax, -18\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 4,
+   "title": "Which way is up",
+   "brief": "<p><code>second_from_top</code> pushes three values and returns the middle one by reading it directly off the stack rather than popping. Clean the stack up before you return.</p>",
+   "kind": "output",
+   "concept": "The stack grows toward lower addresses, so the item below the top is at a higher address.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "After three pushes, <code>[rsp]</code> is the last one pushed. Count upward from there."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Draw the addresses. Each push subtracts 8 from <code>rsp</code> first, so after pushing <code>a</code>, <code>b</code>, <code>c</code> in that order, <code>c</code> is at <code>[rsp]</code>, <code>b</code> is at <code>[rsp + 8]</code> and <code>a</code> is at <code>[rsp + 16]</code>. Subtracting from <code>rsp</code> reads memory the stack has not claimed yet.</p>"
+    },
+    {
+     "id": "fault",
+     "judge": "verdict",
+     "key": "signal",
+     "prose": "<p>The address you computed is not mapped. Reading below <code>rsp</code> by a large amount leaves the region the kernel gave you, which is a fault rather than garbage.</p>"
+    }
+   ],
+   "after": "<p>Reading past the end of a structure gives you whatever is next in memory and no complaint. Here it happened to be another value you had pushed.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global second_from_top\nsecond_from_top:\n    push rdi\n    push rsi\n    push rdx\n    mov rax, [rsp - 8]\n    add rsp, 24\n    ret",
+   "tests": ".global _start\n_start:\n    mov rdi, 100\n    mov rsi, 200\n    mov rdx, 300\n    call second_from_top\n    cmp rax, 200\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 5,
+   "title": "A name that is not there",
+   "brief": "<p><code>use_helper</code> should return twice its argument by calling <code>double_it</code>, which the checks define for you. The starter calls something else. Read what the linker says rather than what the assembler says.</p>",
+   "kind": "output",
+   "concept": "An assembler accepts any name you write. The linker is what decides whether that name exists.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "link-error"
+    }
+   ],
+   "hints": [
+    "The helper the checks provide is called <code>double_it</code>."
+   ],
+   "diagnose": [
+    {
+     "id": "link",
+     "judge": "verdict",
+     "key": "link-error",
+     "prose": "<p>Every line of your code assembled without complaint, because to an assembler a name it has not seen is just a name it has not seen yet. The linker went looking for the body and found nothing, and the message it gives names the symbol and the section offset that referred to it.</p>\n<p>This failure looks different from a compile error in the tooling: nothing reports a build failure, and the result is simply that no executable was produced.</p>"
+    },
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The name resolves now and the answer is wrong. <code>double_it</code> expects its argument in <code>rdi</code> and returns in <code>rax</code>, like everything else here.</p>"
+    }
+   ],
+   "after": "<p>Undefined symbols are the single most common build failure in C and C++ too, and they mean the same thing there: something promised a definition and nothing supplied one.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global use_helper\nuse_helper:\n    call twice_it\n    ret",
+   "tests": ".global double_it\ndouble_it:\n    mov rax, rdi\n    add rax, rax\n    ret\n\n.global _start\n_start:\n    mov rdi, 21\n    call use_helper\n    cmp rax, 42\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 6,
+   "title": "Put it back the way you found it",
+   "brief": "<p><code>uses_rbx</code> may use <code>rbx</code> for its own working, and must leave it holding whatever it held on entry. Return the argument plus one.</p>",
+   "kind": "output",
+   "concept": "Callee-saved registers are the half of the file a function has to preserve, and nothing checks that it did.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "<code>rbx</code> is callee-saved. There is a two-instruction way to borrow it."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The checks put a known value in <code>rbx</code>, call you, and look at <code>rbx</code> afterwards. The starter overwrites it and never restores it. Push it on entry and pop it before the <code>ret</code>, and mind that the pop has to happen before the return rather than after it.</p>"
+    },
+    {
+     "id": "fault",
+     "judge": "verdict",
+     "key": "signal",
+     "prose": "<p>The stack is unbalanced. A <code>push</code> with no matching <code>pop</code> leaves <code>rsp</code> pointing at your saved value, so <code>ret</code> jumps to that value instead of to your caller.</p>"
+    }
+   ],
+   "after": "<p>This is why a compiler prefers caller-saved registers for short-lived values. Using <code>rbx</code> costs two instructions before you have done any work.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global uses_rbx\nuses_rbx:\n    mov rbx, rdi\n    add rbx, 1\n    mov rax, rbx\n    ret",
+   "tests": ".global _start\n_start:\n    mov rbx, 0x1234\n    mov rdi, 41\n    call uses_rbx\n    cmp rax, 42\n    jne fail\n    cmp rbx, 0x1234\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 7,
+   "title": "Six arguments, in order",
+   "brief": "<p><code>sum_six</code> takes six integers and returns their sum. The checks pass 1 through 6, so the answer is 21. Getting this wrong tells you which register you had in the wrong place.</p>",
+   "kind": "output",
+   "concept": "The first six integer arguments go in a fixed order, and the order is not alphabetical or numerical.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The order is <code>rdi</code>, <code>rsi</code>, <code>rdx</code>, <code>rcx</code>, <code>r8</code>, <code>r9</code>."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Add the registers you used and see which sum you got. The starter stops after four, so it returns 10 rather than 21, which tells you exactly how many arguments it read.</p>\n<p>The order is worth memorising because it is not guessable. <code>rcx</code> is the fourth argument for an ordinary call and is not used at all by the syscall interface, which puts <code>r10</code> in its place, because the <code>syscall</code> instruction overwrites <code>rcx</code> with the return address.</p>"
+    }
+   ],
+   "after": "<p>Beyond six, arguments go on the stack, which is why a function with many parameters is measurably slower to call than one with few.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global sum_six\nsum_six:\n    mov rax, rdi\n    add rax, rsi\n    add rax, rdx\n    add rax, rcx\n    ret",
+   "tests": ".global _start\n_start:\n    mov rdi, 1\n    mov rsi, 2\n    mov rdx, 3\n    mov rcx, 4\n    mov r8, 5\n    mov r9, 6\n    call sum_six\n    cmp rax, 21\n    jne fail\n    mov edi, 0\n    mov eax, 60\n    syscall\nfail:\n    mov edi, 1\n    mov eax, 60\n    syscall",
+   "spec": null,
+   "lang": "asm"
+  },
+  {
+   "n": 8,
+   "title": "Ending a program that has nowhere to return",
+   "brief": "<p><code>_start</code> is the entry point and nothing called it, so there is no return address on the stack and <code>ret</code> has nothing to return to. Write the exit sequence yourself. A program that ends cleanly here exits with status 0.</p>",
+   "kind": "output",
+   "concept": "Without a C runtime underneath, a program ends by asking the kernel to end it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "signal"
+    }
+   ],
+   "hints": [
+    "Syscall 60 is <code>exit</code>, and its one argument goes where the first argument always goes."
+   ],
+   "diagnose": [
+    {
+     "id": "fault",
+     "judge": "verdict",
+     "key": "signal",
+     "prose": "<p>Running off the end of your code is a fault, and so is <code>ret</code> at <code>_start</code>, because the value it pops is whatever the kernel left on the stack rather than a return address. Neither is a bug in your logic; both are what happens when a program does not end deliberately.</p>"
+    },
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>It exited, with a nonzero status. The number in <code>rax</code> selects the syscall and the number in <code>rdi</code> is the status, so check you have not swapped them.</p>"
+    }
+   ],
+   "after": "<p>The status is one byte. Exit with 256 and the kernel reports 0, which has confused a great many test scripts.</p>",
+   "starter": ".intel_syntax noprefix\n.text\n.global _start\n_start:\n    mov edi, 0\n    ret",
+   "tests": "",
+   "spec": null,
+   "lang": "asm"
+  }
+ ]
+}

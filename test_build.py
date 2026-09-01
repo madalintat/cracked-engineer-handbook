@@ -629,6 +629,26 @@ def t_authoring_guide_numbers_match_the_code():
         assert backend in doc, f"the guide does not mention the {backend} backend"
 
 
+def t_every_judged_language_has_a_nonce_flag_its_tool_accepts():
+    """The cache buster is a real flag passed to a real tool.
+
+    llvm-mc rejects -D, so the backend-wide flag broke every assembly
+    exercise. Nothing noticed, because there were no assembly exercises.
+    """
+    ce = build.JUDGES_CONFIG["godbolt"]
+    assert ce["nonceFlag"], "the godbolt backend has no nonce flag"
+    for lang, cfg in ce["langs"].items():
+        flag = cfg.get("nonceFlag", ce["nonceFlag"])
+        assert flag.startswith("-"), f"{lang}: {flag!r} is not a flag"
+        # An assembler takes --defsym; a compiler driver takes -D. Mixing them
+        # is the bug this test exists for.
+        if cfg["id"].startswith("llvmas"):
+            assert flag == "--defsym HH_NONCE", (
+                f"{lang} is assembled by llvm-mc, which rejects {flag!r}")
+        else:
+            assert flag.startswith("-D"), f"{lang}: {flag!r} is not a define"
+
+
 def t_the_palette_clears_wcag_aa():
     problems = contrast.check("light") + contrast.check("dark")
     assert not problems, "\n  " + "\n  ".join(problems)

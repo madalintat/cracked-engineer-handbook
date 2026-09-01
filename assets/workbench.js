@@ -40,7 +40,15 @@ const WB = (() => {
     while ((m = re.exec(src)) !== null) {
       if (m.index > last) out += esc(src.slice(last, m.index));
       const i = m.slice(1).findIndex(g => g !== undefined);
-      out += `<span class="t-${rules[i].cls}">${esc(m[0])}</span>`;
+      // A rule anchored to the start of a line has to match the indentation to
+      // get there, but the indentation is not part of the token. `trim` puts
+      // it back outside the span, so the class still names exactly the word.
+      let text = m[0];
+      if (rules[i].trim) {
+        const lead = text.match(/^[ \t]*/)[0];
+        if (lead) { out += esc(lead); text = text.slice(lead.length); }
+      }
+      out += `<span class="t-${rules[i].cls}">${esc(text)}</span>`;
       last = m.index + m[0].length;
       if (m[0].length === 0) re.lastIndex++;
     }
@@ -100,6 +108,31 @@ const WB = (() => {
     RULES.c[4], RULES.c[5], RULES.c[6], RULES.c[7],
   ];
 
+  /* x86-64, in both syntaxes. This was a separate function built from chained
+   * replaces, which escaped only the text it matched: everything it did not
+   * recognise reached the page as raw HTML, so a line containing a script tag
+   * was rendered as one. Expressed as rules, it goes through paint(), which
+   * escapes every chunk whether it matched or not.
+   *
+   * Order is the correctness argument. A label wins over a mnemonic because it
+   * is checked first, and both are checked before the bare-word register list.
+   */
+  RULES.asm = [
+    { cls: 'com', re: '[#;][^\\n]*' },
+    { cls: 'fn', re: '[A-Za-z_.$][\\w.$]*(?=:)' },
+    { cls: 'pre', re: '\\.[a-z_][\\w.]*' },
+    { cls: 'kw', re: '^[ \\t]*[a-z][a-z0-9.]*\\b', trim: true },
+    { cls: 'type', re: '%[a-z0-9]+' },
+    // Intel syntax names registers bare, so they have to be listed. AT&T
+    // prefixes them with %, which the rule above catches without a list.
+    { cls: 'type', re: '\\b(?:r[abcd]x|r[sd]i|r[bs]p|r(?:8|9|1[0-5])[dwb]?'
+                     + '|e[abcd]x|e[sd]i|e[bs]p|[abcd]x|[sd]il|[bs]pl'
+                     + '|[abcd][lh]|rip|rflags|eflags)\\b' },
+    { cls: 'str', re: '"(?:[^"\\\\\\n]|\\\\.)*"' },
+    { cls: 'num', re: '\\$?-?\\b(?:0[xX][0-9a-fA-F]+|\\d+)\\b' },
+    { cls: 'punc', re: '[,:\\[\\]()+*]|(?<![\\w])-(?=[\\s\\w])' },
+  ];
+
   RULES.cuda = [
     ...RULES.cpp.slice(0, 4),
     { cls: 'type', re: '\\b(?:__global__|__device__|__host__|__shared__|__constant__|__restrict__|__managed__|dim3|threadIdx|blockIdx|blockDim|gridDim|warpSize|half|nv_bfloat16|__nv_fp8_e4m3|__nv_fp8_e5m2)\\b' },
@@ -110,31 +143,8 @@ const WB = (() => {
   /* x86-64 does not fit the single-pass shape: `label:` at column zero and an
    * operand `mov` are different tokens by POSITION, not by pattern. So it gets
    * an anchored pass per line. */
-  function paintAsm(src) {
-    return src.split('\n').map(line => {
-      const c = line.indexOf('#') >= 0 ? line.indexOf('#')
-              : (line.indexOf(';') >= 0 ? line.indexOf(';') : -1);
-      const code = c >= 0 ? line.slice(0, c) : line;
-      const com = c >= 0 ? line.slice(c) : '';
-      let out = code
-        .replace(/^(\s*)([A-Za-z_.$][\w.$]*)(:)/,
-          (_, w, l, cl) => `${w}<span class="t-fn">${esc(l)}</span><span class="t-punc">${cl}</span>`)
-        .replace(/(^|\s)(\.[a-z_]\w*)/g,
-          (_, w, d) => `${w}<span class="t-pre">${esc(d)}</span>`)
-        .replace(/%[a-z0-9]+/g, r => `<span class="t-type">${esc(r)}</span>`)
-        .replace(/\$?-?\b(?:0[xX][0-9a-fA-F]+|\d+)\b/g,
-          n => `<span class="t-num">${esc(n)}</span>`);
-      // anything still unspanned at the start of the instruction is a mnemonic
-      out = out.replace(/^(\s*)([a-z][a-z0-9.]*)(?=\s|$)/,
-        (m0, w, mn) => m0.includes('<span') ? m0
-          : `${w}<span class="t-kw">${esc(mn)}</span>`);
-      return out + (com ? `<span class="t-com">${esc(com)}</span>` : '');
-    }).join('\n') + ' ';
-  }
-
   function highlight(src, lang) {
-    if (lang === 'asm' || lang === 'x86') return paintAsm(src);
-    const rules = RULES[lang] || RULES.c;
+    const rules = RULES[lang === 'x86' ? 'asm' : lang] || RULES.c;
     return paint(src, rules);
   }
 
@@ -316,10 +326,10 @@ const WB = (() => {
    * didExecute:false with code -1, which is not a program exit status.
    */
 
-  const uuid = () =>
-    (crypto.randomUUID ? crypto.randomUUID()
-     : String(Date.now()) + Math.random().toString(16).slice(2))
-    .replace(/-/g, '').slice(0, 16);
+  /* Decimal, not hex. The nonce is passed as the value of a flag, and one of
+   * those flags is --defsym, which takes an integer. A hex uuid is not one. */
+  const nonce = () =>
+    String(Date.now()) + String(Math.floor(Math.random() * 1e6)).padStart(6, '0');
 
   /** Compiler prose is not stable across releases, but its shape is. Strip the
    *  parts that move so a regex written today still matches tomorrow. */
@@ -412,7 +422,9 @@ const WB = (() => {
         : source;
       const userLines = source.split('\n').length;
 
-      const args = [L.flags, ex.flags || '', `${conf.nonceFlag}=${uuid()}`]
+      // Per language, because llvm-mc and gcc do not accept the same flag.
+      const nonceFlag = L.nonceFlag || conf.nonceFlag;
+      const args = [L.flags, ex.flags || '', `${nonceFlag}=${nonce()}`]
         .filter(Boolean).join(' ');
 
       const body = {

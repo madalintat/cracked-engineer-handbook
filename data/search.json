@@ -1343,6 +1343,254 @@
  },
  {
   "t": "section",
+  "slug": "registers",
+  "anchor": "what-a-register-actually-is",
+  "title": "What a register actually is",
+  "text": "Everything you have built so far stores values in something you addressed: a wire, a flip-flop you wrote to, a location in a memory array. A register is the same idea with the addressing removed. There are a fixed number of them, they have names rather than addresses, and those names are part of the instruction encoding. That is the whole difference, and it buys the two things that matter. A register access has no address to compute and no cache to miss, so it takes zero extra cycles: the value is already inside the core, in the register file you met as a context store in Part II. And because the name is in the instruction, the processor knows which values an instruction touches before it has decoded anything else, which is what lets it start work on several instructions at once. The cost is that there are not many of them.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "registers",
+  "anchor": "the-sixteen",
+  "title": "The sixteen",
+  "text": "x86-64 has sixteen general-purpose registers. Eight carry names inherited from the 8086, which is why they are not through : The names once meant something. was the accumulator, the counter, and the source and destination index for string operations. Almost none of that is true any more. They are sixteen interchangeable places to put a value, with two exceptions that still hold: is the stack pointer and the hardware itself uses it, and is conventionally the frame pointer, though optimised code usually declines the convention and uses it as a seventeenth general register. Each one has four names, addressing four widths:",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "registers",
+  "anchor": "the-rule-about-widths",
+  "title": "The rule about widths",
+  "text": "Here is the asymmetry from the top of the page, stated properly. Writing to a 32-bit name zero-extends into the full 64-bit register. Writing to a 16-bit or 8-bit name modifies only those bits and leaves the rest untouched. You can check this rather than believe it, and the exercises will make you. Set to all ones, write 5 through , shift right by 32, and you get zero. Do the same through and the upper half is still all ones. The reason is not consistency, it is dependencies. If left the upper 32 bits alone, then the new value of would depend on the old value of , and the processor could not begin that instruction until whatever last wrote had finished. Zero-extension breaks the chain: the instruction depends on nothing, so it can be issued immediately. The 16-bit and 8-bit forms did not get the same treatment because they had to keep behaving the way 16-bit code from 1985 expected. So the partial-register dependency survives in exactly the widths nobody writes on purpose any more. This is also why compilers emit to zero a register rather than . It is shorter to encode, and the processor recognises it as producing a constant, so it does not even use an execution unit.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "registers",
+  "anchor": "the-stack-is-a-register-and-a-convention",
+  "title": "The stack is a register and a convention",
+  "text": "There is no stack instruction in the sense of a stack data structure in the hardware. There is a register, , and two instructions that agree on what to do with it. subtracts 8 from and stores at the new address. loads from and adds 8. That is all. Measured: one push moves by exactly 8. The stack grows downward , toward lower addresses. This is not a deep truth about stacks. It is a layout decision: the stack starts at the top of the address space and the heap starts low and grows up, so the two can expand toward each other and neither has to know in advance how much room the other will need. The consequence is that is the top of the stack and is the item below it, which reads backwards the first several times.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "registers",
+  "anchor": "the-contract-nobody-enforces",
+  "title": "The contract nobody enforces",
+  "text": "On Linux, x86-64 code follows the System V AMD64 ABI. The first six integer arguments go in , , , , , , in that order. The return value comes back in . A syscall uses the same idea with a different list: the number in , then , , , , , . Two things are worth being precise about. First, is an argument register for function calls and is not one for syscalls, because the instruction itself overwrites with the return address. The kernel interface uses in its place. This is the kind of detail that only bites you once. Second, the ABI is a convention and nothing checks it. There is no mechanism in the processor that makes a function read its argument from . If you write both sides of a call yourself, you can pass arguments anywhere you like and it will work. It stops working the moment one side is code you did not write, which in practice means the moment you call libc or the kernel.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "registers",
+  "anchor": "who-has-to-put-things-back",
+  "title": "Who has to put things back",
+  "text": "The sixteen registers are split by who is responsible for preserving them. Callee-saved : , , through . A function that uses these must leave them holding what it found. If it wants them, it pushes them on entry and pops them before returning. Caller-saved : everything else, including all the argument registers and . A function may destroy these freely, so a caller with something valuable in has to save it before making a call. The split exists because both rules are wrong on their own. If everything were callee-saved, a leaf function that uses two registers would still have to preserve all sixteen. If everything were caller-saved, every call site would have to spill everything live. Splitting the file lets a compiler put short-lived values in caller-saved registers and long-lived ones in callee-saved registers, and pay for saving only what it actually uses. This is where sixteen starts to feel small. A loop with more live values than available registers has to keep some of them in memory and move them back and forth, which is called spilling, and it is the single most common reason a compiler's output is slower than you expected. Part V returns to it.",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "registers",
+  "anchor": "what-the-exercises-run",
+  "title": "What the exercises run",
+  "text": "These exercises assemble real x86-64 and run it, with no C runtime underneath. That is unusual and it is deliberate: there is no , because is a libc idea. Execution starts at a label called , and there is nothing to return to, so the program has to end by asking the kernel to end it. Leave that out and the processor runs off the end of your code into whatever bytes follow, which is a fault. The exit status is the observable. It is one byte, so it holds 0 to 255, and the checks read it. Where an exercise needs more than a byte of output, it writes to standard output with syscall 1. Three failures you will see, and what each one means. An assembler error names a line and a column and quotes the text, the way a C compiler does. A link error looks different and is worth recognising: every line assembled correctly, so nothing complains about your syntax, and the linker then cannot find a name you referred to. Compiler Explorer reports this as an executable that was not produced rather than as a build failure, which is why this handbook keys on the linker's own words. And a fault, reported as a signal. On this hardware a segmentation fault means an address the kernel refused. Assembly gi",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
+  "slug": "registers",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "A register is a name, there are sixteen, and that number is the constraint every optimisation above this layer is working against. The stack is one of those registers plus an agreement. The calling convention is a contract that nothing enforces, which is precisely why it has to be written down. The next unit takes the other half of an instruction: not which register, but which address, and what the processor remembers about the last comparison you made.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "registers",
+  "n": 1,
+  "title": "Return a value in the right place",
+  "text": "A function returns its value in <code>rax</code> because the calling convention says so, and nothing in the hardware enforces that. Write , a function taking no arguments that returns 42. The checks call it and compare what comes back.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "registers",
+  "n": 2,
+  "title": "The width that clears the top",
+  "text": "Writing a 32-bit register name zero-extends into the full 64 bits. Writing a 16-bit name does not. is given a 64-bit value in with every bit set. Return a value whose upper 32 bits are zero and whose lower 32 bits are 5, using a single move into the right name.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "registers",
+  "n": 3,
+  "title": "Two values through the stack",
+  "text": "A stack reverses order, so pushing two values and popping two values swaps them. takes two values in and . Push both, then pop them into the opposite registers, and return the first minus the second. With 30 and 12 the answer is negative 18.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "registers",
+  "n": 4,
+  "title": "Which way is up",
+  "text": "The stack grows toward lower addresses, so the item below the top is at a higher address. pushes three values and returns the middle one by reading it directly off the stack rather than popping. Clean the stack up before you return.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "registers",
+  "n": 5,
+  "title": "A name that is not there",
+  "text": "An assembler accepts any name you write. The linker is what decides whether that name exists. should return twice its argument by calling , which the checks define for you. The starter calls something else. Read what the linker says rather than what the assembler says.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "registers",
+  "n": 6,
+  "title": "Put it back the way you found it",
+  "text": "Callee-saved registers are the half of the file a function has to preserve, and nothing checks that it did. may use for its own working, and must leave it holding whatever it held on entry. Return the argument plus one.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "registers",
+  "n": 7,
+  "title": "Six arguments, in order",
+  "text": "The first six integer arguments go in a fixed order, and the order is not alphabetical or numerical. takes six integers and returns their sum. The checks pass 1 through 6, so the answer is 21. Getting this wrong tells you which register you had in the wrong place.",
+  "part": "The machine"
+ },
+ {
+  "t": "exercise",
+  "slug": "registers",
+  "n": 8,
+  "title": "Ending a program that has nowhere to return",
+  "text": "Without a C runtime underneath, a program ends by asking the kernel to end it. is the entry point and nothing called it, so there is no return address on the stack and has nothing to return to. Write the exit sequence yourself. A program that ends cleanly here exits with status 0.",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "registers",
+  "n": 1,
+  "title": "How many general-purpose registers does x86-64 have?",
+  "text": " Eight inherited from the 8086 and eight added by AMD64. That number is the constraint every optimisation above this layer is working against. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "registers",
+  "n": 2,
+  "title": "After <code>mov rax, -1</code> then <code>mov eax, 5</code>, what does <code>rax</code> hold?",
+  "text": " Measured. Set  rax  to all ones, write through  eax , shift right by 32 and the result is zero. A 32-bit write clears the upper half. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "registers",
+  "n": 3,
+  "title": "After <code>mov rax, -1</code> then <code>mov ax, 5</code>, is the upper half of <code>rax</code> cleared?",
+  "text": " This asymmetry is the whole trap. The 16-bit and 8-bit forms had to keep behaving the way 16-bit code from 1985 expected, so the partial-register dependency survives in exactly the widths nobody writes on purpose. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "registers",
+  "n": 4,
+  "title": "Why does a 32-bit write clear the upper half at all?",
+  "text": " If the write preserved the upper bits, the new value of  rax  would depend on the old one, and the processor could not start the instruction until whatever last wrote  rax  had finished. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "registers",
+  "n": 5,
+  "title": "Why do compilers emit <code>xor eax, eax</code> rather than <code>mov rax, 0</code>?",
+  "text": " It is idiom recognition rather than arithmetic. The same reasoning is why you see it everywhere in optimised output and almost nowhere in source. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "registers",
+  "n": 6,
+  "title": "Which way does the stack grow on x86-64?",
+  "text": " It is a layout decision rather than a truth about stacks. The stack starts high and the heap starts low so the two can grow toward each other without either having to know in advance how much room the other needs. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "registers",
+  "n": 7,
+  "title": "After <code>push a</code> then <code>push b</code>, where is <code>a</code>?",
+  "text": "  b  was pushed last so it is on top, at  [rsp] . Because the stack grows down, the item below the top is at a higher address, which reads backwards the first several times. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "registers",
+  "n": 8,
+  "title": "By how much does one <code>push</code> change <code>rsp</code>?",
+  "text": " Measured: take  rsp , push once, and subtract.  push  is  sub rsp, 8  followed by a store, and  pop  is a load followed by  add rsp, 8 . There is no stack in the hardware, only a register and an agreement. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "registers",
+  "n": 9,
+  "title": "In what order do the first six integer arguments go?",
+  "text": " This is the System V AMD64 convention, and it is not guessable from the register names. Beyond six, arguments go on the stack. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "registers",
+  "n": 10,
+  "title": "Why does the Linux syscall interface use <code>r10</code> where a function call uses <code>rcx</code>?",
+  "text": " The hardware takes  rcx  for its own purposes the moment  syscall  executes, so the kernel interface cannot use it for an argument. This is the kind of detail that bites you exactly once. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "registers",
+  "n": 11,
+  "title": "Which of these must a function preserve for its caller?",
+  "text": " Those are the callee-saved half. Everything else, including all the argument registers and  rax , may be destroyed freely by a called function. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "registers",
+  "n": 12,
+  "title": "Why split the registers into callee-saved and caller-saved at all?",
+  "text": " If everything were callee-saved, a leaf function using two registers would still preserve sixteen. If everything were caller-saved, every call site would spill everything live. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "registers",
+  "n": 13,
+  "title": "What is spilling?",
+  "text": " With sixteen registers and more live values than that, something has to live in memory and be moved back and forth. It is the most common reason compiled output is slower than you expected. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "registers",
+  "n": 14,
+  "title": "In a program with no C runtime, where does execution begin?",
+  "text": "  main  is a libc idea: the runtime sets things up and then calls it. Without a runtime the kernel jumps straight to the entry symbol, which is  _start  by default. ",
+  "part": "The machine"
+ },
+ {
+  "t": "drill",
+  "slug": "registers",
+  "n": 15,
+  "title": "Why can a program with no C runtime not end with <code>ret</code>?",
+  "text": " There is no caller and no return address. The program has to ask the kernel to end it, which is syscall 60 with the status in  rdi . ",
+  "part": "The machine"
+ },
+ {
+  "t": "section",
   "slug": "integers",
   "anchor": "the-representation-briefly",
   "title": "The representation, briefly",

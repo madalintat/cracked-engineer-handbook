@@ -217,6 +217,28 @@ t('the exit code path still works where the text is silent', () => {
   is(WB.ceVerdictOf({ ...ok, code: 134 }, true, '') === 'assert-failed', 'abort');
 });
 
+t('the highlighter escapes what it does not recognise', () => {
+  // paintAsm built its output from chained replaces and escaped only the text
+  // it matched, so anything it did not recognise reached the page as raw HTML.
+  for (const lang of Object.keys(WB.RULES)) {
+    const out = WB.highlight('x <script>bad()</script> y', lang);
+    // Every < in the input must arrive escaped. A tokenizer may split the tag
+    // across spans, so check for the raw character rather than the whole tag.
+    is(!/<script/.test(out), `${lang} emitted a raw script tag`);
+    const outsideSpans = out.replace(/<\/?span[^>]*>/g, '');
+    is(!/[<>]/.test(outsideSpans), `${lang} left a raw angle bracket`);
+  }
+});
+
+t('assembly highlights registers, mnemonics, labels and directives', () => {
+  const h = WB.highlight('.text\nlbl:\n    mov rbx, [rsp + 8]   # note', 'asm');
+  for (const cls of ['t-pre', 't-fn', 't-kw', 't-type', 't-num', 't-com']) {
+    is(h.includes(cls), `assembly produced no ${cls}`);
+  }
+  // AT&T names registers with a % prefix and Intel names them bare. Both.
+  is(WB.highlight('movq %rax, %rbx', 'asm').includes('t-type'), 'AT&T registers');
+});
+
 t('a link failure is not a compile failure', () => {
   // Measured against the live service assembling x86-64: every unit compiled,
   // so buildResult.code is 0, and the top level says only "Executable not

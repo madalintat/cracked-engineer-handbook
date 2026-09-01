@@ -50,7 +50,8 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 
 - [x] Unit `nand` complete: note, 8 exercises, 15 drills, all validated
 - [x] Unit `integers` complete: note, 8 exercises, 15 drills (proves `godbolt`)
-- [ ] Unit `registers` complete (x86-64 asm through `godbolt`)
+- [x] Unit `registers` complete: note, 8 exercises, 15 drills, all validated
+      against the real assembler (proves `asm` through `godbolt`)
 - [x] Unit `clock-edge` complete: note, 8 exercises, 15 drills (proves `yosys`)
 - [x] Unit `execution-model` complete: note, 8 exercises, 15 drills,
       all eight checked on a real T4 (proves `modal`)

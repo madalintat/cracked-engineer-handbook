@@ -98,8 +98,13 @@ JUDGES_CONFIG = {
                      "flags": "-O2 -Wall -Wextra -std=c17"},
             "cpp":  {"id": "g162",  "name": "x86-64 gcc 16.2",
                      "flags": "-O2 -Wall -Wextra -std=c++23"},
+            # llvm-mc is an assembler, not a compiler driver, and rejects -D
+            # outright: "Unknown command line argument '-DHH_NONCE'". The
+            # backend-wide nonce flag therefore failed every assembly exercise
+            # before an assembly exercise existed to notice. --defsym defines
+            # an assembler symbol that nothing references.
             "asm":  {"id": "llvmas2310", "name": "x86-64 clang 23.1.0",
-                     "flags": ""},
+                     "flags": "", "nonceFlag": "--defsym HH_NONCE"},
             "cuda": {"id": "nvcc133", "name": "NVCC 13.3.0",
                      "flags": "-O2 -arch=sm_90 -lineinfo"},
         },
@@ -1579,8 +1584,14 @@ def run_validate():
                 group = [e for w, e in items if w == where]
                 problems += validate_godbolt(group, where)
                 checked += len(group)
+            # Name every toolchain that actually ran. This said "gcc 16.2" for
+            # all of them, which stopped being true the moment eight of them
+            # were assembled by llvm-mc.
+            langs = JUDGES_CONFIG["godbolt"]["langs"]
+            used = sorted({langs[e["lang"]]["name"] for _, e in items
+                           if e["lang"] in langs})
             print(f"  godbolt  {len(items):3} exercises checked "
-                  f"({JUDGES_CONFIG['godbolt']['langs']['cpp']['name']})")
+                  f"({', '.join(used)})")
         else:
             print(f"  {backend:<8} {len(items):3} exercises skipped "
                   f"(backend client not wired yet)")

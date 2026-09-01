@@ -17,7 +17,8 @@
    "asm": {
     "id": "llvmas2310",
     "name": "x86-64 clang 23.1.0",
-    "flags": ""
+    "flags": "",
+    "nonceFlag": "--defsym HH_NONCE"
    },
    "cuda": {
     "id": "nvcc133",

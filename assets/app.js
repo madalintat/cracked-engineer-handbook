@@ -631,9 +631,13 @@ function wireWork() {
   const host = el('#ed');
   if (!host) return;
 
-  const lang = ex.backend === 'sim' ? 'netlist'
-             : ex.backend === 'yosys' ? 'verilog'
-             : ex.backend === 'modal' ? 'cuda' : 'cpp';
+  /* The exercise declares its language and the build validates it against the
+   * backend, so use it. Deriving it from the backend instead meant every
+   * godbolt exercise was highlighted as C++, including the assembly ones, and
+   * a `@lang cpp` exercise on Modal was highlighted as CUDA. */
+  const lang = ex.lang || (ex.backend === 'sim' ? 'netlist'
+                         : ex.backend === 'yosys' ? 'verilog'
+                         : ex.backend === 'modal' ? 'cuda' : 'cpp');
 
   const draftKey = `draft.${slug}.${n}`;
   const editor = WB.mountEditor(host, {
@@ -756,7 +760,8 @@ function wireWork() {
         },
       });
       renderVerdicts(res.verdicts, undefined, ex.backend,
-                     (res.signals.find(s => s.judge === 'verdict') || {}).key);
+                     (res.signals.find(s => s.judge === 'verdict') || {}).key,
+                     res.pass);
       renderDiagnosis(ex, res);
       if (res.pass) {
         Store.set(`pass.${slug}.${n}`, true);
@@ -775,23 +780,29 @@ function wireWork() {
   };
 }
 
-function renderVerdicts(verdicts, toolchain, backend, verdictKey) {
+function renderVerdicts(verdicts, toolchain, backend, verdictKey, passed) {
   const box = el('#verdicts');
   if (!box) return;
   const foot = toolchain
     ? `<p style="margin:2px 0 0;color:var(--ink-4);font:500 var(--t-micro)/1.5 var(--mono)">
          checked by ${esc(toolchain)}</p>` : '';
-  // The reader is looking at a verdict slug at exactly the moment they want to
-  // know what it means, so the row carries the link rather than making them go
-  // and find the page.
-  const explain = (i) => (i === 0 && backend && verdictKey)
+  // The verdict describes the run, not a row, so put the link on the row that
+  // actually reports the trouble. It was on the first row, which meant a
+  // failing attempt explained "nonzero-exit" next to "Compiled cleanly."
+  const at = verdicts.findIndex(v => v.state !== 'ok');
+  const explainRow = at === -1 ? verdicts.length - 1 : at;
+  // Nothing to explain when it worked: "what ok means" is noise on a pass.
+  const explain = (i) => (!passed && i === explainRow && backend && verdictKey)
     ? ` <a class="what-is" href="#/errors#${esc(backend)}-${esc(verdictKey)}"
          >what <code>${esc(verdictKey)}</code> means</a>` : '';
+  // The stamp says the reader got it right, so it belongs to the run and not
+  // to a row. A compiler that is happy about a wrong answer is still happy,
+  // and it was stamping "Correct" on every failing attempt that compiled.
   box.innerHTML = verdicts.map((v, i) => `
     <div class="vrow" data-state="${esc(v.state)}">
       <div class="who">${esc(v.who)}</div>
       <div class="what">
-        ${v.state === 'ok' ? '<span class="stamp">Correct</span><br>' : ''}
+        ${passed && i === 0 ? '<span class="stamp">Correct</span><br>' : ''}
         ${esc(v.title)}${explain(i)}
         ${v.detail || ''}
       </div>

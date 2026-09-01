@@ -1,0 +1,185 @@
+{
+ "slug": "registers",
+ "drills": [
+  {
+   "n": 1,
+   "q": "How many general-purpose registers does x86-64 have?",
+   "options": [
+    "16",
+    "8",
+    "32",
+    "64"
+   ],
+   "correct": 0,
+   "why": "<p>Eight inherited from the 8086 and eight added by AMD64. That number is the constraint every optimisation above this layer is working against.</p>"
+  },
+  {
+   "n": 2,
+   "q": "After <code>mov rax, -1</code> then <code>mov eax, 5</code>, what does <code>rax</code> hold?",
+   "options": [
+    "5, because writing a 32-bit name zero-extends into the full 64 bits",
+    "<code>0xFFFFFFFF00000005</code>, because only the low 32 bits were written",
+    "<code>-1</code>, because <code>eax</code> is a separate register",
+    "It depends on the processor"
+   ],
+   "correct": 0,
+   "why": "<p>Measured. Set <code>rax</code> to all ones, write through <code>eax</code>, shift right by 32 and the result is zero. A 32-bit write clears the upper half.</p>"
+  },
+  {
+   "n": 3,
+   "q": "After <code>mov rax, -1</code> then <code>mov ax, 5</code>, is the upper half of <code>rax</code> cleared?",
+   "options": [
+    "No. A 16-bit write leaves the other 48 bits exactly as they were",
+    "Yes, the same rule applies to every narrow write",
+    "Yes, but only on processors newer than 2010",
+    "The instruction is invalid"
+   ],
+   "correct": 0,
+   "why": "<p>This asymmetry is the whole trap. The 16-bit and 8-bit forms had to keep behaving the way 16-bit code from 1985 expected, so the partial-register dependency survives in exactly the widths nobody writes on purpose.</p>"
+  },
+  {
+   "n": 4,
+   "q": "Why does a 32-bit write clear the upper half at all?",
+   "options": [
+    "To save encoding space",
+    "It removes the dependency on the register's previous value, so the",
+    "To make 32-bit and 64-bit code interchangeable",
+    "It is an accident of the 8086 encoding"
+   ],
+   "correct": 1,
+   "why": "<p>If the write preserved the upper bits, the new value of <code>rax</code> would depend on the old one, and the processor could not start the instruction until whatever last wrote <code>rax</code> had finished.</p>"
+  },
+  {
+   "n": 5,
+   "q": "Why do compilers emit <code>xor eax, eax</code> rather than <code>mov rax, 0</code>?",
+   "options": [
+    "<code>mov</code> cannot take a zero operand",
+    "It is shorter to encode, and the processor recognises it as producing a",
+    "<code>xor</code> is faster than <code>mov</code> in general",
+    "To clear the flags at the same time"
+   ],
+   "correct": 1,
+   "why": "<p>It is idiom recognition rather than arithmetic. The same reasoning is why you see it everywhere in optimised output and almost nowhere in source.</p>"
+  },
+  {
+   "n": 6,
+   "q": "Which way does the stack grow on x86-64?",
+   "options": [
+    "Downward, toward lower addresses",
+    "Upward, toward higher addresses",
+    "Whichever direction the compiler chooses",
+    "Downward on Linux and upward on Windows"
+   ],
+   "correct": 0,
+   "why": "<p>It is a layout decision rather than a truth about stacks. The stack starts high and the heap starts low so the two can grow toward each other without either having to know in advance how much room the other needs.</p>"
+  },
+  {
+   "n": 7,
+   "q": "After <code>push a</code> then <code>push b</code>, where is <code>a</code>?",
+   "options": [
+    "At <code>[rsp]</code>",
+    "At <code>[rsp + 8]</code>",
+    "At <code>[rsp - 8]</code>",
+    "At <code>[rsp + 16]</code>"
+   ],
+   "correct": 1,
+   "why": "<p><code>b</code> was pushed last so it is on top, at <code>[rsp]</code>. Because the stack grows down, the item below the top is at a higher address, which reads backwards the first several times.</p>"
+  },
+  {
+   "n": 8,
+   "q": "By how much does one <code>push</code> change <code>rsp</code>?",
+   "options": [
+    "It subtracts 8",
+    "It subtracts 4",
+    "It adds 8",
+    "It depends on the width of the operand"
+   ],
+   "correct": 0,
+   "why": "<p>Measured: take <code>rsp</code>, push once, and subtract. <code>push</code> is <code>sub rsp, 8</code> followed by a store, and <code>pop</code> is a load followed by <code>add rsp, 8</code>. There is no stack in the hardware, only a register and an agreement.</p>"
+  },
+  {
+   "n": 9,
+   "q": "In what order do the first six integer arguments go?",
+   "options": [
+    "<code>rdi</code>, <code>rsi</code>, <code>rdx</code>, <code>rcx</code>, <code>r8</code>, <code>r9</code>",
+    "<code>rax</code>, <code>rbx</code>, <code>rcx</code>, <code>rdx</code>, <code>rsi</code>, <code>rdi</code>",
+    "<code>r8</code> through <code>r13</code>",
+    "Left to right on the stack"
+   ],
+   "correct": 0,
+   "why": "<p>This is the System V AMD64 convention, and it is not guessable from the register names. Beyond six, arguments go on the stack.</p>"
+  },
+  {
+   "n": 10,
+   "q": "Why does the Linux syscall interface use <code>r10</code> where a function call uses <code>rcx</code>?",
+   "options": [
+    "The <code>syscall</code> instruction overwrites <code>rcx</code> with the return address",
+    "<code>rcx</code> is reserved for the kernel",
+    "<code>r10</code> is faster to access from ring 0",
+    "Historical accident with no reason behind it"
+   ],
+   "correct": 0,
+   "why": "<p>The hardware takes <code>rcx</code> for its own purposes the moment <code>syscall</code> executes, so the kernel interface cannot use it for an argument. This is the kind of detail that bites you exactly once.</p>"
+  },
+  {
+   "n": 11,
+   "q": "Which of these must a function preserve for its caller?",
+   "options": [
+    "<code>rbx</code>, <code>rbp</code> and <code>r12</code> through <code>r15</code>",
+    "<code>rax</code>, <code>rcx</code>, <code>rdx</code> and the argument registers",
+    "All sixteen",
+    "None; the caller saves everything it cares about"
+   ],
+   "correct": 0,
+   "why": "<p>Those are the callee-saved half. Everything else, including all the argument registers and <code>rax</code>, may be destroyed freely by a called function.</p>"
+  },
+  {
+   "n": 12,
+   "q": "Why split the registers into callee-saved and caller-saved at all?",
+   "options": [
+    "To make the encoding smaller",
+    "Either rule alone is wasteful, and splitting lets a compiler pay only for",
+    "Because the kernel requires it",
+    "To leave room for future registers"
+   ],
+   "correct": 1,
+   "why": "<p>If everything were callee-saved, a leaf function using two registers would still preserve sixteen. If everything were caller-saved, every call site would spill everything live.</p>"
+  },
+  {
+   "n": 13,
+   "q": "What is spilling?",
+   "options": [
+    "Writing past the end of the stack",
+    "Keeping a value in memory because there is no free register for it",
+    "Losing a value when a called function clobbers a register",
+    "Overflowing an arithmetic result"
+   ],
+   "correct": 1,
+   "why": "<p>With sixteen registers and more live values than that, something has to live in memory and be moved back and forth. It is the most common reason compiled output is slower than you expected.</p>"
+  },
+  {
+   "n": 14,
+   "q": "In a program with no C runtime, where does execution begin?",
+   "options": [
+    "At <code>main</code>",
+    "At <code>_start</code>",
+    "At the first instruction in the file",
+    "At whichever label is declared first"
+   ],
+   "correct": 1,
+   "why": "<p><code>main</code> is a libc idea: the runtime sets things up and then calls it. Without a runtime the kernel jumps straight to the entry symbol, which is <code>_start</code> by default.</p>"
+  },
+  {
+   "n": 15,
+   "q": "Why can a program with no C runtime not end with <code>ret</code>?",
+   "options": [
+    "Nothing called it, so the value <code>ret</code> pops is not a return address",
+    "<code>ret</code> is not a valid instruction at the entry point",
+    "The kernel forbids it",
+    "It works, but leaks the process"
+   ],
+   "correct": 0,
+   "why": "<p>There is no caller and no return address. The program has to ask the kernel to end it, which is syscall 60 with the status in <code>rdi</code>.</p>"
+  }
+ ]
+}
