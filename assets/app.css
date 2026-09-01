@@ -469,6 +469,22 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
   margin-top: 16px;
 }
 
+/* A deep link or a rail click must not park the heading under the sticky
+ * header. scroll-margin-top does this in CSS, so no JS has to know the header
+ * height. The Medical handbook solves the same problem with an offset computed
+ * in its jumpTo; this needs no code at all. */
+.body :is(h2, h3) { scroll-margin-top: 76px; }
+
+/* And say where you landed, because a silent jump leaves the reader hunting
+ * for what moved. */
+.body :is(h2, h3).landed {
+  animation: hh-landed 2.2s var(--ease);
+}
+@keyframes hh-landed {
+  0%, 55% { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  100%    { background: transparent; }
+}
+
 /* the contents rail */
 
 .rail {

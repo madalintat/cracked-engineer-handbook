@@ -215,6 +215,23 @@ async function viewUnit(slug) {
        data-open="false"></div>`;
 }
 
+/* Scroll to a heading and mark it, so the reader can see what moved. The
+ * sticky-header offset lives in CSS as scroll-margin-top, not here. */
+function land(id, behavior) {
+  const t = document.getElementById(id);
+  if (!t) return false;
+  t.scrollIntoView({ behavior, block: 'start' });
+  t.classList.remove('landed');
+  void t.offsetWidth;               // restart the animation
+  t.classList.add('landed');
+  setTimeout(() => t.classList.remove('landed'), 2400);
+  if (location.hash.split('/')[3] !== id) {
+    history.replaceState(null, '',
+      `#/unit/${el('.unit')?.dataset.slug}/${id}`);
+  }
+  return true;
+}
+
 /* The rail. Two jobs, one layout read, throttled to a frame.
  *
  * The spine fills by read progress and the dots LATCH: once passed, a heading
@@ -274,8 +291,7 @@ function wireUnit(slug) {
     const a = ev.target.closest('a[data-h]');
     if (!a) return;
     ev.preventDefault();
-    const t = document.getElementById(a.dataset.h);
-    if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    land(a.dataset.h, 'smooth');
     closeSheet();
   });
 
@@ -401,9 +417,7 @@ async function render() {
   const h = main.querySelector('h1');
   if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
   if (route === 'unit' && b) {
-    const t = document.getElementById(b);
-    if (t) t.scrollIntoView({ block: 'start', behavior: 'instant' });
-    else window.scrollTo({ top: 0, behavior: 'instant' });
+    if (!land(b, 'instant')) window.scrollTo({ top: 0, behavior: 'instant' });
   } else {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
@@ -427,6 +441,11 @@ function initTheme() {
 /* ------------------------------------------------------------------ boot */
 
 async function boot() {
+  // This app positions the page itself: to the top on navigation, or to a
+  // heading on a deep link. The browser's own restoration runs AFTER that and
+  // silently undoes it, which lands a deep-linked heading exactly
+  // scroll-margin-top too far down. Take the wheel.
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   initTheme();
   try {
     HH.manifest = await getJSON('data/manifest.json');

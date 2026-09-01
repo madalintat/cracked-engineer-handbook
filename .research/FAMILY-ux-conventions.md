@@ -1274,15 +1274,62 @@ literal colours, no literal durations).
 - **Whether the Voice `api/` endpoint is deployed.** `vercel.json` exists and
   `requirements.txt` is one line, but with zero content files there is nothing to
   run against it, so I could not confirm it works end to end.
-- **Python's `#/progress` and `#/projects` views in detail** — `viewProjects`
-  reads `m.projects` but `content/projects/` is empty on disk, so the projects
-  IA is declared and unbuilt. I could not tell whether that is abandoned or
-  pending.
-- **Medical's `gate.js`** — there is an access gate over the whole site with a
-  video landing page. I read enough to see it exists, gates on a stored flag,
-  and calls `window.onUnlocked`; I did not audit what it gates on or why, and
-  nothing in the other three has an equivalent.
+- **Python's `#/projects`** — the manifest declares 15 projects and 39 track
+  units, but `content/projects/` is empty and only 10 unit/ex files exist. The
+  projects IA is declared and unbuilt; I could not tell whether that is
+  abandoned or pending. (Its `hasNote` gating handles this gracefully — see the
+  "This unit is in the manifest but has not been written yet" state — which is
+  itself a convention worth inheriting for a 122-unit book written over months.)
 - **Actual runtime performance at scale.** Every claim in §7.4(a) about the flat
   track and the manifest payload is read off the code and the file sizes
   (Medical's `glossary.json` is 507KB; `audit.json` is 97KB), not measured in a
   browser.
+
+---
+
+## Addendum: two things found late that belong somewhere
+
+**Rust's backend is `play.rust-lang.org`, and it exposes its own version.**
+`const PLAY = 'https://play.rust-lang.org/execute'` plus
+`const VERSIONS = 'https://play.rust-lang.org/meta/versions'`, and the app
+renders both the version the manifest was validated against and the version the
+service is running *today*, with the reasoning attached:
+
+> *"Two versions matter and they are not the same question. The manifest records
+> which rustc last validated every exercise; the playground answers with
+> whichever stable it is running today. Stable moves every six weeks, so those
+> drift apart on their own, and the gap between them is exactly the window in
+> which a diagnostic can change out from under an exercise. Showing both makes
+> that visible instead of surprising."*
+
+It also refuses to imply a check that did not happen:
+
+> *"Content added since the last --validate has never been compiled by anything.
+> Presenting a toolchain version beside it would imply a check that did not
+> happen, so say how many items are outstanding instead."*
+
+**For the fifth this generalises to four version pairs.** Compiler Explorer's
+compiler list moves, `yowasp-yosys` is pinned per build, and a user's Modal
+image is whatever they deployed. The version badge should become a per-backend
+row: `validated against X · currently running Y`, with an explicit
+`N exercises added since the last validation run` where they disagree. This is
+the single best trust-building idea in the family and it scales linearly with
+backend count.
+
+**Medical's `gate.js` — a styled front door, honestly labelled.** The whole site
+is behind a client-side password check, and the file opens by admitting exactly
+what it is:
+
+> *"Be clear about what this is: the check runs in the browser, so anyone who
+> opens devtools can walk past it. It is a front door, not a vault. The real
+> lock is Vercel's Deployment Protection, which never serves the page at all to
+> someone who has not authenticated. This exists because Vercel's own password
+> screen cannot be styled, and arriving at a stranger's grey form is a bad way
+> to meet a study book."*
+
+It stores a salted SHA-256 (`'msh:' + pw`) in `localStorage` rather than the
+password. The fifth handbook probably does not need a gate — but the *comment*
+is the model for how this family documents a deliberate limitation, and it is
+the same instinct as the coverage-check chips and the derived-key warning: say
+what the thing does not do, in the place where someone would otherwise assume it
+does.

@@ -18,7 +18,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 
 - [x] Rust Handbook: design system, app architecture, workbench, content pipeline
 - [x] Python handbook: structured verdicts, the `silent` case, solution leak
-- [~] Voice and Medical handbooks: family conventions (agent running)
+- [x] Family analysis: only 3 designs, not 4 (Voice is a fork of Rust, no content)
 - [ ] Fold the findings into the design doc
 
 ## 2. The unit view
@@ -52,6 +52,23 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [ ] Unit `registers` complete (proves `godbolt`)
 - [ ] Unit `clock-edge` complete (proves `yosys`)
 - [ ] Unit `execution-model` complete (proves `modal`)
+
+## 4a. From the family analysis, not yet done
+
+- [ ] `data/judges.json` authored by `build.py`, so the browser cannot call a
+      backend configuration that `--validate` never checked
+- [ ] Label the verdict row per backend rather than badging the exercise; badge
+      only Modal, because it is the one with a cost
+- [ ] Track view will not survive 122 units as a flat list: two-level index,
+      live filter, and stop loading the whole manifest at boot
+- [ ] Accent should be a property of the phase, not a 7-colour rotation across
+      19 parts, where it stops meaning anything
+- [ ] Render the dependency edges. Every handbook in the family computes a
+      dependency order at build time and throws it away. At 122 units "each
+      unit depends on the ones before it" stops being true, and `needs:` is
+      already in the front matter
+- [ ] Non-binary pass state: "correct, but not clean"
+- [ ] Empty states worth reading, which is the family's weakest copy
 
 ## 5. The rest of the site
 
