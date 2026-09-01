@@ -634,6 +634,199 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
 }
 .scrim[data-open="true"] { opacity: .62; pointer-events: auto; }
 
+/* ------------------------------------------------------------ workbench */
+
+.wb {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  gap: 24px;
+  align-items: start;
+  padding-top: 32px;
+}
+.wb .pane { min-width: 0; }
+
+.exhead { margin-bottom: 16px; }
+.exhead .kicker {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font: 600 var(--t-micro)/1 var(--mono);
+  color: var(--ink-4); text-transform: uppercase; letter-spacing: .08em;
+  margin-bottom: 10px;
+}
+.exhead .kicker .n { color: var(--accent); }
+
+.exnav { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 18px; }
+.exnav a {
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-2);
+  font: 600 var(--t-tiny)/1 var(--mono);
+  color: var(--ink-3);
+  transition: border-color var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.exnav a:hover { border-color: var(--accent); color: var(--ink); text-decoration: none; }
+.exnav a[aria-current="page"] { border-color: var(--accent); color: var(--accent); }
+.exnav a.done { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); border-color: transparent; }
+
+/* the editor: two layers that must agree on every metric below */
+
+.editor {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--code-bg);
+  overflow: hidden;
+}
+.editor .stack {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* THE FIFTEEN. Anything that affects glyph advance or line box must be
+ * declared once, here, for both layers. Splitting one of these across two
+ * rules is how the caret drifts from the text. */
+.editor pre.hl,
+.editor textarea {
+  margin: 0;
+  border: 0;
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: var(--t-sm);
+  font-weight: 500;
+  font-style: normal;
+  line-height: 1.62;
+  letter-spacing: 0;
+  tab-size: 2;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-align: left;
+  text-indent: 0;
+}
+.editor[data-wrap="on"] pre.hl,
+.editor[data-wrap="on"] textarea { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.editor pre.hl {
+  display: block;
+  min-height: 220px;
+  color: var(--code-ink);
+  pointer-events: none;
+}
+.editor textarea {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  resize: none;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--accent);
+  outline: none;
+  overflow: hidden;
+}
+.editor textarea::selection { background: color-mix(in srgb, var(--accent) 32%, transparent); }
+
+/* Token colours may only set colour and opacity. A token rule that changes
+ * weight, size or spacing changes glyph advance, and the two layers separate. */
+.hl .t-kw   { color: var(--tok-kw); }
+.hl .t-str  { color: var(--tok-str); }
+.hl .t-num  { color: var(--tok-num); }
+.hl .t-com  { color: var(--tok-com); font-style: normal; }
+.hl .t-fn   { color: var(--tok-fn); }
+.hl .t-type { color: var(--tok-type); }
+.hl .t-punc { color: var(--tok-punc); }
+.hl .t-pre  { color: var(--tok-pre); }
+
+.wbbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 14px;
+}
+.wbbar .spacer { margin-left: auto; }
+.wbbar .tog {
+  font: 600 var(--t-micro)/1 var(--mono);
+  color: var(--ink-3);
+  background: none; border: 1px solid var(--border-soft);
+  border-radius: var(--r-2); padding: 7px 9px; cursor: pointer;
+}
+.wbbar .tog[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+
+/* verdict rows: one per judge, named, so the reader knows which tool spoke */
+
+.verdicts { margin-top: 16px; display: grid; gap: 8px; }
+.vrow {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 11px 13px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-3);
+  background: var(--surface);
+}
+.vrow .who {
+  font: 700 var(--t-micro)/1.5 var(--mono);
+  text-transform: uppercase; letter-spacing: .08em;
+  color: var(--ink-4);
+}
+.vrow .what { font-size: var(--t-sm); color: var(--ink-2); min-width: 0; }
+.vrow .what pre {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  background: var(--code-bg);
+  border-radius: var(--r-2);
+  overflow-x: auto;
+  font: 500 var(--t-tiny)/1.6 var(--mono);
+  color: var(--code-ink);
+}
+.vrow[data-state="ok"]      { border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
+.vrow[data-state="ok"] .who { color: var(--ok); }
+.vrow[data-state="bad"]      { border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
+.vrow[data-state="bad"] .who { color: var(--bad); }
+.vrow[data-state="warn"] .who { color: var(--warn); }
+/* Not available is not the same as failed, and must not look like it. */
+.vrow[data-state="unavailable"] { opacity: .62; border-style: dashed; }
+.vrow[data-state="running"] .who { color: var(--accent); }
+
+.diagnosis {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-left: 2px solid var(--accent);
+  background: var(--surface);
+  border-radius: 0 var(--r-2) var(--r-2) 0;
+  font-size: var(--t-sm);
+  line-height: 1.6;
+}
+.diagnosis .lbl {
+  display: block;
+  font: 700 var(--t-micro)/1 var(--mono);
+  color: var(--accent);
+  text-transform: uppercase; letter-spacing: .1em;
+  margin-bottom: 8px;
+}
+
+.stamp {
+  display: inline-flex; align-items: center; gap: 7px;
+  font: 700 var(--t-sm)/1 var(--sans);
+  color: var(--ok);
+  animation: hh-verdict-in var(--med) var(--ease);
+}
+
+.hintbox { margin-top: 16px; }
+.hintbox .hint {
+  padding: 11px 13px;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-3);
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+  margin-bottom: 8px;
+}
+
+.truth { width: auto; font: 500 var(--t-tiny)/1.5 var(--mono); }
+.truth td, .truth th { padding: 4px 10px; }
+.truth tr.bad td { color: var(--bad); }
+.truth tr.bad td:last-child::after { content: " <-"; }
+
 /* ------------------------------------------------------------ motion */
 
 @keyframes hh-rise {

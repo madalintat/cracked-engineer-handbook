@@ -34,9 +34,9 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 
 ## 3. The workbench
 
-- [ ] Editor: transparent textarea over a highlighted `<pre>`, 15 shared metrics
-- [ ] Tokenizers: C/C++, CUDA, Verilog, Python, and a per-line pass for x86-64
-- [ ] Backend interface: one shape, four implementations
+- [x] Editor: transparent textarea over a highlighted `<pre>`, 15 shared metrics
+- [x] Tokenizers: netlist, C, C++, CUDA, Verilog, Python, x86-64. 29 tests
+- [x] Backend interface: one shape, registry, three distinct non-pass states
 - [x] `sim` — in-page logic simulator, 24 tests, Worker-ready
 - [ ] `godbolt` — Compiler Explorer client, nonce in `userArguments`
 - [ ] `yosys` — `yowasp-yosys` in a Worker
