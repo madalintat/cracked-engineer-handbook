@@ -25,7 +25,7 @@ that you now have to know about.
 ## What a register actually is
 
 Everything you have built so far stores values in something you addressed: a
-wire, a flip-flop you wrote to, a location in a memory array. A register is the
+wire, a flip-flop you wrote to, a location in a memory array. A [[register]] is the
 same idea with the addressing removed. There are a fixed number of them, they
 have names rather than addresses, and those names are part of the instruction
 encoding.
@@ -58,7 +58,8 @@ hardware itself uses it, and `rbp` is conventionally the frame pointer, though
 optimised code usually declines the convention and uses it as a seventeenth
 general register.
 
-Each one has four names, addressing four widths:
+Each one has four names, and they are not four registers. They are four windows
+onto the same 64 bits, all starting at the low end:
 
 ```figure
 {
@@ -121,6 +122,8 @@ address space and the heap starts low and grows up, so the two can expand
 toward each other and neither has to know in advance how much room the other
 will need.
 
+The consequence is worth drawing, because it is the thing people get backwards.
+
 ```figure
 {
   "kind": "blocks",
@@ -142,7 +145,8 @@ item below it, which reads backwards the first several times.
 
 ## The contract nobody enforces
 
-On Linux, x86-64 code follows the System V AMD64 ABI. The first six integer
+On Linux, x86-64 code follows the System V AMD64 ABI, which is a
+[[calling-convention|calling convention]]. The first six integer
 arguments go in `rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`, in that order. The
 return value comes back in `rax`. A syscall uses the same idea with a different
 list: the number in `rax`, then `rdi`, `rsi`, `rdx`, `r10`, `r8`, `r9`.
@@ -164,7 +168,7 @@ which in practice means the moment you call libc or the kernel.
 
 The sixteen registers are split by who is responsible for preserving them.
 
-**Callee-saved**: `rbx`, `rbp`, `r12` through `r15`. A function that uses these
+**[[callee-saved|Callee-saved]]**: `rbx`, `rbp`, `r12` through `r15`. A function that uses these
 must leave them holding what it found. If it wants them, it pushes them on
 entry and pops them before returning.
 
@@ -181,7 +185,7 @@ callee-saved registers, and pay for saving only what it actually uses.
 
 This is where sixteen starts to feel small. A loop with more live values than
 available registers has to keep some of them in memory and move them back and
-forth, which is called spilling, and it is the single most common reason a
+forth, which is called [[spilling]], and it is the single most common reason a
 compiler's output is slower than you expected. Part V returns to it.
 
 ## What the exercises run
@@ -189,7 +193,7 @@ compiler's output is slower than you expected. Part V returns to it.
 These exercises assemble real x86-64 and run it, with no C runtime underneath.
 That is unusual and it is deliberate: there is no `main`, because `main` is a
 libc idea. Execution starts at a label called `_start`, and there is nothing to
-return to, so the program has to end by asking the kernel to end it.
+return to, so the program has to end by asking the kernel to end it, with a [[syscall]].
 
 ```
     mov edi, 0        ; the exit status

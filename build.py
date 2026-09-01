@@ -838,6 +838,10 @@ def build(strict=True):
         if note_p.exists():
             try:
                 meta, body = split_front_matter(note_p.read_text(), f"units/{slug}")
+                problems += check_gloss_links_render(
+                    note_p.read_text().split("---")[1] if "---" in note_p.read_text() else "",
+                    body, f"units/{slug}")
+                problems += check_figures_are_introduced(body, f"units/{slug}")
                 body_html, heads = render(body, f"units/{slug}")
                 words = word_count(body_html)
                 if strict and not (NOTE_WORDS[0] <= words <= NOTE_WORDS[1]):
@@ -991,6 +995,55 @@ def build(strict=True):
 
 
 GL_LINK = re.compile(r'<a class="gl" href="#/glossary#([a-z0-9-]+)">')
+
+
+GLOSS_LINK_RE = re.compile(r"\[\[[a-z0-9-]+(\|[^\]]+)?\]\]")
+
+
+def check_gloss_links_render(meta_text, md, where):
+    """A glossary link only works in body prose.
+
+    In front matter it is a YAML string that nothing renders, and in a heading
+    it corrupts the anchor the contents rail links to. Both look right in the
+    source and do nothing on the page, which is the worst combination.
+    """
+    problems = []
+    if GLOSS_LINK_RE.search(meta_text):
+        problems.append(
+            f"{where}: a glossary link in the front matter. Nothing renders "
+            f"front matter as prose, so the link does nothing.")
+    for line in md.split("\n"):
+        if line.startswith("#") and GLOSS_LINK_RE.search(line):
+            problems.append(
+                f"{where}: a glossary link in the heading {line.strip()[:44]!r}. "
+                f"It corrupts the anchor the contents rail points at.")
+    return problems
+
+
+def check_figures_are_introduced(md, where):
+    """A figure must have a sentence in front of it.
+
+    A diagram dropped straight under a heading reads as decoration, and the
+    reader does not know what they are being asked to look at. Every one of the
+    first five figures written here was unannounced until something checked.
+    """
+    problems, lines = [], md.split("\n")
+    for i, line in enumerate(lines):
+        if not line.startswith("```figure"):
+            continue
+        j = i - 1
+        while j >= 0 and not lines[j].strip():
+            j -= 1
+        prev = lines[j].strip() if j >= 0 else ""
+        if not prev or prev.startswith("#") or prev.startswith("```"):
+            problems.append(
+                f"{where}: a figure follows "
+                + ("a heading" if prev.startswith("#")
+                   else "a code block" if prev.startswith("```")
+                   else "nothing")
+                + ". Say what the reader is about to look at, or it reads as "
+                  "decoration.")
+    return problems
 
 
 def attach_glossary(html_text, by_slug):

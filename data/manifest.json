@@ -390,7 +390,7 @@
    "accent": "gold",
    "backend": "sim",
    "ready": true,
-   "words": 1572,
+   "words": 1700,
    "exercises": 8,
    "drills": 15,
    "needs": [
@@ -563,7 +563,7 @@
    "accent": "gold",
    "backend": "yosys",
    "ready": true,
-   "words": 1473,
+   "words": 1625,
    "exercises": 8,
    "drills": 15,
    "needs": [
@@ -695,7 +695,7 @@
    "accent": "copper",
    "backend": "godbolt",
    "ready": true,
-   "words": 1595,
+   "words": 1637,
    "exercises": 8,
    "drills": 15,
    "needs": [
@@ -824,7 +824,7 @@
    "accent": "copper",
    "backend": "godbolt",
    "ready": true,
-   "words": 1739,
+   "words": 1786,
    "exercises": 8,
    "drills": 15,
    "needs": [
@@ -1947,7 +1947,7 @@
    "accent": "jade",
    "backend": "modal",
    "ready": true,
-   "words": 1595,
+   "words": 1629,
    "exercises": 8,
    "drills": 15,
    "needs": [
@@ -2541,13 +2541,13 @@
  ],
  "counts": {
   "atlas": 1,
-  "glossary": 12,
+  "glossary": 28,
   "errors": 30,
   "phases": 7,
   "parts": 19,
   "units": 122,
   "ready": 5,
-  "words": 7974,
+  "words": 8377,
   "exercises": 40,
   "drills": 75
  }

@@ -1,6 +1,19 @@
 {
  "terms": [
   {
+   "slug": "block",
+   "html": "<p>The unit within which threads may cooperate, sharing memory and waiting for each other at a barrier. Between blocks there is no ordering and no communication, which looks like a restriction and is the mechanism that lets one kernel run on any number of processors.</p>",
+   "see": [
+    "warp",
+    "occupancy"
+   ],
+   "text": "The unit within which threads may cooperate, sharing memory and waiting for each other at a barrier. Between blocks there is no ordering and no communication, which looks like a restriction and is the mechanism that lets one kernel run on any number of processors.",
+   "file": "gpu",
+   "usedBy": [
+    "execution-model"
+   ]
+  },
+  {
    "slug": "blocking",
    "html": "<p>The Verilog assignment written <code>=</code>, which evaluates and writes immediately, in order. Correct inside a combinational block and a quiet bug inside a clocked one, where it makes two flops hold the same value so the optimiser deletes one.</p>",
    "see": [
@@ -11,6 +24,32 @@
    "file": "logic",
    "usedBy": [
     "clock-edge"
+   ]
+  },
+  {
+   "slug": "callee-saved",
+   "html": "<p>A register a called function must restore before returning, so a caller can keep something in it across a call. The rest are caller-saved and may be destroyed freely. The split exists because either rule alone wastes work.</p>",
+   "see": [
+    "calling-convention",
+    "register"
+   ],
+   "text": "A register a called function must restore before returning, so a caller can keep something in it across a call. The rest are caller-saved and may be destroyed freely. The split exists because either rule alone wastes work.",
+   "file": "machine",
+   "usedBy": [
+    "registers"
+   ]
+  },
+  {
+   "slug": "calling-convention",
+   "html": "<p>The agreement about which registers carry arguments, which returns a value, and which a function must leave as it found them. Nothing in the processor enforces it. It matters the moment one side of a call is code you did not write.</p>",
+   "see": [
+    "register",
+    "callee-saved"
+   ],
+   "text": "The agreement about which registers carry arguments, which returns a value, and which a function must leave as it found them. Nothing in the processor enforces it. It matters the moment one side of a call is code you did not write.",
+   "file": "machine",
+   "usedBy": [
+    "registers"
    ]
   },
   {
@@ -61,6 +100,19 @@
    "usedBy": []
   },
   {
+   "slug": "divergence",
+   "html": "<p>Threads within one warp disagreeing about which way a branch goes. The warp runs one side with the disagreeing lanes masked off and then the other, so both paths cost their full time. It is spatial rather than statistical: a branch half the threads take is free if the split lands on a warp boundary.</p>",
+   "see": [
+    "warp",
+    "block"
+   ],
+   "text": "Threads within one warp disagreeing about which way a branch goes. The warp runs one side with the disagreeing lanes masked off and then the other, so both paths cost their full time. It is spatial rather than statistical: a branch half the threads take is free if the split lands on a warp boundary.",
+   "file": "gpu",
+   "usedBy": [
+    "execution-model"
+   ]
+  },
+  {
    "slug": "floating",
    "html": "<p>A wire that nothing drives. It has no value, and it is not zero. A simulator that quietly treated it as zero would let a design pass that behaves differently on real silicon.</p>",
    "see": [
@@ -84,6 +136,17 @@
    "usedBy": [
     "nand"
    ]
+  },
+  {
+   "slug": "integer-promotion",
+   "html": "<p>The rule that converts narrow integer types to <code>int</code> before arithmetic. It is why adding two <code>unsigned char</code> values gives an <code>int</code>, and why a comparison between a signed and an unsigned value converts the signed one, turning minus one into a very large number.</p>",
+   "see": [
+    "sign-extension",
+    "twos-complement"
+   ],
+   "text": "The rule that converts narrow integer types to `int` before arithmetic. It is why adding two `unsigned char` values gives an `int`, and why a comparison between a signed and an unsigned value converts the signed one, turning minus one into a very large number.",
+   "file": "numbers",
+   "usedBy": []
   },
   {
    "slug": "latch",
@@ -123,6 +186,56 @@
    ]
   },
   {
+   "slug": "occupancy",
+   "html": "<p>How many warps are resident on a processor at once. More is not faster in itself; it is what lets a stall disappear behind another warp's work. Registers per thread cap it, which is why using too many quietly removes the machine's main way of hiding memory latency.</p>",
+   "see": [
+    "warp",
+    "block"
+   ],
+   "text": "How many warps are resident on a processor at once. More is not faster in itself; it is what lets a stall disappear behind another warp's work. Registers per thread cap it, which is why using too many quietly removes the machine's main way of hiding memory latency.",
+   "file": "gpu",
+   "usedBy": [
+    "execution-model"
+   ]
+  },
+  {
+   "slug": "overflow",
+   "html": "<p>Arithmetic whose true result does not fit the type. Signed overflow is undefined behaviour in C and C++, which means the compiler is entitled to assume it cannot happen and to optimise on that assumption. Unsigned overflow is defined to wrap, and is a different thing wearing a similar name.</p>",
+   "see": [
+    "twos-complement",
+    "undefined-behaviour"
+   ],
+   "text": "Arithmetic whose true result does not fit the type. Signed overflow is undefined behaviour in C and C++, which means the compiler is entitled to assume it cannot happen and to optimise on that assumption. Unsigned overflow is defined to wrap, and is a different thing wearing a similar name.",
+   "file": "numbers",
+   "usedBy": [
+    "integers"
+   ]
+  },
+  {
+   "slug": "register",
+   "html": "<p>A named location inside the processor core, addressed by a name in the instruction encoding rather than by an address. There are sixteen general-purpose ones on x86-64, and that number is the constraint every optimisation above this layer works against.</p>",
+   "see": [
+    "calling-convention",
+    "spilling"
+   ],
+   "text": "A named location inside the processor core, addressed by a name in the instruction encoding rather than by an address. There are sixteen general-purpose ones on x86-64, and that number is the constraint every optimisation above this layer works against.",
+   "file": "machine",
+   "usedBy": [
+    "registers"
+   ]
+  },
+  {
+   "slug": "sanitizer",
+   "html": "<p>A compiler mode that inserts checks for behaviour the language leaves undefined, so the moment it happens is reported with a file, a line and the operands rather than surfacing later as a wrong answer. It costs runtime speed, which is the only reason it is not always on.</p>",
+   "see": [
+    "undefined-behaviour",
+    "overflow"
+   ],
+   "text": "A compiler mode that inserts checks for behaviour the language leaves undefined, so the moment it happens is reported with a file, a line and the operands rather than surfacing later as a wrong answer. It costs runtime speed, which is the only reason it is not always on.",
+   "file": "numbers",
+   "usedBy": []
+  },
+  {
    "slug": "sequential",
    "html": "<p>Logic whose outputs depend on the inputs and on a stored value, updated at a clock edge. Nearly every Verilog bug is a confusion between this and combinational logic.</p>",
    "see": [
@@ -137,6 +250,52 @@
    ]
   },
   {
+   "slug": "sign-extension",
+   "html": "<p>Widening a signed value by copying its top bit into every new bit, which preserves its value under two's complement. Copying zeros instead would turn every negative number into a large positive one, which is exactly what happens when a signed value is widened through an unsigned type by mistake.</p>",
+   "see": [
+    "twos-complement",
+    "integer-promotion"
+   ],
+   "text": "Widening a signed value by copying its top bit into every new bit, which preserves its value under two's complement. Copying zeros instead would turn every negative number into a large positive one, which is exactly what happens when a signed value is widened through an unsigned type by mistake.",
+   "file": "numbers",
+   "usedBy": []
+  },
+  {
+   "slug": "spilling",
+   "html": "<p>Keeping a value in memory because there is no free register for it, and moving it back and forth around the uses. With sixteen registers and more live values than that, something has to spill, and it is the most common reason compiled output is slower than expected.</p>",
+   "see": [
+    "register",
+    "callee-saved"
+   ],
+   "text": "Keeping a value in memory because there is no free register for it, and moving it back and forth around the uses. With sixteen registers and more live values than that, something has to spill, and it is the most common reason compiled output is slower than expected.",
+   "file": "machine",
+   "usedBy": [
+    "registers"
+   ]
+  },
+  {
+   "slug": "syscall",
+   "html": "<p>The instruction that asks the kernel to do something the process cannot do itself. On Linux x86-64 the number goes in <code>rax</code> and the arguments follow the same order as a function call with one substitution, because the instruction overwrites <code>rcx</code> with the return address.</p>",
+   "see": [
+    "calling-convention"
+   ],
+   "text": "The instruction that asks the kernel to do something the process cannot do itself. On Linux x86-64 the number goes in `rax` and the arguments follow the same order as a function call with one substitution, because the instruction overwrites `rcx` with the return address.",
+   "file": "machine",
+   "usedBy": [
+    "registers"
+   ]
+  },
+  {
+   "slug": "tensor-core",
+   "html": "<p>A matrix multiply-accumulate unit, separate from the ordinary arithmetic pipeline. Which numeric formats it accepts is the difference between one generation and the next, and it is the reason a kernel written for one architecture may not carry over to another.</p>",
+   "see": [
+    "warp"
+   ],
+   "text": "A matrix multiply-accumulate unit, separate from the ordinary arithmetic pipeline. Which numeric formats it accepts is the difference between one generation and the next, and it is the reason a kernel written for one architecture may not carry over to another.",
+   "file": "gpu",
+   "usedBy": []
+  },
+  {
    "slug": "truth-table",
    "html": "<p>The complete specification of a Boolean function: one row per input combination. A two-input function has four rows, so there are sixteen distinct two-input functions, of which AND, OR, XOR and NAND are four.</p>",
    "see": [
@@ -146,6 +305,43 @@
    "file": "logic",
    "usedBy": [
     "nand"
+   ]
+  },
+  {
+   "slug": "twos-complement",
+   "html": "<p>The representation every machine you will use stores signed integers in. The top bit carries a negative weight rather than acting as a sign flag, so addition and subtraction need no special case and the same adder serves both. The price is asymmetry: one more negative value than positive, which is why negating the smallest one has no answer.</p>",
+   "see": [
+    "sign-extension",
+    "overflow"
+   ],
+   "text": "The representation every machine you will use stores signed integers in. The top bit carries a negative weight rather than acting as a sign flag, so addition and subtraction need no special case and the same adder serves both. The price is asymmetry: one more negative value than positive, which is why negating the smallest one has no answer.",
+   "file": "numbers",
+   "usedBy": [
+    "integers"
+   ]
+  },
+  {
+   "slug": "undefined-behaviour",
+   "html": "<p>A construct the language standard declines to give any meaning. Not \"does something unpredictable at runtime\": the compiler may assume it never occurs, so code around it can be deleted or reordered on that basis. The observable effect often appears in a function that contains no mistake at all.</p>",
+   "see": [
+    "overflow",
+    "sanitizer"
+   ],
+   "text": "A construct the language standard declines to give any meaning. Not \"does something unpredictable at runtime\": the compiler may assume it never occurs, so code around it can be deleted or reordered on that basis. The observable effect often appears in a function that contains no mistake at all.",
+   "file": "numbers",
+   "usedBy": []
+  },
+  {
+   "slug": "warp",
+   "html": "<p>Thirty-two threads that execute together with one instruction pointer. It appears nowhere in the CUDA programming model and decides almost everything about what a kernel costs. The width comes from graphics: eight 2x2 pixel quads to a warp.</p>",
+   "see": [
+    "divergence",
+    "occupancy"
+   ],
+   "text": "Thirty-two threads that execute together with one instruction pointer. It appears nowhere in the CUDA programming model and decides almost everything about what a kernel costs. The width comes from graphics: eight 2x2 pixel quads to a warp.",
+   "file": "gpu",
+   "usedBy": [
+    "execution-model"
    ]
   }
  ]

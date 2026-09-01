@@ -91,7 +91,10 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
       to rent, joined from the Modal catalogue
 - [x] Glossary hover cards, with the definition inlined at build time
 - [x] Touch targets at 390px: 44 / 40 / 38 / 36, and 24 for inline links
-- [ ] Prose pass over every note, for connection rather than correctness
+- [x] Prose pass over every note, for connection rather than correctness:
+      every figure is introduced by the sentence before it, every unit ends
+      pointing at the next one, and 17 more glossary terms across numbers,
+      the machine and the GPU so terms are hoverable outside Part II
 
 ## 5. The rest of the site
 

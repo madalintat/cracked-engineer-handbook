@@ -120,6 +120,9 @@ quietly started one storey above the ground floor.
 So the reason to start at NAND is not that it is elegant. It is that the physics
 hands it to you and charges extra for the alternatives.
 
+Here is what that buys, in the case where it is least obvious. XOR looks like it
+needs five NANDs and needs four, and the difference is one wire.
+
 ```figure
 {
   "kind": "gates",
@@ -237,3 +240,15 @@ which wire closed it.
 is not 0. It has no value, and a simulator that quietly treated it as 0 would let
 you ship a design that fails on real silicon. This one is the most valuable error
 in the set, because it is the one that would otherwise find you much later.
+
+## Where this goes
+
+You now have every two-input function, which sounds like the end of something
+and is the start of it. The next unit takes one of those functions, the
+multiplexer, and notices that a circuit choosing between two inputs is the same
+circuit whether the choosing signal is data or a command. Control turns out not
+to be a separate kind of wire.
+
+Nothing new gets added for a while. Selection, arithmetic, memory and a whole
+processor are all built from what you have, which is the claim this unit made
+and the next several spend cashing.

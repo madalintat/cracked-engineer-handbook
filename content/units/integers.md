@@ -7,11 +7,12 @@ sources: [numbers-text-numerics, compilers-interpreters-terminals-unix]
 
 Two units ago you built an adder out of NAND gates and discovered that
 subtraction came free: invert one operand, set the carry in, and the same
-hardware does both. That was a fact about two's complement, and it is the reason
+hardware does both. That was a fact about [[twos-complement|two's complement]], and it is the reason
 every machine you will ever touch represents signed integers that way.
 
-This unit is about what happens at the edges of that representation, and it
-contains the single most surprising thing in the C family.
+This unit is about what happens at the edges of that representation, where
+[[overflow]] stops being arithmetic and becomes a promise, and it contains the
+single most surprising thing in the C family.
 
 ## The representation, briefly
 
@@ -42,6 +43,10 @@ operand inverted and the carry in set. One control bit.
 The asymmetry is the price. There are 128 negative values and 127 positive ones,
 so `-INT_MIN` has no representable answer. `abs(INT_MIN)` is negative on every
 machine you will use. That is not a bug in your standard library.
+
+Widen that to 32 bits and the shape is the same. The top bit is not a flag the
+hardware inspects; it is a bit with a negative weight, and the ranges follow
+from that one fact.
 
 ```figure
 {

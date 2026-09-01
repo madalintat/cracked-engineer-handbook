@@ -87,6 +87,10 @@ q1 <= d; q2 <= q1;        2   $_DFF_P_
 q1  = d; q2  = q1;        1   $_DFF_P_
 ```
 
+Two numbers are the whole argument, and the waveform underneath is the same
+argument in time. Watch `q2` in the two versions: in one it arrives a cycle
+after `q1`, and in the other the two are the same signal.
+
 ```figure
 {
   "kind": "timing",
@@ -208,3 +212,15 @@ The tool answers it precisely, every time, and for free. Synthesise the design
 and read the cells. Two flops or one, a latch or a mux, a synchronous reset or
 an asynchronous one. The netlist is not a summary of your intent; it is what
 you actually said.
+
+## Where this goes
+
+Reading the cells settles what a design says. It does not settle whether what
+it says is right, and those are different questions: a netlist can be exactly
+what you wrote and still compute the wrong function.
+
+The next unit is about closing that gap, and hardware is unusual in how far it
+can be closed. For a circuit of this size a tool can compare your design
+against a reference and either find an input where they disagree or prove that
+no such input exists. Not a test that passed, a proof that there is nothing to
+find. Almost nowhere else in this handbook is that available.

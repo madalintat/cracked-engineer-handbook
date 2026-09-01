@@ -9,13 +9,15 @@ You launch a kernel with `<<<blocks, threads>>>` and write code that reads as
 though each thread runs on its own. That reading is the CUDA programming model,
 it is deliberate, and it is not what the hardware does.
 
-Two facts sit underneath it. Threads are executed in groups of 32 called warps,
-and warps do not appear in the programming model at all. Blocks are the unit
+Two facts sit underneath it. Threads are executed in groups of 32 called [[warp|warps]],
+and warps do not appear in the programming model at all. [[block|Blocks]] are
+the unit
 within which threads may cooperate, and between blocks there is no cooperation
 and no ordering whatsoever.
 
 Almost everything that surprises people about GPU code follows from one of
-those two.
+those two. It is worth having the whole hierarchy in front of you before any
+of it, because the level that costs you money is the one your code cannot see.
 
 ```figure
 {
@@ -72,7 +74,7 @@ else                      b();   // 16 lanes active, 16 idle
 ```
 
 Both paths cost their full time and half your lanes sit idle through each. That
-is why divergence is described as expensive: not because branching is slow, but
+is why [[divergence]] is described as expensive: not because branching is slow, but
 because the work does not overlap.
 
 The important qualifier is that divergence is **spatial**, not statistical. A
@@ -132,7 +134,8 @@ is waiting several hundred cycles for a value from memory, the SM issues from
 another, and the wait disappears behind work that was going to happen anyway.
 
 The price is paid elsewhere, and you should know where. The register file is
-finite, so the registers each thread uses limit how many warps can be resident,
+finite, so the registers each thread uses limit [[occupancy]], the number of
+warps that can be resident,
 and using too many quietly reduces the number of warps available to hide
 latency. That trade has its own unit later. For now the point is that the
 register file is a context store, not a cache, and it is the reason the whole
