@@ -1,0 +1,310 @@
+{
+ "slug": "linking",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "First definition wins",
+   "brief": "<p>Write <code>resolve</code>, returning the index of the scope a symbol resolves to: the first one in the ordered list that defines it.</p>\n<p>Not the nearest. The first. That one rule decides what every reference in the whole process calls.</p>",
+   "kind": "output",
+   "concept": "Symbols resolve against one ordered list, so a library's call to its own function can land in somebody else's library and neither is told.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Scan from the front and stop at the first hit."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Searching backwards, or preferring the scope that asked, gives the nearest definition rather than the first. The loader does neither: it walks one list in load order and takes the first match, wherever the reference came from.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A library calling its own <code>malloc</code> gets whichever <code>malloc</code> is first in the global list, which may belong to something else entirely. That is not a bug in either library, and it is the mechanism the next exercise turns into a tool.</p>",
+   "starter": "#include <stddef.h>\nint resolve(const unsigned char *defines, size_t n, size_t caller) {\n    if (defines[caller]) return (int)caller;\n    for (size_t i = n; i > 0; i--)\n        if (defines[i - 1]) return (int)(i - 1);\n    return -1;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nint resolve(const unsigned char *, size_t, size_t);\nint main(void) {\n    /* Scopes: executable, libfoo, libc. Only libc defines it. */\n    unsigned char a[3] = {0, 0, 1};\n    assert(resolve(a, 3, 1) == 2);\n    /* Two definitions: the earlier one wins, whoever is calling. */\n    unsigned char b[3] = {0, 1, 1};\n    assert(resolve(b, 3, 2) == 1);\n    assert(resolve(b, 3, 1) == 1);\n    /* The executable defines it, so everything resolves there. */\n    unsigned char c[3] = {1, 1, 1};\n    assert(resolve(c, 3, 2) == 0);\n    /* Nobody defines it. */\n    unsigned char d[3] = {0, 0, 0};\n    assert(resolve(d, 3, 0) == -1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "Getting in front",
+   "brief": "<p>Write <code>scope_order</code>, building the resolution list: preloaded libraries first, then the executable, then its libraries in load order.</p>\n<p>Anything at the front of that list decides what every reference in the program resolves to.</p>",
+   "kind": "output",
+   "concept": "Preloading puts a definition ahead of everything, which is how a memory checker intercepts every allocation in software nobody has the source for.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The preloads come before the executable, not after it."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees on the order. Preloaded libraries go ahead of the executable itself, which is what lets them intercept calls the executable makes to its own dependencies. Placing them after the executable would let them intercept nothing the executable defines.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A test replaces a clock, a tracer wraps every network call, a checker counts every allocation, none of it requiring a recompile. The technique needs one more thing to be useful rather than merely destructive, which is the next exercise.</p>",
+   "starter": "#include <stddef.h>\nsize_t scope_order(size_t n_preload, size_t n_lib, int *out) {\n    size_t k = 0;\n    out[k++] = -1;\n    for (size_t i = 0; i < n_preload; i++) out[k++] = (int)i;\n    for (size_t i = 0; i < n_lib; i++) out[k++] = 100 + (int)i;\n    return k;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t scope_order(size_t, size_t, int *);\nint main(void) {\n    int out[8];\n    /* Two preloads, the executable, three libraries. */\n    size_t n = scope_order(2, 3, out);\n    assert(n == 6);\n    assert(out[0] == 0);\n    assert(out[1] == 1);\n    assert(out[2] == -1);     /* the executable */\n    assert(out[3] == 100);\n    assert(out[5] == 102);\n    /* No preloads: the executable is first. */\n    n = scope_order(0, 2, out);\n    assert(n == 3);\n    assert(out[0] == -1);\n    assert(out[1] == 100);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Finding the one you replaced",
+   "brief": "<p>Write <code>next_definition</code>, which continues the search from after a given scope: the first definition strictly later in the list.</p>\n<p>An interposing wrapper almost always wants to call the original, and this is how it finds it.</p>",
+   "kind": "output",
+   "concept": "Interposition that could only replace would be far less useful than one that can observe, and continuing the search is what makes the difference.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Start one past the current scope rather than at the beginning."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees, and it will be the case where the current scope defines the symbol. Starting from the beginning finds the wrapper itself, which calls itself, which recurses until the stack is gone. The search has to begin strictly after.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A wrapper that starts the search from the front is the classic interposition bug: it finds itself, calls itself, and the program dies in a stack overflow with a backtrace that is one function repeated four thousand times.</p>",
+   "starter": "#include <stddef.h>\nint next_definition(const unsigned char *defines, size_t n, size_t after) {\n    for (size_t i = 0; i < n; i++)\n        if (defines[i]) return (int)i;\n    return -1;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nint next_definition(const unsigned char *, size_t, size_t);\nint main(void) {\n    /* The preload at 0 and libc at 3 both define it. */\n    unsigned char a[4] = {1, 0, 0, 1};\n    /* From the wrapper's own scope, the next one is libc. */\n    assert(next_definition(a, 4, 0) == 3);\n    /* From later than both, nothing follows. */\n    assert(next_definition(a, 4, 3) == -1);\n    /* Three definitions: each search finds the next. */\n    unsigned char b[4] = {1, 1, 0, 1};\n    assert(next_definition(b, 4, 0) == 1);\n    assert(next_definition(b, 4, 1) == 3);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Where the mechanism stops",
+   "brief": "<p>Write <code>preload_honoured</code>, reporting whether the loader will act on a preload request for a process with the given privilege situation.</p>\n<p>A program running with elevated privileges ignores the variable entirely.</p>",
+   "kind": "output",
+   "concept": "The same flexibility that makes interposition useful makes it an attack, and the boundary is where the program stops belonging to whoever started it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The question is whether the program gained privileges it was not started with."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A program running as root because root started it is still under that user's control and honours the variable; one that gained privileges from its file's permissions is not, and ignores it. The distinction is the elevation rather than the resulting privilege level.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>An attacker who can set an environment variable would otherwise choose what a privileged program's every call resolves to. The same reasoning applies to the compiled-in search paths, which is why a binary trusting a directory a user can write to has the problem without needing the variable at all.</p>",
+   "starter": "int preload_honoured(int running_as_root, int gained_privilege) {\n    (void)gained_privilege;\n    return !running_as_root;\n}",
+   "tests": "#include <assert.h>\nint preload_honoured(int, int);\nint main(void) {\n    /* An ordinary user's program. */\n    assert(preload_honoured(0, 0) == 1);\n    /* Root's own shell running a program: still root's choice. */\n    assert(preload_honoured(1, 0) == 1);\n    /* A program that elevated itself: ignored. */\n    assert(preload_honoured(1, 1) == 0);\n    assert(preload_honoured(0, 1) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Exporting less",
+   "brief": "<p>Write <code>exported</code>, reporting whether a symbol appears in a library's dynamic table, given the default visibility setting and any explicit marking.</p>\n<p>A library exports everything by default, which is usually far more than its interface.</p>",
+   "kind": "output",
+   "concept": "Hiding by default and marking the interface removes symbol collisions entirely, shrinks the table, and speeds up every lookup.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "An explicit marking overrides the default, in both directions."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. An explicit visibility attribute wins over the default whichever way each points, so a symbol marked visible is exported from a library that hides by default, and one marked hidden is not exported from a library that does not.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A library that hides by default starts faster, has a smaller dynamic table, and cannot be broken by a name it never meant to publish. The last of those is the one worth the flag: it removes a whole category of silent failure rather than making one faster.</p>",
+   "starter": "/* explicit: -1 unmarked, 0 marked hidden, 1 marked visible. */\nint exported(int default_hidden, int explicit_marking) {\n    (void)explicit_marking;\n    return !default_hidden;\n}",
+   "tests": "#include <assert.h>\nint exported(int, int);\nint main(void) {\n    /* Default visible, unmarked: exported. */\n    assert(exported(0, -1) == 1);\n    /* Default hidden, unmarked: not exported. */\n    assert(exported(1, -1) == 0);\n    /* Marked visible wins over a hiding default. */\n    assert(exported(1, 1) == 1);\n    /* Marked hidden wins over a visible default. */\n    assert(exported(0, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Two libraries, one name",
+   "brief": "<p>Write <code>collision_reported</code>, reporting whether the loader tells anybody when two loaded libraries define the same symbol.</p>",
+   "kind": "output",
+   "concept": "The collision is resolved silently by the first-wins rule, which is why the symptom is behaviour changing when an unrelated dependency is added.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The answer does not depend on how many definitions there are."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Nothing is reported at any count, because the rule that picks one is the ordinary resolution rule rather than an error condition. A duplicate at static link time is an error; a duplicate across shared libraries is a decision.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The symptoms are behaviour changing when an unrelated dependency is added and an ordering that differs between machines, which is a long way from the cause. Hiding internal symbols removes the category, and it is the practical argument for doing it.</p>",
+   "starter": "int collision_reported(int definition_count) {\n    return definition_count > 1;\n}",
+   "tests": "#include <assert.h>\nint collision_reported(int);\nint main(void) {\n    assert(collision_reported(1) == 0);\n    /* Two definitions: one is chosen and nothing is said. */\n    assert(collision_reported(2) == 0);\n    assert(collision_reported(5) == 0);\n    assert(collision_reported(0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "Loading with the door shut",
+   "brief": "<p>Write <code>plugin_can_shadow</code>, reporting whether a library loaded at run time can shadow the host program's functions, given whether it was loaded with its symbols kept local.</p>\n<p>A plugin's symbols enter the same ordered scope unless you say otherwise.</p>",
+   "kind": "output",
+   "concept": "A plugin loaded into the global scope participates in first-wins resolution, which is rarely what a host program intended.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Local symbols are visible only through the handle the loader returned."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Keeping the symbols local means nothing outside the plugin can resolve against them, so it cannot shadow anything however early it was loaded. Loading into the global scope is what allows the shadowing, and it is the default.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Local is the sensible default for anything untrusted, and it is not the loader's default. A program loading two plugins that happen to share a helper name into the global scope gets the first-wins behaviour between them, with the outcome depending on load order.</p>",
+   "starter": "int plugin_can_shadow(int loaded_local, int loaded_before_host) {\n    (void)loaded_local;\n    return loaded_before_host;\n}",
+   "tests": "#include <assert.h>\nint plugin_can_shadow(int, int);\nint main(void) {\n    /* Global scope: it participates in resolution. */\n    assert(plugin_can_shadow(0, 1) == 1);\n    /* Local: invisible to everything but the handle. */\n    assert(plugin_can_shadow(1, 1) == 0);\n    assert(plugin_can_shadow(1, 0) == 0);\n    /* Global but loaded after the host resolved its own names. */\n    assert(plugin_can_shadow(0, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "What the compiler could not assume",
+   "brief": "<p>Write <code>inlinable</code>, reporting whether a call can be inlined, given whether the callee is in the same translation unit, in a static archive linked together, or in a shared library.</p>\n<p>The call overhead is small. The optimisation that did not happen is not.</p>",
+   "kind": "output",
+   "concept": "A function in another shared library cannot be inlined and nothing about it can be assumed, which is a larger cost than the indirect call itself.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Link-time optimisation reaches across things linked together and not across a shared library boundary."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Code in a static archive can be inlined when link-time optimisation is on, because the compiler still has the bodies at the moment the program is assembled. A shared library's bodies are not there at any point the compiler runs.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A small accessor that would have vanished entirely becomes a real call with real argument setup. That is why the same code can be meaningfully faster in a static build, and why the measurement to make is the optimisation that did not happen rather than the call overhead.</p>",
+   "starter": "/* where: 0 same unit, 1 static archive, 2 shared library. */\nint inlinable(int where, int lto_enabled) {\n    (void)lto_enabled;\n    return where == 0;\n}",
+   "tests": "#include <assert.h>\nint inlinable(int, int);\nint main(void) {\n    /* Same translation unit: always. */\n    assert(inlinable(0, 0) == 1);\n    assert(inlinable(0, 1) == 1);\n    /* Static archive: only with link-time optimisation. */\n    assert(inlinable(1, 0) == 0);\n    assert(inlinable(1, 1) == 1);\n    /* Shared library: never, whatever the flags. */\n    assert(inlinable(2, 0) == 0);\n    assert(inlinable(2, 1) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

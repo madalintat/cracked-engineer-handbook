@@ -79,5 +79,7 @@
   "addressing",
   "object-model"
  ],
- "neededBy": []
+ "neededBy": [
+  "linking"
+ ]
 }

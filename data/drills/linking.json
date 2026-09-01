@@ -1,0 +1,185 @@
+{
+ "slug": "linking",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What starts first when you run a dynamically linked program?",
+   "options": [
+    "The interpreter named inside the executable, which loads the libraries",
+    "Your entry point",
+    "The C library's initialiser",
+    "The kernel's ELF loader, which resolves symbols itself"
+   ],
+   "correct": 0,
+   "why": "<p>It is a shared library with an entry point, running in your address space with your privileges, before anything you wrote. Most of this unit follows from that being true.</p>"
+  },
+  {
+   "n": 2,
+   "q": "In what order does the loader search for a named library?",
+   "options": [
+    "Compiled-in path, then the environment variable, then a system cache, then the defaults",
+    "The current directory, then the system directories",
+    "Alphabetically within each directory",
+    "The order the libraries were linked"
+   ],
+   "correct": 0,
+   "why": "<p>Every step is a place something can be inserted, which is why the order is worth knowing rather than merely working.</p>"
+  },
+  {
+   "n": 3,
+   "q": "Which definition does a symbol resolve to?",
+   "options": [
+    "The first one in the ordered list of scopes",
+    "The nearest one to the reference",
+    "The one in the same library, if there is one",
+    "The most recently loaded one"
+   ],
+   "correct": 0,
+   "why": "<p>Not the nearest. A library calling its own <code>malloc</code> gets whichever <code>malloc</code> is first in the global list, which may belong to something else entirely.</p>"
+  },
+  {
+   "n": 4,
+   "q": "Where do preloaded libraries sit in the resolution order?",
+   "options": [
+    "Ahead of the executable itself",
+    "After the executable and before its libraries",
+    "At the end, as a fallback",
+    "In a separate scope consulted on failure"
+   ],
+   "correct": 0,
+   "why": "<p>Which is what lets them intercept calls the executable makes to its own dependencies. Placing them after would let them intercept nothing the executable defines.</p>"
+  },
+  {
+   "n": 5,
+   "q": "An interposing wrapper needs to call the original. How does it find it?",
+   "options": [
+    "A lookup that continues the search from after the current library",
+    "By opening the real library explicitly and looking inside",
+    "By taking the address before it installs itself",
+    "It cannot; interposition can only replace"
+   ],
+   "correct": 0,
+   "why": "<p>Almost every use of interposition wants to observe rather than replace, so this is what makes the technique useful rather than merely destructive.</p>"
+  },
+  {
+   "n": 6,
+   "q": "What happens if a wrapper searches from the front instead?",
+   "options": [
+    "It finds itself, calls itself, and the stack runs out",
+    "It finds the original, since the wrapper is not in the list",
+    "The loader detects the recursion and returns an error",
+    "It finds whichever definition the caller belongs to"
+   ],
+   "correct": 0,
+   "why": "<p>The backtrace is one function repeated four thousand times, and it is the classic interposition bug.</p>"
+  },
+  {
+   "n": 7,
+   "q": "Why does a privileged program ignore the preload variable?",
+   "options": [
+    "An attacker who can set an environment variable would otherwise choose what every call resolves to",
+    "Privileged programs are statically linked",
+    "The variable is cleared by the shell",
+    "It does not; the restriction is on the library search path only"
+   ],
+   "correct": 0,
+   "why": "<p>The boundary is drawn at the point the program stops belonging to whoever started it, which is elevation rather than the resulting privilege level.</p>"
+  },
+  {
+   "n": 8,
+   "q": "What does a shared library export by default?",
+   "options": [
+    "Every symbol with external linkage, which is usually far more than its interface",
+    "Only symbols declared in its public headers",
+    "Only symbols marked visible",
+    "Everything, including internal static functions"
+   ],
+   "correct": 0,
+   "why": "<p>A larger table means slower lookups and more startup cost, internal names become things callers can depend on, and any of them can collide.</p>"
+  },
+  {
+   "n": 9,
+   "q": "Two loaded libraries define the same symbol. What does the loader report?",
+   "options": [
+    "Nothing; one is chosen by the ordinary resolution rule",
+    "An error at load time",
+    "A warning naming both libraries",
+    "It refuses to load the second"
+   ],
+   "correct": 0,
+   "why": "<p>A duplicate at static link time is an error and a duplicate across shared libraries is a decision, which is why the symptom is behaviour changing when an unrelated dependency is added.</p>"
+  },
+  {
+   "n": 10,
+   "q": "What removes the symbol collision category entirely?",
+   "options": [
+    "Hiding symbols by default and marking the interface explicitly",
+    "Prefixing every internal name",
+    "Loading libraries in a fixed order",
+    "Static linking everything"
+   ],
+   "correct": 0,
+   "why": "<p>A prefix reduces the chance and does not remove it. Hiding means the names are not in the table to collide.</p>"
+  },
+  {
+   "n": 11,
+   "q": "Can a plugin loaded at run time shadow the host program's functions?",
+   "options": [
+    "Yes, unless it is loaded with its symbols kept local",
+    "No; plugins have their own scope",
+    "Only if it defines the symbol before the host resolves it",
+    "Only for functions the host declared weak"
+   ],
+   "correct": 0,
+   "why": "<p>Local is the sensible default for anything untrusted and it is not the loader's default.</p>"
+  },
+  {
+   "n": 12,
+   "q": "What is the larger cost of calling into a shared library?",
+   "options": [
+    "The compiler cannot see through it, so nothing can be inlined or assumed",
+    "The indirect call through the table",
+    "The relocation applied at load time",
+    "The extra cache line for the table entry"
+   ],
+   "correct": 0,
+   "why": "<p>A small accessor that would have vanished entirely becomes a real call with real argument setup, and that is a bigger number than the call overhead.</p>"
+  },
+  {
+   "n": 13,
+   "q": "When can a function in a static archive be inlined into your code?",
+   "options": [
+    "With link-time optimisation, because the compiler still has the bodies",
+    "Always",
+    "Never; archives are linked as objects",
+    "Only if the archive was built with the same compiler version"
+   ],
+   "correct": 0,
+   "why": "<p>A shared library's bodies are not present at any point the compiler runs, whatever the flags.</p>"
+  },
+  {
+   "n": 14,
+   "q": "Why has static linking become more attractive again?",
+   "options": [
+    "Containers ship one process, startup cost matters, and reproducibility is easier",
+    "Dynamic linking was found to be insecure",
+    "Disks are larger",
+    "Compilers got better at whole-program optimisation"
+   ],
+   "correct": 0,
+   "why": "<p>The sharing rarely happens when a container holds one process, and a static binary skips thousands of relocations at startup.</p>"
+  },
+  {
+   "n": 15,
+   "q": "What is the modern position on static against dynamic?",
+   "options": [
+    "The trade changed: dynamic for a system with shared, jointly updated libraries; static for a program shipped as a unit",
+    "Static is now correct in all cases",
+    "Dynamic is now correct in all cases",
+    "The choice makes no measurable difference"
+   ],
+   "correct": 0,
+   "why": "<p>Most software deployed today is shipped as a unit, and the tooling has been catching up with that for a decade.</p>"
+  }
+ ]
+}

@@ -10671,6 +10671,286 @@
  },
  {
   "t": "section",
+  "slug": "linking",
+  "anchor": "the-program-that-runs-before-yours",
+  "title": "The program that runs before yours",
+  "text": "A dynamically linked executable names an interpreter inside itself, and the kernel starts that rather than your code. The interpreter is a shared library with an entry point, it loads the libraries your program needs and the libraries those need, applies relocations, runs initialisers, and only then jumps to your entry point. So the loader is a program running in your address space with your privileges, before anything you wrote, driven by a list of names and a search procedure. Most of what follows is a consequence of that being true.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "linking",
+  "anchor": "where-it-looks",
+  "title": "Where it looks",
+  "text": "The search for a named library is ordered, and every step of the order is worth knowing because each is a place something can be inserted. A path compiled into the executable comes first. Then the environment variable, unless the process is privileged. Then a cache the system maintains, which is what makes the search fast rather than a directory scan. Then the default directories. The compiled-in path exists in two forms, an older one that cannot be overridden by the environment and a newer one that can, and which of the two a binary uses changes whether a user can substitute a library at all. That distinction is invisible in the source and decided by a linker flag.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "linking",
+  "anchor": "first-definition-wins",
+  "title": "First definition wins",
+  "text": "Once the libraries are loaded, symbols are resolved against a single ordered list: the executable first, then its libraries in the order they were loaded. The first definition found is the one every reference resolves to, everywhere. Not the nearest one. The first one. A library that calls its own gets whichever is first in the global list, which may belong to something else entirely, and that is not a bug in either library. One list, searched in order, first definition wins. Anything inserted at the front decides what every reference in the whole program resolves to.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "linking",
+  "anchor": "the-variable-that-puts-you-first",
+  "title": "The variable that puts you first",
+  "text": "names libraries loaded before everything else, which puts their definitions at the front of that list. Every reference to a name they define, in the executable and in every library, resolves to theirs. This is a feature and a large one. It is how a memory checker intercepts every allocation without recompiling anything, how a tracer wraps every network call, how a test replaces a clock, and how a great deal of debugging gets done on software nobody has the source for. The technique has one requirement: your replacement usually needs to call the original. The loader provides a lookup that continues the search from after the current library, so a wrapper finds the real function and calls it. Without that, interposition could only replace, and almost every use of it wants to observe.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "linking",
+  "anchor": "why-it-stops-at-a-privilege-boundary",
+  "title": "Why it stops at a privilege boundary",
+  "text": "A program running with elevated privileges ignores the variable entirely, and the reason is immediate once the mechanism is clear: an attacker who can set an environment variable would otherwise choose what a privileged program's every call resolves to. So the same flexibility that makes interposition useful makes it an attack, and the boundary is drawn at the point the program stops belonging to whoever started it. This is also why the compiled-in search paths matter: a binary that trusts a directory a user can write to has the same problem without needing the variable at all.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "linking",
+  "anchor": "the-symbols-nobody-meant-to-export",
+  "title": "The symbols nobody meant to export",
+  "text": "By default a shared library exports every symbol with external linkage, which is usually far more than its interface. Three things follow. The dynamic symbol table is large, so every lookup is slower and startup costs more. Internal names are visible, so a caller can depend on something never meant to be stable. And any of them can collide with another library's, at which point the first-wins rule picks one and neither library is told. The fix is to hide everything by default and mark the interface explicitly. Compilers have a flag for the default and an attribute for the exceptions, and the resulting library starts faster, has a smaller table, and cannot be broken by a name it never meant to publish.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "linking",
+  "anchor": "two-definitions-no-diagnostic",
+  "title": "Two definitions, no diagnostic",
+  "text": "The collision case deserves stating plainly because it is silent. Two libraries each define a function with the same name, both are loaded, and every call anywhere goes to whichever came first. The second library's calls to its own function go to the other library's version, and nothing reports anything. This is not hypothetical. It happens with common helper names, with symbols leaked from statically linked dependencies, and with two versions of one library loaded through different paths. The symptoms are behaviour changing when an unrelated dependency is added, and an ordering that differs between machines. Hiding internal symbols removes the whole category, which is the practical argument for doing it.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "linking",
+  "anchor": "loading-on-purpose",
+  "title": "Loading on purpose",
+  "text": "loads a library while the program runs and returns a handle, and finds a symbol in it. That is how plugins work, and how a program uses an optional dependency it may not have been built against. It brings the same rules with it. A plugin's symbols enter the same ordered scope, so a plugin can shadow the host's functions, and a program loading two plugins that share a name gets the first-wins behaviour between them. Loading a library with a flag that keeps its symbols local avoids that and is the sensible default for anything untrusted.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "linking",
+  "anchor": "the-cost-you-pay-at-every-call",
+  "title": "The cost you pay at every call",
+  "text": "Unit 023 described the two tables. What is worth adding is what they cost, since it is the other half of the static-against-dynamic decision. A call into a shared library goes through a stub which jumps through a table slot, so it is an indirect call rather than a direct one. The processor has to predict the target, which it does well because the slot rarely changes, and the extra load is usually in cache. On a hot path it is measurable and small. The larger cost is that the compiler cannot see through it. A function in another shared library cannot be inlined, its arguments cannot be propagated into, and nothing about it can be assumed. A small accessor that would have vanished entirely if statically linked becomes a real call with real argument setup. Which is why the same code can be meaningfully faster in a static build, and why the measurement to make is not the call overhead but the optimisation that did not happen. Link-time optimisation exists to recover some of it and only works across things linked together.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "linking",
+  "anchor": "why-static-linking-came-back",
+  "title": "Why static linking came back",
+  "text": "For twenty years the trend was towards dynamic linking, for good reasons: one copy of a library in memory across every process, and a security fix applied without relinking anything. The reasons have weakened. A container ships one process and its dependencies, so the sharing rarely happens. Startup cost matters when a process serves one request and exits, and a static binary skips thousands of relocations. And reproducibility is easier when the artefact does not depend on what happened to be installed. So the modern position is not that one is right. It is that the trade changed: dynamic linking is for a system where many programs share libraries and are updated together, and static linking is for a program shipped as a unit. Most software deployed today is the second, and the tooling has been catching up with that for a decade.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "linking",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "The loader is a program that runs before yours, and its search order is a list you can get in front of. First definition wins, across the whole process, which is what makes interposition work and what makes symbol collisions silent. Hiding everything a library does not mean to export removes the collisions, shrinks the table, and speeds up startup. And the privilege boundary is where the mechanism stops, because a search order an attacker controls is a program an attacker controls.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "linking",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the resolution order rather than loading real libraries, because the behaviour being modelled is a decision procedure and a test of it should not depend on what happens to be installed. names the lookup your model got wrong. Every case corresponds to a situation in the prose, including the ones where the correct answer is the one that produces a bug.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "linking",
+  "n": 1,
+  "title": "First definition wins",
+  "text": "Symbols resolve against one ordered list, so a library's call to its own function can land in somebody else's library and neither is told. Write , returning the index of the scope a symbol resolves to: the first one in the ordered list that defines it. Not the nearest. The first. That one rule decides what every reference in the whole process calls.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "linking",
+  "n": 2,
+  "title": "Getting in front",
+  "text": "Preloading puts a definition ahead of everything, which is how a memory checker intercepts every allocation in software nobody has the source for. Write , building the resolution list: preloaded libraries first, then the executable, then its libraries in load order. Anything at the front of that list decides what every reference in the program resolves to.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "linking",
+  "n": 3,
+  "title": "Finding the one you replaced",
+  "text": "Interposition that could only replace would be far less useful than one that can observe, and continuing the search is what makes the difference. Write , which continues the search from after a given scope: the first definition strictly later in the list. An interposing wrapper almost always wants to call the original, and this is how it finds it.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "linking",
+  "n": 4,
+  "title": "Where the mechanism stops",
+  "text": "The same flexibility that makes interposition useful makes it an attack, and the boundary is where the program stops belonging to whoever started it. Write , reporting whether the loader will act on a preload request for a process with the given privilege situation. A program running with elevated privileges ignores the variable entirely.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "linking",
+  "n": 5,
+  "title": "Exporting less",
+  "text": "Hiding by default and marking the interface removes symbol collisions entirely, shrinks the table, and speeds up every lookup. Write , reporting whether a symbol appears in a library's dynamic table, given the default visibility setting and any explicit marking. A library exports everything by default, which is usually far more than its interface.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "linking",
+  "n": 6,
+  "title": "Two libraries, one name",
+  "text": "The collision is resolved silently by the first-wins rule, which is why the symptom is behaviour changing when an unrelated dependency is added. Write , reporting whether the loader tells anybody when two loaded libraries define the same symbol.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "linking",
+  "n": 7,
+  "title": "Loading with the door shut",
+  "text": "A plugin loaded into the global scope participates in first-wins resolution, which is rarely what a host program intended. Write , reporting whether a library loaded at run time can shadow the host program's functions, given whether it was loaded with its symbols kept local. A plugin's symbols enter the same ordered scope unless you say otherwise.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "linking",
+  "n": 8,
+  "title": "What the compiler could not assume",
+  "text": "A function in another shared library cannot be inlined and nothing about it can be assumed, which is a larger cost than the indirect call itself. Write , reporting whether a call can be inlined, given whether the callee is in the same translation unit, in a static archive linked together, or in a shared library. The call overhead is small. The optimisation that did not happen is not.",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "linking",
+  "n": 1,
+  "title": "What starts first when you run a dynamically linked program?",
+  "text": " It is a shared library with an entry point, running in your address space with your privileges, before anything you wrote. Most of this unit follows from that being true. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "linking",
+  "n": 2,
+  "title": "In what order does the loader search for a named library?",
+  "text": " Every step is a place something can be inserted, which is why the order is worth knowing rather than merely working. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "linking",
+  "n": 3,
+  "title": "Which definition does a symbol resolve to?",
+  "text": " Not the nearest. A library calling its own  malloc  gets whichever  malloc  is first in the global list, which may belong to something else entirely. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "linking",
+  "n": 4,
+  "title": "Where do preloaded libraries sit in the resolution order?",
+  "text": " Which is what lets them intercept calls the executable makes to its own dependencies. Placing them after would let them intercept nothing the executable defines. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "linking",
+  "n": 5,
+  "title": "An interposing wrapper needs to call the original. How does it find it?",
+  "text": " Almost every use of interposition wants to observe rather than replace, so this is what makes the technique useful rather than merely destructive. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "linking",
+  "n": 6,
+  "title": "What happens if a wrapper searches from the front instead?",
+  "text": " The backtrace is one function repeated four thousand times, and it is the classic interposition bug. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "linking",
+  "n": 7,
+  "title": "Why does a privileged program ignore the preload variable?",
+  "text": " The boundary is drawn at the point the program stops belonging to whoever started it, which is elevation rather than the resulting privilege level. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "linking",
+  "n": 8,
+  "title": "What does a shared library export by default?",
+  "text": " A larger table means slower lookups and more startup cost, internal names become things callers can depend on, and any of them can collide. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "linking",
+  "n": 9,
+  "title": "Two loaded libraries define the same symbol. What does the loader report?",
+  "text": " A duplicate at static link time is an error and a duplicate across shared libraries is a decision, which is why the symptom is behaviour changing when an unrelated dependency is added. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "linking",
+  "n": 10,
+  "title": "What removes the symbol collision category entirely?",
+  "text": " A prefix reduces the chance and does not remove it. Hiding means the names are not in the table to collide. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "linking",
+  "n": 11,
+  "title": "Can a plugin loaded at run time shadow the host program's functions?",
+  "text": " Local is the sensible default for anything untrusted and it is not the loader's default. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "linking",
+  "n": 12,
+  "title": "What is the larger cost of calling into a shared library?",
+  "text": " A small accessor that would have vanished entirely becomes a real call with real argument setup, and that is a bigger number than the call overhead. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "linking",
+  "n": 13,
+  "title": "When can a function in a static archive be inlined into your code?",
+  "text": " A shared library's bodies are not present at any point the compiler runs, whatever the flags. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "linking",
+  "n": 14,
+  "title": "Why has static linking become more attractive again?",
+  "text": " The sharing rarely happens when a container holds one process, and a static binary skips thousands of relocations at startup. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "linking",
+  "n": 15,
+  "title": "What is the modern position on static against dynamic?",
+  "text": " Most software deployed today is shipped as a unit, and the tooling has been catching up with that for a decade. ",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

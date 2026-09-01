@@ -880,7 +880,8 @@
     "syscalls"
    ],
    "neededBy": [
-    "processes"
+    "processes",
+    "linking"
    ],
    "minutes": 55
   },
@@ -1205,7 +1206,9 @@
     "addressing",
     "object-model"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "linking"
+   ],
    "minutes": 55
   },
   {
@@ -1219,12 +1222,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1453,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "elf",
+    "abi"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "flash",
@@ -2743,9 +2750,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 39,
-  "words": 59219,
-  "exercises": 312,
-  "drills": 585
+  "ready": 40,
+  "words": 60672,
+  "exercises": 320,
+  "drills": 600
  }
 }

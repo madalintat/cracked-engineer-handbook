@@ -78,6 +78,7 @@
   "syscalls"
  ],
  "neededBy": [
-  "processes"
+  "processes",
+  "linking"
  ]
 }
