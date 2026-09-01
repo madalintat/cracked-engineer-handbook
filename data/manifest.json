@@ -855,7 +855,8 @@
     "addressing"
    ],
    "neededBy": [
-    "elf"
+    "elf",
+    "processes"
    ],
    "minutes": 50
   },
@@ -877,7 +878,9 @@
    "needs": [
     "syscalls"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "processes"
+   ],
    "minutes": 55
   },
   {
@@ -1120,12 +1123,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1503,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "syscalls",
+    "elf"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "virtual-memory",
@@ -2716,9 +2723,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 35,
-  "words": 53253,
-  "exercises": 280,
-  "drills": 525
+  "ready": 36,
+  "words": 54756,
+  "exercises": 288,
+  "drills": 540
  }
 }

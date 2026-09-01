@@ -9599,6 +9599,278 @@
  },
  {
   "t": "section",
+  "slug": "processes",
+  "anchor": "three-tables-not-one",
+  "title": "Three tables, not one",
+  "text": "The phrase file descriptor suggests one object. There are three, and every confusing thing about descriptors comes from which of the three is shared. The descriptor is a small integer, and it indexes a table belonging to your process. That table entry points at an open file description, which holds the current offset and the access mode. The description points at the underlying object, an inode for a file, a buffer for a pipe, a socket for a connection. So two descriptors can point at one description, in which case they share an offset: read from one and the other has moved. Or two descriptions can point at one file, in which case they have independent offsets on the same bytes. Three levels. Which of them two descriptors share decides whether they see one offset or two, and every question about redirection is really a question about this picture.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "processes",
+  "anchor": "the-lowest-free-number",
+  "title": "The lowest free number",
+  "text": "One rule decides how redirection works, and it looks like an implementation detail. When the kernel hands out a descriptor it always gives the lowest number not currently in use. So closing descriptor 0 and then opening a file gives you descriptor 0, which is standard input, which means the next program to read standard input reads your file. That is the whole mechanism. A shell redirecting input opens the file, closes 0, and duplicates the file onto 0, and the program it then runs has no idea anything happened. does the close and the duplicate atomically, which matters because a signal arriving between them would leave the process without a standard input. Nothing about this requires the program's cooperation, which is why redirection works on programs that never considered it.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "processes",
+  "anchor": "fork-and-why-it-copies-nothing",
+  "title": "Fork, and why it copies nothing",
+  "text": "creates a process that is a copy of the caller. Same memory, same descriptors, same instruction about to execute. It returns twice: zero in the child, the child's identifier in the parent. Copying an address space would be ruinous, so nothing is copied. Both processes are given the same physical pages marked read-only, and the first write to a page traps into the kernel, which makes a private copy and lets the write proceed. That is copy on write, it is the same page fault mechanism unit 035 is about, and it means forking a process using a gigabyte costs a page table rather than a gigabyte. The child usually then calls , which throws the address space away and replaces it with a program from disk. Which raises the obvious question: if the copy is discarded immediately, why make it.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "processes",
+  "anchor": "because-the-gap-is-where-the-work-happens",
+  "title": "Because the gap is where the work happens",
+  "text": "The answer is that everything a parent wants to arrange for a child happens between the two calls. Redirect the descriptors. Change the working directory. Drop privileges. Set resource limits. Join a namespace. Every one of those is an ordinary call in the child, before the new program exists, using the ordinary interface rather than a parameter to a launch function. The alternative design, a single call that both creates and launches, has to accept every one of those as an argument, and the list is never complete. Windows took that route and its process creation function has ten parameters and a structure with eighteen fields. The cost of the Unix design is the wasted copy, which copy on write mostly removes, and a second call that can fail. exists for the cases where even that is too much.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "processes",
+  "anchor": "what-survives-each-step",
+  "title": "What survives each step",
+  "text": "Descriptors survive , and both processes share the same open file descriptions, offsets included. Two processes appending to one log file through inherited descriptors interleave lines correctly, because they share an offset, which is a property people rely on without knowing why it holds. Descriptors also survive , and that is the mechanism redirection depends on. It is also a hazard: a descriptor you forgot about is now open in a program you did not write, which is how private files have leaked into subprocesses. The close-on-exec flag is the fix, and the reason it exists as a flag rather than a default is history. Modern interfaces let you set it at creation, and the advice is to set it always and clear it deliberately for the few descriptors a child is supposed to receive.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "processes",
+  "anchor": "pipes-and-the-signal-nobody-expects",
+  "title": "Pipes, and the signal nobody expects",
+  "text": "A pipe is a kernel buffer with a descriptor at each end. Writes block when it is full, reads block when it is empty, and the buffer is small, typically sixty four kilobytes. Two behaviours follow that surprise people. Reading from a pipe whose write end is closed everywhere returns zero, which is end of file. If any process still holds the write end open, including the reader itself through a descriptor it forgot to close, the read blocks forever. A great many hangs are a descriptor left open in the wrong process. Writing to a pipe whose read end is closed delivers , which by default terminates the process. That is why a program in a pipeline dies quietly when the next stage exits, and it is deliberate: a producer whose consumer has gone should stop rather than fill a buffer nobody will drain.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "processes",
+  "anchor": "the-child-that-will-not-go-away",
+  "title": "The child that will not go away",
+  "text": "A process that exits does not disappear. Its exit status has to survive until somebody asks for it, so the kernel keeps a small record and the process shows as defunct in the process list. That is a zombie, and it is the system working. The parent collects it with , which returns the status and releases the record. A parent that never does accumulates one entry per child until the process table is full, and the fix is always in the parent rather than in the children, which is why killing a zombie does nothing: it is already dead. The opposite case is a child whose parent exits first. It is reparented to the init process, which waits in a loop for exactly this reason, so an orphan is always collected by somebody. That is also the mechanism a daemon uses to detach: fork, let the parent exit, and the child is inherited by init with no controlling terminal. Neither of these is exotic. A long-running server that spawns helpers and ignores their exit status will fill the process table eventually, and the symptom is that nothing can start any more, several hours after the mistake.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "processes",
+  "anchor": "where-everything-stops-being-a-file",
+  "title": "Where everything stops being a file",
+  "text": "The slogan is useful and it is not true. Files, pipes, devices and sockets all accept and , which is a real and valuable uniformity. But a socket needs , and , none of which is a file operation. A terminal needs its mode changed, and there is no that does that. is the escape hatch: an operation taking a device-specific number and an untyped pointer, which is where every operation that did not fit went. Its existence is the honest measure of how far the abstraction stretches.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "processes",
+  "anchor": "a-thread-is-a-process-that-shared",
+  "title": "A thread is a process that shared",
+  "text": "The last piece, and the one that makes the model coherent. Linux does not have separate machinery for threads. It has one call that creates a new execution context and a set of flags saying what to share: address space, descriptor table, signal handlers, working directory. shares nothing. Creating a thread shares almost everything. So a thread is not a lighter kind of process; it is the same object with the sharing flags set differently. That explains why threads appear in the process list, why a thread can be scheduled independently, and why the same scheduler handles both, which is unit 036.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "processes",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "A descriptor indexes a per-process table, that entry points at a description holding the offset, and the description points at the object. Sharing at each level means something different. Descriptors are handed out lowest first, which is the entire mechanism of redirection. They survive both and , which makes redirection possible and leaks possible, and close-on-exec is the control. And the gap between and is where a parent does everything it wants to arrange, which is why two calls beat one with a parameter list that is never finished.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "processes",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the descriptor table and the pipe rather than forking real processes, because a test that depends on scheduling is a test that fails intermittently. names the case your model got wrong. The rules being modelled are exactly the ones above, and where a rule looks arbitrary the exercise says which observable behaviour depends on it.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "processes",
+  "n": 1,
+  "title": "The lowest free number",
+  "text": "Descriptors are handed out lowest first, so closing 0 and opening a file puts the file on standard input without the program's cooperation. Write , returning the descriptor the kernel would hand out next: the lowest number not currently in use. This looks like an implementation detail and it is the entire mechanism of shell redirection.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "processes",
+  "n": 2,
+  "title": "Two descriptors, one offset",
+  "text": "The table entry points at a description holding the offset, so duplicating a descriptor shares the position and opening the file again does not. Write , which points a second descriptor at the same open file description as the first. Descriptors that share a description share an offset. Descriptors on separate descriptions of the same file do not.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "processes",
+  "n": 3,
+  "title": "Redirection, atomically",
+  "text": "<code>dup2</code> is atomic because the gap between closing and duplicating is a state no program is written to survive. Write , which closes the target descriptor if it is open and then points it at the source's description, as one indivisible step. Doing the close and the duplicate separately leaves a window where the process has no standard input, and a signal arriving in it finds a program that cannot read.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "processes",
+  "n": 4,
+  "title": "What crosses exec",
+  "text": "Descriptors survive <code>exec</code> by default, which is what makes redirection possible and leaks possible, and the flag is the only control. Write , which clears the descriptors marked close-on-exec and leaves the rest. A descriptor you forgot about is open in a program you did not write, and that is how private files have reached subprocesses.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "processes",
+  "n": 5,
+  "title": "When a read returns nothing",
+  "text": "A pipe reports end of file when the last writer closes, so a descriptor left open in the wrong process turns a finished pipeline into a hang. Write , which reports what a read from a pipe does: the number of bytes available, 0 for end of file, or -1 to mean it would block. End of file happens only when no process anywhere still holds the write end.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "processes",
+  "n": 6,
+  "title": "Writing into nothing",
+  "text": "A producer whose consumer has gone is signalled rather than allowed to fill a buffer nobody will drain, which is why a pipeline stage dies quietly when the next one exits. Write , reporting what happens when a process writes to a pipe: the bytes accepted, -1 to mean it would block because the buffer is full, or -2 to mean the reader has gone and the writer is about to be signalled.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "processes",
+  "n": 7,
+  "title": "The record that outlives the process",
+  "text": "An exit status has to survive until somebody asks for it, so a process that exits leaves a record and a parent that never asks accumulates them. Write , modelling what happens to a child's table entry. A child that has exited holds a record until the parent collects it; a child whose parent has gone is reparented to init. Return 0 if the entry is released, 1 if it lingers as a zombie, 2 if it is reparented.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "processes",
+  "n": 8,
+  "title": "The flags decide what it is",
+  "text": "A thread is not a lighter kind of process, it is the same object with the sharing flags set differently, which is why the same scheduler handles both. Linux has one call that creates an execution context and a set of flags saying what to share. shares nothing; creating a thread shares almost everything. Write , reporting whether a given set of flags produces something a programmer would call a thread rather than a process.",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "processes",
+  "n": 1,
+  "title": "What are the three levels behind a file descriptor?",
+  "text": " Which of the three two descriptors share decides whether they see one offset or two, and every question about redirection is really about this picture. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "processes",
+  "n": 2,
+  "title": "Which descriptor does the kernel hand out next?",
+  "text": " It looks like an implementation detail and it is the entire mechanism of redirection: close 0, open a file, and the file is standard input. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "processes",
+  "n": 3,
+  "title": "Why is <code>dup2</code> atomic?",
+  "text": " A signal handler running between the close and the duplicate would find a process with no standard input. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "processes",
+  "n": 4,
+  "title": "What does <code>dup2</code> do when the source and target are the same descriptor?",
+  "text": " Closing first would destroy the thing about to be duplicated, which is why the case is called out rather than left to the obvious implementation. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "processes",
+  "n": 5,
+  "title": "What does <code>fork</code> actually copy?",
+  "text": " Copy on write means forking a process using a gigabyte costs a page table rather than a gigabyte, using the same fault mechanism virtual memory is built on. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "processes",
+  "n": 6,
+  "title": "If the child usually calls <code>exec</code> immediately, why make the copy at all?",
+  "text": " Redirect descriptors, change directory, drop privileges, set limits, join a namespace: all ordinary calls in the child. A single create-and-launch call has to accept every one as a parameter, and that list is never finished. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "processes",
+  "n": 7,
+  "title": "What survives <code>exec</code>?",
+  "text": " That is what makes redirection work and what makes leaks possible, and the flag is the only control. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "processes",
+  "n": 8,
+  "title": "Why do two processes appending to one log file through inherited descriptors not overwrite each other?",
+  "text": " Two processes that each opened the file separately have independent descriptions and independent offsets, and those do overwrite. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "processes",
+  "n": 9,
+  "title": "Reading an empty pipe whose write end is still open somewhere does what?",
+  "text": " End of file happens only when no process anywhere holds the write end. The commonest hang is a reader that forgot to close its own copy of the write end. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "processes",
+  "n": 10,
+  "title": "Writing to a pipe whose read end is closed does what?",
+  "text": " It is deliberate: a producer whose consumer has gone should stop rather than fill a buffer nobody will drain. It is also why a server writing to sockets has to ignore the signal explicitly. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "processes",
+  "n": 11,
+  "title": "What is a zombie process?",
+  "text": " Killing one does nothing, because it is already dead. The fix is always in the parent, and a server that ignores its children's exit statuses fills the process table eventually. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "processes",
+  "n": 12,
+  "title": "What happens to a child whose parent exits first?",
+  "text": " Which is also the mechanism a daemon uses to detach: fork, let the parent exit, and the child is inherited by init with no controlling terminal. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "processes",
+  "n": 13,
+  "title": "Where does \"everything is a file\" stop being true?",
+  "text": "  ioctl  is the escape hatch where every operation that did not fit went, and its existence is the honest measure of how far the abstraction stretches. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "processes",
+  "n": 14,
+  "title": "On Linux, what makes a new execution context a thread rather than a process?",
+  "text": " Two processes share a descriptor table after a fork and are not threads. There is one call and a set of flags, and the distinction people draw is a distinction between two settings of one of them. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "processes",
+  "n": 15,
+  "title": "Why does the scheduler not need separate machinery for threads?",
+  "text": " Which is also why threads appear in the process list and can be scheduled independently. ",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

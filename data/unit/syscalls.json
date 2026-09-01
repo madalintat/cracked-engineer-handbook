@@ -78,6 +78,7 @@
   "addressing"
  ],
  "neededBy": [
-  "elf"
+  "elf",
+  "processes"
  ]
 }
