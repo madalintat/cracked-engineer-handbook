@@ -1,0 +1,185 @@
+{
+ "slug": "object-model",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What decides where a struct member lands?",
+   "options": [
+    "Its own alignment: the offset is rounded up to the next multiple of it",
+    "The compiler's optimiser, which reorders for density",
+    "The order of first use in the code",
+    "The size of the largest member"
+   ],
+   "correct": 0,
+   "why": "<p>And the whole struct is rounded up to a multiple of its own alignment, so an array of them keeps every element aligned. Those two rules explain every surprising <code>sizeof</code>.</p>"
+  },
+  {
+   "n": 2,
+   "q": "A struct of char, long, char occupies how many bytes on a 64-bit target?",
+   "options": [
+    "24",
+    "10",
+    "16",
+    "12"
+   ],
+   "correct": 0,
+   "why": "<p>Measured. Seven bytes of padding before the long, then seven more of tail padding. The same three members as long, char, char occupy 16.</p>"
+  },
+  {
+   "n": 3,
+   "q": "Why does the compiler not reorder members for you?",
+   "options": [
+    "The standard guarantees declaration order for members with the same access",
+    "It would break the debugger",
+    "Reordering is too expensive to compute",
+    "It does, at higher optimisation levels"
+   ],
+   "correct": 0,
+   "why": "<p>Too much depends on it: casting the first member's address back to the struct, sharing a layout with C, writing the bytes to a file. Field order is your responsibility.</p>"
+  },
+  {
+   "n": 4,
+   "q": "What does adding one virtual function cost in every object?",
+   "options": [
+    "Eight bytes, once, however many virtual functions there are",
+    "Eight bytes per virtual function",
+    "Nothing; the table is shared",
+    "Four bytes, for a table index"
+   ],
+   "correct": 0,
+   "why": "<p>The table holds all of them and the object holds one pointer to the table, which is why a class with twenty virtual functions costs the same as one with a single virtual destructor.</p>"
+  },
+  {
+   "n": 5,
+   "q": "What is the real cost of a virtual call?",
+   "options": [
+    "The target is unknown until a load returns, so the predictor has to guess it",
+    "The extra instructions in the dispatch",
+    "The cache line holding the table",
+    "The pointer adjustment on entry"
+   ],
+   "correct": 0,
+   "why": "<p>A call site that sees many different types guesses wrong often, and that is the misprediction penalty from unit 025 rather than the two extra loads.</p>"
+  },
+  {
+   "n": 6,
+   "q": "Casting a pointer to a second polymorphic base does what?",
+   "options": [
+    "Changes the pointer's value, because that base's subobject starts later",
+    "Nothing; all base pointers share the object's address",
+    "Produces a null pointer if the cast is invalid",
+    "Copies the subobject"
+   ],
+   "correct": 0,
+   "why": "<p>Measured at sixteen bytes for two sixteen-byte bases, which is why two pointers to one object can compare unequal until they are brought to a common type.</p>"
+  },
+  {
+   "n": 7,
+   "q": "Why is an empty class one byte rather than zero?",
+   "options": [
+    "Two distinct objects must have distinct addresses",
+    "To hold a type tag",
+    "Alignment requires at least one byte",
+    "It is zero; the byte comes from padding"
+   ],
+   "correct": 0,
+   "why": "<p>But an empty base contributes nothing, which is the empty base optimisation and the reason a class with an empty base and an <code>int</code> is four bytes where one with an empty member is eight.</p>"
+  },
+  {
+   "n": 8,
+   "q": "Why do standard containers inherit from their allocator rather than holding it?",
+   "options": [
+    "To get the empty base optimisation, so a stateless allocator costs nothing",
+    "To allow the allocator to be overridden virtually",
+    "Because allocators must be base classes by the standard",
+    "To reduce template instantiation"
+   ],
+   "correct": 0,
+   "why": "<p>And <code>[[no_unique_address]]</code> was added to get the same result for a member, without the inheritance.</p>"
+  },
+  {
+   "n": 9,
+   "q": "When does an object's lifetime begin?",
+   "options": [
+    "When its storage is obtained and its initialisation completes",
+    "When the storage is allocated",
+    "When its address is first taken",
+    "When its constructor is declared"
+   ],
+   "correct": 0,
+   "why": "<p>Allocating a buffer and casting it to a type does not create objects there. Placement new does, and the difference is exactly the sort of thing an optimiser is entitled to exploit.</p>"
+  },
+  {
+   "n": 10,
+   "q": "What is the strict aliasing rule?",
+   "options": [
+    "The compiler may assume a pointer to one type does not point at an unrelated type",
+    "Two pointers to the same object must have the same value",
+    "Casting between pointer types is forbidden",
+    "Objects of different types cannot share a cache line"
+   ],
+   "correct": 0,
+   "why": "<p>That assumption is what lets it keep a value in a register across a store through a different pointer type, which is a real and frequent optimisation.</p>"
+  },
+  {
+   "n": 11,
+   "q": "How does violating strict aliasing usually fail?",
+   "options": [
+    "A load is hoisted out of a loop, because the compiler proved nothing could change it",
+    "The program crashes on the cast",
+    "The value read is byte-swapped",
+    "A warning is emitted and the code is left alone"
+   ],
+   "correct": 0,
+   "why": "<p>The failure mode is not a wrong value from the cast itself, and it looks like the compiler being wrong.</p>"
+  },
+  {
+   "n": 12,
+   "q": "What is the sanctioned way to reinterpret bytes?",
+   "options": [
+    "<code>memcpy</code>, which compiles to nothing when the sizes match",
+    "A union with both types as members",
+    "<code>reinterpret_cast</code> on the address",
+    "A <code>volatile</code> pointer"
+   ],
+   "correct": 0,
+   "why": "<p>You pay nothing for following the rule, which is what makes ignoring it a poor trade.</p>"
+  },
+  {
+   "n": 13,
+   "q": "What does trivially copyable mean?",
+   "options": [
+    "Copying the bytes produces a valid copy, and the destructor does nothing",
+    "The type has no members needing construction",
+    "The type can be passed in registers",
+    "The layout matches what C would produce"
+   ],
+   "correct": 0,
+   "why": "<p>Anything holding a pointer it owns is not, because copying the bytes would give two owners. A type that acquires a <code>std::string</code> member stops qualifying.</p>"
+  },
+  {
+   "n": 14,
+   "q": "What does standard layout mean?",
+   "options": [
+    "The arrangement is predictable and matches what C would produce",
+    "The members are in declaration order",
+    "The type has no padding",
+    "The type is trivially copyable"
+   ],
+   "correct": 0,
+   "why": "<p>No virtual functions, no mixed access control across members, and at most one class in the hierarchy with data. It is what lets a struct cross a language boundary.</p>"
+  },
+  {
+   "n": 15,
+   "q": "Why do layout questions matter more than they used to?",
+   "options": [
+    "The unit of memory transfer is 64 bytes, so an oversized struct is wasted traffic on every pass",
+    "Compilers have stopped optimising layout",
+    "Modern CPUs fault on misaligned access",
+    "Larger structs no longer fit in registers"
+   ],
+   "correct": 0,
+   "why": "<p>A struct a third larger than it needs to be is a third more memory traffic over an array of them, which is unit 024's arithmetic applied to a source edit.</p>"
+  }
+ ]
+}

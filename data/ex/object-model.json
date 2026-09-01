@@ -1,0 +1,310 @@
+{
+ "slug": "object-model",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "The order you typed it in",
+   "brief": "<p>Reorder the members of <code>Rec</code> so it occupies as few bytes as possible, without removing anything.</p>\n<p>Alignment decides padding: each member starts at the next offset satisfying its own alignment, and the whole struct is rounded up to a multiple of its own.</p>",
+   "kind": "output",
+   "concept": "The compiler is not allowed to reorder members, so field order is layout order and shrinking a struct is a source edit.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Declare the wide members first and let the narrow ones share the tail."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees on the size. A <code>char</code> before a <code>long</code> forces seven bytes of padding so the <code>long</code> can start on an eight-byte boundary. Putting the <code>long</code> first lets both <code>char</code> members sit next to each other afterwards, and only the tail padding remains.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>24 bytes against 16, measured, for the same three members. On an array of a million of these that is eight megabytes of memory traffic that does nothing, and unit 024 already said what eight extra bytes per element costs when the unit of transfer is 64.</p>",
+   "starter": "#include <cstddef>\nstruct Rec {\n    char a;\n    long b;\n    char c;\n};\nstatic_assert(sizeof(long) == 8, \"this exercise assumes a 64-bit target\");\nsize_t rec_size() { return sizeof(Rec); }\nsize_t off_b() { return offsetof(Rec, b); }",
+   "tests": "#include <cassert>\n#include <cstddef>\nsize_t rec_size();\nsize_t off_b();\nint main() {\n    assert(rec_size() == 16);\n    /* The wide member has to be first for that size to be reachable. */\n    assert(off_b() == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 2,
+   "title": "Working out the offsets by hand",
+   "brief": "<p>Write <code>field_offset</code>, computing where a member lands given the offset reached so far and the member's alignment.</p>\n<p>This is the whole layout rule: round the current offset up to the next multiple of the alignment.</p>",
+   "kind": "output",
+   "concept": "Layout is one arithmetic rule applied member by member, which is why a <code>sizeof</code> can be predicted rather than looked up.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Round up, not down. An offset already on a boundary does not move."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Rounding down puts a member before where the previous one ended, which overlaps it. The expression that rounds up is the offset plus the alignment minus one, divided by the alignment, times the alignment.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Apply this member by member and then once more to the total, using the struct's own alignment, and you have the size the compiler will produce. Every <code>sizeof</code> surprise in C and C++ is this arithmetic performed differently from how you expected.</p>",
+   "starter": "#include <cstddef>\nsize_t field_offset(size_t so_far, size_t align) {\n    return so_far / align * align;\n}",
+   "tests": "#include <cassert>\n#include <cstddef>\nsize_t field_offset(size_t, size_t);\nint main() {\n    /* Already aligned: no movement. */\n    assert(field_offset(0, 8) == 0);\n    assert(field_offset(8, 8) == 8);\n    assert(field_offset(4, 4) == 4);\n    /* A char at 1, then a long: seven bytes of padding. */\n    assert(field_offset(1, 8) == 8);\n    assert(field_offset(7, 8) == 8);\n    assert(field_offset(9, 8) == 16);\n    /* Alignment of one never pads. */\n    assert(field_offset(5, 1) == 5);\n    assert(field_offset(5, 4) == 8);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 3,
+   "title": "The pointer you did not declare",
+   "brief": "<p>Add a virtual destructor to <code>Node</code> and observe what it costs.</p>\n<p><code>Node</code> holds one <code>int</code>. Adding a virtual function gives every object a hidden pointer to a table shared by the class.</p>",
+   "kind": "output",
+   "concept": "A virtual function costs eight bytes in every object, once, whatever the number of virtual functions.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "One virtual function is enough. A destructor is the one you want here."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees on the size. Without a virtual function the object is just its <code>int</code>, four bytes. With one it gains an eight-byte pointer, and the <code>int</code> plus four bytes of tail padding brings the total to sixteen.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>One pointer per object, not one per virtual function: the table holds all of them and the object holds one pointer to the table. That also means a class with twenty virtual functions costs the same eight bytes as a class with one, which is why the advice to avoid virtual functions for size reasons is usually misdirected.</p>",
+   "starter": "#include <cstddef>\nstruct Node {\n    int x;\n    ~Node() = default;\n};\nsize_t node_size() { return sizeof(Node); }\nbool node_polymorphic() { return __is_polymorphic(Node); }",
+   "tests": "#include <cassert>\n#include <cstddef>\nsize_t node_size();\nbool node_polymorphic();\nint main() {\n    assert(node_polymorphic());\n    assert(node_size() == 16);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 4,
+   "title": "The cast that moves the pointer",
+   "brief": "<p><code>Both</code> inherits from two polymorphic bases. A pointer to the second base cannot address the start of the object, because the second base's part of it does not begin there.</p>\n<p>Write <code>second_base_offset</code>, which builds one and returns how far into it that pointer points.</p>",
+   "kind": "output",
+   "concept": "Casting to a second base changes the pointer's value, so two pointers to one object can compare unequal until they are brought to a common type.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Cast the address to a byte pointer on both sides and subtract."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The first base shares the object's address and the second does not: its subobject starts after the first one ends, which for two sixteen-byte polymorphic bases is sixteen bytes in. Returning zero assumes single inheritance.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Sixteen bytes, measured. This is why comparing a pointer to one base against a pointer to another can be false for the same object, and why calling through the second base runs a small stub that subtracts the offset before entering the derived implementation. Neither appears in the source.</p>",
+   "starter": "#include <cstddef>\nstruct A { virtual void f(); virtual ~A() = default; int a; };\nstruct B { virtual void g(); virtual ~B() = default; int b; };\nstruct Both : A, B { void f() override; void g() override; int c; };\ninline void A::f() {} inline void B::g() {}\ninline void Both::f() {} inline void Both::g() {}\n\nptrdiff_t second_base_offset() {\n    Both obj{};\n    Both *p = &obj;\n    (void)p;\n    return 0;\n}\nsize_t both_size() { return sizeof(Both); }",
+   "tests": "#include <cassert>\n#include <cstddef>\nptrdiff_t second_base_offset();\nsize_t both_size();\nint main() {\n    assert(both_size() == 32);\n    /* The first base shares the address; the second does not. */\n    assert(second_base_offset() == 16);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 5,
+   "title": "Empty, and free",
+   "brief": "<p>An empty class has size 1, because two objects must have distinct addresses. An empty base contributes nothing at all.</p>\n<p>Change <code>Holder</code> so that its empty policy costs no space.</p>",
+   "kind": "output",
+   "concept": "The empty base optimisation exists so that a stateless policy does not cost a byte and its padding in every object that uses one.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Inherit from it rather than holding it."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees on the size. An empty member occupies one byte and then forces three more of padding before the <code>int</code>, giving eight. An empty base occupies nothing, giving four.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Four bytes against eight, for a class with no data in it. This is why the standard library's containers inherit from their allocator and their comparator rather than holding them, and why <code>[[no_unique_address]]</code> was added, to get the same result without inheritance.</p>",
+   "starter": "#include <cstddef>\nstruct Policy {};\nstruct Holder {\n    Policy p;\n    int x;\n};\nsize_t holder_size() { return sizeof(Holder); }\nsize_t policy_size() { return sizeof(Policy); }",
+   "tests": "#include <cassert>\n#include <cstddef>\nsize_t holder_size();\nsize_t policy_size();\nint main() {\n    /* An empty class is still one byte on its own. */\n    assert(policy_size() == 1);\n    /* And costs nothing inside another. */\n    assert(holder_size() == 4);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 6,
+   "title": "Reinterpreting bytes without lying",
+   "brief": "<p>Write <code>bits_of</code>, returning the bit pattern of a <code>float</code> as an unsigned integer.</p>\n<p>The starter converts rather than reinterprets, which is the commoner confusion. The other tempting route, reading through an <code>unsigned*</code>, is undefined: the failure there is not a wrong value but the compiler proving, from the aliasing rule, that nothing could have changed a value it kept in a register.</p>",
+   "kind": "output",
+   "concept": "Strict aliasing is an assumption the optimiser works from, so violating it produces code that is wrong in ways that look like a compiler bug.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "There is a function whose entire job is to copy bytes between unrelated types."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees, and by a lot. A conversion asks what number this is and gives 1 for <code>1.0f</code>; a reinterpretation asks what bytes this is and gives 0x3F800000. <code>std::memcpy</code> between two four-byte objects performs the second, has no aliasing problem, and compiles to a single move.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names. <code>std::memcpy</code> needs <code>&lt;cstring&gt;</code>.</p>"
+    }
+   ],
+   "after": "<p><code>memcpy</code> here generates no instructions: the compiler sees a four-byte copy between two four-byte objects and emits a move. You pay nothing for following the rule, which is what makes ignoring it a poor trade.</p>",
+   "starter": "#include <cstring>\nunsigned bits_of(float f) {\n    return static_cast<unsigned>(f);\n}",
+   "tests": "#include <cassert>\nunsigned bits_of(float);\nint main() {\n    assert(bits_of(1.0f) == 0x3F800000u);\n    assert(bits_of(0.0f) == 0x00000000u);\n    assert(bits_of(2.0f) == 0x40000000u);\n    /* The nearest float to a tenth. */\n    assert(bits_of(0.1f) == 0x3DCCCCCDu);\n    assert(bits_of(-1.0f) == 0xBF800000u);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 7,
+   "title": "What the library requires",
+   "brief": "<p>Write <code>describe</code>, reporting whether a type is trivially copyable and whether it is standard layout.</p>\n<p>Library constraints are stated in these terms, and a type can lose one of them by gaining a member.</p>",
+   "kind": "output",
+   "concept": "A container that relocates objects by copying bytes requires trivial copyability, so a type that acquires an owning member stops qualifying and the change shows up as performance rather than as an error.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The standard library has a trait for each."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The two properties are independent: a class with virtual functions is trivially copyable in neither sense but a class with mixed access control can be trivially copyable and not standard layout, and one holding a <code>std::string</code> is standard layout and not trivially copyable.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names. The traits live in <code>&lt;type_traits&gt;</code>.</p>"
+    }
+   ],
+   "after": "<p>The distinction decides what you may do with the bytes. Trivially copyable means <code>memcpy</code> produces a valid copy. Standard layout means the arrangement matches what C would produce, which is what lets a struct cross a language boundary. Only a type with both may be written to a file and read back.</p>",
+   "starter": "#include <type_traits>\ntemplate <class T>\nvoid describe(bool *trivially_copyable, bool *standard_layout) {\n    *trivially_copyable = true;\n    *standard_layout = true;\n}\ntemplate void describe<int>(bool *, bool *);",
+   "tests": "#include <cassert>\n#include <string>\ntemplate <class T> void describe(bool *, bool *);\n\nstruct Plain { int a; double b; };\nstruct Owning { std::string s; };\nstruct Poly { virtual ~Poly() = default; int x; };\n\ntemplate <class T> static void check(bool tc, bool sl) {\n    bool a, b;\n    describe<T>(&a, &b);\n    assert(a == tc);\n    assert(b == sl);\n}\n\nint main() {\n    check<int>(true, true);\n    check<Plain>(true, true);\n    /* Owns a heap buffer, so copying its bytes would give two owners. */\n    check<Owning>(false, true);\n    /* A vptr the compiler manages, so neither holds. */\n    check<Poly>(false, false);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  },
+  {
+   "n": 8,
+   "title": "Predicting a size",
+   "brief": "<p>Write <code>struct_size</code>, computing what a struct of the given member sizes and alignments will occupy.</p>\n<p>Members are laid out in order, each rounded up to its own alignment, and the total is rounded up to the largest alignment present.</p>",
+   "kind": "output",
+   "concept": "The layout rule is short enough to apply by hand, which turns every surprising <code>sizeof</code> into arithmetic you can check.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Track the running offset and the largest alignment seen, then round the total once at the end."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The tail padding is the step people forget: the total is rounded up to the struct's own alignment, which is the largest of its members', so that an array of them keeps every element aligned.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Run it on a <code>char</code>, a <code>long</code> and a <code>char</code> in that order and it gives 24. Reorder to <code>long</code>, <code>char</code>, <code>char</code> and it gives 16. Those are the numbers the compiler produces, and this function is the whole reason why.</p>",
+   "starter": "#include <cstddef>\nsize_t struct_size(const size_t *sizes, const size_t *aligns, size_t n) {\n    size_t off = 0;\n    for (size_t i = 0; i < n; i++) {\n        off = (off + aligns[i] - 1) / aligns[i] * aligns[i];\n        off += sizes[i];\n    }\n    return off;\n}",
+   "tests": "#include <cassert>\n#include <cstddef>\nsize_t struct_size(const size_t *, const size_t *, size_t);\nint main() {\n    /* char, long, char: padding before the long, then tail padding. */\n    size_t s1[3] = {1, 8, 1}, a1[3] = {1, 8, 1};\n    assert(struct_size(s1, a1, 3) == 24);\n    /* long, char, char: no interior padding, six bytes of tail. */\n    size_t s2[3] = {8, 1, 1}, a2[3] = {8, 1, 1};\n    assert(struct_size(s2, a2, 3) == 16);\n    /* Two ints need no padding at all. */\n    size_t s3[2] = {4, 4}, a3[2] = {4, 4};\n    assert(struct_size(s3, a3, 2) == 8);\n    /* One char alone is one byte. */\n    size_t s4[1] = {1}, a4[1] = {1};\n    assert(struct_size(s4, a4, 1) == 1);\n    /* An int then a char: three bytes of tail padding. */\n    size_t s5[2] = {4, 1}, a5[2] = {4, 1};\n    assert(struct_size(s5, a5, 2) == 8);\n    assert(struct_size(s1, a1, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "cpp"
+  }
+ ]
+}

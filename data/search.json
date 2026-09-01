@@ -8791,6 +8791,270 @@
  },
  {
   "t": "section",
+  "slug": "object-model",
+  "anchor": "alignment-decides-padding",
+  "title": "Alignment decides padding",
+  "text": "Every type has an alignment, which is an address boundary its objects must start on. A four-byte integer is aligned to four, an eight-byte one to eight. A struct's alignment is the largest alignment among its members. Two rules follow and between them they explain every surprising . Each member starts at the next offset that satisfies its own alignment, so the compiler inserts padding before a member that would otherwise be misaligned. And the whole struct is rounded up to a multiple of its own alignment, so that an array of them keeps every element aligned. Measured, on a 64-bit target: A struct of , , in that order is 24 bytes. The sits at 0, seven bytes of padding follow so the can start at 8, the second is at 16, and seven more bytes bring the total to a multiple of eight. The same three members declared as , , are 16 bytes. The is at 0, the two values are at 8 and 9, and six bytes of tail padding finish it. Same data, same alignment requirements, one third less memory, from the order you typed the declarations in. Measured. Declaration order is layout order, so putting the wide member first removes an entire run of padding.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "object-model",
+  "anchor": "why-the-compiler-does-not-reorder-for-you",
+  "title": "Why the compiler does not reorder for you",
+  "text": "It is not allowed to. The standard guarantees that members with the same access control appear in memory in declaration order, and a great deal depends on that: casting the address of the first member back to the struct, sharing a layout with C, writing the bytes to a file. Which means field order is your responsibility. The rule that gets you most of the way is to declare members in decreasing size, and the rule that gets you the rest is to read what the compiler produced rather than trusting the first rule.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "object-model",
+  "anchor": "the-pointer-you-did-not-declare",
+  "title": "The pointer you did not declare",
+  "text": "A class with a virtual function gains a hidden pointer. Measured: a struct holding one and a non-virtual member function is 4 bytes. The same struct with a virtual destructor is 16, which is 8 bytes of hidden pointer, the , and 4 bytes of tail padding to reach a multiple of the pointer's alignment. That pointer is the vptr, and it points at a table of function pointers shared by every object of the class. Calling a virtual function loads the vptr, indexes the table, and calls through the result. Two dependent loads and an indirect call rather than a direct one. The cost is not the instructions. It is that the target is not known until the first load returns, so the branch predictor has to guess it, and a call site that sees many different types guesses wrong often.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "object-model",
+  "anchor": "two-bases-two-pointers-one-object",
+  "title": "Two bases, two pointers, one object",
+  "text": "Inherit from two classes that both have virtual functions and the object gets two vptrs. Measured: two base classes of 16 bytes each, and a derived class inheriting both is 32. Which raises a question the language has to answer. If code holds a pointer to the second base, that pointer must address something that looks like the second base, and the second base's subobject does not start at the beginning of the derived object. So the pointer changes value when you cast. Measured on the same objects, a pointer to the derived class and a pointer to its first base are the same address, and a pointer to its second base is 16 bytes further along. Two consequences worth carrying. Comparing pointers of different static types can be false for the same object unless you cast them to a common type first. And calling a virtual function through the second base has to subtract that offset before running the derived implementation, which the compiler does with a small stub, invisible in the source and visible in a disassembly.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "object-model",
+  "anchor": "empty-is-not-free-unless-you-ask",
+  "title": "Empty is not free unless you ask",
+  "text": "An empty class has size 1, because two distinct objects must have distinct addresses and a size of zero would break that. But an empty base class contributes nothing. Measured: a class with an empty member and an is 8 bytes, and a class with an empty base and an is 4. The empty base optimisation exists because policy-based design would otherwise pay a byte and its padding for every stateless policy. That is why standard library types take their allocator and their comparator as base classes rather than as members, and it is why was added, to get the same result for a member.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "object-model",
+  "anchor": "the-three-words-the-standard-uses",
+  "title": "The three words the standard uses",
+  "text": "Three categories keep appearing in error messages and in library requirements, and they are nested. Trivially copyable means the bytes are the object: copying them with produces a valid copy, and the destructor does nothing. Anything holding a pointer it owns is not, because copying the bytes would give two owners. Standard layout means the memory arrangement is predictable and matches what C would produce. No virtual functions, no mixed access control across the members, and at most one class in the hierarchy with data. This is what lets a struct cross a language boundary. A type that is both is what the older standards called plain old data, and it is the class of thing you may write to a file, send over a socket, or hand to a driver. The reason to know the three names is that library constraints are stated in them. A container that promises to relocate objects by copying bytes requires trivial copyability, and a type that quietly acquires a member stops qualifying, which shows up as a performance change rather than an error.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "object-model",
+  "anchor": "when-does-an-object-exist",
+  "title": "When does an object exist",
+  "text": "A question that sounds philosophical and has a practical answer. An object's lifetime begins when its storage is obtained and its initialisation completes, and ends when its destructor runs. Before and after, the storage is just bytes, and reading through a pointer of the object's type is undefined. This matters for anything that manages memory by hand. Allocating a buffer and casting it to a type does not create objects there. Placement new does. The difference is invisible in practice on most compilers and is exactly the sort of thing an optimiser is entitled to exploit.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "object-model",
+  "anchor": "the-rule-that-punishes-clever-casts",
+  "title": "The rule that punishes clever casts",
+  "text": "Strict aliasing is the related rule and it produces the more common bug. The compiler is allowed to assume that a pointer to one type does not point at an object of an unrelated type. That assumption is what lets it keep a value in a register across a store through a different pointer type, which is a real and frequent optimisation. So reading a through an is undefined, and the failure mode is not a wrong value; it is a load being hoisted out of a loop because the compiler proved, using the rule, that nothing could have changed it. is the sanctioned way to reinterpret bytes, and it compiles to nothing at all when the sizes match. Every exercise in unit 028 that looked at the bits of a float used it, and that was the reason.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "object-model",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Alignment plus declaration order gives layout, and the compiler will not reorder for you because too much depends on it not doing so. A virtual function costs eight bytes per object and an indirect call whose target the predictor has to guess. Multiple inheritance costs a second one and makes a cast change a pointer's value. And the rules about lifetime and aliasing are not pedantry: they are the assumptions the optimiser is working from, and code that violates them fails in ways that look like the compiler being wrong.",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
+  "slug": "object-model",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These are C++, compiled with a real compiler, and most of them assert sizes and offsets. Those numbers were measured rather than derived, on the same 64-bit target the checker uses. names the size or offset your layout produced. A disagreement here is a fact about the machine rather than an opinion.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "object-model",
+  "n": 1,
+  "title": "The order you typed it in",
+  "text": "The compiler is not allowed to reorder members, so field order is layout order and shrinking a struct is a source edit. Reorder the members of so it occupies as few bytes as possible, without removing anything. Alignment decides padding: each member starts at the next offset satisfying its own alignment, and the whole struct is rounded up to a multiple of its own.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "object-model",
+  "n": 2,
+  "title": "Working out the offsets by hand",
+  "text": "Layout is one arithmetic rule applied member by member, which is why a <code>sizeof</code> can be predicted rather than looked up. Write , computing where a member lands given the offset reached so far and the member's alignment. This is the whole layout rule: round the current offset up to the next multiple of the alignment.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "object-model",
+  "n": 3,
+  "title": "The pointer you did not declare",
+  "text": "A virtual function costs eight bytes in every object, once, whatever the number of virtual functions. Add a virtual destructor to and observe what it costs. holds one . Adding a virtual function gives every object a hidden pointer to a table shared by the class.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "object-model",
+  "n": 4,
+  "title": "The cast that moves the pointer",
+  "text": "Casting to a second base changes the pointer's value, so two pointers to one object can compare unequal until they are brought to a common type. inherits from two polymorphic bases. A pointer to the second base cannot address the start of the object, because the second base's part of it does not begin there. Write , which builds one and returns how far into it that pointer points.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "object-model",
+  "n": 5,
+  "title": "Empty, and free",
+  "text": "The empty base optimisation exists so that a stateless policy does not cost a byte and its padding in every object that uses one. An empty class has size 1, because two objects must have distinct addresses. An empty base contributes nothing at all. Change so that its empty policy costs no space.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "object-model",
+  "n": 6,
+  "title": "Reinterpreting bytes without lying",
+  "text": "Strict aliasing is an assumption the optimiser works from, so violating it produces code that is wrong in ways that look like a compiler bug. Write , returning the bit pattern of a as an unsigned integer. The starter converts rather than reinterprets, which is the commoner confusion. The other tempting route, reading through an , is undefined: the failure there is not a wrong value but the compiler proving, from the aliasing rule, that nothing could have changed a value it kept in a register.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "object-model",
+  "n": 7,
+  "title": "What the library requires",
+  "text": "A container that relocates objects by copying bytes requires trivial copyability, so a type that acquires an owning member stops qualifying and the change shows up as performance rather than as an error. Write , reporting whether a type is trivially copyable and whether it is standard layout. Library constraints are stated in these terms, and a type can lose one of them by gaining a member.",
+  "part": "Systems"
+ },
+ {
+  "t": "exercise",
+  "slug": "object-model",
+  "n": 8,
+  "title": "Predicting a size",
+  "text": "The layout rule is short enough to apply by hand, which turns every surprising <code>sizeof</code> into arithmetic you can check. Write , computing what a struct of the given member sizes and alignments will occupy. Members are laid out in order, each rounded up to its own alignment, and the total is rounded up to the largest alignment present.",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "object-model",
+  "n": 1,
+  "title": "What decides where a struct member lands?",
+  "text": " And the whole struct is rounded up to a multiple of its own alignment, so an array of them keeps every element aligned. Those two rules explain every surprising  sizeof . ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "object-model",
+  "n": 2,
+  "title": "A struct of char, long, char occupies how many bytes on a 64-bit target?",
+  "text": " Measured. Seven bytes of padding before the long, then seven more of tail padding. The same three members as long, char, char occupy 16. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "object-model",
+  "n": 3,
+  "title": "Why does the compiler not reorder members for you?",
+  "text": " Too much depends on it: casting the first member's address back to the struct, sharing a layout with C, writing the bytes to a file. Field order is your responsibility. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "object-model",
+  "n": 4,
+  "title": "What does adding one virtual function cost in every object?",
+  "text": " The table holds all of them and the object holds one pointer to the table, which is why a class with twenty virtual functions costs the same as one with a single virtual destructor. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "object-model",
+  "n": 5,
+  "title": "What is the real cost of a virtual call?",
+  "text": " A call site that sees many different types guesses wrong often, and that is the misprediction penalty from unit 025 rather than the two extra loads. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "object-model",
+  "n": 6,
+  "title": "Casting a pointer to a second polymorphic base does what?",
+  "text": " Measured at sixteen bytes for two sixteen-byte bases, which is why two pointers to one object can compare unequal until they are brought to a common type. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "object-model",
+  "n": 7,
+  "title": "Why is an empty class one byte rather than zero?",
+  "text": " But an empty base contributes nothing, which is the empty base optimisation and the reason a class with an empty base and an  int  is four bytes where one with an empty member is eight. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "object-model",
+  "n": 8,
+  "title": "Why do standard containers inherit from their allocator rather than holding it?",
+  "text": " And  [[no_unique_address]]  was added to get the same result for a member, without the inheritance. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "object-model",
+  "n": 9,
+  "title": "When does an object's lifetime begin?",
+  "text": " Allocating a buffer and casting it to a type does not create objects there. Placement new does, and the difference is exactly the sort of thing an optimiser is entitled to exploit. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "object-model",
+  "n": 10,
+  "title": "What is the strict aliasing rule?",
+  "text": " That assumption is what lets it keep a value in a register across a store through a different pointer type, which is a real and frequent optimisation. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "object-model",
+  "n": 11,
+  "title": "How does violating strict aliasing usually fail?",
+  "text": " The failure mode is not a wrong value from the cast itself, and it looks like the compiler being wrong. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "object-model",
+  "n": 12,
+  "title": "What is the sanctioned way to reinterpret bytes?",
+  "text": " You pay nothing for following the rule, which is what makes ignoring it a poor trade. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "object-model",
+  "n": 13,
+  "title": "What does trivially copyable mean?",
+  "text": " Anything holding a pointer it owns is not, because copying the bytes would give two owners. A type that acquires a  std::string  member stops qualifying. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "object-model",
+  "n": 14,
+  "title": "What does standard layout mean?",
+  "text": " No virtual functions, no mixed access control across members, and at most one class in the hierarchy with data. It is what lets a struct cross a language boundary. ",
+  "part": "Systems"
+ },
+ {
+  "t": "drill",
+  "slug": "object-model",
+  "n": 15,
+  "title": "Why do layout questions matter more than they used to?",
+  "text": " A struct a third larger than it needs to be is a third more memory traffic over an array of them, which is unit 024's arithmetic applied to a source edit. ",
+  "part": "Systems"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

@@ -899,7 +899,8 @@
     "addressing"
    ],
    "neededBy": [
-    "pipeline"
+    "pipeline",
+    "object-model"
    ],
    "minutes": 55
   },
@@ -1035,7 +1036,9 @@
     "encoding",
     "integers"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "object-model"
+   ],
    "minutes": 55
   },
   {
@@ -1049,12 +1052,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1452,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "cache",
+    "text"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "raii",
@@ -2699,9 +2706,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 32,
-  "words": 48723,
-  "exercises": 256,
-  "drills": 480
+  "ready": 33,
+  "words": 50175,
+  "exercises": 264,
+  "drills": 495
  }
 }
