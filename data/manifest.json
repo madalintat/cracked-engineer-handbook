@@ -965,7 +965,9 @@
     "cmos-gate",
     "arithmetic"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "floats"
+   ],
    "minutes": 50
   },
   {
@@ -979,12 +981,15 @@
    "phase": "understand",
    "accent": "copper",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1563,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "integers"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "stability",
@@ -2683,9 +2688,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 29,
-  "words": 44122,
-  "exercises": 232,
-  "drills": 435
+  "ready": 30,
+  "words": 45685,
+  "exercises": 240,
+  "drills": 450
  }
 }

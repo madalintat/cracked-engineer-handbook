@@ -1,0 +1,310 @@
+{
+ "slug": "floats",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Three fields",
+   "brief": "<p>Write <code>decompose</code>, splitting a 32-bit float into its sign, its stored exponent and its stored fraction.</p>\n<p>Copy the bits rather than casting the pointer. Casting a float pointer to an integer pointer and dereferencing it is undefined behaviour, and the compiler is entitled to notice.</p>",
+   "kind": "output",
+   "concept": "The bits are a sign, a biased exponent and a fraction with an implied leading one, which is why twenty-three stored bits give twenty-four of precision.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The fraction is the low 23 bits, the exponent the next 8, the sign the top one."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Shift before masking, and mask with the right width: the exponent is 8 bits after shifting right by 23, and masking before shifting takes the wrong bits entirely.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names. <code>memcpy</code> needs <code>&lt;string.h&gt;</code>.</p>"
+    }
+   ],
+   "after": "<p>1.0f is exponent 127 and fraction 0, because the bias is 127 and the leading 1 is implied rather than stored. That implied bit is why a format with 23 bits of fraction has 24 bits of precision, and it is free because a normalised binary number always starts with one.</p>",
+   "starter": "#include <string.h>\nvoid decompose(float f, unsigned *sign, unsigned *exp, unsigned *frac) {\n    unsigned bits;\n    memcpy(&bits, &f, sizeof bits);\n    *sign = bits >> 31;\n    *exp = bits & 0xFF;\n    *frac = bits >> 23;\n}",
+   "tests": "#include <assert.h>\nvoid decompose(float, unsigned *, unsigned *, unsigned *);\nint main(void) {\n    unsigned s, e, m;\n    decompose(1.0f, &s, &e, &m);\n    assert(s == 0 && e == 127 && m == 0);\n    decompose(-1.0f, &s, &e, &m);\n    assert(s == 1 && e == 127 && m == 0);\n    decompose(2.0f, &s, &e, &m);\n    assert(s == 0 && e == 128 && m == 0);\n    decompose(0.5f, &s, &e, &m);\n    assert(s == 0 && e == 126 && m == 0);\n    decompose(0.0f, &s, &e, &m);\n    assert(s == 0 && e == 0 && m == 0);\n    /* 0.1f is the nearest float to a tenth, and its bits are 0x3dcccccd. */\n    decompose(0.1f, &s, &e, &m);\n    assert(s == 0 && e == 123 && m == 0x4ccccd);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "The gap at a magnitude",
+   "brief": "<p>Write <code>gap_above</code>, returning the distance from a float to the next larger one.</p>\n<p>The exponent scales the whole number, so this distance scales with it. That is the property behind almost every floating point surprise.</p>",
+   "kind": "output",
+   "concept": "The spacing between representable values grows with the values, so the same absolute error is negligible at one magnitude and catastrophic at another.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The bit patterns of positive floats increase in the same order as the values, so the next float is the next bit pattern."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Adding a constant epsilon gives the gap near 1.0 and nothing else. Add one to the bit pattern instead: the exponent is biased precisely so that consecutive bit patterns are consecutive values.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The gap at 2 to the 23 is exactly 1 and at 2 to the 24 it is 2, which is why a float represents every integer up to 16777216 and starts skipping above it. That bias in the exponent, which makes the bit patterns ordered, is a deliberate design decision and this exercise is one of the things it buys.</p>",
+   "starter": "#include <string.h>\nfloat gap_above(float f) {\n    (void)f;\n    return 1.1920929e-07f;\n}",
+   "tests": "#include <assert.h>\nfloat gap_above(float);\nint main(void) {\n    assert(gap_above(1.0f) == 1.1920929e-07f);\n    assert(gap_above(2.0f) == 2.3841858e-07f);\n    /* At two to the 23 the gap is exactly one. */\n    assert(gap_above(8388608.0f) == 1.0f);\n    /* At two to the 24 it is two, so adding one changes nothing. */\n    assert(gap_above(16777216.0f) == 2.0f);\n    assert(16777216.0f + 1.0f == 16777216.0f);\n    assert(gap_above(0.5f) == 5.9604645e-08f);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "The value that is not equal to itself",
+   "brief": "<p>Write <code>is_nan</code>, reporting whether a double is not-a-number, without calling any library function.</p>\n<p>There is exactly one comparison the standard defines to be true for a NaN, and it is the one that looks like a mistake.</p>",
+   "kind": "output",
+   "concept": "A NaN compares unequal to everything including itself, which is the only property that distinguishes it using comparisons alone.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Compare the value with itself."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Comparing against a NaN constant does not work, because every comparison involving a NaN is false, including equality between two NaNs. The test that works is <code>x != x</code>, which is true for a NaN and false for everything else.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This also breaks sorting. A comparison function built on <code>&lt;</code> stops being a valid ordering the moment a NaN appears, and some sort implementations respond by running off the end of the array rather than by returning a wrong order.</p>",
+   "starter": "int is_nan(double x) {\n    return x == 0.0 / 0.0;\n}",
+   "tests": "#include <assert.h>\nint is_nan(double);\nint main(void) {\n    double zero = 0.0;\n    double nan = zero / zero;\n    double inf = 1.0 / zero;\n    assert(is_nan(nan) == 1);\n    assert(is_nan(0.0) == 0);\n    assert(is_nan(1.5) == 0);\n    assert(is_nan(-1.5) == 0);\n    assert(is_nan(inf) == 0);\n    assert(is_nan(-inf) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Two zeros",
+   "brief": "<p>Positive and negative zero compare equal and are not the same value. Write <code>is_negative_zero</code>, which distinguishes them.</p>",
+   "kind": "output",
+   "concept": "Zero has a sign because the reciprocal has to have one, so two values that compare equal can still be told apart.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Comparison cannot see the difference. Something else can."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. <code>x == -0.0</code> is true for positive zero as well, because the two compare equal. Either look at the sign bit, or divide: one over negative zero is negative infinity and one over positive zero is positive infinity.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names. <code>memcpy</code> needs <code>&lt;string.h&gt;</code>.</p>"
+    }
+   ],
+   "after": "<p>The sign exists so that a computation which underflows to zero from below still produces a negative infinity when inverted, rather than losing the direction it came from. It is one of the places the standard chose to preserve information that equality then hides.</p>",
+   "starter": "int is_negative_zero(double x) {\n    return x == -0.0;\n}",
+   "tests": "#include <assert.h>\nint is_negative_zero(double);\nint main(void) {\n    assert(is_negative_zero(-0.0) == 1);\n    assert(is_negative_zero(0.0) == 0);\n    assert(is_negative_zero(1.0) == 0);\n    assert(is_negative_zero(-1.0) == 0);\n    /* They compare equal, which is why comparison cannot be the test. */\n    assert(-0.0 == 0.0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Ties to even",
+   "brief": "<p>Write <code>round_half_even</code>, rounding a double to the nearest integer and breaking ties toward the even neighbour.</p>\n<p>This is the default mode for every floating point operation, and it is not what most people would have chosen.</p>",
+   "kind": "output",
+   "concept": "Rounding ties in a fixed direction accumulates a bias over a long sum; rounding to the even neighbour does not, because it goes each way about equally often.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Only exact halves are ties. Everything else rounds to whichever integer is nearer."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees on a tie. Adding a half and truncating rounds 2.5 to 3 and 3.5 to 4, which is the biased rule. Ties to even sends 2.5 to 2 and 3.5 to 4, so the direction alternates and the bias cancels.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The bias is invisible in one operation and real over a million. Rounding always upward on a tie adds half an unit of last place per tie, which over a long accumulation is a drift in one direction rather than noise around the answer.</p>",
+   "starter": "double round_half_even(double x) {\n    return (double)(long)(x + (x < 0 ? -0.5 : 0.5));\n}",
+   "tests": "#include <assert.h>\ndouble round_half_even(double);\nint main(void) {\n    assert(round_half_even(2.4) == 2.0);\n    assert(round_half_even(2.6) == 3.0);\n    /* Ties go to the even neighbour, in both directions. */\n    assert(round_half_even(2.5) == 2.0);\n    assert(round_half_even(3.5) == 4.0);\n    assert(round_half_even(-2.5) == -2.0);\n    assert(round_half_even(-3.5) == -4.0);\n    assert(round_half_even(0.5) == 0.0);\n    assert(round_half_even(1.5) == 2.0);\n    assert(round_half_even(-0.5) == 0.0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "The root that lost its digits",
+   "brief": "<p>Write <code>smaller_root</code>, returning the root of <code>x</code> squared times a, plus b x, plus c, that is closest to zero, for a positive b much larger than a and c.</p>\n<p>The textbook formula subtracts two nearly equal numbers. The equivalent form that multiplies instead does not.</p>",
+   "kind": "output",
+   "concept": "Subtracting two nearly equal quantities discards the digits they agree on, and what is left is whatever noise was underneath them.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra -lm",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Multiply the numerator and denominator of the textbook formula by the conjugate. The subtraction becomes an addition."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees, and the discrepancy is enormous rather than small. With b at 1e8, the square root of b squared minus 4ac agrees with b to about fifteen digits, so subtracting them leaves one significant digit. The stable form is twice c over minus b minus that square root, which adds two large numbers instead of subtracting them.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names. <code>sqrt</code> needs <code>&lt;math.h&gt;</code>.</p>"
+    }
+   ],
+   "after": "<p>The naive answer is -7.450580596923828e-09 where the right one is -1.0000000000000000209e-08. Twenty five percent wrong, from a formula that is mathematically correct and implemented without a single mistake. This is the failure mode worth recognising: nothing was rounded badly, the information was never there.</p>",
+   "starter": "#include <math.h>\ndouble smaller_root(double a, double b, double c) {\n    double disc = sqrt(b * b - 4 * a * c);\n    return (-b + disc) / (2 * a);\n}",
+   "tests": "#include <assert.h>\n#include <math.h>\ndouble smaller_root(double, double, double);\nint main(void) {\n    /* Well conditioned: both forms agree. */\n    double r = smaller_root(1.0, 5.0, 6.0);\n    assert(fabs(r - (-2.0)) < 1e-12);\n    /* The hard case. The true root is very close to -1e-8. */\n    double h = smaller_root(1.0, 1e8, 1.0);\n    assert(fabs(h - (-1e-8)) < 1e-20);\n    /* The naive form gets this one wrong by a quarter. */\n    double naive = (-1e8 + sqrt(1e16 - 4.0)) / 2.0;\n    assert(fabs(naive - (-1e-8)) > 1e-9);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "Counting the steps between",
+   "brief": "<p>Write <code>ulps_apart</code>, returning how many representable floats lie between two values, inclusive of neither endpoint's own position.</p>\n<p>Both arguments are positive. Because the exponent is biased, the bit patterns of positive floats increase in the same order the values do, so this is a subtraction of integers.</p>",
+   "kind": "output",
+   "concept": "A tolerance measured in representable steps handles every magnitude with one constant, which neither an absolute nor a relative epsilon manages.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Copy both to unsigned integers and subtract, larger minus smaller."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Subtracting the values and dividing by an epsilon gives a different answer at every magnitude, which is the problem this approach exists to solve. Subtract the bit patterns instead.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names. <code>memcpy</code> needs <code>&lt;string.h&gt;</code>.</p>"
+    }
+   ],
+   "after": "<p>One constant covers every magnitude, because the question asked is how many representable values apart these are rather than how far apart they are. This is what a serious numerical test suite compares against, and it is only possible because the exponent was stored biased so that the bit patterns sort.</p>",
+   "starter": "#include <string.h>\nunsigned ulps_apart(float a, float b) {\n    float d = a > b ? a - b : b - a;\n    return (unsigned)(d / 1.1920929e-07f);\n}",
+   "tests": "#include <assert.h>\nunsigned ulps_apart(float, float);\nint main(void) {\n    assert(ulps_apart(1.0f, 1.0f) == 0);\n    /* One step apart, at two very different magnitudes. */\n    assert(ulps_apart(1.0f, 1.0f + 1.1920929e-07f) == 1);\n    assert(ulps_apart(16777216.0f, 16777218.0f) == 1);\n    assert(ulps_apart(8388608.0f, 8388609.0f) == 1);\n    /* Order does not matter. */\n    assert(ulps_apart(16777218.0f, 16777216.0f) == 1);\n    assert(ulps_apart(2.0f, 2.0f + 2 * 2.3841858e-07f) == 2);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Where the integers run out",
+   "brief": "<p>Write <code>exact_integers_up_to</code>, returning the largest integer <code>n</code> such that every integer from 0 to <code>n</code> is exactly representable in a float of the given precision.</p>\n<p>Precision is the number of significant bits, which is 24 for a 32-bit float and 53 for a double.</p>",
+   "kind": "output",
+   "concept": "The precision is a bit count, so the exact integer range is a power of two and it is the number to check a counter against.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Twenty-four bits of significand covers every integer up to two to the twenty-four."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. With <code>p</code> significant bits, every integer below two to the <code>p</code> fits in the significand, and two to the <code>p</code> itself is representable because it needs only a leading one. The first integer that is not representable is one more than that.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>16777216 for a float and about nine quadrillion for a double, which is why a double is usually acceptable as a counter and a float usually is not. Anything counting past sixteen million in a 32-bit float silently stops counting, and the comparison that would have caught it returns true.</p>",
+   "starter": "unsigned long long exact_integers_up_to(int precision_bits) {\n    return 1ULL << (precision_bits - 1);\n}",
+   "tests": "#include <assert.h>\nunsigned long long exact_integers_up_to(int);\nint main(void) {\n    assert(exact_integers_up_to(24) == 16777216ULL);\n    assert(exact_integers_up_to(53) == 9007199254740992ULL);\n    assert(exact_integers_up_to(11) == 2048ULL);   /* fp16 */\n    assert(exact_integers_up_to(8) == 256ULL);     /* bf16 */\n    assert(exact_integers_up_to(1) == 2ULL);\n    /* The claim, checked against the hardware. */\n    assert(16777216.0f + 1.0f == 16777216.0f);\n    assert(16777215.0f + 1.0f == 16777216.0f);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

@@ -69,5 +69,7 @@
   "cmos-gate",
   "arithmetic"
  ],
- "neededBy": []
+ "neededBy": [
+  "floats"
+ ]
 }
