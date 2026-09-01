@@ -1,0 +1,316 @@
+{
+ "slug": "integers",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "The value that has no negative",
+   "brief": "<p>Write <code>negate</code>. The checks include <code>INT_MIN</code>, and one of them asserts something that will look like a typo until you work out why it is not.</p>\n<p>input has no representable negation.</p>",
+   "kind": "output",
+   "concept": "Two's complement has one more negative value than positive, so one",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "There are 2147483648 negative ints and 2147483647 positive ones."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>Read the check that failed. <code>negate(INT_MIN)</code> cannot be <code>2147483648</code>, because that value does not exist in an <code>int</code>. Every implementation returns <code>INT_MIN</code> unchanged, and on a machine that traps it would trap instead. This is the one input for which the function has no correct answer.</p>"
+    },
+    {
+     "id": "silent",
+     "judge": "silent",
+     "key": "",
+     "prose": "<p>The toolchain had nothing to say and a check still failed. That is the ordinary case for this class of bug: the arithmetic is legal, the types are right, and one input has no answer.</p>"
+    }
+   ],
+   "after": "<p><code>abs(INT_MIN)</code> is negative for the same reason, on every machine you will use. It is not a bug in your standard library.</p>",
+   "starter": "int negate(int x) {\n    return 0;\n}",
+   "tests": "#include <assert.h>\n#include <limits.h>\nint main(void) {\n    assert(negate(5) == -5);\n    assert(negate(-5) == 5);\n    assert(negate(0) == 0);\n    assert(negate(INT_MIN) == INT_MIN);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "A comparison that is not a comparison",
+   "brief": "<p>The starter looks obviously true and prints nothing. Compile it with the warnings on and the compiler will tell you what it is really doing.</p>\n<p>signed one converts to unsigned before anything is compared.</p>",
+   "kind": "property",
+   "concept": "When a signed and an unsigned operand of the same rank meet, the",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "warning"
+    }
+   ],
+   "hints": [
+    "What is `-1` as a 32-bit unsigned value?"
+   ],
+   "diagnose": [
+    {
+     "id": "signcmp",
+     "judge": "match",
+     "key": "/\\[-Wsign-compare\\]/",
+     "prose": "<p>The compiler is naming the conversion. <code>a</code> becomes <code>unsigned</code> before the comparison, and <code>-1</code> as a 32-bit unsigned value is 4294967295, which is not less than 1. The comparison is well defined and it does not mean what it says.</p>"
+    },
+    {
+     "id": "warning",
+     "judge": "verdict",
+     "key": "warning",
+     "prose": "<p>The warning names the rule: two operands of different signedness met, and the signed one converted. Change the types so both sides agree.</p>"
+    }
+   ],
+   "after": "<p><code>-Wsign-compare</code> is enabled by <code>-Wextra</code>. Turn it on and leave it on. Every reverse loop written with an unsigned counter is this bug.</p>",
+   "starter": "#include <stdio.h>\nint main(void) {\n    int a = -1;\n    unsigned b = 1;\n    printf(\"%d\\n\", a < b);\n    return 0;\n}",
+   "tests": "",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Make the sanitizer speak",
+   "brief": "<p>The flags here turn undefined behaviour from silent into loud. Write an <code>add</code> that overflows and watch what the sanitizer says about it.</p>\n<p>and names the file and line.</p>",
+   "kind": "output",
+   "concept": "`-fsanitize=undefined` catches the overflow at the moment it happens",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O1 -fsanitize=undefined -fno-sanitize-recover=all",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The checks pass `INT_MAX` and `1`."
+   ],
+   "diagnose": [
+    {
+     "id": "overflow",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Read the runtime error. The sanitizer names the operation, the operands and the type: <code>signed integer overflow: 2147483647 + 1 cannot be represented in type 'int'</code>. That is the whole class made visible.</p>"
+    },
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check failed rather than the sanitizer firing. Look at which one, and at what your function returns for the ordinary inputs.</p>"
+    }
+   ],
+   "after": "<p><code>-fno-sanitize-recover=all</code> is not optional. Without it the sanitizer prints its complaint and the program still exits 0, so a test suite reports a pass over a program that has already broken its contract.</p>",
+   "starter": "int add(int a, int b) {\n    return 0;\n}",
+   "tests": "#include <limits.h>\nint main(void) {\n    if (add(2, 3) != 5) return 1;\n    return add(INT_MAX, 1) == 0 ? 0 : 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Two midpoints that disagree",
+   "brief": "<p>Both of these compute a midpoint. Both compile cleanly with every warning enabled. They do not agree, and the input that separates them does not overflow anything.</p>\n<p>would not have thought to try. a negative number?</p>",
+   "kind": "output",
+   "concept": "Nothing complained, and one of them is still wrong for an input you",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The failing input has a negative operand. What does C do when it divides"
+   ],
+   "diagnose": [
+    {
+     "id": "silent",
+     "judge": "silent",
+     "key": "",
+     "prose": "<p>No error, no warning, and a check failed. <code>a + (b - a) / 2</code> is the form people reach for to avoid overflow, and for <code>mid(2, -1)</code> it gives 1 where <code>(a + b) / 2</code> gives 0. Integer division truncates toward zero, so <code>(-3) / 2</code> is <code>-1</code> and not <code>-2</code>. The divergence has nothing to do with overflow.</p>"
+    },
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>Work out both expressions by hand for <code>a = 2, b = -1</code> before changing anything.</p>"
+    }
+   ],
+   "after": "<p>The overflow-safe form is still the right one when the operands can be large. Just know that it is a different function on negative inputs, not the same function written more carefully.</p>",
+   "starter": "int mid(int a, int b) {\n    return a + (b - a) / 2;\n}",
+   "tests": "#include <assert.h>\nint main(void) {\n    assert(mid(2, 4) == 3);\n    assert(mid(2, -1) == 0);\n    assert(mid(-8, -2) == -5);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Ask before you add",
+   "brief": "<p>Write <code>safe_add</code> so it reports whether the addition was representable, and writes the result only when it was.</p>\n<p>did not choose.</p>",
+   "kind": "output",
+   "concept": "The checked builtins are the honest way to do arithmetic on input you",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "`__builtin_add_overflow(a, b, &out)` returns true when it overflowed."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>Read which check failed. The function has to return the opposite of what the builtin returns, and it must still write the result for the cases that fit.</p>"
+    },
+    {
+     "id": "silent",
+     "judge": "silent",
+     "key": "",
+     "prose": "<p>Nothing complained and a check failed. Compare what the builtin returns against what your function returns for the same call.</p>"
+    }
+   ],
+   "after": "<p>C23 standardises this family as <code>ckd_add</code> and friends in <code>&lt;stdckdint.h&gt;</code>. Until then the builtin is available in gcc and clang and compiles to one <code>add</code> and one conditional jump.</p>",
+   "starter": "#include <stdbool.h>\nbool safe_add(int a, int b, int *out) {\n    *out = a + b;\n    return true;\n}",
+   "tests": "#include <assert.h>\n#include <limits.h>\nint main(void) {\n    int o = 0;\n    assert(safe_add(2, 3, &o) && o == 5);\n    assert(safe_add(-7, 4, &o) && o == -3);\n    assert(!safe_add(INT_MAX, 1, &o));\n    assert(!safe_add(INT_MIN, -1, &o));\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "The loop that never ends",
+   "brief": "<p>Count down from <code>n - 1</code> to <code>0</code> and sum the array. The starter uses the type everyone reaches for, and it does not terminate.</p>\n<p>fires.</p>",
+   "kind": "output",
+   "concept": "An unsigned counter cannot go below zero, so a test for that never",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "timeout"
+    }
+   ],
+   "hints": [
+    "What is the smallest value a `size_t` can hold?"
+   ],
+   "diagnose": [
+    {
+     "id": "timeout",
+     "judge": "verdict",
+     "key": "timeout",
+     "prose": "<p>The loop does not end. <code>i &gt;= 0</code> is always true for an unsigned type, so when <code>i</code> is 0 the decrement wraps it to the largest <code>size_t</code> instead of going negative, and the loop starts again from the top of the address space.</p>"
+    },
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>The loop terminates now but the sum is wrong. Check which elements you visited.</p>"
+    },
+    {
+     "id": "silent",
+     "judge": "silent",
+     "key": "",
+     "prose": "<p>Nothing complained and a check failed. Count the iterations by hand for a three-element array.</p>"
+    }
+   ],
+   "after": "<p>Two fixes are idiomatic: loop from <code>n</code> down to <code>1</code> and index with <code>i - 1</code>, or use a signed counter. The first is preferred because it keeps the index type matching the container's.</p>",
+   "starter": "#include <stddef.h>\nint sum_backwards(const int *a, size_t n) {\n    int total = 0;\n    for (size_t i = n - 1; i >= 0; i--) total += a[i];\n    return total;\n}",
+   "tests": "#include <assert.h>\nint main(void) {\n    int a[] = {1, 2, 3, 4};\n    assert(sum_backwards(a, 4) == 10);\n    assert(sum_backwards(a, 1) == 1);\n    assert(sum_backwards(a, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "Widening is an instruction",
+   "brief": "<p><code>load</code> reads one byte and returns it as an <code>int</code>. The checks include a byte whose top bit is set, and the answer depends on a single character in the declaration.</p>\n<p>by the type, and it becomes a different instruction.</p>",
+   "kind": "output",
+   "concept": "Whether the high bits are copies of the sign bit or zeros is decided",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "`0xFF` as a `signed char` is `-1`. As an `unsigned char` it is 255."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>The failing check uses a byte with its top bit set. Plain <code>char</code> is signed on this target, so the value sign-extends and you get a negative number where the check wants 255. The compiler emits <code>movsx</code> for one and <code>movzx</code> for the other.</p>"
+    },
+    {
+     "id": "silent",
+     "judge": "silent",
+     "key": "",
+     "prose": "<p>Nothing complained and a check failed. The types are all legal; only one of them means what the checks expect.</p>"
+    }
+   ],
+   "after": "<p>This is why <code>char</code> is the wrong type for a byte. Use <code>unsigned char</code> for data and <code>char</code> only for text.</p>",
+   "starter": "int load(const char *p) {\n    return *p;\n}",
+   "tests": "#include <assert.h>\nint main(void) {\n    unsigned char bytes[] = {0x01, 0x7F, 0x80, 0xFF};\n    assert(load((const char *)&bytes[0]) == 1);\n    assert(load((const char *)&bytes[1]) == 127);\n    assert(load((const char *)&bytes[2]) == 128);\n    assert(load((const char *)&bytes[3]) == 255);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Say what you mean instead",
+   "brief": "<p>Rewrite the overflow check so it asks a question the standard answers. The starter tests the result of an operation the standard says does not happen.</p>\n<p>well defined.</p>",
+   "kind": "output",
+   "concept": "Check the operands before the operation, not the result after it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "`a + b` overflows exactly when `b > INT_MAX - a`, and that comparison is"
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>The check that failed passes two large positive values. <code>a + b &lt; 0</code> asks about a value the standard says cannot exist, so the compiler is entitled to conclude the test is never true and delete it. Ask about the operands instead.</p>"
+    },
+    {
+     "id": "silent",
+     "judge": "silent",
+     "key": "",
+     "prose": "<p>Nothing complained and a check failed. The test you wrote is legal C and the compiler removed it, which is why nothing was reported.</p>"
+    }
+   ],
+   "after": "<p>Both operands need a guard: positive overflow when <code>b &gt; INT_MAX - a</code>, and negative when <code>b &lt; INT_MIN - a</code>.</p>",
+   "starter": "#include <stdbool.h>\nbool would_overflow(int a, int b) {\n    return a + b < 0;\n}",
+   "tests": "#include <assert.h>\n#include <limits.h>\nint main(void) {\n    assert(!would_overflow(2, 3));\n    assert(!would_overflow(-5, 2));\n    assert(would_overflow(INT_MAX, 1));\n    assert(would_overflow(INT_MIN, -1));\n    assert(!would_overflow(INT_MAX, INT_MIN));\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

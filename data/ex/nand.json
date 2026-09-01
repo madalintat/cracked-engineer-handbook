@@ -57,7 +57,8 @@
     ],
     "minGates": 1,
     "maxGates": 2
-   }
+   },
+   "lang": "netlist"
   },
   {
    "n": 2,
@@ -127,7 +128,8 @@
     ],
     "minGates": 2,
     "maxGates": 4
-   }
+   },
+   "lang": "netlist"
   },
   {
    "n": 3,
@@ -197,7 +199,8 @@
     ],
     "minGates": 3,
     "maxGates": 5
-   }
+   },
+   "lang": "netlist"
   },
   {
    "n": 4,
@@ -254,7 +257,8 @@
     ],
     "minGates": 1,
     "maxGates": 3
-   }
+   },
+   "lang": "netlist"
   },
   {
    "n": 5,
@@ -323,7 +327,8 @@
      ]
     ],
     "minGates": 4
-   }
+   },
+   "lang": "netlist"
   },
   {
    "n": 6,
@@ -393,7 +398,8 @@
     ],
     "minGates": 4,
     "maxGates": 4
-   }
+   },
+   "lang": "netlist"
   },
   {
    "n": 7,
@@ -492,7 +498,8 @@
     ],
     "minGates": 4,
     "maxGates": 8
-   }
+   },
+   "lang": "netlist"
   },
   {
    "n": 8,
@@ -561,7 +568,8 @@
      ]
     ],
     "minGates": 5
-   }
+   },
+   "lang": "netlist"
   }
  ]
 }

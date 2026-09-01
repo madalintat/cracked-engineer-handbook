@@ -34,6 +34,7 @@ def ex_file(body, n=build.N_EXERCISES, backend="godbolt"):
 ## Filler {i}
 A brief that says something real about the exercise at hand.
 @concept placeholder
+@lang cpp
 @expect match /error: something/
 @hint Look at the line the compiler points at.
 @diagnose d match /error: something/
@@ -45,6 +46,8 @@ int main(){}
 int main(){return 0;}
 ```
 """ + spec
+    if backend == "sim":
+        filler = filler.replace("@lang cpp\n", "")
     rest = "".join(filler.replace("{i}", str(i)) for i in range(2, n + 1))
     return "## First\n" + body + rest
 
@@ -53,6 +56,7 @@ GOOD = """A real brief explaining what the reader has to do here.
 @kind compile-error
 @concept Moving out of a value leaves nothing behind.
 @backend godbolt
+@lang cpp
 @flags -O2 -Wall
 @expect match /error: use of moved value/
 @hint The compiler is telling you where the value went.
@@ -120,14 +124,14 @@ SPEC = """```spec
 
 
 def t_backend_defaults_to_the_unit():
-    body = GOOD.replace("@backend godbolt\n", "") + SPEC
+    body = GOOD.replace("@backend godbolt\n", "").replace("@lang cpp\n", "") + SPEC
     ex = build.parse_exercises(ex_file(body, backend="sim"), "t", "sim")
     assert ex[0]["backend"] == "sim", ex[0]["backend"]
     assert ex[0]["spec"]["chip"] == "Not"
 
 
 def t_sim_without_a_spec_is_an_error():
-    expect_problem(ex_file(GOOD.replace("@backend godbolt", "@backend sim")),
+    expect_problem(ex_file(GOOD.replace("@backend godbolt", "@backend sim").replace("@lang cpp\n", "")),
                    "needs a ```spec block")
 
 
@@ -138,32 +142,32 @@ def t_spec_outside_sim_is_an_error():
 
 def t_spec_table_must_be_exhaustive():
     short = SPEC.replace('"table": [[0,1],[1,0]]', '"table": [[0,1]]')
-    body = GOOD.replace("@backend godbolt", "@backend sim") + short
+    body = GOOD.replace("@backend godbolt", "@backend sim").replace("@lang cpp\n", "") + short
     expect_problem(ex_file(body, backend="sim"), "must be exhaustive", default="sim")
 
 
 def t_spec_row_width_is_checked():
     bad = SPEC.replace('"table": [[0,1],[1,0]]', '"table": [[0,1,1],[1,0,0]]')
-    body = GOOD.replace("@backend godbolt", "@backend sim") + bad
+    body = GOOD.replace("@backend godbolt", "@backend sim").replace("@lang cpp\n", "") + bad
     expect_problem(ex_file(body, backend="sim"), "want 1 inputs plus 1 outputs",
                    default="sim")
 
 
 def t_spec_rejects_a_repeated_input_row():
     dup = SPEC.replace('"table": [[0,1],[1,0]]', '"table": [[0,1],[0,0]]')
-    body = GOOD.replace("@backend godbolt", "@backend sim") + dup
+    body = GOOD.replace("@backend godbolt", "@backend sim").replace("@lang cpp\n", "") + dup
     expect_problem(ex_file(body, backend="sim"), "repeats the input row",
                    default="sim")
 
 
 def t_spec_rejects_an_impossible_gate_budget():
     imp = SPEC.replace('"minGates": 1', '"minGates": 4, "maxGates": 2')
-    body = GOOD.replace("@backend godbolt", "@backend sim") + imp
+    body = GOOD.replace("@backend godbolt", "@backend sim").replace("@lang cpp\n", "") + imp
     expect_problem(ex_file(body, backend="sim"), "below minGates", default="sim")
 
 
 def t_spec_must_be_valid_json():
-    body = (GOOD.replace("@backend godbolt", "@backend sim")
+    body = (GOOD.replace("@backend godbolt", "@backend sim").replace("@lang cpp\n", "")
             + "```spec\n{not json}\n```\n")
     expect_problem(ex_file(body, backend="sim"), "not valid JSON", default="sim")
 
@@ -377,6 +381,31 @@ def t_the_real_nand_content_builds_strictly():
     assert u["exercises"] == build.N_EXERCISES, u["exercises"]
     assert u["drills"] == build.N_DRILLS, u["drills"]
     assert build.NOTE_WORDS[0] <= u["words"] <= build.NOTE_WORDS[1], u["words"]
+
+
+def t_lang_is_required_where_a_backend_has_several():
+    expect_problem(ex_file(GOOD.replace("@lang cpp\n", "")),
+                   "@lang is required on the godbolt backend")
+
+
+def t_lang_must_belong_to_the_backend():
+    expect_problem(ex_file(GOOD.replace("@lang cpp", "@lang verilog")),
+                   "is not a language the godbolt backend checks")
+
+
+def t_lang_is_inferred_where_a_backend_has_only_one():
+    body = (GOOD.replace("@backend godbolt\n", "").replace("@lang cpp\n", "")
+            + SPEC)
+    ex = build.parse_exercises(ex_file(body, backend="sim"), "t", "sim")
+    assert ex[0]["lang"] == "netlist", ex[0]["lang"]
+
+
+def t_the_real_integers_content_builds_strictly():
+    if not (build.CONTENT / "units" / "integers.md").exists():
+        return
+    manifest, _ = build.build(strict=True)
+    u = next(x for x in manifest if x["slug"] == "integers")
+    assert u["ready"] and u["exercises"] == 8 and u["drills"] == 15, u
 
 
 # ------------------------------------------------------------------- markdown

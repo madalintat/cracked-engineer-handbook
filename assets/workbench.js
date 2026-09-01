@@ -460,17 +460,30 @@ const WB = (() => {
       const errors = tagged.filter(x => x.tag.severity === 3);
       const warnings = tagged.filter(x => x.tag.severity === 2);
 
+      // In compile-only mode the build stderr and the top-level stderr are the
+      // same text, so dedupe rather than offering the reader's regex two
+      // identical haystacks.
       const signals = [{ judge: 'verdict', key: verdict }];
-      if (diagText) signals.push({ judge: 'match', key: diagText });
-      if (progErr) signals.push({ judge: 'match', key: progErr });
+      const seen = new Set();
+      const addMatch = (txt) => {
+        if (!txt || seen.has(txt)) return;
+        seen.add(txt);
+        signals.push({ judge: 'match', key: txt });
+      };
+      addMatch(diagText);
+      addMatch(progErr);
+      addMatch(progOut);
       for (const w of warnings) {
         const f = warningFlag(w.tag.text);
         if (f) signals.push({ judge: 'verdict', key: 'warning' },
                             { judge: 'match', key: f });
       }
-      if (verdict === 'ok' && !errors.length && !warnings.length) {
-        signals.push({ judge: 'silent', key: '' });
-      }
+      // `silent` is the most instructive failure a handbook can set: every
+      // judge happy and the answer still wrong. It is a property of FAILING
+      // with nothing to show for it, not of succeeding.
+      const quiet = !errors.length && !warnings.length;
+      const wrong = verdict === 'assert-failed' || verdict === 'nonzero-exit';
+      if (quiet && wrong) signals.push({ judge: 'silent', key: '' });
 
       const verdicts = [];
       const firstErr = errors[0] || warnings[0];

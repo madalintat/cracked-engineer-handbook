@@ -63,7 +63,17 @@ N_DRILLS = 15
 
 DIRECTIVES = {
     "kind", "concept", "expect", "hint", "diagnose", "after",
-    "backend", "gpu", "flags",
+    "backend", "gpu", "flags", "lang",
+}
+
+# Which source languages each backend can actually check. The editor also picks
+# its tokenizer from this, so an unknown value would silently fall back to the
+# wrong highlighter.
+BACKEND_LANGS = {
+    "sim": {"netlist"},
+    "godbolt": {"c", "cpp", "asm", "cuda"},
+    "yosys": {"verilog"},
+    "modal": {"cuda", "cpp"},
 }
 
 JUDGES = ("verdict", "match", "silent")
@@ -320,7 +330,7 @@ def parse_exercises(text, where, default_backend):
             "concept": "", "backend": default_backend, "gpu": None,
             "flags": "", "expect": [], "hints": [], "diagnose": [],
             "after": "", "starter": "", "tests": "", "solution": "",
-            "spec": None,
+            "spec": None, "lang": "",
         }
 
         sink = ["brief"]          # where free prose currently goes
@@ -360,7 +370,7 @@ def parse_exercises(text, where, default_backend):
                     problems.append(f"{w}: unknown directive @{name}")
                     i += 1
                     continue
-                if name in ("kind", "concept", "backend", "gpu", "flags"):
+                if name in ("kind", "concept", "backend", "gpu", "flags", "lang"):
                     ex[name] = arg
                     sink[0] = "brief"
                 elif name == "expect":
@@ -409,6 +419,17 @@ def _check_exercise_shape(ex, w):
         p.append(f"{w}: unknown backend {ex['backend']!r}")
     if ex["gpu"] and ex["backend"] != "modal":
         p.append(f"{w}: @gpu only means something on the modal backend")
+    langs = BACKEND_LANGS.get(ex["backend"], set())
+    if not ex["lang"]:
+        # one language per backend means no ambiguity; more means say which
+        ex["lang"] = next(iter(langs)) if len(langs) == 1 else ""
+        if not ex["lang"]:
+            p.append(f"{w}: @lang is required on the {ex['backend']} backend "
+                     f"(one of {', '.join(sorted(langs))})")
+    elif ex["lang"] not in langs:
+        p.append(f"{w}: {ex['lang']!r} is not a language the {ex['backend']} "
+                 f"backend checks. Known: {', '.join(sorted(langs))}")
+
     if ex["backend"] == "sim":
         p += _check_sim_spec(ex.get("spec"), w)
     elif ex.get("spec") is not None:
@@ -443,7 +464,8 @@ def _check_exercise_shape(ex, w):
         if (e["judge"], e["key"]) not in covered:
             p.append(f"{w}: @expect {e['judge']} {e['key']!r} has no matching "
                      f"@diagnose, so the reader gets the error with no explanation")
-    p += prose.lint(re.sub(r"<[^>]+>", " ", ex["brief"]), f"{w} brief")
+    p += prose.lint(re.sub(r"<[^>]+>", " ", prose.strip_code(ex["brief"])),
+                    f"{w} brief")
     for h in ex["hints"]:
         p += prose.lint(h, f"{w} hint")
     return p
@@ -624,8 +646,9 @@ def build(strict=True):
                     problems.append(
                         f"units/{slug}: {words} words, want "
                         f"{NOTE_WORDS[0]}..{NOTE_WORDS[1]}")
-                problems += prose.lint(re.sub(r"<[^>]+>", " ", body_html),
-                                       f"units/{slug}")
+                problems += prose.lint(
+                    re.sub(r"<[^>]+>", " ", prose.strip_code(body_html)),
+                    f"units/{slug}")
                 ex_p = CONTENT / "ex" / f"{slug}.md"
                 dr_p = CONTENT / "drills" / f"{slug}.md"
                 exercises = parse_exercises(ex_p.read_text(), f"ex/{slug}", backend) \
@@ -784,6 +807,83 @@ console.log(JSON.stringify(out));
     return problems
 
 
+def validate_godbolt(exercises, where):
+    """Compile every godbolt starter and solution for real.
+
+    Runs through assets/workbench.js, the same client the browser uses. A
+    validator that models the client rather than being the client will
+    eventually disagree with it, and the disagreement gets found by a learner.
+    """
+    import subprocess, tempfile
+    items = [{
+        "n": e["n"], "title": e["title"], "lang": e["lang"] or "cpp",
+        "kind": e["kind"], "flags": e["flags"], "tests": e["tests"],
+        "starter": e["starter"], "solution": e["solution"],
+        "want": [x["key"] for x in e["expect"] if x["judge"] == "verdict"],
+        "wantMatch": [x["key"] for x in e["expect"] if x["judge"] == "match"],
+        "wantSilent": any(x["judge"] == "silent" for x in e["expect"]),
+    } for e in exercises if e["backend"] == "godbolt"]
+    if not items:
+        return []
+
+    with tempfile.TemporaryDirectory() as d:
+        jp = Path(d) / "p.json"
+        jp.write_text(json.dumps({"judges": JUDGES_CONFIG, "items": items}))
+        try:
+            r = subprocess.run(
+                ["node", str(ROOT / "validate_godbolt.mjs"), str(jp)],
+                capture_output=True, text=True, timeout=600, cwd=ROOT)
+        except FileNotFoundError:
+            return [f"{where}: --validate needs node on PATH"]
+        except subprocess.TimeoutExpired:
+            return [f"{where}: the compiler service did not answer in ten minutes"]
+        if r.returncode != 0:
+            return [f"{where}: the validator failed: {r.stderr.strip()[:500]}"]
+        results = json.loads(r.stdout)
+
+    by_n = {i["n"]: i for i in items}
+    problems = []
+    for res in results:
+        w = f"{where} ex{res['n']} ({res['title']})"
+        item = by_n[res["n"]]
+
+        if res["starterUnavailable"] or res["solutionUnavailable"]:
+            problems.append(
+                f"{w}: the compiler service could not be reached after three "
+                f"tries. This is the service, not the content, so treat it as "
+                f"a skip rather than a failure.")
+            continue
+
+        got = res.get("starterVerdicts") or [res["starterVerdict"]]
+        if res["want"] and not (set(got) & set(res["want"])):
+            problems.append(
+                f"{w}: starter emits {got}, @expect declares "
+                f"{' or '.join(res['want'])!r}.")
+        if item["wantSilent"] and not res["starterPass"]:
+            problems.append(
+                f"{w}: @expect silent, but the starter failed the toolchain "
+                f"({res['starterVerdict']}). A silent exercise must compile and "
+                f"run cleanly and still be wrong.")
+        for pat in item["wantMatch"]:
+            rx = re.compile(pat[1:-1])
+            hay = "\n".join(s2["key"] for s2 in res["starterSignals"]
+                             if s2["judge"] == "match")
+            if not rx.search(hay):
+                problems.append(
+                    f"{w}: @expect match {pat} did not match what the compiler "
+                    f"actually said. Got: {hay[:200]!r}")
+
+        if not res["solutionPass"]:
+            problems.append(
+                f"{w}: solution does not pass: {res['solutionVerdict']} "
+                f"({res['solutionTitle']})")
+        elif res["solutionClean"] is False:
+            problems.append(
+                f"{w}: solution passes but is not clean. Fix the warnings or "
+                f"say so in the exercise.")
+    return problems
+
+
 def run_validate():
     """Every backend, every exercise. Per-backend pools, not one shared pool:
     a single pool of four would queue hundreds of local simulator checks behind
@@ -807,6 +907,13 @@ def run_validate():
                 problems += validate_sim(group, where)
                 checked += len(group)
             print(f"  sim      {len(items):3} exercises checked")
+        elif backend == "godbolt":
+            for where in sorted({w for w, _ in items}):
+                group = [e for w, e in items if w == where]
+                problems += validate_godbolt(group, where)
+                checked += len(group)
+            print(f"  godbolt  {len(items):3} exercises checked "
+                  f"({JUDGES_CONFIG['godbolt']['langs']['cpp']['name']})")
         else:
             print(f"  {backend:<8} {len(items):3} exercises skipped "
                   f"(backend client not wired yet)")

@@ -621,10 +621,10 @@
    "partTitle": "Numbers and text",
    "accent": "amber",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0
+   "ready": true,
+   "words": 1702,
+   "exercises": 8,
+   "drills": 15
   },
   {
    "slug": "floats",
@@ -2046,9 +2046,9 @@
  "counts": {
   "parts": 19,
   "units": 122,
-  "ready": 1,
-  "words": 1541,
-  "exercises": 8,
-  "drills": 15
+  "ready": 2,
+  "words": 3243,
+  "exercises": 16,
+  "drills": 30
  }
 }

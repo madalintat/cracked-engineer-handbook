@@ -71,8 +71,25 @@ def _repeated_phrase(text, min_words=3):
     return None
 
 
-def lint(text, where="text"):
-    """Return a list of findings. Empty list means clean."""
+# Code is not prose. A listing legitimately repeats lines, uses hyphens, and
+# contains words the list below would flag. Strip it before linting rather than
+# teaching authors to word their code around a style checker.
+_CODE = re.compile(r"<pre\b[^>]*>.*?</pre>|<code\b[^>]*>.*?</code>",
+                   re.S | re.I)
+
+
+def strip_code(html):
+    return _CODE.sub(" ", html)
+
+
+def lint(text, where="text", code_is_prose=True):
+    """Return a list of findings. Empty list means clean.
+
+    `code_is_prose=False` strips fenced and inline code first, for anything
+    rendered from markdown.
+    """
+    if not code_is_prose:
+        text = strip_code(text)
     out = []
     low = text.lower()
 
@@ -188,6 +205,19 @@ def _selfcheck():
     assert any("too short" in g for g in check_blurb("Too short.", "t"))
     assert any("doubled word" in g for g in
                check_blurb("The the clock is a contract about garbage timing.", "t"))
+
+    # Code is not prose and must not be linted as such.
+    listing = ("<p>Both emit this:</p><pre><code>xor eax, eax\n"
+               "xor eax, eax</code></pre><p>Which is the same instruction.</p>")
+    assert lint(listing, "t", code_is_prose=False) == [], \
+        lint(listing, "t", code_is_prose=False)
+    assert any("repeated" in g for g in lint(listing, "t")), \
+        "with code_is_prose=True the repeat should still be seen"
+    dashy = "<p>Fine.</p><pre><code>a -- b</code></pre>"
+    assert lint(dashy, "t", code_is_prose=False) == []
+    # but prose around the code is still linted
+    bad = "<p>Let's dive in.</p><pre><code>ok</code></pre>"
+    assert any("dive" in g for g in lint(bad, "t", code_is_prose=False))
 
     # Terms of art must not trip the word list.
     assert any("title case" in g for g in

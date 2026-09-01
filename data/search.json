@@ -972,5 +972,133 @@
   "title": "The last of the sixteen",
   "text": "Every one of the sixteen two-input functions is reachable, and you now",
   "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "integers",
+  "anchor": "the-representation-briefly",
+  "title": "The representation, briefly",
+  "text": "",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "section",
+  "slug": "integers",
+  "anchor": "widening-and-the-bit-that-gets-copied",
+  "title": "Widening, and the bit that gets copied",
+  "text": "",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "section",
+  "slug": "integers",
+  "anchor": "the-surprise",
+  "title": "The surprise",
+  "text": "",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "section",
+  "slug": "integers",
+  "anchor": "what-undefined-behaviour-actually-is",
+  "title": "What undefined behaviour actually is",
+  "text": "",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "section",
+  "slug": "integers",
+  "anchor": "how-this-fails-in-practice",
+  "title": "How this fails in practice",
+  "text": "",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "section",
+  "slug": "integers",
+  "anchor": "the-trap-that-has-nothing-to-do-with-overflow",
+  "title": "The trap that has nothing to do with overflow",
+  "text": "",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "section",
+  "slug": "integers",
+  "anchor": "saying-what-you-mean",
+  "title": "Saying what you mean",
+  "text": "",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "section",
+  "slug": "integers",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "integers",
+  "n": 1,
+  "title": "The value that has no negative",
+  "text": "Two's complement has one more negative value than positive, so one",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "integers",
+  "n": 2,
+  "title": "A comparison that is not a comparison",
+  "text": "When a signed and an unsigned operand of the same rank meet, the",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "integers",
+  "n": 3,
+  "title": "Make the sanitizer speak",
+  "text": "`-fsanitize=undefined` catches the overflow at the moment it happens",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "integers",
+  "n": 4,
+  "title": "Two midpoints that disagree",
+  "text": "Nothing complained, and one of them is still wrong for an input you",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "integers",
+  "n": 5,
+  "title": "Ask before you add",
+  "text": "The checked builtins are the honest way to do arithmetic on input you",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "integers",
+  "n": 6,
+  "title": "The loop that never ends",
+  "text": "An unsigned counter cannot go below zero, so a test for that never",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "integers",
+  "n": 7,
+  "title": "Widening is an instruction",
+  "text": "Whether the high bits are copies of the sign bit or zeros is decided",
+  "part": "Numbers and text"
+ },
+ {
+  "t": "exercise",
+  "slug": "integers",
+  "n": 8,
+  "title": "Say what you mean instead",
+  "text": "Check the operands before the operation, not the result after it.",
+  "part": "Numbers and text"
  }
 ]
