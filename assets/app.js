@@ -132,9 +132,19 @@ function viewHome() {
 
 /* The track at 122 units.
  *
- * A flat grid of 122 cards is a wall. Three levels instead: phase, part, unit,
- * where the unit is a row rather than a card so a whole part fits on screen and
- * can be scanned. The filter is the fast path; the spine is the slow one.
+ * This was a list, and a list of 122 rows is 122 near-identical lines carrying
+ * the same two badges. In Part I every row said GODBOLT; in Part II every row
+ * said SIM; almost every row said "1 before". Repetition at that density stops
+ * being information and becomes texture, and the two things a reader actually
+ * wants, which unit is this and what is it about, were the smallest type on
+ * the row.
+ *
+ * So: cards, chunked by part, and everything constant within a part stated
+ * once in the part's header instead of on every unit under it. A per-unit
+ * backend badge appears only where a unit disagrees with its part, which is
+ * the only case where it tells you anything. Prerequisite counts are gone
+ * from here entirely; the unit page names them, and a number was never the
+ * useful form of that.
  */
 function viewTrack() {
   const byPart = new Map();
@@ -144,58 +154,92 @@ function viewTrack() {
   });
   const partById = new Map(HH.manifest.parts.map(p => [p.id, p]));
 
-  const row = u => {
+  const TOOL = {
+    sim: 'the simulator in this page',
+    godbolt: 'a real compiler, through Compiler Explorer',
+    yosys: 'Yosys, synthesising in this page',
+    modal: 'a GPU you rent by the second',
+  };
+
+  /* One unit. The number is set large and ghosted rather than small and dim:
+   * at 122 units the number is how you keep your place, so it should be the
+   * thing you can find without reading. */
+  const card = (u, oddBackend) => {
     const started = Store.get(`read.${u.slug}`, -1) >= 0;
-    const needs = (u.needs || []).length;
+    const cls = ['u', u.ready ? '' : 'stub', started ? 'started' : '']
+      .filter(Boolean).join(' ');
+    const inner = `
+      <span class="u-n">${unitNo(u)}</span>
+      <span class="u-t">${esc(u.title)}</span>
+      <span class="u-b">${esc(u.blurb)}</span>
+      <span class="u-foot">
+        ${started ? '<span class="u-dot" title="You have started this"></span>' : ''}
+        ${oddBackend ? `<span class="badge">${esc(u.backend)}</span>` : ''}
+      </span>`;
     return `
-    <li class="u${u.ready ? '' : ' stub'}${started ? ' started' : ''}"
+    <li class="${cls}"
         data-hay="${esc([u.title, u.blurb, u.backend].join(' ').toLowerCase())}">
-      <a href="${u.ready ? `#/unit/${esc(u.slug)}` : '#/track'}"
-         ${u.ready ? '' : 'aria-disabled="true"'}>
-        <span class="n">${unitNo(u)}</span>
-        <span class="t">${esc(u.title)}
-          <span class="b">${esc(u.blurb)}</span></span>
-        <span class="tags">
-          ${started ? '<span class="badge ok">started</span>' : ''}
-          ${needs ? `<span class="badge" title="${needs} prerequisite${
-            needs === 1 ? '' : 's'}">${needs} before</span>` : ''}
-          <span class="badge">${esc(u.backend)}</span>
-          ${u.ready ? '' : '<span class="badge muted">planned</span>'}
-        </span>
-      </a>
+      ${u.ready
+        ? `<a href="#/unit/${esc(u.slug)}">${inner}</a>`
+        : `<div class="u-card">${inner}</div>`}
     </li>`;
   };
 
   const phases = HH.manifest.phases.map(ph => {
     const units = ph.parts.flatMap(pid => byPart.get(pid) || []);
     const written = units.filter(u => u.ready).length;
+
     const parts = ph.parts.map(pid => {
       const p = partById.get(pid);
       const us = byPart.get(pid) || [];
       const read = us.filter(u => Store.get(`read.${u.slug}`, -1) >= 0).length;
-      const pct = us.length ? Math.round(read / us.length * 100) : 0;
+      const written = us.filter(u => u.ready).length;
+
+      /* What every unit here is checked by, said once. A part is usually all
+       * one backend, and where it is not, the majority goes in the header and
+       * only the exceptions carry a badge. */
+      const tally = {};
+      us.forEach(u => { tally[u.backend] = (tally[u.backend] || 0) + 1; });
+      const main = Object.keys(tally).sort((a, b) => tally[b] - tally[a])[0];
+
+      /* One tick per unit, filled for the ones you have opened. A ring
+       * showing "0" told you nothing and told it prominently; this says how
+       * long the part is and how far in you are in the same glance. */
+      const rail = us.map(u => {
+        const on = Store.get(`read.${u.slug}`, -1) >= 0;
+        return `<span class="tick${on ? ' on' : ''}${
+          u.ready ? '' : ' stub'}"></span>`;
+      }).join('');
+
       return `
       <section class="part" id="${esc(p.id)}" data-part="${esc(p.id)}">
         <div class="part-head">
-          <span class="ring${read === us.length && us.length ? ' done' : ''}"
-                style="--p:${pct}" data-n="${read}"
-                role="img" aria-label="${read} of ${us.length} started"></span>
-          <div>
-            <h3><span class="roman">${esc(p.roman)}</span> ${esc(p.title)}</h3>
-            <p class="pb">${esc(p.blurb)}</p>
+          <p class="part-eyebrow">Part ${esc(p.roman)}</p>
+          <h3>${esc(p.title)}</h3>
+          <p class="pb">${esc(p.blurb)}</p>
+          <div class="part-meta">
+            <span class="rail" role="img"
+                  aria-label="${read} of ${us.length} started">${rail}</span>
+            <span class="part-tool">${
+              written === us.length ? `All ${us.length} written`
+              : written ? `${written} of ${us.length} written`
+              : `${us.length} units, none written yet`
+            } &middot; checked by ${esc(TOOL[main] || main)}</span>
           </div>
         </div>
-        <ol class="units">${us.map(row).join('')}</ol>
+        <ul class="ugrid">${
+          us.map(u => card(u, u.backend !== main)).join('')}</ul>
       </section>`;
     }).join('');
+
     return `
     <section class="phase" id="phase-${esc(ph.id)}" data-accent="${esc(ph.accent)}"
              data-phase="${esc(ph.id)}">
       <header class="ph-head">
-        <h2>${esc(ph.title)}</h2>
-        <p>${esc(ph.blurb)}</p>
         <p class="ph-count">${units.length} units${
           written ? `, ${written} written` : ''}</p>
+        <h2>${esc(ph.title)}</h2>
+        <p>${esc(ph.blurb)}</p>
       </header>
       ${parts}
     </section>`;

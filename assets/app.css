@@ -1327,79 +1327,149 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
   white-space: nowrap;
 }
 
-.track .phase { margin-top: 56px; }
+.track .phase { margin-top: 64px; }
 .track .ph-head {
   border-top: 2px solid var(--accent);
   padding-top: 14px;
   max-width: var(--measure);
 }
-.track .ph-head h2 { margin: 0; }
-.track .ph-head p { color: var(--ink-3); font-size: var(--t-sm); margin: 6px 0 0; }
+.track .ph-head h2 { margin: 6px 0 0; }
+.track .ph-head p { color: var(--ink-2); font-size: var(--t-sm); margin: 8px 0 0; }
 .track .ph-head .ph-count {
-  font: 600 var(--t-micro)/1 var(--mono);
+  font: 700 var(--t-micro)/1 var(--mono);
+  color: var(--accent-ink);
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  margin: 0;
+}
+
+.track .part { margin-top: 40px; }
+.track .part-eyebrow {
+  font: 700 var(--t-micro)/1 var(--mono);
   color: var(--ink-4);
   text-transform: uppercase;
-  letter-spacing: .06em;
-  margin-top: 10px;
+  letter-spacing: .09em;
+  margin: 0;
 }
-
-.track .part { margin-top: 34px; }
 .track .part h3 {
   font: 700 var(--t-h3)/1.2 var(--sans);
-  margin: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-.track .part .roman {
-  font: 700 var(--t-sm)/1 var(--mono);
-  color: var(--accent-ink);
+  margin: 7px 0 0;
 }
 .track .part .pb {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--t-sm);
+  line-height: 1.55;
   max-width: var(--measure);
-  margin: 6px 0 14px;
+  margin: 7px 0 0;
+}
+.track .part-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 13px;
+}
+/* One tick per unit in the part, filled for the ones you have opened. It
+ * replaces a ring that rendered the number 0 at 34px: this says how long the
+ * part is and how far in you are in the same glance, and says nothing loudly
+ * when the answer is nothing. */
+.rail { display: flex; gap: 3px; align-items: center; }
+.rail .tick {
+  width: 15px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+}
+.rail .tick.stub { background: var(--border-soft); }
+.rail .tick.on { background: var(--accent); }
+.track .part-tool {
+  font: 500 var(--t-micro)/1 var(--sans);
+  color: var(--ink-3);
 }
 
-.track ol.units { list-style: none; margin: 0; padding: 0; }
-.track li.u + li.u { border-top: 1px solid var(--border-soft); }
-.track li.u > a {
+/* Cards, not rows. Auto-fill rather than a fixed column count so a part of
+ * four and a part of thirteen both fill the width they are given. */
+.track .ugrid {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
   display: grid;
-  grid-template-columns: 3.4rem 1fr auto;
-  gap: 14px;
-  align-items: baseline;
-  padding: 11px 10px;
-  text-decoration: none;
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  gap: 10px;
+}
+.track .u > a,
+.track .u .u-card {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr;
+  height: 100%;
+  padding: 14px 15px 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-3);
+  background: var(--raised);
   color: inherit;
-  border-radius: var(--r-2);
+  text-decoration: none;
 }
-.track li.u > a:hover { background: var(--surface); }
-.track li.u .n {
-  font: 600 var(--t-micro)/1.6 var(--mono);
+.track .u > a { transition: border-color var(--fast) var(--ease),
+                            transform var(--fast) var(--ease); }
+.track .u > a:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+/* The number is how you keep your place across 122 units, so it is set at a
+ * size you can find without reading, and dimmed so it never competes with the
+ * title for the first look. */
+.track .u-n {
+  font: 700 var(--t-md)/1 var(--mono);
   color: var(--ink-4);
+  letter-spacing: -.01em;
 }
-.track li.u .t { font: 600 var(--t-body)/1.35 var(--sans); color: var(--ink); }
-.track li.u .b {
-  display: block;
-  font: 400 var(--t-sm)/1.45 var(--sans);
-  color: var(--ink-3);
-  margin-top: 2px;
+.track .u > a:hover .u-n { color: var(--accent-ink); }
+.track .u-t {
+  font: 700 var(--t-body)/1.3 var(--sans);
+  color: var(--ink);
+  margin-top: 9px;
 }
-.track li.u .tags {
+/* Clamped, because a blurb runs from eight words to thirty and unclamped
+ * cards in a grid row all stretch to the tallest one. Three lines is enough
+ * to say what a unit is about, and the unit page has the rest. */
+.track .u-b {
+  font: 400 var(--t-sm)/1.5 var(--sans);
+  color: var(--ink-2);
+  margin-top: 7px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+.track .u-foot {
   display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 7px;
+  min-height: 14px;
+  margin-top: 12px;
 }
-.track li.u.started .n { color: var(--accent-ink); }
+.track .u-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
 /* A planned unit is dimmed by one step of ink, not by opacity. Fading the
- * whole row put its blurb at 2.8:1, and 118 of 122 units are planned, so that
- * made most of the track unreadable to say something the badge already says. */
-.track li.u.stub > a { cursor: default; }
-.track li.u.stub > a:hover { background: none; }
-.track li.u.stub .t { color: var(--ink-2); font-weight: 500; }
+ * whole card put its blurb at 2.8:1, and 106 of 122 units are planned, so that
+ * made most of the track unreadable to say something the label already says. */
+.track .u.stub .u-card {
+  background: none;
+  border-style: dashed;
+}
+.track .u.stub .u-t { color: var(--ink-2); font-weight: 600; }
+.track .u.stub .u-b { color: var(--ink-3); }
+.track .u.started > a { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+
+@media (max-width: 620px) {
+  .track .ugrid { grid-template-columns: 1fr; }
+}
+
 .badge.muted { color: var(--ink-3); background: var(--raised); }
 
 /* Every view that can come up empty uses this, so an empty state looks like a
@@ -1792,38 +1862,6 @@ a.gl:hover { text-decoration-style: solid; color: var(--accent-ink); }
   color: var(--ink-4);
 }
 
-/* A part's progress, as one element and no SVG. The conic gradient takes two
- * stops rather than one: a single hard cut leaves a jagged leading edge at
- * this size, and the extra degree smooths it without being visible. */
-.ring {
-  flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  position: relative;
-  background: conic-gradient(var(--accent) calc(var(--p, 0) * 1%),
-                             var(--raised) calc(var(--p, 0) * 1% + 1deg));
-  transition: background var(--slow) var(--ease);
-}
-.ring::after {
-  content: attr(data-n);
-  position: absolute;
-  inset: 3px;
-  border-radius: 50%;
-  background: var(--bg);
-  display: grid;
-  place-items: center;
-  font: 700 var(--t-micro)/1 var(--mono);
-  color: var(--ink-3);
-}
-.ring.done::after { content: "✓"; color: var(--ok); }
-
-.track .part-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-}
-.track .part-head > div { min-width: 0; }
 
 /* Three pixels on the left is this app's mark for "this block belongs to
  * something". It is on the callout, on the caption, and here. */
