@@ -432,7 +432,8 @@
     "nand"
    ],
    "neededBy": [
-    "arithmetic"
+    "arithmetic",
+    "feedback"
    ]
   },
   {
@@ -454,6 +455,7 @@
     "selection"
    ],
    "neededBy": [
+    "feedback",
     "integers"
    ]
   },
@@ -468,11 +470,14 @@
    "phase": "build",
    "accent": "gold",
    "backend": "sim",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
+   "ready": true,
+   "words": 1474,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "selection",
+    "arithmetic"
+   ],
    "neededBy": [
     "clock-edge"
    ]
@@ -2567,9 +2572,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 11,
-  "words": 17434,
-  "exercises": 88,
-  "drills": 165
+  "ready": 12,
+  "words": 18908,
+  "exercises": 96,
+  "drills": 180
  }
 }

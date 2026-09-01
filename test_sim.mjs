@@ -345,18 +345,15 @@ t('a deep chain does not blow the stack', () => {
   eq(r.gates, 401);
 });
 
-console.log();
-if (failed.length) {
-  console.log(`${failed.length} failed: ${failed.join(', ')}`);
-  process.exit(1);
-}
-console.log(`all ${pass} passed`);
 
 /* ------------------------------------------------------- the clock edge */
 
 const LIB = `chip Not(a) -> out { out = nand(a, a) }
 chip And(a, b) -> out { n = nand(a, b)  out = Not(n) }
 chip Or(a, b) -> out { na = Not(a)  nb = Not(b)  out = nand(na, nb) }
+chip Xor(a, b) -> out {
+  n1 = nand(a, b)  n2 = nand(a, n1)  n3 = nand(b, n1)  out = nand(n2, n3)
+}
 chip Mux(a, b, sel) -> out {
   nsel = Not(sel)
   x = And(a, nsel)
@@ -487,5 +484,75 @@ t('an alias cannot hide a cycle or a floating wire', () => {
   const dangling = SIM.check('chip B(a) -> out { out = ghost }',
     { chip: 'B', inputs: ['a'], outputs: ['out'], table: [[0, 0], [1, 1]] });
   is(dangling.verdict === 'floating-input', dangling.verdict);
+});
+
+t('a loop through a sub-chip that holds state is legal', () => {
+  // Stopping only at a literal `dff` saw a register as combinational and
+  // rejected every counter in the unit that introduces counters.
+  const src = LIB + `chip Bit(in, load) -> out {
+  m = Mux(out, in, load)
+  out = dff(m)
+}
+chip Toggle(t) -> out {
+  flipped = Not(out)
+  out = Bit(flipped, t)
+}`;
+  const r = SIM.check(src, { chip: 'Toggle', inputs: ['t'], outputs: ['out'],
+    trace: [[1, 0], [1, 1], [1, 0], [0, 1], [0, 1], [1, 1]] });
+  is(r.verdict === 'ok', `${r.verdict}: ${r.message}`);
+});
+
+t('a sub-chip forces only the inputs it reads', () => {
+  // A register's output does not depend on its data input. Forcing every
+  // argument before entering a sub-chip recurses forever in a counter, where
+  // the data input is computed from the output.
+  const src = LIB + `chip Bit(in, load) -> out {
+  m = Mux(out, in, load)
+  out = dff(m)
+}
+chip Count2(en) -> q1, q0 {
+  n0 = Not(q0)
+  carry = And(q0, en)
+  n1 = Xor(q1, carry)
+  d0 = Mux(q0, n0, en)
+  q0 = Bit(d0, en)
+  q1 = Bit(n1, en)
+}`;
+  const r = SIM.check(src, { chip: 'Count2', inputs: ['en'],
+    outputs: ['q1', 'q0'],
+    trace: [[1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1], [1, 0, 0]] });
+  is(r.verdict === 'ok', `${r.verdict}: ${r.message}`);
+  is(r.flops === 2, `counted ${r.flops} flops`);
+});
+
+t('a flop cannot see another flop new value', () => {
+  // Two flops in a ring: each takes the other value. If next state were
+  // computed during the settle rather than after it, one would see the other
+  // already updated and the pair would not swap, it would agree.
+  const src = 'chip Swap(seed, load) -> a, b {\n' +
+              '  ina = nand(seed, seed)\n' +
+              '  a = dff(b)\n' +
+              '  b = dff(a)\n' +
+              '}';
+  const r = SIM.check(src, { chip: 'Swap', inputs: ['seed', 'load'],
+    outputs: ['a', 'b'], trace: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]] });
+  is(r.verdict === 'ok', `${r.verdict}: ${r.message}`);
+});
+
+/* The summary runs last, always.
+ *
+ * It used to sit in the middle of this file, so tests appended after it ran,
+ * printed their own line, and were not counted: the suite reported "all 25
+ * passed" while running 39, and a failure among the uncounted ones would not
+ * have changed the exit code. Registering it on exit makes its position in the
+ * file stop mattering. */
+process.on('exit', () => {
+  console.log();
+  if (failed.length) {
+    console.log(`${failed.length} failed: ${failed.join(', ')}`);
+    process.exitCode = 1;
+  } else {
+    console.log(`all ${pass} passed`);
+  }
 });
 

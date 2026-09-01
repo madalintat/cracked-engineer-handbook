@@ -2599,6 +2599,254 @@
  },
  {
   "t": "section",
+  "slug": "feedback",
+  "anchor": "the-loop-you-already-wrote",
+  "title": "The loop you already wrote",
+  "text": "In the last unit but one you built a part called hold-or-load: a multiplexer whose two inputs are the value that is already here and the value arriving, with choosing between them. Then the note said to imagine wiring the output back round to the first input, and that the simulator would refuse it. Try it and it does, and the complaint is correct: with no clock, \"the value that is already here\" has no meaning. The circuit is not wrong. It is incomplete. What is missing is a way to say when .",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "feedback",
+  "anchor": "the-part-that-says-when",
+  "title": "The part that says when",
+  "text": "A D flip-flop has one input and one output, and one rule: its output during this cycle is whatever its input was during the previous one. That is all. It is not built from NAND here, and that is a deliberate choice rather than a fact. Real flip-flops are built from gates with feedback loops inside them, in a master-slave arrangement with two phases, and nand2tetris says plainly that it abstracts those away. This handbook does the same, for the same reason: the interesting thing is what having one lets you build, not what one is made of. Part III builds one properly, from the standard cells a synthesiser actually uses. Taking it as given, look at what it does to the loop. The invalid design and the valid one. A flip-flop with its output tied to its input can never be loaded with anything. Putting a multiplexer in the loop makes the select bit into a load signal, and that is a register. Now the loop has a delay in it. The multiplexer's first input is not the output right now, it is the output as of the previous cycle, which is a value that exists and can be read. The circuit has a defined answer again.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "feedback",
+  "anchor": "why-the-multiplexer-has-to-be-there",
+  "title": "Why the multiplexer has to be there",
+  "text": "It is worth being precise about the invalid version, because it is the most valuable diagram in nand2tetris and the mistake it prevents is one people make repeatedly. The tempting design is a flip-flop with its output wired straight back to its input. That does hold a value: whatever is in it stays in it, cycle after cycle. And it is useless, because there is no way to ever put anything else in. The book labels the figure \"invalid design\" and says that it is not clear how you would ever load a new value. The multiplexer is what fixes it. Its select input decides, each cycle, whether the flop is fed its own old value or something new, and that select input is what the word means. There is no separate loading mechanism anywhere in any machine. There is a multiplexer in a loop. So a register is a part you already had, plus a part you were just given, and nothing else.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "feedback",
+  "anchor": "what-the-clock-actually-is",
+  "title": "What the clock actually is",
+  "text": "Three things people believe about the clock, and none of them is right. It is not what makes the computer go. A clock is a time unit. Everything in the machine is computing continuously, whether or not a clock is running, and the clock exists to say when the results are allowed to be believed. It does not make anything fast. If anything it makes things slower, because the cycle has to be long enough for the slowest path in the design to settle, so every operation takes as long as the worst one. And the machine is not required to be correct in the middle of a cycle. It is allowed to be, and usually is, showing garbage: an adder's output is not trustworthy the instant its inputs change, and while a carry is rippling the output is a sequence of wrong answers. nand2tetris says it directly: until the output stabilises, the arithmetic unit generates garbage. The design is correct if it has settled by the cycle boundary and it does not matter what happened before that. That is the whole trick. A clock cycle is a contract about when signals are allowed to be wrong, and choosing its length is choosing how much wrongness you are willing to wait out.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "feedback",
+  "anchor": "what-a-latch-is-and-why-this-is-not-one",
+  "title": "What a latch is, and why this is not one",
+  "text": "There is a part next to the flip-flop that is worth naming so you can avoid it, because the two get confused and the difference causes real bugs. A latch is level-triggered. While its enable is high it is transparent: the output follows the input continuously, as a wire would. When the enable goes low it holds whatever was there. A flip-flop is edge-triggered. It samples at one instant and holds for the whole cycle regardless of what the input does afterwards. The difference matters the moment you build a loop. Put a latch in the loop with its enable high and the value races round it as fast as the gates allow, many times within one enable pulse, and where it stops depends on propagation delays. Ben Eater's videos show this directly, with a level-triggered toggle flipping repeatedly during a single clock pulse rather than once. The fix, historically and in every real part, is two latches in series with opposite enables, so that at no moment is there a path all the way through. While the first is open the second is closed. That arrangement is called master-slave and it is what makes the sampling happen on the edge. Part III meets latches again from the other direction: there, the pr",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "feedback",
+  "anchor": "reading-before-writing",
+  "title": "Reading before writing",
+  "text": "There is a discipline hiding in the flip-flop's rule, and it is the reason a row of registers can pass values around without racing. Every flop reads its input and produces its output at the same instant. So in a design where flop A's output feeds flop B's input, what B captures at the edge is what A held before the edge, not what A is about to become. Every flop reads old values and writes new ones, and nothing can observe the intermediate state. That is why a chain of flip-flops shifts rather than collapsing. Feed a value into the first and after two cycles it is in the second, because each one captured what its neighbour held rather than what its neighbour was becoming. Part III meets this idea again under a different name. Verilog's non-blocking assignment exists to model exactly this, and getting it wrong is the single most common bug in hardware description languages. You are meeting the reason first and the language later, which is the right order.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "feedback",
+  "anchor": "what-to-carry-into-the-next-unit",
+  "title": "What to carry into the next unit",
+  "text": "You now have storage. A register is a multiplexer in a loop with a flip-flop holding the value, the load signal is the multiplexer's select, and the clock decides when the loop takes a step. The exercises build that: a bit, a register with a load, a chain that shifts, a toggle that flips once per cycle, and a two-bit counter. The counter is worth noticing, because it is the increment from the last unit wired to a register, which means counting is not a new mechanism either. The next unit is about what happens when several of these want to talk to each other over one set of wires, and what has to be true about the timing for that to work rather than being a short circuit.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "feedback",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "The specifications here are traces rather than truth tables: one row per cycle, run in order, with the state carrying forward. A mismatch names the cycle it happened on, which matters because the same inputs appear on many cycles and mean different things. Every flip-flop starts holding 0. A design that is right except for cycle 0 is usually one that expected its output to reflect its input immediately, and the whole point of the part is that it does not. The simulator will still reject a loop that has no flip-flop in it, and the message now says so: a value may depend on itself through a clock edge and may not otherwise.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "feedback",
+  "n": 1,
+  "title": "One cycle of delay",
+  "text": "The flip-flop is an axiom here, and its whole rule is that its output this cycle is its input from the last one. Build , which outputs whatever its input was on the previous cycle. Every flip-flop starts holding 0.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "feedback",
+  "n": 2,
+  "title": "The invalid design, and the fix",
+  "text": "A flip-flop with its output tied to its input can never be loaded. The multiplexer in the loop is what makes <code>load</code> mean anything. Build . When is 1 it captures ; when is 0 it holds what it had. The output shows what it held coming into the cycle.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "feedback",
+  "n": 3,
+  "title": "Two of them in a row",
+  "text": "Each flop captures what its neighbour held, not what its neighbour is becoming, which is why a chain shifts rather than collapsing. Build , where the output is the input from two cycles ago.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "feedback",
+  "n": 4,
+  "title": "Flipping",
+  "text": "A part whose next value depends on its current value is the first thing you have built that could not exist without the clock. Build , which inverts what it holds on every cycle where is 1 and holds otherwise. The output shows what it held coming into the cycle.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "feedback",
+  "n": 5,
+  "title": "Set and reset",
+  "text": "Priority between two controls is an ordinary multiplexer decision, not a special arbitration mechanism. Build . When is 1 the stored bit becomes 1; when is 1 and is 0 it becomes 0; otherwise it holds. Set wins.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "feedback",
+  "n": 6,
+  "title": "A register two bits wide",
+  "text": "Width is repetition. A wide register is one-bit registers sharing a load signal, and nothing else changes. Build , which loads both bits together when is 1 and holds otherwise.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "feedback",
+  "n": 7,
+  "title": "Counting",
+  "text": "Counting is the increment from the last unit wired to a register. It is not a new mechanism. Build , a two-bit counter that increments when is 1 and holds otherwise, wrapping from 3 back to 0. The output shows the value coming into the cycle.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "feedback",
+  "n": 8,
+  "title": "Counting, with a way back to zero",
+  "text": "Reset is a multiplexer in front of the register, and it takes priority by being the last choice made before the value is stored. Build , the same counter with a input that forces the next value to 0 regardless of .",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "feedback",
+  "n": 1,
+  "title": "Why did the simulator reject a loop before this unit?",
+  "text": " The circuit is not wrong so much as incomplete. What it is missing is a way to say when, and that is the whole subject of this unit. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "feedback",
+  "n": 2,
+  "title": "What is the rule for a D flip-flop?",
+  "text": " That single rule is all a flip-flop is here. Following the input while the enable is high describes a latch, which is a different part with a different failure mode. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "feedback",
+  "n": 3,
+  "title": "Why is the flip-flop taken as an axiom rather than built from NAND?",
+  "text": " nand2tetris says so plainly, and this handbook does the same. Part III builds one properly from the standard cells a synthesiser actually uses. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "feedback",
+  "n": 4,
+  "title": "Why is a flip-flop with its output tied to its input an invalid design?",
+  "text": " nand2tetris labels that figure \"invalid design\" for exactly this reason, and it is the most valuable diagram in the book. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "feedback",
+  "n": 5,
+  "title": "What makes a register out of a flip-flop?",
+  "text": " There is no separate loading mechanism anywhere in any machine. There is a multiplexer in a loop, and its select bit is what  load  means. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "feedback",
+  "n": 6,
+  "title": "What is a clock?",
+  "text": " Everything is computing continuously whether or not a clock runs. The clock decides when it has settled enough to be trusted. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "feedback",
+  "n": 7,
+  "title": "Does a faster clock make the logic faster?",
+  "text": " If anything the clock makes things slower, because a fast operation still waits for the boundary. Choosing the period is choosing how much settling you are willing to wait out. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "feedback",
+  "n": 8,
+  "title": "Halfway through a cycle, an adder's output is:",
+  "text": " The design is correct if it has settled by the cycle boundary, and what happened before that does not matter. A clock cycle is a contract about when signals are allowed to be wrong. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "feedback",
+  "n": 9,
+  "title": "In a chain of flip-flops, what does the second one capture at the edge?",
+  "text": " Every flop reads old values and writes new ones, and nothing can observe the intermediate state. That is why a chain shifts rather than collapsing to one value. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "feedback",
+  "n": 10,
+  "title": "What language feature exists to model that reading-before-writing?",
+  "text": " Getting it wrong is the most common bug in hardware description languages, and Part III meets it as a language problem after you have met it here as a circuit property. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "feedback",
+  "n": 11,
+  "title": "How does a latch differ from a flip-flop?",
+  "text": " Put a latch in a loop with its enable high and the value races round as fast as the gates allow, many times within one pulse, and where it stops depends on propagation delays. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "feedback",
+  "n": 12,
+  "title": "How is edge triggering actually built?",
+  "text": " That arrangement is called master-slave. While the first is open the second is closed, which is what turns a level into an edge. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "feedback",
+  "n": 13,
+  "title": "A counter is:",
+  "text": " Counting is not a new mechanism. You built the increment last unit and the register this unit, and the counter is those two connected. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "feedback",
+  "n": 14,
+  "title": "Reset on a counter is implemented as:",
+  "text": " And it takes priority by being the last choice made before the value is stored. That is why a processor has a reset pin rather than a reset instruction: at power-on there is no instruction to run yet. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "feedback",
+  "n": 15,
+  "title": "After <code>rst</code> is asserted for one cycle, the output returns to zero:",
+  "text": " Reset acts on what gets stored, and stored values appear one cycle later. Everything sequential in this unit has that same delay, and expecting otherwise is the most common way to misread a trace. ",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
   "slug": "clock-edge",
   "anchor": "two-kinds-of-logic-and-only-two",
   "title": "Two kinds of logic, and only two",

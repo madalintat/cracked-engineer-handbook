@@ -171,6 +171,58 @@ function checkParts(chip, library) {
   return bad;
 }
 
+/** Which of a chip's outputs depend on which of its inputs *without* passing
+ *  through a flip-flop.
+ *
+ *  Needed because a loop through a sub-chip that contains a dff is legal, and
+ *  a loop through one that does not is not. Stopping only at a literal `dff`
+ *  saw a register as a combinational part and rejected every counter in the
+ *  unit that introduces counters. Memoised per chip, since the library is
+ *  fixed once parsed.
+ */
+function combDeps(chip, library, memo = new Map()) {
+  if (memo.has(chip.name)) return memo.get(chip.name);
+  memo.set(chip.name, chip.outputs.map(() => new Set()));   // guard recursion
+
+  const producer = new Map();
+  chip.stmts.forEach(st => (st.targets || [st.target]).forEach(
+    t => producer.set(t, st)));
+
+  const cache = new Map();
+  const deps = (wire, seen = new Set()) => {
+    if (chip.inputs.includes(wire)) return new Set([wire]);
+    if (cache.has(wire)) return cache.get(wire);
+    if (seen.has(wire)) return new Set();      // a real loop; findCycle reports it
+    seen.add(wire);
+    const st = producer.get(wire);
+    if (!st) return new Set();
+    let out = new Set();
+    if (st.part === 'dff') {
+      out = new Set();                          // the path stops here
+    } else if (st.alias || st.part === 'nand') {
+      st.args.forEach(a => deps(a, seen).forEach(x => out.add(x)));
+    } else {
+      const sub = library[st.part];
+      if (sub) {
+        const subDeps = combDeps(sub, library, memo);
+        const k = (st.targets || [st.target]).indexOf(wire);
+        const wanted = subDeps[k] || new Set();
+        sub.inputs.forEach((nm, j) => {
+          if (wanted.has(nm) && st.args[j] !== undefined) {
+            deps(st.args[j], seen).forEach(x => out.add(x));
+          }
+        });
+      }
+    }
+    cache.set(wire, out);
+    return out;
+  };
+
+  const result = chip.outputs.map(o => deps(o));
+  memo.set(chip.name, result);
+  return result;
+}
+
 /** A combinational loop is not a clever trick: a value that depends on its own
  *  present value is not a function of the inputs and cannot be defined.
  *
@@ -178,7 +230,7 @@ function checkParts(chip, library) {
  *  the dependency is on the previous cycle rather than on this one. So the
  *  walk does not follow a dff's inputs, and whatever cycles remain after that
  *  are the genuinely undefined ones. */
-function findCycle(chip) {
+function findCycle(chip, library = {}) {
   const producer = new Map();
   chip.stmts.forEach(s => (s.targets || [s.target]).forEach(
     t => producer.set(t, s)));
@@ -195,9 +247,18 @@ function findCycle(chip) {
     if (c === GREY) return [...stack.slice(stack.indexOf(wire)), wire];
     colour.set(wire, GREY);
     stack.push(wire);
-    // A dff ends the combinational path. What feeds it is last cycle's problem.
+    // A dff ends the combinational path, and so does a sub-chip whose output
+    // does not combinationally depend on the input in question. What feeds
+    // either of those is last cycle's problem.
     if (s.part !== 'dff') {
-      for (const a of s.args) {
+      let follow = s.args;
+      const sub = s.part ? library[s.part] : null;
+      if (sub) {
+        const k = (s.targets || [s.target]).indexOf(wire);
+        const wanted = combDeps(sub, library)[k] || new Set();
+        follow = s.args.filter((_, j) => wanted.has(sub.inputs[j]));
+      }
+      for (const a of follow) {
         const loop = visit(a);
         if (loop) return loop;
       }
@@ -244,7 +305,19 @@ function findFloating(chip) {
  */
 function evaluate(chip, inputs, library, state, pending, path = '') {
   const wires = new Map();
-  chip.inputs.forEach((n, i) => wires.set(n, inputs[i] ? 1 : 0));
+
+  /* Inputs arrive as thunks, not values.
+   *
+   * A register's output does not depend on its data input, so evaluating a
+   * sub-chip must not force every argument up front: in a counter, the data
+   * input is computed *from* the output, and resolving it first recurses
+   * forever. Forcing an argument only when the sub-chip actually reads it is
+   * what makes a feedback loop through a stored bit terminate. */
+  const getters = new Map();
+  chip.inputs.forEach((n, i) => {
+    const a = inputs[i];
+    getters.set(n, typeof a === 'function' ? a : () => (a ? 1 : 0));
+  });
 
   const producer = new Map();
   chip.stmts.forEach(s => (s.targets || [s.target]).forEach(
@@ -253,6 +326,11 @@ function evaluate(chip, inputs, library, state, pending, path = '') {
   const resolve = (wire, depth) => {
     if (wires.has(wire)) return wires.get(wire);
     if (depth > 5000) throw new SimError('circuit too deep to evaluate', 0);
+    if (getters.has(wire)) {
+      const v = getters.get(wire)();
+      wires.set(wire, v);
+      return v;
+    }
     const s = producer.get(wire);
     if (!s) throw new SimError(`wire ${wire} has no source`, 0);
     let v;
@@ -269,7 +347,11 @@ function evaluate(chip, inputs, library, state, pending, path = '') {
       // cycle's value, instead of recursing forever.
       v = state && state.has(key) ? state.get(key) : 0;
       wires.set(wire, v);
-      if (pending) pending.set(key, resolve(s.args[0], depth + 1));
+      // What this flop becomes is settled after the whole circuit has, not
+      // during. Computing it here forces the flop's data input while the
+      // parent is still mid-way through publishing this flop's output, and in
+      // a counter the data input is computed from that output.
+      if (pending) pending.later.push(() => pending.next.set(key, resolve(s.args[0], 0)));
       return v;
     } else if (s.part === 'nand') {
       const args = s.args.map(a => resolve(a, depth + 1));
@@ -280,7 +362,8 @@ function evaluate(chip, inputs, library, state, pending, path = '') {
     } else {
       const sub = library[s.part];
       if (!sub) throw new SimError(`unknown part ${s.part}`, s.line);
-      const args = s.args.map(a => resolve(a, depth + 1));
+      // Thunks: the sub-chip forces only what it reads.
+      const args = s.args.map(a => () => resolve(a, depth + 1));
       const outs = evaluate(sub, args, library, state, pending,
                             path + '/' + s.target + ':' + s.part);
       const names = s.targets || [s.target];
@@ -310,10 +393,15 @@ function simulateTrace(chip, rows, library) {
   const state = new Map();
   const out = [];
   for (const inputs of rows) {
-    const pending = new Map();
+    // Two phases, and the split is the point. Phase one settles the circuit
+    // and every flop shows what it came in holding. Phase two works out what
+    // each flop becomes, reading values that have all finished settling. No
+    // flop can observe another flop's new value, so the order in which they
+    // are evaluated cannot change the result.
+    const pending = { next: new Map(), later: [] };
     out.push(evaluate(chip, inputs, library, state, pending));
-    // Commit every dff at once, after the whole circuit has settled.
-    for (const [k, v] of pending) state.set(k, v);
+    while (pending.later.length) pending.later.shift()();
+    for (const [k, v] of pending.next) state.set(k, v);
   }
   return out;
 }
@@ -420,7 +508,7 @@ function check(src, spec) {
   }
 
   for (const c of Object.values(library)) {
-    const loop = findCycle(c);
+    const loop = findCycle(c, library);
     if (loop) {
       return {
         verdict: 'cycle', loop,

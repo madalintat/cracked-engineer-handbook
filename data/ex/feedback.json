@@ -1,0 +1,638 @@
+{
+ "slug": "feedback",
+ "backend": "sim",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "One cycle of delay",
+   "brief": "<p>Build <code>Delay</code>, which outputs whatever its input was on the previous cycle. Every flip-flop starts holding 0.</p>",
+   "kind": "property",
+   "concept": "The flip-flop is an axiom here, and its whole rule is that its output this cycle is its input from the last one.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "There is a primitive for exactly this, and it is not built from nand."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>The message names the cycle. If cycle 0 is wrong and everything else is right, your design is passing the input straight through: the point of the part is that it does not, and the value shows up one cycle later.</p>"
+    }
+   ],
+   "after": "<p>Nothing else in Part II is given to you. Every other sequential part in this unit is built from this one and the routing you already have.</p>",
+   "starter": "chip Delay(d) -> q {\n  q = d\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Delay",
+    "inputs": [
+     "d"
+    ],
+    "outputs": [
+     "q"
+    ],
+    "trace": [
+     [
+      1,
+      0
+     ],
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      0,
+      1
+     ],
+     [
+      0,
+      0
+     ]
+    ]
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 2,
+   "title": "The invalid design, and the fix",
+   "brief": "<p>Build <code>Bit</code>. When <code>load</code> is 1 it captures <code>in</code>; when <code>load</code> is 0 it holds what it had. The output shows what it held coming into the cycle.</p>",
+   "kind": "property",
+   "concept": "A flip-flop with its output tied to its input can never be loaded. The multiplexer in the loop is what makes <code>load</code> mean anything.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "The multiplexer chooses between the value already here and the value arriving, and its select is <code>load</code>."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Read which cycle disagreed. If the value never changes at all, the flop is being fed its own output with nothing able to interrupt, which is the design nand2tetris labels invalid.</p>"
+    },
+    {
+     "id": "cycle",
+     "judge": "verdict",
+     "key": "cycle",
+     "prose": "<p>The loop has no flip-flop in it. A value may depend on itself through a clock edge and may not otherwise, so the feedback has to pass through the <code>dff</code>.</p>"
+    }
+   ],
+   "after": "<p>Eight gates and one flip-flop. This is the part every register, counter and memory in the rest of Part II is made from.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip Mux(a, b, sel) -> out {\n  nsel = Not(sel)\n  ga = nand(a, nsel)\n  gb = nand(b, sel)\n  out = nand(ga, gb)\n}\nchip Bit(in, load) -> out {\n  out = dff(in)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Bit",
+    "inputs": [
+     "in",
+     "load"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "trace": [
+     [
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 3,
+   "title": "Two of them in a row",
+   "brief": "<p>Build <code>Shift2</code>, where the output is the input from two cycles ago.</p>",
+   "kind": "property",
+   "concept": "Each flop captures what its neighbour held, not what its neighbour is becoming, which is why a chain shifts rather than collapsing.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Two flops in series, and no logic between them."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>If the value appears one cycle early, there is only one flop in the path. If it never appears at all, check that the second flop is fed by the first rather than by the input.</p>"
+    }
+   ],
+   "after": "<p>Every flop reads before any flop writes, so the intermediate state cannot be observed. That is the same discipline Part III calls non-blocking assignment, and it is the reason a chain of these shifts.</p>",
+   "starter": "chip Shift2(d) -> q {\n  q = dff(d)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Shift2",
+    "inputs": [
+     "d"
+    ],
+    "outputs": [
+     "q"
+    ],
+    "trace": [
+     [
+      1,
+      0
+     ],
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      1
+     ],
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ],
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      1
+     ]
+    ]
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 4,
+   "title": "Flipping",
+   "brief": "<p>Build <code>Toggle</code>, which inverts what it holds on every cycle where <code>t</code> is 1 and holds otherwise. The output shows what it held coming into the cycle.</p>",
+   "kind": "property",
+   "concept": "A part whose next value depends on its current value is the first thing you have built that could not exist without the clock.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "The value to load is the inverse of the value held, and <code>t</code> decides whether to load it."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Check the cycles where <code>t</code> is 0. The value must not change there, which means the multiplexer has to select the held value rather than the inverted one.</p>"
+    },
+    {
+     "id": "cycle",
+     "judge": "verdict",
+     "key": "cycle",
+     "prose": "<p>Inverting the output and feeding it back is still a loop, and it is legal only because the flop is in it. Make sure the inversion is on the path into the multiplexer rather than around it.</p>"
+    }
+   ],
+   "after": "<p>This is a one-bit counter. The next exercise makes it two bits, and at that point you have built counting out of nothing but routing, an adder and a clock.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip Mux(a, b, sel) -> out {\n  nsel = Not(sel)\n  ga = nand(a, nsel)\n  gb = nand(b, sel)\n  out = nand(ga, gb)\n}\nchip Bit(in, load) -> out {\n  m = Mux(out, in, load)\n  out = dff(m)\n}\nchip Toggle(t) -> out {\n  out = dff(t)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Toggle",
+    "inputs": [
+     "t"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "trace": [
+     [
+      1,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      0
+     ],
+     [
+      0,
+      1
+     ],
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      0
+     ]
+    ]
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 5,
+   "title": "Set and reset",
+   "brief": "<p>Build <code>SetReset</code>. When <code>s</code> is 1 the stored bit becomes 1; when <code>r</code> is 1 and <code>s</code> is 0 it becomes 0; otherwise it holds. Set wins.</p>",
+   "kind": "property",
+   "concept": "Priority between two controls is an ordinary multiplexer decision, not a special arbitration mechanism.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Decide what to load, then decide whether to load. Set winning is a multiplexer whose select is <code>s</code>."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>The cycle where both <code>s</code> and <code>r</code> are 1 is the one that separates a correct design from a nearly correct one. Set has to win there.</p>"
+    }
+   ],
+   "after": "<p>Every priority encoder and every interrupt controller is this shape. Deciding which of several requests wins is a chain of multiplexers, and the order of the chain is the priority.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip Mux(a, b, sel) -> out {\n  nsel = Not(sel)\n  ga = nand(a, nsel)\n  gb = nand(b, sel)\n  out = nand(ga, gb)\n}\nchip Bit(in, load) -> out {\n  m = Mux(out, in, load)\n  out = dff(m)\n}\nchip SetReset(s, r) -> out {\n  out = Bit(s, r)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "SetReset",
+    "inputs": [
+     "s",
+     "r"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "trace": [
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ]
+    ]
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 6,
+   "title": "A register two bits wide",
+   "brief": "<p>Build <code>Reg2</code>, which loads both bits together when <code>load</code> is 1 and holds otherwise.</p>",
+   "kind": "property",
+   "concept": "Width is repetition. A wide register is one-bit registers sharing a load signal, and nothing else changes.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Two <code>Bit</code> parts, both taking the same <code>load</code>."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Read which output bit disagreed. If one bit tracks correctly and the other never changes, the two are not sharing the load signal.</p>"
+    }
+   ],
+   "after": "<p>One control wire fanning out to every bit is how every register in every machine works. There is no such thing as loading half a register.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip Mux(a, b, sel) -> out {\n  nsel = Not(sel)\n  ga = nand(a, nsel)\n  gb = nand(b, sel)\n  out = nand(ga, gb)\n}\nchip Bit(in, load) -> out {\n  m = Mux(out, in, load)\n  out = dff(m)\n}\nchip Reg2(d1, d0, load) -> q1, q0 {\n  q1 = Bit(d1, load)\n  q0 = Bit(d0, load)\n  q0 = q1\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Reg2",
+    "inputs": [
+     "d1",
+     "d0",
+     "load"
+    ],
+    "outputs": [
+     "q1",
+     "q0"
+    ],
+    "trace": [
+     [
+      1,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1
+     ]
+    ]
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 7,
+   "title": "Counting",
+   "brief": "<p>Build <code>Count2</code>, a two-bit counter that increments when <code>en</code> is 1 and holds otherwise, wrapping from 3 back to 0. The output shows the value coming into the cycle.</p>",
+   "kind": "property",
+   "concept": "Counting is the increment from the last unit wired to a register. It is not a new mechanism.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Compute the current value plus one, and load it when <code>en</code> is 1."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Check the cycle where the count wraps from 3 to 0. The increment has to carry out of the top bit and be discarded, and a design that stops at 3 is holding the carry somewhere it should not.</p>"
+    },
+    {
+     "id": "cycle",
+     "judge": "verdict",
+     "key": "cycle",
+     "prose": "<p>The next value depends on the current value, which is legal only through the flops. The increment must sit between the register's output and its input, not around it.</p>"
+    }
+   ],
+   "after": "<p>The program counter in unit 010 is this part with one addition: a load input that overrides the increment. That is what a jump is, and it is why a jump needs no special machinery.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip Mux(a, b, sel) -> out {\n  nsel = Not(sel)\n  ga = nand(a, nsel)\n  gb = nand(b, sel)\n  out = nand(ga, gb)\n}\nchip Bit(in, load) -> out {\n  m = Mux(out, in, load)\n  out = dff(m)\n}\nchip Count2(en) -> q1, q0 {\n  q1 = Bit(en, en)\n  q0 = Bit(en, en)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Count2",
+    "inputs": [
+     "en"
+    ],
+    "outputs": [
+     "q1",
+     "q0"
+    ],
+    "trace": [
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1
+     ]
+    ]
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 8,
+   "title": "Counting, with a way back to zero",
+   "brief": "<p>Build <code>CountReset</code>, the same counter with a <code>rst</code> input that forces the next value to 0 regardless of <code>en</code>.</p>",
+   "kind": "property",
+   "concept": "Reset is a multiplexer in front of the register, and it takes priority by being the last choice made before the value is stored.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Choose the next value first, then let reset override it."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Read the cycle after the one where <code>rst</code> was high. Reset acts on what gets stored, so the output returns to zero on the following cycle rather than immediately, which is the same one-cycle delay as everything else here.</p>"
+    }
+   ],
+   "after": "<p>Every counter in every machine has this input, and it is why a processor has a reset pin rather than a reset instruction: at power-on there is no instruction to run yet.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip Mux(a, b, sel) -> out {\n  nsel = Not(sel)\n  ga = nand(a, nsel)\n  gb = nand(b, sel)\n  out = nand(ga, gb)\n}\nchip Bit(in, load) -> out {\n  m = Mux(out, in, load)\n  out = dff(m)\n}\nchip CountReset(en, rst) -> q1, q0 {\n  q1 = Bit(rst, en)\n  q0 = Bit(rst, en)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "CountReset",
+    "inputs": [
+     "en",
+     "rst"
+    ],
+    "outputs": [
+     "q1",
+     "q0"
+    ],
+    "trace": [
+     [
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0
+     ]
+    ]
+   },
+   "lang": "netlist"
+  }
+ ]
+}
