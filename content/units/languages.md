@@ -195,7 +195,6 @@ case is bad, the ordinary case is nothing like the worst case, and the
 engineering is arranged so that meeting the worst case costs you speed rather
 than availability.
 
-
 ## What to carry forward
 
 Restricting a machine is a design tool. The lexer is fast because it was denied

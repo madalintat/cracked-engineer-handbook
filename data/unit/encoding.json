@@ -74,6 +74,7 @@
  "neededBy": [
   "control",
   "structure",
-  "addressing"
+  "addressing",
+  "text"
  ]
 }

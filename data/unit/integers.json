@@ -70,6 +70,7 @@
   "arithmetic"
  ],
  "neededBy": [
-  "floats"
+  "floats",
+  "text"
  ]
 }

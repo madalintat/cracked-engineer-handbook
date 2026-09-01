@@ -162,7 +162,6 @@ case over an infinite family of inputs, and your job concerns a particular finit
 input with a particular shape. The class tells you which shelf to look on. It
 does not tell you what is on it.
 
-
 ## Beyond NP
 
 Two things worth knowing, because they explain some familiar tools.

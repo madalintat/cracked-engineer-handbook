@@ -1,0 +1,310 @@
+{
+ "slug": "text",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Encoding a code point",
+   "brief": "<p>Write <code>utf8_encode</code>, writing a code point into a buffer and returning how many bytes it used.</p>\n<p>One byte below 128. Two below 2048, with a leading byte of 110 and one continuation. Three below 65536, leading 1110. Four above that, leading 11110. Every continuation byte starts with 10.</p>",
+   "kind": "output",
+   "concept": "Every property UTF-8 is admired for falls out of one rule: a leading byte says how many follow, and a continuation byte never looks like anything else.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The high bits of the code point go in the leading byte, and each continuation takes the next six."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Continuation bytes carry six bits each and are formed as 0x80 plus the low six bits of what is left, taken most significant first. The starter handles only the one-byte case, so anything above 127 comes out as a single wrong byte.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A byte under 128 is itself, which is why every ASCII file is already valid UTF-8. That one decision is also what makes the encoding self synchronising and what removes any question of byte order.</p>",
+   "starter": "int utf8_encode(unsigned cp, unsigned char *out) {\n    out[0] = (unsigned char)cp;\n    return 1;\n}",
+   "tests": "#include <assert.h>\nint utf8_encode(unsigned, unsigned char *);\nint main(void) {\n    unsigned char b[4];\n    assert(utf8_encode(0x41, b) == 1 && b[0] == 0x41);\n    /* e with an acute accent. */\n    assert(utf8_encode(0xE9, b) == 2 && b[0] == 0xC3 && b[1] == 0xA9);\n    /* A combining acute accent. */\n    assert(utf8_encode(0x301, b) == 2 && b[0] == 0xCC && b[1] == 0x81);\n    /* The CJK character for middle. */\n    assert(utf8_encode(0x4E2D, b) == 3);\n    assert(b[0] == 0xE4 && b[1] == 0xB8 && b[2] == 0xAD);\n    /* A grinning face. */\n    assert(utf8_encode(0x1F600, b) == 4);\n    assert(b[0] == 0xF0 && b[1] == 0x9F && b[2] == 0x98 && b[3] == 0x80);\n    assert(utf8_encode(0x00, b) == 1 && b[0] == 0x00);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "Counting what the user counts",
+   "brief": "<p>Write <code>count_code_points</code>, counting the code points in a UTF-8 string without decoding any of them.</p>\n<p>A continuation byte has its top two bits as 10 and nothing else does, so the count is the bytes that are not continuations.</p>",
+   "kind": "output",
+   "concept": "The leading byte and the continuation byte are distinguishable from each other alone, which is what makes counting, seeking and searching all work on bytes.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Mask with 0xC0 and compare against 0x80."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees, and it will be one with a multi-byte character in it. Counting bytes gives the buffer size rather than the character count. A continuation byte is exactly one whose top two bits are 10, so skip those and count the rest.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This still is not what a reader would call the number of characters. The family emoji is five code points and one character, and the accented e written as a base letter plus a mark is two code points and one character. Code point count is the number every language gives you and the one that belongs almost nowhere.</p>",
+   "starter": "#include <stddef.h>\nsize_t count_code_points(const unsigned char *s, size_t n) {\n    return n;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t count_code_points(const unsigned char *, size_t);\nint main(void) {\n    unsigned char ascii[] = {'h','i'};\n    assert(count_code_points(ascii, 2) == 2);\n    /* e with an acute accent: one code point, two bytes. */\n    unsigned char acc[] = {0xC3, 0xA9};\n    assert(count_code_points(acc, 2) == 1);\n    /* e followed by a combining acute: two code points, three bytes. */\n    unsigned char dec[] = {0x65, 0xCC, 0x81};\n    assert(count_code_points(dec, 3) == 2);\n    /* A grinning face: one code point, four bytes. */\n    unsigned char emo[] = {0xF0, 0x9F, 0x98, 0x80};\n    assert(count_code_points(emo, 4) == 1);\n    assert(count_code_points(ascii, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Landing in the middle",
+   "brief": "<p>Write <code>char_start</code>, which takes a byte offset into a UTF-8 string and returns the offset of the first byte of the character containing it.</p>\n<p>This is the self-synchronising property, and it is the one no other popular encoding has.</p>",
+   "kind": "output",
+   "concept": "You can find the start of a character from anywhere inside it, which is why a UTF-8 buffer can be split at an arbitrary point and repaired.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Walk backwards while the byte you are on is a continuation."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Landing on a leading byte means you are already at the start and must not move, and landing on a continuation byte means walking back until you reach one that is not. The starter always steps back, which is wrong for every offset that was already correct.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>No other popular encoding permits this. In UTF-16 a lone sixteen-bit unit does not say whether it is the first or second half of a pair without looking at its value, and in the older multi-byte encodings a second byte could be indistinguishable from a first. Splitting a buffer anywhere and repairing it is free here and was not before.</p>",
+   "starter": "#include <stddef.h>\nsize_t char_start(const unsigned char *s, size_t at) {\n    return at > 0 ? at - 1 : 0;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t char_start(const unsigned char *, size_t);\nint main(void) {\n    /* 'a' then a grinning face then 'b'. */\n    unsigned char s[] = {0x61, 0xF0, 0x9F, 0x98, 0x80, 0x62};\n    assert(char_start(s, 0) == 0);\n    assert(char_start(s, 1) == 1);\n    /* Anywhere inside the four-byte sequence returns its start. */\n    assert(char_start(s, 2) == 1);\n    assert(char_start(s, 3) == 1);\n    assert(char_start(s, 4) == 1);\n    assert(char_start(s, 5) == 5);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "The encoding that says the same thing twice",
+   "brief": "<p>An overlong encoding uses more bytes than a code point needs. It decodes to the same value and it is invalid, and decoders that accepted them have let a slash through a path check looking for the one-byte version.</p>\n<p>Write <code>is_overlong</code>, reporting whether a two-byte sequence encodes a value that should have been one byte.</p>",
+   "kind": "output",
+   "concept": "Two byte sequences that decode to the same value are not both valid, and a decoder that accepts either is a decoder an attacker can talk past.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Decode it and check whether the result would have fitted in one byte."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A two-byte sequence carries eleven bits, and any value below 128 encoded that way is overlong. The leading byte 0xC0 or 0xC1 is always overlong, because those cannot produce a value of 128 or more.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>0xC0 0xAF decodes to a forward slash and is not a forward slash. A checker that rejects the one-byte version and a decoder that accepts the two-byte one between them let a path traversal through, which is why every conforming decoder rejects these outright rather than normalising them.</p>",
+   "starter": "int is_overlong(unsigned char b0, unsigned char b1) {\n    (void)b0; (void)b1;\n    return 0;\n}",
+   "tests": "#include <assert.h>\nint is_overlong(unsigned char, unsigned char);\nint main(void) {\n    /* 0xC0 0xAF decodes to a slash, which needs one byte. */\n    assert(is_overlong(0xC0, 0xAF) == 1);\n    /* 0xC1 0x81 decodes to 'A'. */\n    assert(is_overlong(0xC1, 0x81) == 1);\n    /* 0xC3 0xA9 is an accented e, which genuinely needs two bytes. */\n    assert(is_overlong(0xC3, 0xA9) == 0);\n    /* 0xC2 0x80 is the smallest legitimate two-byte sequence. */\n    assert(is_overlong(0xC2, 0x80) == 0);\n    assert(is_overlong(0xC2, 0xBF) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Two halves of one character",
+   "brief": "<p>UTF-16 encodes a code point above 65535 as two sixteen-bit units. Write <code>to_surrogates</code>, producing the pair.</p>\n<p>Subtract 65536, take the top ten bits plus 0xD800 for the first unit and the bottom ten plus 0xDC00 for the second.</p>",
+   "kind": "output",
+   "concept": "UTF-16 is a variable-width encoding that most of the systems built on it treat as fixed, which is where its surviving bugs are.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Subtract the offset first. Ten bits each."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The subtraction of 65536 comes first, so the remaining twenty bits split into two tens. Skipping it puts the wrong bits in both halves and can produce a high surrogate outside the reserved range.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A grinning face is one code point and two units, which is why its <code>length</code> in JavaScript is 2, why indexing to position 1 gives half a character, and why reversing a string breaks every character above the basic range. The trap is that it works for years, because most European text never leaves the first sixty five thousand code points.</p>",
+   "starter": "void to_surrogates(unsigned cp, unsigned *hi, unsigned *lo) {\n    *hi = (cp >> 10) + 0xD800;\n    *lo = (cp & 0x3FF) + 0xDC00;\n}",
+   "tests": "#include <assert.h>\nvoid to_surrogates(unsigned, unsigned *, unsigned *);\nint main(void) {\n    unsigned hi, lo;\n    /* A grinning face. */\n    to_surrogates(0x1F600, &hi, &lo);\n    assert(hi == 0xD83D && lo == 0xDE00);\n    /* The first code point that needs a pair. */\n    to_surrogates(0x10000, &hi, &lo);\n    assert(hi == 0xD800 && lo == 0xDC00);\n    /* The last one Unicode defines. */\n    to_surrogates(0x10FFFF, &hi, &lo);\n    assert(hi == 0xDBFF && lo == 0xDFFF);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Grouping what a reader sees",
+   "brief": "<p>Write <code>count_graphemes</code>, using a simplified rule: a code point in the combining marks range attaches to the character before it, and everything else starts a new one.</p>\n<p>The real algorithm has many more rules and a table that changes between Unicode versions. This one captures the case people meet first.</p>",
+   "kind": "output",
+   "concept": "What a reader calls a character is a run of code points, so the count they mean is neither the byte count nor the code point count.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A combining mark does not increase the count. A leading mark with nothing before it still has to start one."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Marks in the range 0x300 to 0x36F attach to whatever came before, so they add nothing, unless nothing came before, in which case there is still one thing on the screen. The starter counts every code point.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The real rules also group emoji joined by zero-width joiners, regional indicator pairs that form flags, and several scripts where a syllable spans several code points. And the table changes between versions, which means the number of characters in a string can change when a library is upgraded. That is correct behaviour: when a new emoji sequence is defined, what used to draw as three symbols draws as one.</p>",
+   "starter": "#include <stddef.h>\nsize_t count_graphemes(const unsigned *cps, size_t n) {\n    return n;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nsize_t count_graphemes(const unsigned *, size_t);\nint main(void) {\n    unsigned plain[3] = {'a', 'b', 'c'};\n    assert(count_graphemes(plain, 3) == 3);\n    /* e followed by a combining acute is one character. */\n    unsigned acc[2] = {0x65, 0x301};\n    assert(count_graphemes(acc, 2) == 1);\n    /* Two marks on one base is still one. */\n    unsigned two[3] = {0x65, 0x301, 0x308};\n    assert(count_graphemes(two, 3) == 1);\n    /* A mark with nothing before it is still something on the screen. */\n    unsigned lone[1] = {0x301};\n    assert(count_graphemes(lone, 1) == 1);\n    unsigned mix[4] = {'a', 0x301, 'b', 0x308};\n    assert(count_graphemes(mix, 4) == 2);\n    assert(count_graphemes(plain, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "Rejecting what is not text",
+   "brief": "<p>Write <code>utf8_valid</code>, checking that a byte sequence is well formed: every leading byte is followed by the right number of continuations, and there are no stray continuations.</p>\n<p>A decoder that accepts malformed input is a decoder that produces characters nobody wrote.</p>",
+   "kind": "output",
+   "concept": "Validating at the boundary once is the defence, and it works because the encoding makes malformed input detectable rather than merely unusual.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Read the leading byte to learn the length, then require exactly that many continuations before the next leading byte."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A truncated sequence at the end of the buffer is invalid, a continuation byte with no leading byte before it is invalid, and a leading byte followed by too few continuations is invalid. The starter only rejects the third.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Validate and normalise at the boundary, once, and treat everything inside as checked. The alternative is every function in the program defending itself, which is how the overlong slash got through: one component rejected the dangerous form and another accepted a different spelling of it.</p>",
+   "starter": "#include <stddef.h>\nint utf8_valid(const unsigned char *s, size_t n) {\n    for (size_t i = 0; i < n; i++) {\n        if (s[i] < 0x80) continue;\n        if ((s[i] & 0xE0) == 0xC0) i += 1;\n        else if ((s[i] & 0xF0) == 0xE0) i += 2;\n        else if ((s[i] & 0xF8) == 0xF0) i += 3;\n    }\n    return 1;\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nint utf8_valid(const unsigned char *, size_t);\nint main(void) {\n    unsigned char ok1[] = {0x61, 0xC3, 0xA9, 0x62};\n    assert(utf8_valid(ok1, 4) == 1);\n    unsigned char ok2[] = {0xF0, 0x9F, 0x98, 0x80};\n    assert(utf8_valid(ok2, 4) == 1);\n    assert(utf8_valid(ok1, 0) == 1);\n    /* A continuation byte with nothing leading it. */\n    unsigned char stray[] = {0xA9};\n    assert(utf8_valid(stray, 1) == 0);\n    /* A two-byte leader with nothing after it. */\n    unsigned char cut[] = {0xC3};\n    assert(utf8_valid(cut, 1) == 0);\n    /* A four-byte leader with only two continuations. */\n    unsigned char short4[] = {0xF0, 0x9F, 0x98};\n    assert(utf8_valid(short4, 3) == 0);\n    /* A leader where a continuation was expected. */\n    unsigned char wrong[] = {0xC3, 0x61};\n    assert(utf8_valid(wrong, 2) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Bytes are not letters",
+   "brief": "<p>Code point order is not alphabetical order in any language. Write <code>byte_order_before</code>, comparing two strings by their bytes, and read what the checks assert about it.</p>",
+   "kind": "output",
+   "concept": "Comparing bytes gives a consistent order, which is what a data structure needs, and it is not the order a person would produce.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Compare byte by byte; if one is a prefix of the other, the shorter comes first."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A prefix sorts before what extends it, and the comparison stops at the first differing byte rather than continuing. Unsigned comparison matters too: a byte above 127 must count as larger than an ASCII one.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Zebra sorts before apple, because uppercase letters have lower code points. In Swedish the accented letters belong after z, in German phone books they sort with their base letters, and in Spanish ch was one letter for sorting until 1994. Collation is a locale-specific algorithm with a large table, and no amount of comparing bytes approximates it.</p>",
+   "starter": "#include <stddef.h>\nint byte_order_before(const unsigned char *a, size_t na,\n                      const unsigned char *b, size_t nb) {\n    (void)na; (void)nb;\n    return a[0] < b[0];\n}",
+   "tests": "#include <assert.h>\n#include <stddef.h>\nint byte_order_before(const unsigned char *, size_t,\n                      const unsigned char *, size_t);\nint main(void) {\n    unsigned char apple[] = {'a','p','p','l','e'};\n    unsigned char zebra[] = {'Z','e','b','r','a'};\n    /* Uppercase has the lower code point, so Zebra comes first. */\n    assert(byte_order_before(zebra, 5, apple, 5) == 1);\n    assert(byte_order_before(apple, 5, zebra, 5) == 0);\n    /* A prefix sorts before what extends it. */\n    unsigned char app[] = {'a','p','p'};\n    assert(byte_order_before(app, 3, apple, 5) == 1);\n    assert(byte_order_before(apple, 5, app, 3) == 0);\n    /* Equal strings are not before each other. */\n    assert(byte_order_before(apple, 5, apple, 5) == 0);\n    /* A non-ASCII byte is larger than every ASCII one. */\n    unsigned char acc[] = {0xC3, 0xA9};\n    assert(byte_order_before(zebra, 5, acc, 2) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

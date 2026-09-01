@@ -1,0 +1,185 @@
+{
+ "slug": "text",
+ "drills": [
+  {
+   "n": 1,
+   "q": "How many lengths does a string have?",
+   "options": [
+    "Four: bytes, code points, grapheme clusters, and glyphs drawn",
+    "One, once you have decided on an encoding",
+    "Two: bytes and characters",
+    "Three: bytes, characters, and words"
+   ],
+   "correct": 0,
+   "why": "<p>The family emoji is 18 bytes, 5 code points, 1 grapheme cluster, and 1 or 3 glyphs depending on the font. Every one of those is correct for some purpose.</p>"
+  },
+  {
+   "n": 2,
+   "q": "Which length belongs in a user interface?",
+   "options": [
+    "The grapheme cluster count",
+    "The byte count",
+    "The code point count",
+    "The glyph count"
+   ],
+   "correct": 0,
+   "why": "<p>Byte length goes in buffers and protocols because it is stable. Code point count is what every language gives you by default and belongs almost nowhere.</p>"
+  },
+  {
+   "n": 3,
+   "q": "What does a byte under 128 mean in UTF-8?",
+   "options": [
+    "Itself, which is why every ASCII file is already valid UTF-8",
+    "The start of a two-byte sequence",
+    "A continuation byte",
+    "A control code"
+   ],
+   "correct": 0,
+   "why": "<p>Several of UTF-8's good properties fall out of that one decision, including self-synchronisation and the absence of any byte order question.</p>"
+  },
+  {
+   "n": 4,
+   "q": "What makes UTF-8 self synchronising?",
+   "options": [
+    "A continuation byte always has 10 as its top two bits and nothing else does",
+    "Every character starts with a marker byte",
+    "The length is encoded in a header",
+    "Characters are a fixed number of bytes"
+   ],
+   "correct": 0,
+   "why": "<p>You can land anywhere in a string and find the start of the character you are in by walking backwards past continuations. No other popular encoding permits this.</p>"
+  },
+  {
+   "n": 5,
+   "q": "Why does UTF-8 need no byte order mark?",
+   "options": [
+    "The unit is a byte, so there is no order to get wrong",
+    "The first byte always identifies the order",
+    "The standard mandates big endian",
+    "It does need one; the marker is required"
+   ],
+   "correct": 0,
+   "why": "<p>The marker that exists is a mistake other encodings made that UTF-8 inherited by imitation.</p>"
+  },
+  {
+   "n": 6,
+   "q": "Why is searching a UTF-8 string for a substring safe at the byte level?",
+   "options": [
+    "A leading byte and a continuation byte can never be confused, so no match can straddle a character",
+    "Because search functions decode first",
+    "Because characters are fixed width",
+    "It is not safe; you must decode both strings"
+   ],
+   "correct": 0,
+   "why": "<p>Searching bytes is searching characters, for free, which is another consequence of the same encoding decision.</p>"
+  },
+  {
+   "n": 7,
+   "q": "What is a surrogate pair?",
+   "options": [
+    "Two sixteen-bit units encoding one code point above 65535 in UTF-16",
+    "Two code points that render as one character",
+    "A composed and a decomposed form of the same character",
+    "Two bytes of a UTF-8 continuation"
+   ],
+   "correct": 0,
+   "why": "<p>Unicode originally promised everything would fit in sixteen bits. It did not, so the encoding was extended, and UTF-16 became variable width.</p>"
+  },
+  {
+   "n": 8,
+   "q": "Why does a JavaScript string report length 2 for one emoji?",
+   "options": [
+    "<code>length</code> counts sixteen-bit units, and that emoji is a surrogate pair",
+    "It counts bytes",
+    "It counts grapheme clusters and the emoji is two",
+    "It counts code points including a joiner"
+   ],
+   "correct": 0,
+   "why": "<p>Indexing to position 1 gives half a character, and reversing a string breaks every character above the basic range. The trap is that it works for years, because most European text never leaves the first sixty five thousand code points.</p>"
+  },
+  {
+   "n": 9,
+   "q": "Two ways to write an accented e. What is the relationship?",
+   "options": [
+    "Both are valid, they look identical, and they compare unequal",
+    "Only the composed form is valid",
+    "They compare equal because the renderer normalises",
+    "The decomposed form is a legacy encoding"
+   ],
+   "correct": 0,
+   "why": "<p>Normalisation is the operation that picks one, and comparing text for equality means normalising both sides first.</p>"
+  },
+  {
+   "n": 10,
+   "q": "Why do filenames with accents sometimes not match themselves across systems?",
+   "options": [
+    "One system stores them decomposed and the other composed",
+    "The filesystem uses a different encoding",
+    "Case folding differs between the systems",
+    "The accents are stored in extended attributes"
+   ],
+   "correct": 0,
+   "why": "<p>It is the situation macOS users have, and it is a normalisation mismatch at a boundary rather than a bug in either system.</p>"
+  },
+  {
+   "n": 11,
+   "q": "Why is lowercasing before comparison a security problem?",
+   "options": [
+    "The correct result depends on the locale, so a Turkish user gets a different answer",
+    "Lowercasing allocates and can fail",
+    "It loses information needed for the comparison",
+    "It is slower than a direct comparison"
+   ],
+   "correct": 0,
+   "why": "<p>Turkish has a dotless i, so uppercasing an ordinary i gives a dotted capital. A check for \"admin\" has failed to match for exactly this reason. Ask for the case-insensitive comparison instead.</p>"
+  },
+  {
+   "n": 12,
+   "q": "Is code point order alphabetical order?",
+   "options": [
+    "In no language, and it puts Zebra before apple",
+    "Yes, for languages using the Latin alphabet",
+    "Yes, after normalisation",
+    "Only for ASCII"
+   ],
+   "correct": 0,
+   "why": "<p>Swedish puts accented letters after z, German phone books sort them with their base letters, and Spanish treated ch as one letter until 1994. Collation is a locale algorithm with a large table.</p>"
+  },
+  {
+   "n": 13,
+   "q": "What is an overlong encoding?",
+   "options": [
+    "A UTF-8 sequence using more bytes than the code point needs, which is invalid",
+    "A sequence longer than four bytes",
+    "A code point above the Unicode maximum",
+    "A grapheme cluster spanning many code points"
+   ],
+   "correct": 0,
+   "why": "<p>0xC0 0xAF decodes to a slash and is not a slash. Decoders that accepted them have let a path traversal past a check looking for the one-byte form.</p>"
+  },
+  {
+   "n": 14,
+   "q": "What is Trojan Source?",
+   "options": [
+    "Bidirectional override characters making source display as one thing and compile as another",
+    "A homoglyph attack on package names",
+    "An overlong encoding in a compiler's lexer",
+    "A normalisation mismatch in a build system"
+   ],
+   "correct": 0,
+   "why": "<p>Published in 2021, and it affected every language that permits those characters in comments and strings.</p>"
+  },
+  {
+   "n": 15,
+   "q": "Why can a string's character count change when you upgrade a library?",
+   "options": [
+    "The grapheme clustering rules have a table that changes between Unicode versions",
+    "The encoding changed",
+    "Normalisation forms are revised",
+    "It cannot; the count is fixed by the bytes"
+   ],
+   "correct": 0,
+   "why": "<p>That is correct behaviour. When a new emoji sequence is defined, text that drew as three symbols draws as one, and a program with the old grouping now disagrees with what the user sees.</p>"
+  }
+ ]
+}

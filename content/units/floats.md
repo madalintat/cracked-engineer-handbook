@@ -180,6 +180,7 @@ be counted directly. Comparing that count against a small budget asks a precise
 question: are these within a few steps of each other. It handles every magnitude
 with one constant, and it is what a serious numerical test suite uses.
 
+## What to carry forward
 
 A float is a fixed number of significant bits and a scale, so the gap between
 values grows with the values. Every integer up to two to the 24 is exact in a

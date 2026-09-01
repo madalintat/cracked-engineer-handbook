@@ -879,6 +879,7 @@ def build(strict=True):
                     note_p.read_text().split("---")[1] if "---" in note_p.read_text() else "",
                     body, f"units/{slug}")
                 problems += check_figures_are_introduced(body, f"units/{slug}")
+                problems += check_no_orphan_gap(body, f"units/{slug}")
                 body_html, heads = render(body, f"units/{slug}")
                 words = word_count(body_html)
                 if strict and not (NOTE_WORDS[0] <= words <= NOTE_WORDS[1]):
@@ -1050,6 +1051,34 @@ def check_gloss_links_render(meta_text, md, where):
                 f"{where}: a glossary link in the heading {line.strip()[:44]!r}. "
                 f"It corrupts the anchor the contents rail points at.")
     return problems
+
+
+def check_no_orphan_gap(md, where):
+    """Reject a run of blank lines in a note.
+
+    This exists because of a specific mistake made three times. Inserting a
+    section with a search-and-replace anchored on the following heading eats
+    that heading, and what is left is the next section's prose with nothing
+    introducing it. The word count still passes, the prose linter still passes,
+    and the note reads as though a paragraph wandered in.
+
+    A double blank line is the signature every time, so that is what is
+    checked. It also catches the plainer case of a heading deleted by hand.
+    """
+    p = []
+    line_no = 1
+    blanks = 0
+    for line in md.split("\n"):
+        if line.strip() == "":
+            blanks += 1
+        else:
+            if blanks >= 2:
+                p.append(f"{where}: {blanks} blank lines before line {line_no}. "
+                         f"A run of blanks is usually a heading that was "
+                         f"deleted, leaving the section under it unannounced.")
+            blanks = 0
+        line_no += 1
+    return p
 
 
 def check_figures_are_introduced(md, where):

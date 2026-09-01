@@ -65,7 +65,6 @@ from that one fact.
 }
 ```
 
-
 ## Widening, and the bit that gets copied
 
 When a narrow value goes into a wider register, the new high bits have to come

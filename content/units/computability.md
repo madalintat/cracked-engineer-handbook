@@ -169,7 +169,6 @@ principled value is a theorem rather than a gap in the literature. A step limit
 that is generous for one input is nowhere near enough for the next, and no
 amount of profiling turns that into a rule.
 
-
 ## Semi-decidable, which is not nothing
 
 One refinement, because it is the difference between hopeless and merely

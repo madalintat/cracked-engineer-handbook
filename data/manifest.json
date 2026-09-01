@@ -563,7 +563,8 @@
    "neededBy": [
     "control",
     "structure",
-    "addressing"
+    "addressing",
+    "text"
    ],
    "minutes": 45
   },
@@ -966,7 +967,8 @@
     "arithmetic"
    ],
    "neededBy": [
-    "floats"
+    "floats",
+    "text"
    ],
    "minutes": 50
   },
@@ -982,7 +984,7 @@
    "accent": "copper",
    "backend": "godbolt",
    "ready": true,
-   "words": 1563,
+   "words": 1567,
    "exercises": 8,
    "drills": 15,
    "needs": [
@@ -1005,7 +1007,7 @@
    "accent": "copper",
    "backend": "godbolt",
    "ready": true,
-   "words": 1514,
+   "words": 1518,
    "exercises": 8,
    "drills": 15,
    "needs": [
@@ -1025,12 +1027,16 @@
    "phase": "understand",
    "accent": "copper",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1516,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "encoding",
+    "integers"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "object-model",
@@ -2693,9 +2699,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 31,
-  "words": 47199,
-  "exercises": 248,
-  "drills": 465
+  "ready": 32,
+  "words": 48723,
+  "exercises": 256,
+  "drills": 480
  }
 }

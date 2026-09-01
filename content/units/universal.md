@@ -110,7 +110,6 @@ And it sets up the trap in unit 018. Once a machine can be handed a description
 of a machine, it can be handed a description of itself, and the questions you can
 ask by doing that are where computability runs out.
 
-
 ## The bar is embarrassingly low
 
 Here is the part that reorganises how you look at systems.

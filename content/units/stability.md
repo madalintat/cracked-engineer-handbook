@@ -182,6 +182,7 @@ Both checks take minutes and neither requires an error analysis. The literature 
 this subject is large and precise and mostly unnecessary for deciding whether a
 particular loop is good enough, which is the question people actually have.
 
+## What to carry forward
 
 Conditioning belongs to the problem, stability belongs to the algorithm, and
 fixing one does nothing for the other.

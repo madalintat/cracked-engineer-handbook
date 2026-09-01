@@ -111,7 +111,6 @@ handwritten table is one of two shapes. Two drivers in one step, which is the
 short. Or a load bit set one step early, which captures the bus before the value
 it wanted has arrived on it.
 
-
 ## The instruction set is data
 
 If the decoder is a memory, then the instruction set is the contents of a
