@@ -15,7 +15,7 @@
    "feedback",
    "clock-bus"
   ],
-  "minutes": "55",
+  "minutes": 55,
   "one_idea": "There are exactly two kinds of logic, and almost every Verilog bug is a confusion between them.",
   "sources": [
    "digital-design-hdl-fpga",

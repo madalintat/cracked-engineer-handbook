@@ -15,7 +15,7 @@
    "feedback",
    "clock-bus"
   ],
-  "minutes": "50",
+  "minutes": 50,
   "one_idea": "A memory is a decoder, a row of registers and a multiplexer, and a jump is a load into the counter you already built.",
   "sources": [
    "nand2tetris-eater-scott"

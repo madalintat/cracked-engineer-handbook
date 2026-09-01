@@ -14,7 +14,7 @@
    "cmos-gate",
    "arithmetic"
   ],
-  "minutes": "50",
+  "minutes": 50,
   "one_idea": "Signed overflow is not a wrapping operation. It is a promise you made to the compiler, and the compiler will cash it.",
   "sources": [
    "numbers-text-numerics",

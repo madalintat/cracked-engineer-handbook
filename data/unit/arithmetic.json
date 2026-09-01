@@ -13,7 +13,7 @@
   "needs": [
    "selection"
   ],
-  "minutes": "50",
+  "minutes": 50,
   "one_idea": "Subtraction is not a second circuit. It is addition with one control bit inverting an operand, and that is a fact about the representation rather than about the hardware.",
   "sources": [
    "nand2tetris-eater-scott",

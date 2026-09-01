@@ -101,23 +101,27 @@ function viewHome() {
       <div class="hero-copy">
         <p class="eyebrow">${c.phases} phases &middot; ${c.parts} parts &middot;
           ${c.units} units</p>
-        <h1>How computers work,<br>from the transistor up.</h1>
-        <p class="lede">One dependency chain, from what a switch costs to flip
-          to why a modern GPU multiplies four-bit numbers. Every exercise is
-          checked by a tool that complains specifically: a simulator, a real
-          compiler, a real synthesiser, or a GPU you rent by the second.</p>
+        <h1>Everything under your code.</h1>
+        <p class="lede">A transistor leaks, and a hundred and twenty units
+          later that is why a model trains in four-bit floating point. In
+          between sit gates, compilers, caches, kernels, filesystems, networks,
+          ciphers and motors. Every exercise here is checked by a tool that
+          complains specifically, and nothing is asserted that was not
+          measured.</p>
         <p class="hero-cta">
           <a class="btn" href="#/track">${started
             ? 'Back to the track' : 'Start at the switch'}</a>
           ${started ? `<a class="btn ghost" href="#/unit/${esc(started.slug)}"
-            >Continue: ${esc(started.title)}</a>` : ''}
+            >Continue: ${esc(started.title)}</a>`
+            : '<a class="btn ghost" href="#/paths">Or pick a shorter route</a>'}
         </p>
         <p class="hero-note">${ready} of ${c.units} units written so far, and
           the rest are in the track so the whole spine is visible.</p>
       </div>
-      <img class="hero-mascot" src="assets/img/mascot-512.png" width="190"
-           height="190" alt="" decoding="async">
-      <div class="hero-art">${HH.manifest.hero || ''}</div>
+      <div class="hero-art">
+        <img src="assets/img/mascot-512.png" width="360" height="360"
+             alt="" decoding="async">
+      </div>
     </section>
     <section>
       <h2 style="margin-bottom:16px">The track</h2>
@@ -206,7 +210,10 @@ function viewTrack() {
     <h1 style="padding-top:48px">The track</h1>
     <p class="prose">${c.units} units in ${c.parts} parts, grouped into
       ${c.phases} phases. The colour is the phase, so a unit's colour tells you
-      which stage of the machine you are standing in.</p>
+      which stage of the machine you are standing in. This is the order the
+      dependencies impose. If you arrived with one goal rather than the whole
+      thing, the <a href="#/paths">paths</a> are shorter routes that reach one
+      each.</p>
     <nav class="chips" aria-label="Phases">${chips}</nav>
     <div class="tfilter">
       <label class="sr-only" for="tf">Filter units</label>
@@ -1006,6 +1013,124 @@ function wireGlossary() {
       setTimeout(() => target.classList.remove('landed'), 2400);
     }
   }
+}
+
+/* ----------------------------------------------------------------- paths */
+
+/* A hundred and twenty two units in one line answers "what is next" and never
+ * answers "what do I need for this". A path answers the second: a named route
+ * for one goal, in stages, each stage saying why it is where it is. The build
+ * refuses a path that puts a unit before something it needs, so the order on
+ * this page is a claim that has been checked. */
+async function viewPaths(id) {
+  const data = await getJSON('data/paths.json');
+  const paths = data.paths || [];
+  if (!paths.length) {
+    return `<div class="wrap" style="padding:80px 0"><h1>Paths</h1>
+      <p class="prose">No paths yet.</p></div>`;
+  }
+  if (!id) return pathsIndex(paths);
+  const p = paths.find(x => x.id === id);
+  if (!p) return viewNotFound(`#/paths/${id}`);
+  return onePath(p, paths);
+}
+
+const hours = m => {
+  const h = Math.round(m / 60);
+  return h < 2 ? `${m} minutes` : `about ${h} hours`;
+};
+
+function pathsIndex(paths) {
+  const cards = paths.map(p => `
+    <a class="pathcard" href="#/paths/${esc(p.id)}">
+      <h2>${esc(p.title)}</h2>
+      <p class="pathblurb">${esc(p.blurb)}</p>
+      <p class="pathwho"><span class="lbl">Who this is for</span>${esc(p.who)}</p>
+      <p class="note">${p.unitCount} units. ${p.readyCount} written so
+        far, ${hours(p.minutes)} of reading.</p>
+    </a>`).join('');
+
+  return `
+  <div class="wrap" style="padding:48px 0" data-accent="slate">
+    <p class="eyebrow">Paths</p>
+    <h1>Routes through the track</h1>
+    <p class="lede" style="max-width:var(--measure)">The track is one line
+      because dependencies are one line. Most people arrive with a goal rather
+      than a plan, so these are the routes that reach one goal each, in an
+      order the build checks: no unit appears before something it needs.</p>
+    <div class="pathgrid">${cards}</div>
+    <p class="prose" style="max-width:var(--measure);margin-top:34px">None of
+      these is the whole handbook, and a path that skips a prerequisite says
+      which one it skipped rather than leaving you to find out inside a unit
+      that assumed it. If none of them is your goal, the
+      <a href="#/track">track</a> is every unit in order.</p>
+  </div>`;
+}
+
+function onePath(p, all) {
+  const bySlug = new Map(HH.manifest.units.map(u => [u.slug, u]));
+  let n = 0;
+
+  const stages = p.stages.map((st, i) => `
+    <section class="pstage">
+      <div class="pstage-head">
+        <span class="pstage-n">${i + 1}</span>
+        <div>
+          <h2>${esc(st.title)}</h2>
+          <p class="pstage-why">${esc(st.why)}</p>
+        </div>
+      </div>
+      <ol class="punits">
+        ${st.units.map(slug => {
+          const u = bySlug.get(slug);
+          n++;
+          if (!u) return '';
+          return `<li class="punit${u.ready ? '' : ' stub'}"
+                      data-accent="${esc(u.accent)}">
+            <span class="punit-n">${n}</span>
+            ${u.ready
+              ? `<a href="#/unit/${esc(u.slug)}">${esc(u.title)}</a>`
+              : `<span class="punit-t">${esc(u.title)}</span>`}
+            <span class="punit-part">Part ${esc(u.partRoman)}</span>
+            ${u.ready ? '' : '<span class="punit-stub">not written yet</span>'}
+          </li>`;
+        }).join('')}
+      </ol>
+    </section>`).join('');
+
+  const assumed = (p.assumes || []).map(slug => bySlug.get(slug)).filter(Boolean);
+
+  const others = all.filter(x => x.id !== p.id).map(x =>
+    `<a href="#/paths/${esc(x.id)}">${esc(x.title)}</a>`).join('');
+
+  return `
+  <div class="wrap" style="padding:48px 0" data-accent="slate">
+    <p class="eyebrow"><a href="#/paths">Paths</a></p>
+    <h1>${esc(p.title)}</h1>
+    <p class="lede" style="max-width:var(--measure)">${esc(p.blurb)}</p>
+    <p class="prose" style="max-width:var(--measure)"><span class="lbl">Who
+      this is for</span>${esc(p.who)}</p>
+    <p class="note" style="margin-top:14px">${p.unitCount} units across
+      ${p.stages.length} stages. ${p.readyCount} are written, which is
+      ${hours(p.minutes)} of reading; the rest are listed here in their place
+      and are not written yet.</p>
+
+    ${assumed.length ? `
+      <div class="passumes">
+        <h3>What this path skips</h3>
+        <p>It does not start at the beginning, so it takes these as read. If a
+          unit here refers to something you have not met, one of them is
+          probably where it was introduced.</p>
+        <ul>${assumed.map(u =>
+          `<li><a href="#/unit/${esc(u.slug)}">${esc(u.title)}</a>
+           <span class="note">Part ${esc(u.partRoman)}</span></li>`).join('')}</ul>
+      </div>` : ''}
+
+    <div class="pstages">${stages}</div>
+
+    <p class="prose" style="max-width:var(--measure);margin-top:40px">Other
+      routes: ${others}. Or the <a href="#/track">whole track</a>.</p>
+  </div>`;
 }
 
 /* ----------------------------------------------------------------- atlas */
@@ -1814,6 +1939,7 @@ const ROUTES = {
   'unit': viewUnit,
   'work': viewWork,
   'atlas': viewAtlas,
+  'paths': viewPaths,
   'glossary': viewGlossary,
   'errors': viewErrors,
   'settings': viewSettings,

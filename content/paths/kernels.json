@@ -1,0 +1,69 @@
+{
+  "id": "kernels",
+  "order": 10,
+  "title": "Write a CUDA kernel that is actually fast",
+  "blurb": "The shortest honest route from knowing C to knowing why your kernel is at 30 percent of peak.",
+  "who": "You can write CUDA that compiles and runs. You cannot yet say, before running it, whether a change will make it faster.",
+  "assumes": [
+    "cmos-gate",
+    "arithmetic",
+    "clock-bus",
+    "universal"
+  ],
+  "stages": [
+    {
+      "title": "What a memory access costs",
+      "why": "Every GPU performance problem is a memory problem wearing a costume. You cannot reason about coalescing without knowing what a cache line is and why it exists.",
+      "units": [
+        "registers",
+        "addressing",
+        "cache"
+      ]
+    },
+    {
+      "title": "What a float is",
+      "why": "Half the arithmetic on a modern accelerator is in a format that cannot represent 0.1, and the reason it works anyway is the subject here.",
+      "units": [
+        "integers",
+        "floats",
+        "stability"
+      ]
+    },
+    {
+      "title": "What the cost model says",
+      "why": "Before the hardware, the arithmetic. A matrix multiply has a known ratio of flops to bytes, and that ratio decides everything downstream.",
+      "units": [
+        "cost-model",
+        "layout",
+        "blas",
+        "gemm"
+      ]
+    },
+    {
+      "title": "The machine itself",
+      "why": "Now the part that is actually a GPU: what an SM is, what a warp does when threads disagree, and where the memory hierarchy differs from the one you know.",
+      "units": [
+        "sm-shape",
+        "throughput",
+        "execution-model",
+        "gpu-memory",
+        "coalescing",
+        "shared-memory",
+        "occupancy",
+        "latency-hiding",
+        "roofline"
+      ]
+    },
+    {
+      "title": "Kernels people actually write",
+      "why": "A tiled matrix multiply, then the modern numeric formats, then attention. This is where the earlier units get spent.",
+      "units": [
+        "tiled-gemm",
+        "cute",
+        "formats",
+        "block-scaling",
+        "flash-attention"
+      ]
+    }
+  ]
+}

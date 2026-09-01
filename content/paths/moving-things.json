@@ -1,0 +1,47 @@
+{
+  "id": "moving-things",
+  "order": 40,
+  "title": "Make something move",
+  "blurb": "The route to a machine with no operating system, a motor, and a deadline it cannot miss.",
+  "who": "You have written a control loop that mostly works and want to know why it sometimes does not.",
+  "stages": [
+    {
+      "title": "A computer with nothing under it",
+      "why": "No kernel, no allocator, no scheduler. What a program looks like when the hardware is the only thing beneath it.",
+      "units": [
+        "no-os",
+        "abstraction-cost",
+        "volatile",
+        "cortex-m"
+      ]
+    },
+    {
+      "title": "Turning the world into numbers",
+      "why": "A sensor reading is a voltage that was measured at particular moments, and every property of the signal you recover follows from when those moments were.",
+      "units": [
+        "sampling",
+        "fourier",
+        "filters"
+      ]
+    },
+    {
+      "title": "The loop that has to close on time",
+      "why": "A deadline missed is a different failure from an answer that is wrong, and the units here are about the first kind.",
+      "units": [
+        "determinism",
+        "actuators",
+        "control-loops",
+        "estimation"
+      ]
+    },
+    {
+      "title": "Deciding where to go",
+      "why": "Above the loop: geometry, a plan, and the point where a learned policy replaces the plan.",
+      "units": [
+        "kinematics",
+        "planning",
+        "policies"
+      ]
+    }
+  ]
+}

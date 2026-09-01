@@ -13,7 +13,7 @@
   "needs": [
    "cmos-gate"
   ],
-  "minutes": "45",
+  "minutes": 45,
   "one_idea": "Every Boolean function is one repeated part. There is no second kind of magic further up.",
   "sources": [
    "nand2tetris-eater-scott",

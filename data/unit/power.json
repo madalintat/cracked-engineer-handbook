@@ -14,7 +14,7 @@
    "switch",
    "cmos-gate"
   ],
-  "minutes": "55",
+  "minutes": 55,
   "one_idea": "Voltage stopped falling in 2005, and every structural change in computing since is a consequence of that one number refusing to move.",
   "sources": [
    "transistors-cmos-fabrication",

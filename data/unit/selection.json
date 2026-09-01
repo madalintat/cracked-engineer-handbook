@@ -13,7 +13,7 @@
   "needs": [
    "nand"
   ],
-  "minutes": "45",
+  "minutes": 45,
   "one_idea": "A control signal is an ordinary wire, and choosing is the same operation as addressing.",
   "sources": [
    "nand2tetris-eater-scott"

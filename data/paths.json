@@ -1,0 +1,237 @@
+{
+ "paths": [
+  {
+   "id": "kernels",
+   "order": 10,
+   "title": "Write a CUDA kernel that is actually fast",
+   "blurb": "The shortest honest route from knowing C to knowing why your kernel is at 30 percent of peak.",
+   "who": "You can write CUDA that compiles and runs. You cannot yet say, before running it, whether a change will make it faster.",
+   "assumes": [
+    "cmos-gate",
+    "arithmetic",
+    "clock-bus",
+    "universal"
+   ],
+   "stages": [
+    {
+     "title": "What a memory access costs",
+     "why": "Every GPU performance problem is a memory problem wearing a costume. You cannot reason about coalescing without knowing what a cache line is and why it exists.",
+     "units": [
+      "registers",
+      "addressing",
+      "cache"
+     ]
+    },
+    {
+     "title": "What a float is",
+     "why": "Half the arithmetic on a modern accelerator is in a format that cannot represent 0.1, and the reason it works anyway is the subject here.",
+     "units": [
+      "integers",
+      "floats",
+      "stability"
+     ]
+    },
+    {
+     "title": "What the cost model says",
+     "why": "Before the hardware, the arithmetic. A matrix multiply has a known ratio of flops to bytes, and that ratio decides everything downstream.",
+     "units": [
+      "cost-model",
+      "layout",
+      "blas",
+      "gemm"
+     ]
+    },
+    {
+     "title": "The machine itself",
+     "why": "Now the part that is actually a GPU: what an SM is, what a warp does when threads disagree, and where the memory hierarchy differs from the one you know.",
+     "units": [
+      "sm-shape",
+      "throughput",
+      "execution-model",
+      "gpu-memory",
+      "coalescing",
+      "shared-memory",
+      "occupancy",
+      "latency-hiding",
+      "roofline"
+     ]
+    },
+    {
+     "title": "Kernels people actually write",
+     "why": "A tiled matrix multiply, then the modern numeric formats, then attention. This is where the earlier units get spent.",
+     "units": [
+      "tiled-gemm",
+      "cute",
+      "formats",
+      "block-scaling",
+      "flash-attention"
+     ]
+    }
+   ],
+   "unitCount": 24,
+   "readyCount": 3,
+   "minutes": 155
+  },
+  {
+   "id": "from-scratch",
+   "order": 20,
+   "title": "Build a computer from a transistor",
+   "blurb": "One switch, then one gate, then a machine that runs a program you wrote for it.",
+   "who": "You write software and have never been able to say where the hardware stops and the software starts.",
+   "stages": [
+    {
+     "title": "The switch",
+     "why": "Everything above rests on one device that leaks, costs energy to flip, and stopped getting better in a specific year for a specific reason.",
+     "units": [
+      "switch",
+      "cmos-gate",
+      "power",
+      "fabrication"
+     ]
+    },
+    {
+     "title": "Logic, and then a machine",
+     "why": "One primitive gate, and then every part of a computer built from it, ending with the component that makes the pile of parts run a program.",
+     "units": [
+      "nand",
+      "selection",
+      "arithmetic",
+      "feedback",
+      "clock-bus",
+      "memory",
+      "encoding",
+      "control"
+     ]
+    },
+    {
+     "title": "The same work, in a language a tool understands",
+     "why": "Hand-drawn netlists stop scaling. This is the same designs described to a synthesiser, and the first time a clock period is a number rather than an idea.",
+     "units": [
+      "structure",
+      "clock-edge",
+      "proving",
+      "timing"
+     ]
+    },
+    {
+     "title": "What it can compute at all",
+     "why": "Having built one, the question of what any of them can and cannot do, which turns out to be answerable and not to depend on the hardware.",
+     "units": [
+      "universal",
+      "languages",
+      "computability",
+      "complexity"
+     ]
+    }
+   ],
+   "unitCount": 20,
+   "readyCount": 13,
+   "minutes": 640
+  },
+  {
+   "id": "under-the-code",
+   "order": 30,
+   "title": "Understand what your compiler did",
+   "blurb": "From the source you wrote to the instructions that ran, with nothing taken on faith.",
+   "who": "You read assembly occasionally and mostly guess. You want to stop guessing.",
+   "assumes": [
+    "clock-bus",
+    "universal"
+   ],
+   "stages": [
+    {
+     "title": "The instruction set, for real",
+     "why": "Not the tutorial version. The registers, how an address is formed, what a system call actually is, and what a linker leaves behind.",
+     "units": [
+      "registers",
+      "addressing",
+      "syscalls",
+      "elf"
+     ]
+    },
+    {
+     "title": "Why the same instructions run at different speeds",
+     "why": "Two programs with identical instruction counts differ by ten times, and the reason is never in the listing.",
+     "units": [
+      "cache",
+      "pipeline",
+      "atomics"
+     ]
+    },
+    {
+     "title": "The compiler's own middle",
+     "why": "The representation an optimiser actually works on, how instructions get chosen, and what a debugger has to be told to make any of it legible.",
+     "units": [
+      "parsing",
+      "ssa",
+      "codegen",
+      "interpreters",
+      "debugger"
+     ]
+    },
+    {
+     "title": "Measuring instead of believing",
+     "why": "The last unit is the one that makes the rest usable: how to find out, rather than reason about, which of two versions is faster.",
+     "units": [
+      "build",
+      "testing",
+      "measurement"
+     ]
+    }
+   ],
+   "unitCount": 15,
+   "readyCount": 1,
+   "minutes": 50
+  },
+  {
+   "id": "moving-things",
+   "order": 40,
+   "title": "Make something move",
+   "blurb": "The route to a machine with no operating system, a motor, and a deadline it cannot miss.",
+   "who": "You have written a control loop that mostly works and want to know why it sometimes does not.",
+   "stages": [
+    {
+     "title": "A computer with nothing under it",
+     "why": "No kernel, no allocator, no scheduler. What a program looks like when the hardware is the only thing beneath it.",
+     "units": [
+      "no-os",
+      "abstraction-cost",
+      "volatile",
+      "cortex-m"
+     ]
+    },
+    {
+     "title": "Turning the world into numbers",
+     "why": "A sensor reading is a voltage that was measured at particular moments, and every property of the signal you recover follows from when those moments were.",
+     "units": [
+      "sampling",
+      "fourier",
+      "filters"
+     ]
+    },
+    {
+     "title": "The loop that has to close on time",
+     "why": "A deadline missed is a different failure from an answer that is wrong, and the units here are about the first kind.",
+     "units": [
+      "determinism",
+      "actuators",
+      "control-loops",
+      "estimation"
+     ]
+    },
+    {
+     "title": "Deciding where to go",
+     "why": "Above the loop: geometry, a plan, and the point where a learned policy replaces the plan.",
+     "units": [
+      "kinematics",
+      "planning",
+      "policies"
+     ]
+    }
+   ],
+   "unitCount": 14,
+   "readyCount": 0,
+   "minutes": 0
+  }
+ ]
+}

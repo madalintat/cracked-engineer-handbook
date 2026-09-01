@@ -1,0 +1,53 @@
+{
+  "id": "from-scratch",
+  "order": 20,
+  "title": "Build a computer from a transistor",
+  "blurb": "One switch, then one gate, then a machine that runs a program you wrote for it.",
+  "who": "You write software and have never been able to say where the hardware stops and the software starts.",
+  "stages": [
+    {
+      "title": "The switch",
+      "why": "Everything above rests on one device that leaks, costs energy to flip, and stopped getting better in a specific year for a specific reason.",
+      "units": [
+        "switch",
+        "cmos-gate",
+        "power",
+        "fabrication"
+      ]
+    },
+    {
+      "title": "Logic, and then a machine",
+      "why": "One primitive gate, and then every part of a computer built from it, ending with the component that makes the pile of parts run a program.",
+      "units": [
+        "nand",
+        "selection",
+        "arithmetic",
+        "feedback",
+        "clock-bus",
+        "memory",
+        "encoding",
+        "control"
+      ]
+    },
+    {
+      "title": "The same work, in a language a tool understands",
+      "why": "Hand-drawn netlists stop scaling. This is the same designs described to a synthesiser, and the first time a clock period is a number rather than an idea.",
+      "units": [
+        "structure",
+        "clock-edge",
+        "proving",
+        "timing"
+      ]
+    },
+    {
+      "title": "What it can compute at all",
+      "why": "Having built one, the question of what any of them can and cannot do, which turns out to be answerable and not to depend on the hardware.",
+      "units": [
+        "universal",
+        "languages",
+        "computability",
+        "complexity"
+      ]
+    }
+  ]
+}

@@ -232,7 +232,16 @@ def split_front_matter(text, where):
             v = [x.strip().strip("'\"") for x in v[1:-1].split(",") if x.strip()]
         else:
             v = v.strip("'\"")
-        meta[k.strip()] = v
+        k = k.strip()
+        # `minutes` is arithmetic downstream: a path totals it into an hour
+        # count. A string that looks like a number would concatenate instead
+        # of adding, so it is converted here and rejected here.
+        if k == "minutes" and isinstance(v, str):
+            if not v.isdigit():
+                raise BuildError(f"{where}: minutes must be a whole number, "
+                                 f"not {v!r}")
+            v = int(v)
+        meta[k] = v
     return meta, body
 
 
@@ -937,6 +946,12 @@ def build(strict=True):
     for sub in ("unit", "ex", "drills"):
         (DATA / sub).mkdir(exist_ok=True)
 
+    # Minutes live in each note's front matter and never reached the
+    # manifest, because the track shows a part's total rather than a unit's.
+    # A path is a plan, and a plan without an hour count is a wish.
+    for slug, u in units.items():
+        by_slug[slug]["minutes"] = u["meta"].get("minutes")
+    paths = build_paths(by_slug)
     atlas = build_atlas()
     glossary = build_glossary(units)
     errors = build_errors()
@@ -960,6 +975,7 @@ def build(strict=True):
         "backends": list(track.BACKENDS),
         "counts": {
             "atlas": len(atlas), "glossary": len(glossary),
+            "paths": len(paths),
             "errors": len(errors),
             "phases": len(phases),
             "parts": len(parts), "units": len(manifest),
@@ -997,6 +1013,7 @@ def build(strict=True):
     write(DATA / "judges.json", JUDGES_CONFIG)
     write(DATA / "modal-gpus.json", load_gpu_catalog())
     write(DATA / "atlas.json", {"tables": atlas})
+    write(DATA / "paths.json", {"paths": paths})
     write(DATA / "glossary.json", {"terms": glossary})
     write(DATA / "errors.json", {"entries": errors,
                                  "backends": list(VERDICTS)})
@@ -1259,6 +1276,82 @@ def build_glossary(units):
     for slug, t in terms.items():
         t["usedBy"] = sorted(used.get(slug, []))
     return sorted(terms.values(), key=lambda t: t["slug"])
+
+
+def build_paths(by_slug):
+    """Named routes through the track, for a reader with one goal.
+
+    A hundred and twenty two units in one line answers "what comes next" and
+    never answers "what do I need for this". A path answers the second, and it
+    is worth having a gate because a route that skips a prerequisite is worse
+    than no route: it sends someone into a unit that assumes something they
+    were never shown, and the unit will not say so.
+
+    So the rule is the one the track already enforces on itself. Every unit's
+    `needs` must appear earlier in the same path, or be listed in `assumes`,
+    which is the path saying out loud what it expects you to bring.
+    """
+    d = CONTENT / "paths"
+    if not d.exists():
+        return []
+    problems, out = [], []
+    for f in sorted(d.glob("*.json")):
+        w = f"paths/{f.name}"
+        try:
+            t = json.loads(f.read_text())
+        except json.JSONDecodeError as e:
+            problems.append(f"{w}: not valid JSON: {e}")
+            continue
+        for k in ("id", "title", "blurb", "who", "stages", "order"):
+            if t.get(k) in (None, "", []):
+                problems.append(f"{w}: missing {k!r}")
+        if any(w in p for p in problems):
+            continue
+        if t["id"] != f.stem:
+            problems.append(f"{w}: id {t['id']!r} does not match the filename")
+        problems += prose.check_blurb(t["blurb"], f"{w} blurb")
+        problems += prose.lint(t["who"], f"{w} who")
+
+        seen, minutes, ready = [], 0, 0
+        assumed = set(t.get("assumes") or [])
+        for si, stage in enumerate(t["stages"]):
+            for k in ("title", "why", "units"):
+                if not stage.get(k):
+                    problems.append(f"{w}: stage {si} is missing {k!r}")
+            if not stage.get("units"):
+                continue
+            problems += prose.lint(stage.get("why", ""), f"{w} stage {si} why")
+            for slug in stage["units"]:
+                u = by_slug.get(slug)
+                if not u:
+                    problems.append(f"{w}: {slug!r} is not a unit in the track")
+                    continue
+                if slug in seen:
+                    problems.append(f"{w}: {slug!r} appears twice")
+                    continue
+                for n in u.get("needs", []):
+                    if n not in seen and n not in assumed:
+                        problems.append(
+                            f"{w}: {slug!r} comes before {n!r}, which it needs. "
+                            f"Put {n!r} earlier in the path, or list it in "
+                            f"'assumes' to say the reader is expected to know it.")
+                seen.append(slug)
+                minutes += u.get("minutes") or 0
+                ready += 1 if u.get("ready") else 0
+        for slug in assumed:
+            if slug not in by_slug:
+                problems.append(f"{w}: assumes {slug!r}, which is not a unit")
+        out.append({**t, "unitCount": len(seen), "readyCount": ready,
+                    "minutes": minutes})
+    fail(problems)
+    seen_order = {}
+    for t in out:
+        if t["order"] in seen_order:
+            fail([f"paths: {t['id']} and {seen_order[t['order']]} both claim "
+                  f"order {t['order']}"])
+        seen_order[t["order"]] = t["id"]
+    out.sort(key=lambda t: t["order"])
+    return out
 
 
 def build_atlas():

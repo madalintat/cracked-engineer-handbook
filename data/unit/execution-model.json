@@ -14,7 +14,7 @@
    "sm-shape",
    "throughput"
   ],
-  "minutes": "55",
+  "minutes": 55,
   "one_idea": "The warp is the unit of execution and the block is the unit of cooperation. Neither of them is the thread.",
   "sources": [
    "modal-gpu-glossary",

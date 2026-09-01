@@ -14,7 +14,7 @@
    "selection",
    "arithmetic"
   ],
-  "minutes": "50",
+  "minutes": 50,
   "one_idea": "Memory is the loop you were forbidden two units ago, made legal by putting a clock edge in it.",
   "sources": [
    "nand2tetris-eater-scott",

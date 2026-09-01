@@ -13,7 +13,7 @@
   "needs": [
    "encoding"
   ],
-  "minutes": "50",
+  "minutes": 50,
   "one_idea": "The component that turns a pile of parts into a computer is a lookup table and a counter, and it is the least clever thing in the design.",
   "sources": [
    "nand2tetris-eater-scott"

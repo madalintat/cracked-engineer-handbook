@@ -14,7 +14,7 @@
    "universal",
    "clock-bus"
   ],
-  "minutes": "50",
+  "minutes": 50,
   "one_idea": "A register is a name the hardware knows, and there are sixteen of them, which is the constraint everything above has to live with.",
   "sources": [
    "x86-64-assembly",

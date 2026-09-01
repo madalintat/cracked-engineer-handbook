@@ -4,9 +4,12 @@
 Run: python3 test_build.py
 """
 
+import json
+import pathlib
 import re
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import build
@@ -548,8 +551,92 @@ def t_front_matter():
     meta, body = build.split_front_matter(
         "---\nneeds: [nand, feedback]\nminutes: 40\n---\nBody text.\n", "t")
     assert meta["needs"] == ["nand", "feedback"]
-    assert meta["minutes"] == "40"
+    # An integer, because a path totals it. A string would concatenate.
+    assert meta["minutes"] == 40
     assert body.strip() == "Body text."
+
+
+def t_minutes_must_be_a_number():
+    try:
+        build.split_front_matter("---\nminutes: about an hour\n---\nBody.\n", "t")
+    except build.BuildError as e:
+        assert "whole number" in str(e), e
+    else:
+        assert False, "a minutes value that is not a number was accepted"
+
+
+# --------------------------------------------------------------------- paths
+
+def _units(*pairs):
+    """A fake manifest: slug -> what build_paths reads off it."""
+    return {slug: {"slug": slug, "needs": list(needs), "minutes": 40,
+                   "ready": True}
+            for slug, needs in pairs}
+
+
+def _path(tmp, **over):
+    d = {"id": "p", "order": 1, "title": "A path",
+         "blurb": "A route through the track for one goal, checked by the build.",
+         "who": "Someone with a goal rather than a plan.",
+         "stages": [{"title": "First", "why": "Because it comes first.",
+                     "units": ["a", "b"]}]}
+    d.update(over)
+    (tmp / "p.json").write_text(json.dumps(d))
+    return d
+
+
+def t_a_path_may_not_precede_a_prerequisite():
+    """The whole reason a path is data rather than a list of links.
+
+    A route that puts a unit before what it needs sends a reader into a unit
+    that assumes something they were never shown, and the unit will not say so.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        tmp = pathlib.Path(td) / "paths"
+        tmp.mkdir()
+        old = build.CONTENT
+        build.CONTENT = tmp.parent
+        try:
+            # b needs a, and a comes first. Fine.
+            _path(tmp)
+            ok = build.build_paths(_units(("a", ()), ("b", ("a",))))
+            assert ok[0]["unitCount"] == 2, ok
+            assert ok[0]["minutes"] == 80, ok
+
+            # Now a needs b, so the same order is backwards.
+            try:
+                build.build_paths(_units(("a", ("b",)), ("b", ())))
+            except build.BuildError:
+                pass
+            else:
+                assert False, "a path that precedes a prerequisite was accepted"
+
+            # Unless the path says out loud that it skips it.
+            _path(tmp, assumes=["c"])
+            out = build.build_paths(
+                _units(("a", ("c",)), ("b", ("a",)), ("c", ())))
+            assert out[0]["assumes"] == ["c"], out
+        finally:
+            build.CONTENT = old
+
+
+def t_a_path_may_not_name_a_unit_twice():
+    with tempfile.TemporaryDirectory() as td:
+        tmp = pathlib.Path(td) / "paths"
+        tmp.mkdir()
+        old = build.CONTENT
+        build.CONTENT = tmp.parent
+        try:
+            _path(tmp, stages=[{"title": "First", "why": "Because.",
+                                "units": ["a", "a"]}])
+            try:
+                build.build_paths(_units(("a", ())))
+            except build.BuildError:
+                pass
+            else:
+                assert False, "a repeated unit was accepted"
+        finally:
+            build.CONTENT = old
 
 
 # --------------------------------------------------------------------- track

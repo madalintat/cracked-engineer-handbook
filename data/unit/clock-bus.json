@@ -13,7 +13,7 @@
   "needs": [
    "feedback"
   ],
-  "minutes": "50",
+  "minutes": 50,
   "one_idea": "A bus works because exactly one thing drives it at a time, and a clock cycle is the agreement about when that is true.",
   "sources": [
    "nand2tetris-eater-scott",

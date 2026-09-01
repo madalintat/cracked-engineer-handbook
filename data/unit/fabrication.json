@@ -13,7 +13,7 @@
   "needs": [
    "power"
   ],
-  "minutes": "50",
+  "minutes": 50,
   "one_idea": "Yield falls exponentially with die area, so a big chip is not expensive, it is impossible, and everything about how modern chips are packaged follows from that.",
   "sources": [
    "transistors-cmos-fabrication",

@@ -13,7 +13,7 @@
   "needs": [
    "memory"
   ],
-  "minutes": "45",
+  "minutes": 45,
   "one_idea": "An instruction is a bit pattern chosen so that the wires it drives are already in the right places.",
   "sources": [
    "nand2tetris-eater-scott"

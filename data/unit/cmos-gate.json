@@ -13,7 +13,7 @@
   "needs": [
    "switch"
   ],
-  "minutes": "50",
+  "minutes": 50,
   "one_idea": "A CMOS gate is structurally inverting, so inversion is free and non-inversion costs an extra stage.",
   "sources": [
    "transistors-cmos-fabrication"

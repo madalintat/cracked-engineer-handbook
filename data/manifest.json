@@ -321,7 +321,8 @@
    "neededBy": [
     "cmos-gate",
     "power"
-   ]
+   ],
+   "minutes": 45
   },
   {
    "slug": "cmos-gate",
@@ -345,7 +346,8 @@
     "power",
     "nand",
     "integers"
-   ]
+   ],
+   "minutes": 50
   },
   {
    "slug": "power",
@@ -368,7 +370,8 @@
    ],
    "neededBy": [
     "fabrication"
-   ]
+   ],
+   "minutes": 55
   },
   {
    "slug": "fabrication",
@@ -388,7 +391,8 @@
    "needs": [
     "power"
    ],
-   "neededBy": []
+   "neededBy": [],
+   "minutes": 50
   },
   {
    "slug": "nand",
@@ -410,7 +414,8 @@
    ],
    "neededBy": [
     "selection"
-   ]
+   ],
+   "minutes": 45
   },
   {
    "slug": "selection",
@@ -434,7 +439,8 @@
     "arithmetic",
     "feedback",
     "memory"
-   ]
+   ],
+   "minutes": 45
   },
   {
    "slug": "arithmetic",
@@ -457,7 +463,8 @@
    "neededBy": [
     "feedback",
     "integers"
-   ]
+   ],
+   "minutes": 50
   },
   {
    "slug": "feedback",
@@ -482,7 +489,8 @@
     "clock-bus",
     "memory",
     "clock-edge"
-   ]
+   ],
+   "minutes": 50
   },
   {
    "slug": "clock-bus",
@@ -506,7 +514,8 @@
     "memory",
     "clock-edge",
     "registers"
-   ]
+   ],
+   "minutes": 50
   },
   {
    "slug": "memory",
@@ -530,7 +539,8 @@
    ],
    "neededBy": [
     "encoding"
-   ]
+   ],
+   "minutes": 50
   },
   {
    "slug": "encoding",
@@ -552,7 +562,8 @@
    ],
    "neededBy": [
     "control"
-   ]
+   ],
+   "minutes": 45
   },
   {
    "slug": "control",
@@ -572,7 +583,8 @@
    "needs": [
     "encoding"
    ],
-   "neededBy": []
+   "neededBy": [],
+   "minutes": 50
   },
   {
    "slug": "structure",
@@ -614,7 +626,8 @@
     "clock-bus",
     "structure"
    ],
-   "neededBy": []
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "proving",
@@ -745,7 +758,8 @@
     "clock-bus",
     "universal"
    ],
-   "neededBy": []
+   "neededBy": [],
+   "minutes": 50
   },
   {
    "slug": "addressing",
@@ -874,7 +888,8 @@
     "cmos-gate",
     "arithmetic"
    ],
-   "neededBy": []
+   "neededBy": [],
+   "minutes": 50
   },
   {
    "slug": "floats",
@@ -1997,7 +2012,8 @@
     "sm-shape",
     "throughput"
    ],
-   "neededBy": []
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "gpu-memory",
@@ -2585,6 +2601,7 @@
  "counts": {
   "atlas": 4,
   "glossary": 28,
+  "paths": 4,
   "errors": 30,
   "phases": 7,
   "parts": 19,

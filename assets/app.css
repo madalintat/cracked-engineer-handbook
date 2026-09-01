@@ -1608,9 +1608,6 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
   color: var(--ink-3);
 }
 .hero-art { min-width: 0; }
-.hero-art .fig { margin: 0; max-width: none; }
-
-.hero-art figcaption { font-size: var(--t-tiny); }
 
 /* The eyebrow. One rule for every small-caps label in the app, because seven
  * components had spelled the same four declarations out and drifted. */
@@ -1626,7 +1623,6 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
  * first thing to go: he is the only part of the hero that is decoration. */
 @media (max-width: 1180px) {
   .hero { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: 40px; }
-  .hero-mascot { display: none; }
 }
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; gap: 28px; padding: 40px 0 32px; }
@@ -1937,4 +1933,130 @@ a.gl:hover { text-decoration-style: solid; color: var(--accent-ink); }
 /* Below 900px the tab bar owns the bottom of the screen. */
 @media (max-width: 900px) {
   .companion { bottom: calc(var(--tabbar-h) + 12px); right: 12px; }
+}
+
+/* ----------------------------------------------------------------- paths */
+
+.pathgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 30px;
+}
+.pathcard {
+  display: block;
+  padding: 22px 22px 18px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-3);
+  background: var(--raised);
+  color: inherit;
+}
+.pathcard:hover { border-color: var(--accent); text-decoration: none; }
+.pathcard h2 { font-size: var(--t-lg); margin: 0 0 8px; line-height: 1.25; }
+.pathcard:hover h2 { color: var(--accent-ink); }
+.pathblurb { margin: 0; color: var(--ink-2); line-height: 1.55; }
+.pathwho {
+  margin: 14px 0 0;
+  font-size: var(--t-sm);
+  color: var(--ink-3);
+  line-height: 1.55;
+}
+.pathcard .note { margin: 14px 0 0; font-size: var(--t-micro); color: var(--ink-4); }
+/* `.lbl` is only styled inside .idea and .diagnosis, so it needs its own rule
+ * here or the label runs straight into the sentence it introduces. */
+.pathwho .lbl, .prose > .lbl {
+  display: block;
+  font: 700 var(--t-micro)/1 var(--mono);
+  color: var(--ink-4);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  margin-bottom: 7px;
+}
+
+/* What the path skips, said out loud. The build already refuses a path whose
+ * order breaks a prerequisite, so this list is the checked answer to "what am
+ * I expected to bring" rather than an author's guess at it. */
+.passumes {
+  margin-top: 28px;
+  max-width: var(--measure);
+  border-left: 2px solid var(--border);
+  padding: 2px 0 2px 16px;
+  font-size: var(--t-sm);
+  color: var(--ink-3);
+}
+.passumes h3 {
+  font: 700 var(--t-micro)/1 var(--mono);
+  color: var(--ink-4);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  margin: 0 0 8px;
+}
+.passumes p { margin: 0 0 10px; line-height: 1.6; }
+.passumes ul { margin: 0; padding-left: 17px; }
+.passumes li { margin-bottom: 4px; }
+/* Without its own size and spacing the part number reads as the last words of
+ * the unit's title. */
+.passumes li .note {
+  margin-left: 9px;
+  font: 500 var(--t-micro)/1 var(--mono);
+  color: var(--ink-4);
+}
+
+/* A row of links running the full width of a 1400px window puts the part
+ * number a hand's width from the title it belongs to. The stage is capped at
+ * the same measure the prose uses, so the two columns of a unit row stay
+ * readable as one line. */
+.pstages { margin-top: 40px; }
+.pstage { max-width: calc(var(--measure) + 44px); }
+.pstage + .pstage { margin-top: 38px; }
+.pstage-head { display: flex; gap: 14px; align-items: flex-start; }
+.pstage-n {
+  flex: none;
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  font: 700 var(--t-sm)/1 var(--mono);
+  color: var(--accent-ink);
+}
+.pstage-head h2 { font-size: var(--t-md); margin: 4px 0 0; }
+.pstage-why {
+  margin: 8px 0 0;
+  max-width: var(--measure);
+  color: var(--ink-3);
+  line-height: 1.6;
+}
+.punits { list-style: none; margin: 16px 0 0; padding: 0 0 0 44px; }
+.punit {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.punit-n {
+  flex: none;
+  width: 26px;
+  font: 500 var(--t-micro)/1.6 var(--mono);
+  color: var(--ink-4);
+}
+.punit a { font-weight: 500; }
+.punit-t { color: var(--ink-3); }
+.punit-part {
+  margin-left: auto;
+  font: 500 var(--t-micro)/1.6 var(--mono);
+  color: var(--ink-4);
+}
+.punit-stub {
+  font: 500 var(--t-micro)/1.6 var(--sans);
+  color: var(--ink-4);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-1);
+  padding: 1px 6px;
+}
+.punit.stub .punit-part { display: none; }
+
+@media (max-width: 640px) {
+  .punits { padding-left: 0; }
+  .punit-part { display: none; }
 }

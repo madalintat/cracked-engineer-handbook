@@ -11,7 +11,7 @@
  "backend": "godbolt",
  "meta": {
   "needs": [],
-  "minutes": "45",
+  "minutes": 45,
   "one_idea": "The gate of a transistor is not connected to anything, and everything else follows from that.",
   "sources": [
    "transistors-cmos-fabrication"

@@ -1,0 +1,52 @@
+{
+  "id": "under-the-code",
+  "order": 30,
+  "title": "Understand what your compiler did",
+  "blurb": "From the source you wrote to the instructions that ran, with nothing taken on faith.",
+  "who": "You read assembly occasionally and mostly guess. You want to stop guessing.",
+  "assumes": [
+    "clock-bus",
+    "universal"
+  ],
+  "stages": [
+    {
+      "title": "The instruction set, for real",
+      "why": "Not the tutorial version. The registers, how an address is formed, what a system call actually is, and what a linker leaves behind.",
+      "units": [
+        "registers",
+        "addressing",
+        "syscalls",
+        "elf"
+      ]
+    },
+    {
+      "title": "Why the same instructions run at different speeds",
+      "why": "Two programs with identical instruction counts differ by ten times, and the reason is never in the listing.",
+      "units": [
+        "cache",
+        "pipeline",
+        "atomics"
+      ]
+    },
+    {
+      "title": "The compiler's own middle",
+      "why": "The representation an optimiser actually works on, how instructions get chosen, and what a debugger has to be told to make any of it legible.",
+      "units": [
+        "parsing",
+        "ssa",
+        "codegen",
+        "interpreters",
+        "debugger"
+      ]
+    },
+    {
+      "title": "Measuring instead of believing",
+      "why": "The last unit is the one that makes the rest usable: how to find out, rather than reason about, which of two versions is faster.",
+      "units": [
+        "build",
+        "testing",
+        "measurement"
+      ]
+    }
+  ]
+}
