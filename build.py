@@ -189,7 +189,7 @@ VERDICTS = {
     },
     "modal": {
         "compile-error", "launch-error", "cuda-error", "sanitizer",
-        "assert-failed", "timeout", "no-endpoint", "ok",
+        "assert-failed", "nonzero-exit", "timeout", "no-endpoint", "ok",
     },
 }
 
@@ -1226,6 +1226,61 @@ def validate_yosys(exercises, where):
     return problems
 
 
+def validate_modal(exercises, where):
+    """Compile and run every modal starter and solution on a real GPU.
+
+    Needs a runner in the environment (HH_MODAL_SUBMIT, HH_MODAL_POLL,
+    HH_MODAL_TOKEN). Without one the exercises are reported as SKIPPED and
+    never as passing: a validation that silently passes what it did not check
+    is worse than one that does not run.
+    """
+    import subprocess, tempfile
+    items = [{
+        "n": e["n"], "title": e["title"], "kind": e["kind"], "flags": e["flags"],
+        "tests": e["tests"], "gpu": e["gpu"],
+        "starter": e["starter"], "solution": e["solution"],
+        "want": [x["key"] for x in e["expect"] if x["judge"] == "verdict"],
+    } for e in exercises if e["backend"] == "modal"]
+    if not items:
+        return [], 0
+
+    with tempfile.TemporaryDirectory() as d:
+        jp, op = Path(d) / "p.json", Path(d) / "out.json"
+        jp.write_text(json.dumps({"judges": JUDGES_CONFIG, "items": items}))
+        try:
+            r = subprocess.run(
+                ["node", str(ROOT / "validate_modal.mjs"), str(jp), str(op)],
+                capture_output=True, text=True, timeout=1800, cwd=ROOT)
+        except FileNotFoundError:
+            return [f"{where}: --validate needs node on PATH"], 0
+        except subprocess.TimeoutExpired:
+            return [f"{where}: the GPU runner did not finish in thirty minutes"], 0
+        if r.returncode != 0 or not op.exists():
+            return [f"{where}: the runner failed: "
+                    f"{(r.stderr or r.stdout).strip()[-400:]}"], 0
+        results = json.loads(op.read_text())
+
+    if results and results[0].get("skipped"):
+        return [], 0
+
+    problems = []
+    for res in results:
+        w = f"{where} ex{res['n']} ({res['title']})"
+        if res["starterUnavailable"] or res["solutionUnavailable"]:
+            problems.append(f"{w}: the GPU runner could not be reached. "
+                            f"That is the runner, not the content.")
+            continue
+        got = res["starterVerdicts"]
+        if res["want"] and not (set(got) & set(res["want"])):
+            problems.append(
+                f"{w}: starter emits {got}, @expect declares "
+                f"{' or '.join(res['want'])!r}. ({res['starterTitle'][:120]})")
+        if not res["solutionPass"]:
+            problems.append(f"{w}: solution does not pass: "
+                            f"{res['solutionVerdicts']} ({res['solutionTitle'][:160]})")
+    return problems, len(results)
+
+
 def run_validate():
     """Every backend, every exercise. Per-backend pools, not one shared pool:
     a single pool of four would queue hundreds of local simulator checks behind
@@ -1249,6 +1304,17 @@ def run_validate():
                 problems += validate_sim(group, where)
                 checked += len(group)
             print(f"  sim      {len(items):3} exercises checked")
+        elif backend == "modal":
+            ran = 0
+            for where in sorted({w for w, _ in items}):
+                group = [e for w, e in items if w == where]
+                probs, n = validate_modal(group, where)
+                problems += probs
+                ran += n
+            checked += ran
+            print(f"  modal    {len(items):3} exercises "
+                  + (f"checked on a real GPU" if ran
+                     else "SKIPPED (no runner in the environment)"))
         elif backend == "yosys":
             for where in sorted({w for w, _ in items}):
                 group = [e for w, e in items if w == where]
@@ -1281,11 +1347,18 @@ def main():
 
     try:
         if a.check:
+            # The directory says which kind of file this is, so use it rather
+            # than parsing every file as exercises and reporting 15 mysteries.
             p = Path(a.check)
-            slug = p.stem
-            backend = next((u[4] for u in track.TRACK if u[0] == slug), "godbolt")
-            ex = parse_exercises(p.read_text(), p.name, backend)
-            print(f"{len(ex)} exercises, {p.name}: clean")
+            if p.parent.name == "drills":
+                d = parse_drills(p.read_text(), p.name)
+                print(f"{len(d)} drills, {p.name}: clean")
+            else:
+                slug = p.stem
+                backend = next((u[4] for u in track.TRACK if u[0] == slug),
+                               "godbolt")
+                ex = parse_exercises(p.read_text(), p.name, backend)
+                print(f"{len(ex)} exercises, {p.name}: clean")
             return 0
 
         manifest, units = build(strict=not a.lax)

@@ -1,0 +1,185 @@
+{
+ "slug": "execution-model",
+ "drills": [
+  {
+   "n": 1,
+   "q": "How many threads are in a warp on an NVIDIA GPU?",
+   "options": [
+    "32",
+    "64",
+    "16",
+    "Whatever `blockDim.x` is set to"
+   ],
+   "correct": 0,
+   "why": "<p>Thirty-two is a fixed property of the hardware, not something you configure. It comes from graphics: the SM controller grouped eight 2x2 pixel quads into one warp, and eight quads of four pixels is 32.</p>"
+  },
+  {
+   "n": 2,
+   "q": "Why is a warp 32 threads wide rather than some other number?",
+   "options": [
+    "It is the widest a scheduler can decode in one cycle",
+    "It is eight 2x2 pixel quads, and quads exist because mipmap selection",
+    "It matches the 32-bit register width",
+    "It was chosen to match the cache line size"
+   ],
+   "correct": 1,
+   "why": "<p>The number is inherited from texture filtering. A derivative is cheapest as a difference against a neighbour, so fragments are shaded in quads, and the Tesla paper describes the SM controller grouping eight quads into a warp.</p>"
+  },
+  {
+   "n": 3,
+   "q": "A block of 33 threads occupies how many warps?",
+   "options": [
+    "One, since 33 is close enough to 32",
+    "Two, and 31 lanes of the second warp are idle",
+    "Two, and both are fully occupied",
+    "It fails to launch"
+   ],
+   "correct": 1,
+   "why": "<p>Warps are allocated whole. The remaining 31 lanes are masked off and still take their slot in the scheduler, which is why block sizes are almost always multiples of 32.</p>"
+  },
+  {
+   "n": 4,
+   "q": "Why prefer `warpSize` over writing the literal 32?",
+   "options": [
+    "The compiler cannot fold the literal",
+    "`warpSize` is a runtime value, and the same concept is 64 wide on other",
+    "The literal is undefined inside device code",
+    "It has no effect either way, so it is only a style preference"
+   ],
+   "correct": 1,
+   "why": "<p>Writing 32 works today on NVIDIA hardware and gives the wrong answer the moment the same idea is read against a vendor whose warp is wider. Reading <code>warpSize</code> says what you meant rather than what happened to be true.</p>"
+  },
+  {
+   "n": 5,
+   "q": "Half the threads in a warp take one side of a branch and half take the other. How long does the warp take?",
+   "options": [
+    "The longer of the two sides",
+    "The sum of both sides",
+    "Half of each side, since half the lanes are idle",
+    "The shorter side, because the rest are masked off"
+   ],
+   "correct": 1,
+   "why": "<p>A warp has one instruction pointer for 32 lanes. It runs one side with the disagreeing lanes masked, then the other with the mask inverted. Nothing overlaps, so the costs add.</p>"
+  },
+  {
+   "n": 6,
+   "q": "A branch that exactly 50% of your threads take is:",
+   "options": [
+    "Always expensive, because half the lanes are idle",
+    "Free if the split lands on warp boundaries, and expensive if it",
+    "Always free, because the scheduler regroups the lanes",
+    "Expensive only on pre-Volta hardware"
+   ],
+   "correct": 1,
+   "why": "<p>Divergence is spatial rather than statistical. A CPU asks whether a branch is predictable in time; a GPU asks whether it is uniform in space.</p>"
+  },
+  {
+   "n": 7,
+   "q": "What changed about warps from Volta onward?",
+   "options": [
+    "Warps became 64 threads wide",
+    "Each thread got its own program counter and call stack, so lockstep",
+    "Divergence became free",
+    "Warps were replaced by blocks as the unit of execution"
+   ],
+   "correct": 1,
+   "why": "<p>This is why the warp intrinsics carry a <code>_sync</code> suffix and an explicit mask. You now have to name the lanes you mean, because the hardware no longer guarantees they arrive together.</p>"
+  },
+  {
+   "n": 8,
+   "q": "Two blocks in the same kernel need to exchange a value. What should you do?",
+   "options": [
+    "Use `__syncthreads()` between them",
+    "Put the value in shared memory",
+    "Split the work into two kernel launches",
+    "Spin on a flag in global memory until the other block writes it"
+   ],
+   "correct": 2,
+   "why": "<p>There is no ordering between blocks and no barrier across them. A block that waits on another can deadlock, because the block it waits for may not be scheduled until the waiting block finishes.</p>"
+  },
+  {
+   "n": 9,
+   "q": "Why is the absence of communication between blocks useful rather than merely restrictive?",
+   "options": [
+    "It makes kernels shorter to write",
+    "It lets the same kernel run unchanged on a GPU with 20 SMs or 148, and",
+    "It removes the need for shared memory",
+    "It guarantees deterministic output ordering"
+   ],
+   "correct": 1,
+   "why": "<p>Every scheduling decision belongs to the hardware, and it can only belong to the hardware because you promised not to care about the order.</p>"
+  },
+  {
+   "n": 10,
+   "q": "Putting `__syncthreads()` inside a branch that only some threads take is:",
+   "options": [
+    "Fine, as long as the branch is uniform within each warp",
+    "Undefined behaviour, and in practice hangs",
+    "A compile error",
+    "Slower, but correct"
+   ],
+   "correct": 1,
+   "why": "<p>Every thread in the block has to reach the barrier. The threads that skipped it never arrive, and the ones that did wait forever.</p>"
+  },
+  {
+   "n": 11,
+   "q": "Why is switching between warps on an SM nearly free, when switching threads on a CPU is expensive?",
+   "options": [
+    "The GPU has no operating system to involve",
+    "Every resident warp keeps its own registers for as long as it lives, so",
+    "Warps are lighter because they share a program counter",
+    "The scheduler switches only when a warp finishes"
+   ],
+   "correct": 1,
+   "why": "<p>The register file is a context store, not a cache. A CPU saves and restores registers because they belong to the core; an SM has enough of them to give every resident warp its own.</p>"
+  },
+  {
+   "n": 12,
+   "q": "More resident warps on an SM means:",
+   "options": [
+    "More switching overhead, as on a CPU",
+    "More chances to hide a stall, since the SM issues from a different warp",
+    "Slower execution once the count exceeds the number of cores",
+    "No difference, since only one warp issues per cycle"
+   ],
+   "correct": 1,
+   "why": "<p>This inverts the CPU intuition. Threads are not a cost to be managed; they are the mechanism by which a several-hundred-cycle memory wait disappears behind work that was going to happen anyway.</p>"
+  },
+  {
+   "n": 13,
+   "q": "What limits how many warps can be resident on an SM?",
+   "options": [
+    "The number of CUDA cores",
+    "Finite resources such as the register file, so the registers each thread",
+    "The size of the L2 cache",
+    "The grid size you launched with"
+   ],
+   "correct": 1,
+   "why": "<p>This is the price of the register-file-as-context-store design. Using too many registers per thread quietly reduces the number of warps available to hide latency.</p>"
+  },
+  {
+   "n": 14,
+   "q": "`__shfl_down_sync` lets lanes exchange values using:",
+   "options": [
+    "Shared memory and a barrier",
+    "Global memory",
+    "Registers directly, with no memory and no barrier",
+    "The L1 cache"
+   ],
+   "correct": 2,
+   "why": "<p>Because a warp executes together, lanes can hand each other register contents. Five shuffle steps reduce 32 values to one in lane 0, which is log2(32).</p>"
+  },
+  {
+   "n": 15,
+   "q": "Why is a grid-stride loop usually better than one thread per element?",
+   "options": [
+    "It runs faster on every input size",
+    "It decouples the grid from the problem, so one launch configuration",
+    "It removes the need for a bounds check",
+    "It avoids divergence entirely"
+   ],
+   "correct": 1,
+   "why": "<p>The property worth having is that the same kernel is debuggable serially and fast in parallel. One block of one thread still gives the right answer.</p>"
+  }
+ ]
+}

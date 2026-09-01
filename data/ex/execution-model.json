@@ -1,0 +1,322 @@
+{
+ "slug": "execution-model",
+ "backend": "modal",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Which lane am I",
+   "brief": "<p>Fill in <code>lane</code> and <code>warp</code> from the thread index. The checks run one block of 96 threads and verify every thread agrees with the hardware about which warp it is in.</p>\n<p>the thread index rather than anything the runtime tells you.</p>",
+   "kind": "output",
+   "concept": "A warp is 32 consecutive threads, and the boundary is arithmetic on",
+   "backend": "modal",
+   "gpu": "sm_75",
+   "flags": "-O2",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "`warpSize` is available inside a kernel. Use it rather than writing 32."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Read the index the check names. Lane is the position within the warp and warp is which warp of the block, so both come from <code>threadIdx.x</code> and the warp width. Writing 32 instead of <code>warpSize</code> gives the right answer here and the wrong one on hardware where a warp is 64 wide.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line nvcc names. <code>warpSize</code> exists only inside device code.</p>"
+    }
+   ],
+   "after": "<p>96 threads is three warps exactly. Try 100 and the fourth warp is mostly idle lanes, which is why block sizes are multiples of 32.</p>",
+   "starter": "__global__ void identify(int* lane, int* warp) {\n    int t = threadIdx.x;\n    lane[t] = 0;\n    warp[t] = 0;\n}",
+   "tests": "#include <cstdio>\nint main() {\n    const int N = 96;\n    int *lane, *warp;\n    cudaMallocManaged(&lane, N * sizeof(int));\n    cudaMallocManaged(&warp, N * sizeof(int));\n    identify<<<1, N>>>(lane, warp);\n    cudaDeviceSynchronize();\n    for (int t = 0; t < N; t++) {\n        if (lane[t] != t % 32) { printf(\"lane[%d]=%d want %d\\n\", t, lane[t], t % 32); return 1; }\n        if (warp[t] != t / 32) { printf(\"warp[%d]=%d want %d\\n\", t, warp[t], t / 32); return 1; }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "cuda"
+  },
+  {
+   "n": 2,
+   "title": "Both sides of the branch",
+   "brief": "<p>Each thread increments one of two counters depending on its lane. Count how many times each side of the branch actually ran, by having every thread record whether it executed a given side.</p>\n<p>both paths cost their full time. takes.</p>",
+   "kind": "output",
+   "concept": "A warp runs both sides of a divergent branch, masking lanes off, so",
+   "backend": "modal",
+   "gpu": "sm_75",
+   "flags": "-O2",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Every thread must write to both arrays, not only to the one its branch"
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The check compares what your kernel recorded against what the hardware does. Sixteen lanes take each side, and the warp issues both sides one after the other. If your counts say only one side ran, your kernel recorded the programming model rather than the execution.</p>"
+    },
+    {
+     "id": "silent",
+     "judge": "silent",
+     "key": "",
+     "prose": "<p>Nothing complained and a check failed. Look at whether every thread writes to both output arrays or only to the one on its own path.</p>"
+    }
+   ],
+   "after": "<p>Now change the condition to <code>threadIdx.x &lt; 32</code>. The split lands on a warp boundary, no warp diverges, and the same 50% of threads costs nothing.</p>",
+   "starter": "__global__ void split(int* took_a, int* took_b) {\n    int t = threadIdx.x;\n    took_a[t] = 0;\n    took_b[t] = 0;\n    if (t % 2 == 0) took_a[t] = 1;\n}",
+   "tests": "#include <cstdio>\nint main() {\n    const int N = 64;\n    int *a, *b;\n    cudaMallocManaged(&a, N * sizeof(int));\n    cudaMallocManaged(&b, N * sizeof(int));\n    split<<<1, N>>>(a, b);\n    cudaDeviceSynchronize();\n    for (int t = 0; t < N; t++) {\n        int wa = (t % 2 == 0) ? 1 : 0, wb = (t % 2 == 0) ? 0 : 1;\n        if (a[t] != wa || b[t] != wb) {\n            printf(\"t=%d a=%d b=%d want a=%d b=%d\\n\", t, a[t], b[t], wa, wb);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "cuda"
+  },
+  {
+   "n": 3,
+   "title": "The guard is not optional",
+   "brief": "<p>A vector add over 1000 elements, launched with a whole number of 256-thread blocks. The starter writes past the end of the data. Nothing crashes.</p>\n<p>exactly there are threads past the end of the data.</p>",
+   "kind": "output",
+   "concept": "Your grid is a whole number of blocks, so unless the size divides",
+   "backend": "modal",
+   "gpu": "sm_75",
+   "flags": "-O2 -lineinfo",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "1000 is not a multiple of 256."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Read which index the check names. Four blocks of 256 threads is 1024 threads for 1000 elements, so 24 threads write past the end. The checks put a sentinel in the 24 slots beyond the data and report the first one that moved.</p>\n<p>Notice what did not happen. There was no crash, no CUDA error and no sanitizer report, because the write landed inside the same managed allocation. Out of bounds is only reliably loud when it leaves the mapping entirely, and the rest of the time it quietly corrupts something you were not looking at.</p>"
+    },
+    {
+     "id": "silent",
+     "judge": "silent",
+     "key": "",
+     "prose": "<p>Nothing complained and a check failed. That is this exercise's whole point: the wrong answer arrives with no complaint at all.</p>"
+    },
+    {
+     "id": "cuda",
+     "judge": "verdict",
+     "key": "cuda-error",
+     "prose": "<p>CUDA reported a fault, which means the write left the mapping rather than landing next door. That is the loud version of the same bug.</p>"
+    }
+   ],
+   "after": "<p>A grid-stride loop removes the special case entirely, and lets you launch any grid for any <code>n</code>. That is the next exercise.</p>",
+   "starter": "__global__ void vadd(const float* a, const float* b, float* c, int n) {\n    int i = blockIdx.x * blockDim.x + threadIdx.x;\n    c[i] = a[i] + b[i];\n}",
+   "tests": "#include <cstdio>\nint main() {\n    const int N = 1000, SLACK = 24;   // 4 blocks x 256 threads = 1024\n    float *a, *b, *c;\n    cudaMallocManaged(&a, (N + SLACK) * sizeof(float));\n    cudaMallocManaged(&b, (N + SLACK) * sizeof(float));\n    cudaMallocManaged(&c, (N + SLACK) * sizeof(float));\n    for (int i = 0; i < N + SLACK; i++) { a[i] = i; b[i] = 2 * i; c[i] = -7.0f; }\n    vadd<<<(N + 255) / 256, 256>>>(a, b, c, N);\n    cudaError_t e = cudaDeviceSynchronize();\n    if (e != cudaSuccess) { printf(\"cuda error: %s\\n\", cudaGetErrorString(e)); return 2; }\n    for (int i = 0; i < N; i++) {\n        if (c[i] != 3.0f * i) { printf(\"c[%d]=%f want %f\\n\", i, c[i], 3.0f * i); return 1; }\n    }\n    for (int i = N; i < N + SLACK; i++) {\n        if (c[i] != -7.0f) {\n            printf(\"wrote past the end: c[%d]=%f, and the array is %d long\\n\", i, c[i], N);\n            return 1;\n        }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "cuda"
+  },
+  {
+   "n": 4,
+   "title": "One launch for any size",
+   "brief": "<p>Rewrite the same addition as a grid-stride loop, so the kernel is correct for any <code>n</code> and any grid. The checks launch it three times with deliberately silly configurations.</p>\n<p>touching correctness.</p>",
+   "kind": "output",
+   "concept": "Decoupling the grid from the problem lets you tune occupancy without",
+   "backend": "modal",
+   "gpu": "sm_75",
+   "flags": "-O2",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The stride is the total number of threads in the grid."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>One of the three launches produced a wrong element. The stride must be every thread in the grid, which is <code>blockDim.x * gridDim.x</code>, not the block size.</p>"
+    },
+    {
+     "id": "silent",
+     "judge": "silent",
+     "key": "",
+     "prose": "<p>Nothing complained and a check failed. Work out by hand which elements a single block of one thread visits with your stride.</p>"
+    }
+   ],
+   "after": "<p>The last launch is one block of one thread, and it still gives the right answer. That is the property worth having: the same kernel debuggable serially and fast in parallel.</p>",
+   "starter": "__global__ void vadd(const float* a, const float* b, float* c, int n) {\n    int i = blockIdx.x * blockDim.x + threadIdx.x;\n    if (i < n) c[i] = a[i] + b[i];\n}",
+   "tests": "#include <cstdio>\nstatic int check(int blocks, int threads) {\n    const int N = 1000;\n    float *a, *b, *c;\n    cudaMallocManaged(&a, N * sizeof(float));\n    cudaMallocManaged(&b, N * sizeof(float));\n    cudaMallocManaged(&c, N * sizeof(float));\n    for (int i = 0; i < N; i++) { a[i] = i; b[i] = 2 * i; c[i] = -1; }\n    vadd<<<blocks, threads>>>(a, b, c, N);\n    cudaDeviceSynchronize();\n    for (int i = 0; i < N; i++) {\n        if (c[i] != 3.0f * i) {\n            printf(\"<<<%d,%d>>> c[%d]=%f want %f\\n\", blocks, threads, i, c[i], 3.0f * i);\n            return 1;\n        }\n    }\n    return 0;\n}\nint main() {\n    if (check(4, 256)) return 1;\n    if (check(1, 32)) return 1;\n    if (check(1, 1)) return 1;\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "cuda"
+  },
+  {
+   "n": 5,
+   "title": "Summing a warp without memory",
+   "brief": "<p>Reduce 32 values to one using register exchange only. No shared memory, no atomics, no loop over global memory.</p>\n<p>steps and no memory at all.</p>",
+   "kind": "output",
+   "concept": "Lanes in a warp can exchange registers directly, which costs log2(32)",
+   "backend": "modal",
+   "gpu": "sm_75",
+   "flags": "-O2",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Five halvings: 16, 8, 4, 2, 1."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>Lane 0 does not hold the total. <code>__shfl_down_sync(mask, v, d)</code> gives each lane the value from the lane <code>d</code> above it, so adding at offsets 16, 8, 4, 2 and 1 leaves the full sum in lane 0 and partial sums elsewhere.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line nvcc names. The intrinsic takes a mask first: the plain <code>__shfl_down</code> without it was removed, because after Volta the hardware no longer promises lanes arrive together.</p>"
+    },
+    {
+     "id": "silent",
+     "judge": "silent",
+     "key": "",
+     "prose": "<p>Nothing complained and a check failed. Print what each lane holds after each step for a small input and the pattern will be obvious.</p>"
+    }
+   ],
+   "after": "<p>Five instructions, no memory traffic, and the same wires the graphics pipeline used to compute derivatives against quad neighbours.</p>",
+   "starter": "__global__ void warp_sum(const int* in, int* out) {\n    int v = in[threadIdx.x];\n    if (threadIdx.x == 0) out[0] = v;\n}",
+   "tests": "#include <cstdio>\nint main() {\n    int *in, *out;\n    cudaMallocManaged(&in, 32 * sizeof(int));\n    cudaMallocManaged(&out, sizeof(int));\n    int want = 0;\n    for (int i = 0; i < 32; i++) { in[i] = i * 3 + 1; want += in[i]; }\n    *out = -1;\n    warp_sum<<<1, 32>>>(in, out);\n    cudaDeviceSynchronize();\n    if (*out != want) { printf(\"got %d want %d\\n\", *out, want); return 1; }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "cuda"
+  },
+  {
+   "n": 6,
+   "title": "The barrier you left out",
+   "brief": "<p>This kernel reverses an array through shared memory. Every thread writes one element and then reads a different one, and the starter does not wait in between.</p>\n<p>visible to another until they have both reached a barrier.</p>",
+   "kind": "output",
+   "concept": "Threads in a block run concurrently, so a write by one thread is not",
+   "backend": "modal",
+   "gpu": "sm_75",
+   "flags": "-O2",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "The read depends on a write performed by a different thread."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>A thread read a slot before the thread responsible for it had written. Warps within a block are scheduled independently, so without a barrier there is no ordering between them at all. This one may even pass sometimes, which is worse than failing.</p>"
+    },
+    {
+     "id": "silent",
+     "judge": "silent",
+     "key": "",
+     "prose": "<p>Nothing complained and a check failed. Add <code>__syncthreads()</code> between the write and the read, and make sure every thread reaches it.</p>"
+    }
+   ],
+   "after": "<p>Note the rule: every thread in the block must reach the barrier. Putting it inside an <code>if</code> that only some threads take hangs the kernel.</p>",
+   "starter": "__global__ void reverse(int* d, int n) {\n    extern __shared__ int s[];\n    int t = threadIdx.x;\n    s[t] = d[t];\n    d[t] = s[n - 1 - t];\n}",
+   "tests": "#include <cstdio>\nint main() {\n    const int N = 256;\n    int* d;\n    cudaMallocManaged(&d, N * sizeof(int));\n    for (int i = 0; i < N; i++) d[i] = i;\n    reverse<<<1, N, N * sizeof(int)>>>(d, N);\n    cudaDeviceSynchronize();\n    for (int i = 0; i < N; i++) {\n        if (d[i] != N - 1 - i) { printf(\"d[%d]=%d want %d\\n\", i, d[i], N - 1 - i); return 1; }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "cuda"
+  },
+  {
+   "n": 7,
+   "title": "Blocks in any order",
+   "brief": "<p>This kernel sums an array with one partial per block. The starter assumes block 0 finishes first, which nothing guarantees.</p>\n<p>blocks, including strictly one at a time in any order.</p>",
+   "kind": "output",
+   "concept": "A correct kernel gives the right answer for every interleaving of its",
+   "backend": "modal",
+   "gpu": "sm_75",
+   "flags": "-O2",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "There is no barrier between blocks, and there cannot be one."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The total is wrong or unstable. Blocks may run in any order, concurrently or not, so a block cannot read a value another block is expected to have written. Combine partials with an atomic, which needs no ordering.</p>"
+    },
+    {
+     "id": "silent",
+     "judge": "silent",
+     "key": "",
+     "prose": "<p>Nothing complained and a check failed. Run it a few times: an answer that changes between runs is a scheduling assumption, not a bug in the arithmetic.</p>"
+    }
+   ],
+   "after": "<p>The restriction is the mechanism. Because blocks are independent, this kernel runs unchanged on a GPU with twenty SMs and one with a hundred and forty, and gets faster on the larger one.</p>",
+   "starter": "__global__ void total(const int* in, int* out, int n) {\n    int i = blockIdx.x * blockDim.x + threadIdx.x;\n    if (blockIdx.x == 0 && threadIdx.x == 0) *out = 0;\n    if (i < n) *out += in[i];\n}",
+   "tests": "#include <cstdio>\nint main() {\n    const int N = 4096;\n    int *in, *out;\n    cudaMallocManaged(&in, N * sizeof(int));\n    cudaMallocManaged(&out, sizeof(int));\n    long want = 0;\n    for (int i = 0; i < N; i++) { in[i] = i % 7; want += in[i]; }\n    for (int trial = 0; trial < 3; trial++) {\n        *out = 0;\n        total<<<(N + 255) / 256, 256>>>(in, out, N);\n        cudaDeviceSynchronize();\n        if (*out != want) { printf(\"trial %d: got %d want %ld\\n\", trial, *out, want); return 1; }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "cuda"
+  },
+  {
+   "n": 8,
+   "title": "Uniform is free",
+   "brief": "<p>Two kernels do the same amount of arithmetic. One divides work by lane, the other by warp. Make the second one branch on the warp rather than the lane, and the checks confirm both produce identical results.</p>\n<p>the same fraction of threads costs nothing.</p>",
+   "kind": "output",
+   "concept": "A branch that splits on a warp boundary does not diverge at all, so",
+   "backend": "modal",
+   "gpu": "sm_75",
+   "flags": "-O2",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "nonzero-exit"
+    }
+   ],
+   "hints": [
+    "Divide the thread index by the warp width before testing it."
+   ],
+   "diagnose": [
+    {
+     "id": "wrong",
+     "judge": "verdict",
+     "key": "nonzero-exit",
+     "prose": "<p>The two kernels disagree. Both must compute the same value for every thread; only the shape of the branch changes. Test on <code>t / warpSize</code> rather than on <code>t</code>.</p>"
+    },
+    {
+     "id": "silent",
+     "judge": "silent",
+     "key": "",
+     "prose": "<p>Nothing complained and a check failed. Compare what each kernel writes for a thread near a warp boundary, such as 31 and 32.</p>"
+    }
+   ],
+   "after": "<p>Both cost the same instructions and only one of them diverges. That is the whole difference between a branch that is expensive and one that is not, and it is a property of where the split falls rather than how many threads take it.</p>",
+   "starter": "__global__ void by_lane(int* out) {\n    int t = blockIdx.x * blockDim.x + threadIdx.x;\n    out[t] = (t % 2 == 0) ? t * 2 : t * 3;\n}\n\n__global__ void by_warp(int* out) {\n    int t = blockIdx.x * blockDim.x + threadIdx.x;\n    out[t] = t * 2;\n}",
+   "tests": "#include <cstdio>\nint main() {\n    const int N = 256;\n    int *a, *b;\n    cudaMallocManaged(&a, N * sizeof(int));\n    cudaMallocManaged(&b, N * sizeof(int));\n    by_lane<<<1, N>>>(a);\n    by_warp<<<1, N>>>(b);\n    cudaDeviceSynchronize();\n    for (int t = 0; t < N; t++) {\n        int want = ((t / 32) % 2 == 0) ? t * 2 : t * 3;\n        if (b[t] != want) { printf(\"by_warp out[%d]=%d want %d\\n\", t, b[t], want); return 1; }\n    }\n    printf(\"ok\\n\");\n    return 0;\n}",
+   "spec": null,
+   "lang": "cuda"
+  }
+ ]
+}

@@ -1551,10 +1551,10 @@
    "partTitle": "Graphics and the GPU",
    "accent": "phos",
    "backend": "modal",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0
+   "ready": true,
+   "words": 1555,
+   "exercises": 8,
+   "drills": 15
   },
   {
    "slug": "gpu-memory",
@@ -2048,9 +2048,9 @@
   "glossary": 12,
   "parts": 19,
   "units": 122,
-  "ready": 3,
-  "words": 4676,
-  "exercises": 24,
-  "drills": 45
+  "ready": 4,
+  "words": 6231,
+  "exercises": 32,
+  "drills": 60
  }
 }

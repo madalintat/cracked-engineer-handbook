@@ -52,7 +52,8 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] Unit `integers` complete: note, 8 exercises, 15 drills (proves `godbolt`)
 - [ ] Unit `registers` complete (x86-64 asm through `godbolt`)
 - [x] Unit `clock-edge` complete: note, 8 exercises, 15 drills (proves `yosys`)
-- [ ] Unit `execution-model` complete (proves `modal`)
+- [x] Unit `execution-model` complete: note, 8 exercises, 15 drills,
+      all eight checked on a real T4 (proves `modal`)
 
 ## 4a. From the family analysis, not yet done
 
@@ -82,7 +83,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 
 ## 6. Ship
 
-- [~] `build.py --validate`: proven for `sim`, `godbolt` and `yosys`; modal pending
+- [x] `build.py --validate`: proven for all four backends, 32 of 32 exercises
 - [ ] `release.sh --check`, staleness gate on `data/`
 - [x] `runner/app.py` with a self-test, and the settings page that explains it
 - [ ] `docs/AUTHORING.md`

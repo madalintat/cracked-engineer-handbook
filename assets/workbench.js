@@ -639,16 +639,21 @@ const WB = (() => {
    * configured a runner, the honest answer is `unavailable`, not a pretend
    * pass.
    */
+  /* A program that ran and reported a wrong value is not a CUDA fault.
+   * Conflating them told the reader their kernel had crashed when in fact it
+   * ran perfectly and computed the wrong number, which is the more
+   * interesting failure and needs its own name.
+   */
   function nvccVerdict(r) {
     if (r.compile_rc !== 0) return 'compile-error';
-    if (/compute-sanitizer|Invalid __global__|CUDA-MEMCHECK/.test(r.stderr || ''))
+    const text = (r.stderr || '') + '\n' + (r.stdout || '');
+    if (/compute-sanitizer|Invalid __global__|CUDA-MEMCHECK/.test(text))
       return 'sanitizer';
-    if (/\b(cudaError|CUDA error|an illegal memory access)\b/.test(
-          (r.stderr || '') + (r.stdout || ''))) return 'cuda-error';
-    if (/\bAssertion\b.*\bfailed\b/.test((r.stderr || '') + (r.stdout || '')))
-      return 'assert-failed';
+    if (/cuda error|cudaError|an illegal memory access|unspecified launch failure/i
+        .test(text)) return 'cuda-error';
+    if (/\bAssertion\b.*\bfailed\b/.test(text)) return 'assert-failed';
     if (r.run_rc === undefined || r.run_rc === null) return 'launch-error';
-    if (r.run_rc !== 0) return 'cuda-error';
+    if (r.run_rc !== 0) return 'nonzero-exit';
     return 'ok';
   }
 
@@ -682,10 +687,14 @@ const WB = (() => {
         return j;
       };
 
+      // The hidden checks are appended the same way the compiler backend does
+      // it, so an exercise reads identically whichever tool runs it.
+      const full = ex.tests ? source + '\n' + ex.tests + '\n' : source;
+
       let started;
       try {
         started = await post(ep.submit, {
-          gpu, source, arch: ex.gpu || undefined, flags: ex.flags || '',
+          gpu, source: full, arch: ex.gpu || undefined, flags: ex.flags || '',
         });
       } catch (e) {
         return {
@@ -738,7 +747,10 @@ const WB = (() => {
       if (runOut) signals.push({ judge: 'match', key: runOut });
       if (r.sass) signals.push({ judge: 'match', key: r.sass });
       if (r.ptxas) signals.push({ judge: 'match', key: normalise(r.ptxas) });
-      if (verdict !== 'ok' && !diag) signals.push({ judge: 'silent', key: '' });
+      // Nothing compiled wrong, nothing crashed, and the answer is still wrong.
+      if ((verdict === 'nonzero-exit' || verdict === 'assert-failed') && !diag) {
+        signals.push({ judge: 'silent', key: '' });
+      }
 
       const verdicts = [{
         who: 'nvcc',
@@ -755,7 +767,9 @@ const WB = (() => {
         title: r.compile_rc !== 0 ? 'Not run, because it did not compile.'
              : verdict === 'ok' ? 'Ran and every check passed.'
              : verdict === 'assert-failed' ? 'A check failed on the GPU.'
-             : verdict === 'cuda-error' ? `The kernel failed: exit ${r.run_rc}.`
+             : verdict === 'nonzero-exit'
+               ? `It ran, and reported a wrong result: exit ${r.run_rc}.`
+             : verdict === 'cuda-error' ? 'CUDA reported an error.'
              : 'The run did not complete.',
         detail: runOut ? `<pre>${escHtml(runOut)}</pre>` : '',
       });
