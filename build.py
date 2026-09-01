@@ -1014,10 +1014,40 @@ def build_errors():
                 problems.append(
                     f"errors.md: {backend} can report {v!r} and it is not "
                     f"documented, so a reader would get the bare slug")
+    problems += unreachable_verdicts()
     fail(problems)
     order = list(VERDICTS)
     entries.sort(key=lambda e: (order.index(e["backend"]), e["verdict"]))
     return entries
+
+
+# The client files that decide a verdict. A verdict no client names is one no
+# reader can ever see.
+CLIENT_FILES = ("assets/workbench.js", "assets/sim.js", "assets/yosys-check.js")
+
+
+def unreachable_verdicts():
+    """Verdicts that are declared and documented and cannot happen.
+
+    Documenting a verdict nothing emits is the quieter half of the same
+    problem as emitting one nothing documents, and only the second half was
+    checked. `link-error` was declared, had an entry on the errors page, and no
+    code path returned it, for exactly as long as nothing looked.
+    """
+    root = Path(__file__).parent
+    text = "\n".join((root / f).read_text() for f in CLIENT_FILES
+                      if (root / f).exists())
+    out = []
+    for backend, verdicts in VERDICTS.items():
+        for v in sorted(verdicts):
+            if v == "ok":
+                continue      # every backend has one and they are all trivial
+            if f"'{v}'" not in text and f'"{v}"' not in text:
+                out.append(
+                    f"{backend} declares the verdict {v!r} and no client names "
+                    f"it, so nothing can ever report it. Implement it or "
+                    f"remove it from VERDICTS")
+    return out
 
 
 def build_glossary(units):

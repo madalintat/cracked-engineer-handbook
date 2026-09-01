@@ -355,13 +355,23 @@ const WB = (() => {
    * and the compiler lives in buildResult. Reading that backwards finds no
    * diagnostics and reports success.
    */
-  function ceVerdictOf(res, ran, runText) {
+  function ceVerdictOf(res, ran, runText, buildText) {
     if (res.timedOut) return 'timeout';
     if (!ran) return res.code === 0 ? 'ok' : 'compile-error';
 
     const build = res.buildResult;
     if (build && build.code !== 0) return 'compile-error';
-    if (res.didExecute === false) return 'compile-error';
+
+    /* A link failure is not a compile failure, and Compiler Explorer reports
+     * it in a way that looks like neither: buildResult.code is 0, because
+     * every translation unit compiled, and the top level says only
+     * "Executable not found". The linker's actual complaint is in the build
+     * stderr. Without this branch link-error was a verdict that was declared,
+     * documented, and unreachable by any code path. */
+    if (res.didExecute === false) {
+      return /undefined reference|cannot find|multiple definition|undefined symbol/i
+        .test(buildText || '') ? 'link-error' : 'compile-error';
+    }
 
     // Not anchored: the real line begins with the object and source path,
     // e.g. "output.s: /app/example.cpp:3: int main(): Assertion `x' failed."
@@ -454,7 +464,8 @@ const WB = (() => {
 
       // In executor mode the top-level object is the run itself.
       const exec = wantsRun ? (res.execResult || res) : null;
-      const verdict = ceVerdictOf(res, wantsRun, progErr + '\n' + progOut);
+      const verdict = ceVerdictOf(res, wantsRun, progErr + '\n' + progOut,
+                                  diagText);
 
       const tagged = (build.stderr || []).filter(x => x.tag);
       const errors = tagged.filter(x => x.tag.severity === 3);

@@ -217,6 +217,23 @@ t('the exit code path still works where the text is silent', () => {
   is(WB.ceVerdictOf({ ...ok, code: 134 }, true, '') === 'assert-failed', 'abort');
 });
 
+t('a link failure is not a compile failure', () => {
+  // Measured against the live service assembling x86-64: every unit compiled,
+  // so buildResult.code is 0, and the top level says only "Executable not
+  // found". The linker's actual complaint is in the build stderr, which is the
+  // only place that distinguishes this from a compile error.
+  const ld = "/usr/bin/ld: /app/example.o: in function `_start':" +
+             String.fromCharCode(10) +
+             "(.text+0x4): undefined reference to `notareg'";
+  is(WB.ceVerdictOf({ code: -1, didExecute: false, buildResult: { code: 0 } },
+                    true, 'Executable not found', ld) === 'link-error',
+     'undefined reference should be a link error');
+  // Without a linker complaint, the same shape is a compile error.
+  is(WB.ceVerdictOf({ code: -1, didExecute: false, buildResult: { code: 0 } },
+                    true, '', 'nothing useful here') === 'compile-error',
+     'no linker complaint means compile error');
+});
+
 t('a build failure is not a program exit status', () => {
   // didExecute:false with code -1 is a failed build, not a crash.
   is(WB.ceVerdictOf({ code: -1, didExecute: false, buildResult: { code: 1 } },
