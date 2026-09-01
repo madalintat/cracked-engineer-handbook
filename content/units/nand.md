@@ -120,6 +120,34 @@ quietly started one storey above the ground floor.
 So the reason to start at NAND is not that it is elegant. It is that the physics
 hands it to you and charges extra for the alternatives.
 
+```figure
+{
+  "kind": "gates",
+  "alt": "Exclusive or built from four NAND gates, where the output of the first NAND feeds both of the middle two gates.",
+  "caption": "XOR in four NANDs. The saving is the wire from n1 into both middle gates: computed once, used twice. The five-gate version inverts each input separately and does that work twice.",
+  "nodes": [
+    { "id": "a",  "type": "in",   "x": 0, "y": 0, "label": "a" },
+    { "id": "b",  "type": "in",   "x": 0, "y": 2, "label": "b" },
+    { "id": "n1", "type": "nand", "x": 1, "y": 1, "label": "n1" },
+    { "id": "n2", "type": "nand", "x": 2, "y": 0, "label": "n2" },
+    { "id": "n3", "type": "nand", "x": 2, "y": 2, "label": "n3" },
+    { "id": "n4", "type": "nand", "x": 3, "y": 1, "label": "n4" },
+    { "id": "out","type": "out",  "x": 4, "y": 1, "label": "out" }
+  ],
+  "wires": [
+    { "from": "a",  "to": "n1" },
+    { "from": "b",  "to": "n1" },
+    { "from": "a",  "to": "n2" },
+    { "from": "n1", "to": "n2", "label": "shared" },
+    { "from": "n1", "to": "n3" },
+    { "from": "b",  "to": "n3" },
+    { "from": "n2", "to": "n4" },
+    { "from": "n3", "to": "n4" },
+    { "from": "n4", "to": "out" }
+  ]
+}
+```
+
 ## Counting, and why your XOR is probably not minimal
 
 Once you can build anything, the interesting question stops being *can I* and

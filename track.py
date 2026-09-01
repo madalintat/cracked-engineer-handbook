@@ -13,13 +13,18 @@ belongs to, so the colour names a stage of the track rather than decorating it.
 Nineteen parts rotating through seven colours is a rotation; seven phases each
 holding one colour is a legend the reader can learn:
 
-    phos   phosphor green   building a computer
-    amber  warm             understanding what one is
-    rust   earth            the system it runs
-    steel  cool blue        programs that scale
-    plum   purple           signal, meaning, secrecy
-    moss   green-grey       parallel hardware
-    slate  neutral          the world outside, and the end of the road
+    gold    golden yellow   building a computer, and the brand
+    copper  warm metal      understanding what one is
+    clay    earth           the system it runs
+    azure   cool blue       programs that scale
+    violet  purple          signal, meaning, secrecy
+    jade    green           parallel hardware
+    slate   neutral         the world outside, and the end of the road
+
+Gold leads rather than green, and that is a functional choice as much as a
+visual one: with a green brand, a passing exercise looked like any other
+accented element, so the pass colour had to be cyan to stay out of its way.
+Gold hands green back to the thing green means everywhere else.
 """
 
 import re
@@ -28,32 +33,32 @@ PHASES = [
     # (id, title, one-line, accent, part ids in order)
     ("build", "Build a computer",
      "A switch, then a gate, then a machine that runs a program you wrote.",
-     "phos", ("physics", "logic", "silicon")),
+     "gold", ("physics", "logic", "silicon")),
 
     ("understand", "Understand what one is",
      "What it can compute at all, the instruction set it really speaks, and "
      "how it writes down a number.",
-     "amber", ("theory", "machine", "numbers")),
+     "copper", ("theory", "machine", "numbers")),
 
     ("system", "The system it runs",
      "The kernel underneath your process, the disk underneath your file, and "
      "the compiler that got you here.",
-     "rust", ("systems", "storage", "tools")),
+     "clay", ("systems", "storage", "tools")),
 
     ("scale", "Programs that scale",
      "What costs what as the input grows, what breaks when two things run at "
      "once, and what happens when the machine is far away.",
-     "steel", ("algorithms", "concurrency", "networks")),
+     "azure", ("algorithms", "concurrency", "networks")),
 
     ("meaning", "Signal, meaning, secrecy",
      "Turning a voltage into a number, a number into information, and "
      "information into something only one person can read.",
-     "plum", ("signals", "information", "security")),
+     "violet", ("signals", "information", "security")),
 
     ("parallel", "Parallel hardware",
      "The other processor in your machine, and the arithmetic that made it "
      "the one that matters.",
-     "moss", ("gpu", "kernels")),
+     "jade", ("gpu", "kernels")),
 
     ("world", "The world outside",
      "Computers that move things, and the physical floor none of them get "
@@ -576,7 +581,7 @@ TRACK = [
 
 BACKENDS = ("sim", "godbolt", "yosys", "modal")
 
-ACCENTS = ["phos", "amber", "rust", "moss", "steel", "plum", "slate"]
+ACCENTS = ["gold", "copper", "clay", "azure", "violet", "jade", "slate"]
 
 PART_BY_ID = {p[0]: p for p in PARTS}
 

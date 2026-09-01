@@ -66,6 +66,41 @@ so a sentence does not have to bend around a slug.
 A `[[term]]` with no definition is a build error. Define it in
 `content/gloss/<area>.md`.
 
+### Figures
+
+A diagram is a fenced `figure` block holding JSON, rendered to inline SVG at
+build time. Not an image: a PNG cannot follow the theme, cannot be selected or
+read aloud, and goes stale the moment a number in it changes.
+
+    ```figure
+    {
+      "kind": "bits",
+      "alt": "What the diagram shows, in a sentence, for a screen reader.",
+      "caption": "Shown under the figure. This is prose and it is linted.",
+      "bits": 64,
+      "groups":   [ { "from": 0, "to": 7, "label": "al", "accent": "gold" } ],
+      "brackets": [ { "from": 0, "to": 15, "label": "ax", "lane": 0 } ]
+    }
+    ```
+
+Four kinds:
+
+    bits    a word divided into fields, with brackets for nested ranges
+    gates   a logic circuit, from explicit column and row positions
+    timing  waveforms, one row per signal, wave characters 0 1 . x p
+    blocks  boxes and arrows, for anything structural
+
+`alt` and `caption` are both required, and `alt` must be at least six words
+saying what the diagram shows rather than that it is a diagram. A figure with
+no description is a figure some readers simply do not get.
+
+An `accent` names a phase token (`gold`, `azure`, `jade` and so on) or a status
+(`ok`, `warn`, `bad`). Never a colour.
+
+A figure's own labels do not count toward the word target and are not linted,
+so a unit cannot reach 1400 words by drawing. The caption does count and is
+linted like any other prose.
+
 ### What the prose linter rejects
 
 Em dashes and en dashes, curly quotes, title case in headings, and a word list.

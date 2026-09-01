@@ -649,6 +649,33 @@ def t_every_judged_language_has_a_nonce_flag_its_tool_accepts():
             assert flag.startswith("-D"), f"{lang}: {flag!r} is not a define"
 
 
+def t_figures_self_check():
+    import figures
+    figures._selfcheck()
+
+
+def t_a_broken_figure_is_a_build_error_not_a_traceback():
+    try:
+        build.render('```figure\n{"kind": "nope"}\n```', "t")
+    except build.BuildError as e:
+        assert "unknown figure kind" in str(e), str(e)
+    else:
+        assert False, "a bad figure did not fail the build"
+
+
+def t_figure_labels_are_not_prose():
+    """A diagram must not reach a word target by drawing."""
+    md = ('```figure\n{"kind":"bits","bits":8,"alt":"eight bits split into two '
+          'labelled halves here","caption":"A caption.","groups":'
+          '[{"from":0,"to":3,"label":"low"},{"from":4,"to":7,"label":"high"}]}'
+          '\n```')
+    html_out, _ = build.render(md, "t")
+    assert "<svg" in html_out
+    # The caption counts, the axis labels do not.
+    assert build.word_count(html_out) == len("A caption.".split()), \
+        build.word_count(html_out)
+
+
 def t_the_palette_clears_wcag_aa():
     problems = contrast.check("light") + contrast.check("dark")
     assert not problems, "\n  " + "\n  ".join(problems)

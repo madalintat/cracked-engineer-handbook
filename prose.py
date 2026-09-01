@@ -79,6 +79,12 @@ _CODE = re.compile(r"<pre\b[^>]*>.*?</pre>|<code\b[^>]*>.*?</code>",
 
 
 def strip_code(html):
+    """Remove what is not prose: code, and the inside of a figure.
+
+    A figure's caption is prose and stays. Its SVG labels are not, and linting
+    them would flag a register name as a doubled word.
+    """
+    html = re.sub(r"<svg\b.*?</svg>", " ", html, flags=re.S)
     return _CODE.sub(" ", html)
 
 

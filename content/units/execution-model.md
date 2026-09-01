@@ -17,6 +17,29 @@ and no ordering whatsoever.
 Almost everything that surprises people about GPU code follows from one of
 those two.
 
+```figure
+{
+  "kind": "blocks",
+  "alt": "A grid containing blocks, one block expanded into three warps of thirty-two threads each, showing that the warp sits between the block and the thread and appears nowhere in the code you write.",
+  "caption": "What you write is the bottom row. What runs is the row above it. The warp is the only level in this picture that the programming model never mentions, and it is the one that decides what your code costs.",
+  "boxes": [
+    { "id": "grid",  "x": 0, "y": 0, "w": 12, "h": 1, "label": "grid", "sub": "as many blocks as you launched", "accent": "slate" },
+    { "id": "b0",    "x": 0, "y": 2, "w": 4,  "h": 1, "label": "block 0", "accent": "jade" },
+    { "id": "b1",    "x": 4, "y": 2, "w": 4,  "h": 1, "label": "block 1", "sub": "no ordering between them", "accent": "jade" },
+    { "id": "b2",    "x": 8, "y": 2, "w": 4,  "h": 1, "label": "block 2", "accent": "jade" },
+    { "id": "w0",    "x": 0, "y": 4, "w": 4,  "h": 1, "label": "warp 0", "sub": "32 threads, one instruction pointer", "accent": "gold" },
+    { "id": "w1",    "x": 4, "y": 4, "w": 4,  "h": 1, "label": "warp 1", "accent": "gold" },
+    { "id": "w2",    "x": 8, "y": 4, "w": 4,  "h": 1, "label": "warp 2", "accent": "gold" },
+    { "id": "t",     "x": 0, "y": 6, "w": 12, "h": 1, "label": "threads", "sub": "the only level your code names" }
+  ],
+  "arrows": [
+    { "from": "grid", "to": "b1" },
+    { "from": "b0",   "to": "w0", "label": "96 threads is exactly three warps" },
+    { "from": "w1",   "to": "t" }
+  ]
+}
+```
+
 ## Where 32 comes from
 
 The number is not a round figure someone chose. Fragments are shaded in 2x2

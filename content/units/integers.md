@@ -43,6 +43,24 @@ The asymmetry is the price. There are 128 negative values and 127 positive ones,
 so `-INT_MIN` has no representable answer. `abs(INT_MIN)` is negative on every
 machine you will use. That is not a bug in your standard library.
 
+```figure
+{
+  "kind": "bits",
+  "alt": "A 32-bit signed integer showing the top bit as the sign and the remaining 31 bits as magnitude, with the ranges each end holds.",
+  "caption": "A 32-bit int. The top bit is not a flag the hardware checks, it is the bit with weight minus two to the thirty-first, which is why the negative range reaches one further than the positive one.",
+  "bits": 32,
+  "groups": [
+    { "from": 31, "to": 31, "label": "s", "accent": "clay" },
+    { "from": 0, "to": 30, "label": "the other 31 bits", "accent": "azure" }
+  ],
+  "brackets": [
+    { "from": 0, "to": 30, "label": "0 to 2147483647", "lane": 0, "accent": "azure" },
+    { "from": 0, "to": 31, "label": "-2147483648 to 2147483647", "lane": 1, "accent": "clay" }
+  ]
+}
+```
+
+
 ## Widening, and the bit that gets copied
 
 When a narrow value goes into a wider register, the new high bits have to come

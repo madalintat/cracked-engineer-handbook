@@ -1,17 +1,22 @@
 /* The Hardware Handbook.
  *
  * Structure follows the Rust Handbook. The palette is cool graphite with a
- * green phosphor accent, so the neutrals are rotated cool: next to green, a
- * warm grey goes muddy.
+ * golden accent. The neutrals stay cool on purpose: against gold, a warm grey
+ * turns the whole page beige, and the contrast between a cool ground and a
+ * warm accent is what makes the accent read as metal rather than as yellow.
  *
  * Rules that are load-bearing, not taste:
  *
  *  1. No literal colour outside the :root blocks. The reference implementation
  *     claims this and breaks it in five places, one of which makes its dark
  *     button hover to a light colour.
- *  2. --ok is cyan, not green. With a green accent a passing exercise would be
- *     indistinguishable from any ordinary accented element, and pass is the
- *     most important state in the interface.
+ *  2. --ok is green, and it can be, because the brand is not. Under the
+ *     earlier green brand a passing exercise was indistinguishable from any
+ *     accented element, so pass had to be cyan. Moving the brand to gold hands
+ *     green back to the state that everyone already reads as success.
+ *  2a. Every colour here is measured, not chosen. contrast.py reads this file
+ *     and fails the build if any of it drops below 4.5:1 on the ground it is
+ *     used on. See --accent versus --accent-ink below for why there are two.
  *  3. Four inks. Most of the page is --ink-2 and --ink-3; full --ink is for
  *     headings and the thing being read. That restraint does more than
  *     anything else here.
@@ -48,54 +53,57 @@
   --code-bg:   #dfe3e6;
   --code-ink:  #1b2124;
 
-  /* accents. one is chosen per part on a container. */
-  --phos:  #1f9e57;
-  --amber: #b06d10;
-  --rust:  #a2542f;
-  --moss:  #4d7d4a;
-  --steel: #2f6f9e;
-  --plum:  #7a4f9c;
-  --slate: #5b6a72;
-  --accent: var(--phos);
+  /* Seven accents, one per phase. Gold leads, which is the point of the set:
+   * with a green brand a passing exercise was indistinguishable from any
+   * accented element, and --ok had to be cyan to stay out of its way. A gold
+   * brand hands green back to the thing green means everywhere else. */
+  --gold:   #c99a1e;   /* build a computer, and the brand */
+  --copper: #c07829;
+  --clay:   #bb6141;
+  --azure:  #2b7fb8;
+  --violet: #8659bd;
+  --jade:   #128f6c;
+  --slate:  #64737d;
+  --accent: var(--gold);
 
   /* Text-safe accents. An accent that reads well as a 2px rule or a 7px dot
    * does not necessarily carry 12px type: measured on the light ground, phos
    * as body text is 2.9:1. So decoration keeps --accent and anything that is
    * read keeps --accent-ink, which is the same hue darkened until it passes.
    * In dark mode the two are the same colour, because there they both pass. */
-  --phos-ink:  #187943;
-  --amber-ink: #965d0e;
-  --rust-ink:  #a2542f;
-  --moss-ink:  #487445;
-  --steel-ink: #2f6e9d;
-  --plum-ink:  #7a4f9c;
-  --slate-ink: #5b6a72;
-  --accent-ink: var(--phos-ink);
+  --gold-ink:   #7f5a06;   /* 5.2:1 on --bg, 4.6:1 on --raised */
+  --copper-ink: #8e521d;
+  --clay-ink:   #984b31;
+  --azure-ink:  #1e6597;
+  --violet-ink: #6f45a0;
+  --jade-ink:   #0c6e53;
+  --slate-ink:  #54626b;
+  --accent-ink: var(--gold-ink);
 
   /* semantic. ok is cyan on purpose: see note 2 above. */
-  --ok:   #0f7c8c;
-  --warn: #9a6a05;
-  --bad:  #b03434;
+  --ok:   #1a7340;
+  --warn: #8a6206;
+  --bad:  #b02f2f;
 
   --ok-ink:   #0c616e;   /* 4.8:1 on its own 16% tint, the darkest ground it sits on */
-  --warn-ink: #8e6105;
+  --warn-ink: #765305;
   --bad-ink:  #a02f2f;   /* 4.8:1 on its own 14% tint */
 
   --btn-ink:    #f6f7f8;
-  --btn-shadow: #0d5c33;
+  --btn-shadow: #5c4408;
 
   /* syntax. tokenised so a theme swap reaches them, and every one of them
    * measured against --code-bg rather than against the page: five of these
    * eight cleared 4.5:1 on the page and failed on the panel they actually
    * sit on, comments and preprocessor lines worst at 3.7. */
   --tok-kw:   #7a4f9c;
-  --tok-str:  #1d7044;
-  --tok-num:  #974e2c;
+  --tok-str:  #1a6b41;
+  --tok-num:  #9c4f2b;
   --tok-com:  #5b6368;
-  --tok-fn:   #2b6792;
-  --tok-type: #0f6c79;
+  --tok-fn:   #1e6597;
+  --tok-type: #0c6e53;
   --tok-punc: #3d4649;
-  --tok-pre:  #835a04;
+  --tok-pre:  #7f5a06;
 
   /* type: nine fluid steps, no font size ever inside a media query */
   --t-micro: clamp(10.5px, 0.1vw + 10.2px, 11.5px);
@@ -134,9 +142,9 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg:          #0e1113;
-  --surface:     #171b1e;
-  --raised:      #1f2427;
+  --bg:          #0f1215;
+  --surface:     #171b1f;
+  --raised:      #20252a;
   --sunken:      #0a0d0f;
   --border:      #2c3438;
   --border-soft: #222a2e;
@@ -146,14 +154,14 @@
   --ink-3: #949fa6;   /* 7.0:1 on --bg */
   --ink-4: #7f8c92;   /* 5.5:1 on --bg. was #5d686e, which measured 3.3 */
 
-  --phos-ink:  var(--phos);
-  --amber-ink: var(--amber);
-  --rust-ink:  var(--rust);
-  --moss-ink:  var(--moss);
-  --steel-ink: var(--steel);
-  --plum-ink:  var(--plum);
-  --slate-ink: var(--slate);
-  --accent-ink: var(--phos-ink);
+  --gold-ink:   var(--gold);
+  --copper-ink: var(--copper);
+  --clay-ink:   var(--clay);
+  --azure-ink:  var(--azure);
+  --violet-ink: var(--violet);
+  --jade-ink:   var(--jade);
+  --slate-ink:  var(--slate);
+  --accent-ink: var(--gold-ink);
 
   --ok-ink:   var(--ok);
   --warn-ink: var(--warn);
@@ -162,29 +170,29 @@
   --code-bg:  #12161a;
   --code-ink: #e6ebed;
 
-  --phos:  #4ade80;
-  --amber: #f0b429;
-  --rust:  #e0855c;
-  --moss:  #8fce8a;
-  --steel: #6fb6ea;
-  --plum:  #c39bea;
-  --slate: #9fb0b8;
+  --gold:   #f0bf4c;
+  --copper: #e59a5b;
+  --clay:   #d98a6a;
+  --azure:  #6bb2e8;
+  --violet: #b090e8;
+  --jade:   #5fd3a8;
+  --slate:  #93a3ad;
 
-  --ok:   #3fd3e0;
-  --warn: #f0b429;
-  --bad:  #f2777a;
+  --ok:   #5fd08a;
+  --warn: #e8b04a;
+  --bad:  #ef7676;
 
   --btn-ink:    #0a0d0f;
-  --btn-shadow: #1d7a45;
+  --btn-shadow: #8a6a12;
 
-  --tok-kw:   #c39bea;
-  --tok-str:  #7fd6a2;
-  --tok-num:  #e0855c;
+  --tok-kw:   #b090e8;
+  --tok-str:  #6fd3a0;
+  --tok-num:  #e59a5b;
   --tok-com:  #77848a;
-  --tok-fn:   #6fb6ea;
-  --tok-type: #58d0c8;
+  --tok-fn:   #6bb2e8;
+  --tok-type: #5fd3c4;
   --tok-punc: #b3bdc2;
-  --tok-pre:  #f0b429;
+  --tok-pre:  #f0bf4c;
 }
 
 /* motion tokens live apart so a reduced-motion override reaches them all */
@@ -195,13 +203,14 @@
   --slow: 380ms;
 }
 
-[data-accent="phos"]  { --accent: var(--phos); --accent-ink: var(--phos-ink);  --btn-shadow: #1d7a45; }
-[data-accent="amber"] { --accent: var(--amber); --accent-ink: var(--amber-ink); --btn-shadow: #7a4c08; }
-[data-accent="rust"]  { --accent: var(--rust); --accent-ink: var(--rust-ink);  --btn-shadow: #6f3820; }
-[data-accent="moss"]  { --accent: var(--moss); --accent-ink: var(--moss-ink);  --btn-shadow: #38562f; }
-[data-accent="steel"] { --accent: var(--steel); --accent-ink: var(--steel-ink); --btn-shadow: #1e4c6d; }
-[data-accent="plum"]  { --accent: var(--plum); --accent-ink: var(--plum-ink);  --btn-shadow: #533670; }
-[data-accent="slate"] { --accent: var(--slate); --accent-ink: var(--slate-ink); --btn-shadow: #3d484e; }
+
+[data-accent="gold"]   { --accent: var(--gold);   --accent-ink: var(--gold-ink);   --btn-shadow: #8a6a12; }
+[data-accent="copper"] { --accent: var(--copper); --accent-ink: var(--copper-ink); --btn-shadow: #8a541c; }
+[data-accent="clay"]   { --accent: var(--clay);   --accent-ink: var(--clay-ink);   --btn-shadow: #85422c; }
+[data-accent="azure"]  { --accent: var(--azure);  --accent-ink: var(--azure-ink);  --btn-shadow: #1d5980; }
+[data-accent="violet"] { --accent: var(--violet); --accent-ink: var(--violet-ink); --btn-shadow: #5d3d84; }
+[data-accent="jade"]   { --accent: var(--jade);   --accent-ink: var(--jade-ink);   --btn-shadow: #0c6349; }
+[data-accent="slate"]  { --accent: var(--slate);  --accent-ink: var(--slate-ink);  --btn-shadow: #44505a; }
 
 /* ----------------------------------------------------------------- reset */
 
@@ -1427,3 +1436,67 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
   text-decoration: none;
 }
 .footnav a:hover { color: var(--accent-ink); text-decoration: underline; }
+
+/* ----------------------------------------------------------------- figures */
+/* Diagrams are inline SVG rendered at build time, so they follow the theme,
+ * scale to any width, select as text and read aloud. Nothing here is an image:
+ * a PNG cannot do any of those four things, and goes stale the moment a number
+ * in it changes. */
+
+.fig {
+  margin: 26px 0;
+  padding: 0;
+  max-width: var(--measure);
+}
+.fig-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-3);
+  padding: 6px 4px;
+}
+.fig figcaption {
+  margin-top: 9px;
+  font-size: var(--t-sm);
+  line-height: 1.55;
+  color: var(--ink-3);
+  padding-left: 11px;
+  border-left: 3px solid var(--accent);
+}
+
+/* Text inside a figure. `fill`, not `color`: an SVG text node paints with
+ * fill, and setting color alone leaves it black in both themes. */
+.fig-svg text { fill: var(--ink-2); font-family: var(--sans); }
+.fig-svg text.mono { font-family: var(--mono); }
+.fig-svg .fig-dim { fill: var(--ink-4); }
+.fig-svg .fig-accent { fill: var(--accent-ink); }
+
+.fig-panel  { fill: var(--raised); stroke: var(--border-soft); }
+.fig-box    { fill: var(--raised); stroke: var(--border); stroke-width: 1; }
+/* A tinted field or box carries its colour in a style attribute, which beats
+ * the class. The opacity has to live here because fill-opacity as an
+ * attribute would lose the same way the fill did. */
+.fig-field  { fill-opacity: .2; stroke-width: 1.2; }
+.fig-box-tint { fill-opacity: .16; stroke-width: 1.3; }
+.fig-gate   { fill: var(--raised); stroke: var(--ink-3); stroke-width: 1.4; }
+.fig-wire   { fill: none; stroke: var(--ink-4); stroke-width: 1.4;
+              stroke-linejoin: round; }
+.fig-rule   { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 3; }
+.fig-grid   { stroke: var(--border-soft); stroke-width: 1; }
+.fig-wave   { fill: none; stroke: var(--accent); stroke-width: 2;
+              stroke-linejoin: round; stroke-linecap: round; }
+.fig-unknown{ fill: var(--ink-4); opacity: .22; }
+.fig-mark   { stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 3 3; }
+.fig-arrow  { stroke: var(--ink-3); stroke-width: 1.4; }
+.fig-head   { fill: var(--ink-3); }
+
+@media (max-width: 640px) {
+  .fig { margin: 20px 0; }
+  .fig-svg { padding: 4px 2px; }
+}
+.fig-bracket { fill: none; stroke: var(--ink-4); stroke-width: 1.2;
+               stroke-linejoin: round; }
+.fig-junction { fill: var(--ink-4); stroke: none; }

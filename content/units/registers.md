@@ -60,11 +60,24 @@ general register.
 
 Each one has four names, addressing four widths:
 
-```
-rax     64 bits
-eax     the low 32
-ax      the low 16
-al      the low 8
+```figure
+{
+  "kind": "bits",
+  "alt": "A 64-bit register divided into four nested names: al is the low 8 bits, ax the low 16, eax the low 32, and rax all 64.",
+  "caption": "Four names for one register. Each shorter name is a window onto the low end of the longer one, and bit 0 is on the right, as it is in every manual.",
+  "bits": 64,
+  "groups": [
+    { "from": 0,  "to": 7,  "label": "al", "accent": "gold" },
+    { "from": 8,  "to": 15, "label": "ah", "accent": "copper" },
+    { "from": 16, "to": 31, "label": "", "accent": "azure" },
+    { "from": 32, "to": 63, "label": "cleared by a write to eax", "accent": "slate" }
+  ],
+  "brackets": [
+    { "from": 0,  "to": 15, "label": "ax",  "mono": true, "accent": "copper", "lane": 0 },
+    { "from": 0,  "to": 31, "label": "eax", "mono": true, "accent": "azure",  "lane": 1 },
+    { "from": 0,  "to": 63, "label": "rax", "mono": true, "accent": "slate",  "lane": 2 }
+  ]
+}
 ```
 
 ## The rule about widths
@@ -107,6 +120,22 @@ about stacks. It is a layout decision: the stack starts at the top of the
 address space and the heap starts low and grows up, so the two can expand
 toward each other and neither has to know in advance how much room the other
 will need.
+
+```figure
+{
+  "kind": "blocks",
+  "alt": "Three pushed values in memory with the stack pointer at the lowest address, showing that the most recently pushed value sits at the lowest address and earlier values are above it.",
+  "caption": "After pushing a, then b, then c. The stack pointer holds the lowest address, so the item below the top is at a higher address, which is why the second item is at rsp plus 8.",
+  "boxes": [
+    { "id": "a",  "x": 3, "y": 0, "w": 4, "h": 1, "label": "a", "sub": "rsp + 16", "mono": true },
+    { "id": "b",  "x": 3, "y": 1, "w": 4, "h": 1, "label": "b", "sub": "rsp + 8",  "mono": true },
+    { "id": "c",  "x": 3, "y": 2, "w": 4, "h": 1, "label": "c", "sub": "rsp",      "mono": true, "accent": "gold" },
+    { "id": "hi", "x": 0, "y": 0, "w": 3, "h": 1, "label": "higher addresses" },
+    { "id": "lo", "x": 0, "y": 2, "w": 3, "h": 1, "label": "lower addresses" }
+  ],
+  "arrows": [ { "from": "a", "to": "c", "label": "each push moves rsp down 8" } ]
+}
+```
 
 The consequence is that `[rsp]` is the top of the stack and `[rsp + 8]` is the
 item below it, which reads backwards the first several times.

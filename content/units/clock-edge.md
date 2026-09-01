@@ -87,6 +87,22 @@ q1 <= d; q2 <= q1;        2   $_DFF_P_
 q1  = d; q2  = q1;        1   $_DFF_P_
 ```
 
+```figure
+{
+  "kind": "timing",
+  "alt": "A clock, an input d, and two outputs. With non-blocking assignment the second output lags the first by one clock cycle; with blocking assignment both change together.",
+  "caption": "The same two lines, two meanings. Non-blocking reads pre-edge values, so q2 trails q1 by a cycle and you have a shift register. Blocking reads the value just written, so both hold d and the synthesiser deletes the redundant flop.",
+  "signals": [
+    { "name": "clk",     "wave": "pppppppp" },
+    { "name": "d",       "wave": "00110000", "accent": "gold" },
+    { "name": "q1",      "wave": "00011000" },
+    { "name": "q2  <=",  "wave": "00001100", "accent": "azure" },
+    { "name": "q2   =",  "wave": "00011000", "accent": "clay" }
+  ],
+  "marks": [ { "at": 4, "label": "one cycle apart" } ]
+}
+```
+
 That is the whole argument, delivered by the tool in two lines. The exercises
 in this unit are built on exactly this: write the design, read the cells, and
 let the netlist settle the question rather than arguing about semantics.

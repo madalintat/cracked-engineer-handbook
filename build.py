@@ -51,6 +51,7 @@ import sys
 from pathlib import Path
 
 import contrast
+import figures
 import prose
 import track
 
@@ -261,7 +262,7 @@ def slugify(s):
     return re.sub(r"\s+", "-", s)
 
 
-def render(md):
+def render(md, where="note"):
     """Markdown to HTML. Returns (html, headings).
 
     Deliberately small. Supports what the notes actually use: headings, code
@@ -281,7 +282,17 @@ def render(md):
             while i < len(lines) and not FENCE.match(lines[i]):
                 buf.append(lines[i]); i += 1
             i += 1
-            code = html.escape("\n".join(buf))
+            body = "\n".join(buf)
+            # A figure is data, not code. It is a fence because that is where
+            # an author already expects to write something the renderer will
+            # not touch.
+            if lang == "figure":
+                try:
+                    out.append(figures.render(body, where))
+                except figures.FigureError as e:
+                    raise BuildError(str(e)) from e
+                continue
+            code = html.escape(body)
             out.append(f'<pre class="cb" data-lang="{lang}"><code>{code}</code></pre>')
             continue
 
@@ -349,8 +360,13 @@ def render(md):
 
 
 def word_count(html_text):
-    """Words in the rendered note, tags stripped. Code and tables count."""
-    txt = re.sub(r"<[^>]+>", " ", html_text)
+    """Words in the rendered note, tags stripped. Code and tables count.
+
+    A figure's own labels do not. Axis labels and gate names are not prose, and
+    counting them would let a unit reach its word target by drawing.
+    """
+    txt = re.sub(r"<svg\b.*?</svg>", " ", html_text, flags=re.S)
+    txt = re.sub(r"<[^>]+>", " ", txt)
     return len(txt.split())
 
 
@@ -822,7 +838,7 @@ def build(strict=True):
         if note_p.exists():
             try:
                 meta, body = split_front_matter(note_p.read_text(), f"units/{slug}")
-                body_html, heads = render(body)
+                body_html, heads = render(body, f"units/{slug}")
                 words = word_count(body_html)
                 if strict and not (NOTE_WORDS[0] <= words <= NOTE_WORDS[1]):
                     problems.append(

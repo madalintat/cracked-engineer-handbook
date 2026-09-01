@@ -106,8 +106,8 @@ TINTED = [
 ]
 
 # Each phase owns an accent, and every one of them is used for text.
-ACCENT_INKS = ["--phos-ink", "--amber-ink", "--rust-ink", "--moss-ink",
-               "--steel-ink", "--plum-ink", "--slate-ink"]
+ACCENT_INKS = ["--gold-ink", "--copper-ink", "--clay-ink", "--azure-ink",
+               "--violet-ink", "--jade-ink", "--slate-ink"]
 
 
 def check(theme):
