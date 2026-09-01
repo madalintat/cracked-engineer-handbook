@@ -20,12 +20,12 @@ bug wearing different clothes.
 
 ## Two kinds of logic, and only two
 
-Combinational logic has outputs that are a function of its inputs and nothing
+[[combinational]] logic has outputs that are a function of its inputs and nothing
 else. Give it the same inputs and it settles to the same outputs, every time,
 with no memory of what came before. That is the entire Part II machine up to
 the point where you added a clock.
 
-Sequential logic has outputs that depend on the inputs and on a stored value,
+[[sequential]] logic has outputs that depend on the inputs and on a stored value,
 and it updates that value at a clock edge. It remembers.
 
 Every construct in Verilog produces one or the other. The trouble is that
@@ -41,12 +41,12 @@ after, which is the clock-to-Q delay. Because every flop samples before any
 flop drives, a chain of them shifts: `q2` gets the value `q1` held *before* the
 edge, not the one it is about to take.
 
-Non-blocking assignment models exactly that. The right side is evaluated when
+[[non-blocking]] assignment models exactly that. The right side is evaluated when
 the block runs, the value is set aside, and the left side is not updated until
 every block scheduled for this edge has finished evaluating. So both
 assignments read the old `q1`, and you get a shift register.
 
-Blocking assignment evaluates and writes immediately, in order. `q1 = d` puts
+[[blocking]] assignment evaluates and writes immediately, in order. `q1 = d` puts
 `d` into `q1` right now, so the next line's `q2 = q1` reads the new value.
 Both flops end up holding `d`, the synthesiser notices they always agree, and
 it deletes one of them.

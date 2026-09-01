@@ -10,7 +10,7 @@ they make a part with two inputs and one output, and that part has one job: its
 output is low only when both inputs are high. Every other combination gives you
 a high output.
 
-That is a NAND gate. It is the smallest useful thing CMOS hands you for free,
+That is a [[nand]] gate. It is the smallest useful thing CMOS hands you for free,
 and this unit makes a claim that should sound absurd the first time you read it.
 
 Given enough NAND gates and wire, you can build every Boolean function that
@@ -32,7 +32,7 @@ function down:
  1  1  |  0
 ```
 
-That table is the complete specification. There is nothing else to know about a
+That [[truth-table]] is the complete specification. There is nothing else to know about a
 NAND gate. If you build something whose table matches, you have built a NAND
 gate, whether you did it with transistors, relays, water valves, or dominoes.
 
@@ -44,7 +44,7 @@ real.
 
 ## The claim, and why it is true
 
-A set of gates is **functionally complete** if you can build every Boolean
+A set of gates is **[[functional-completeness|functionally complete]]** if you can build every Boolean
 function from copies of it. The claim is that {NAND} on its own is functionally
 complete.
 
@@ -159,7 +159,7 @@ One rule governs every exercise in this unit, and it will be enforced.
 **No cycles.** The output of a gate may not, through any path, feed back into
 its own input. Not directly, not through nine other gates.
 
-The reason is that nothing in this unit has a clock. A combinational circuit is
+The reason is that nothing in this unit has a clock. A [[combinational]] circuit is
 one where the outputs are a pure function of the inputs, and a cycle destroys
 that property: the value depends on what it was a moment ago, which means it
 depends on time, which means it is no longer a function of the inputs alone. A
@@ -205,7 +205,7 @@ built-in XOR to build XOR is not an answer.
 **A combinational cycle** prints the loop it found, gate by gate, so you can see
 which wire closed it.
 
-**A floating input** means a gate input was never connected. An unconnected wire
+**A [[floating]] input** means a gate input was never connected. An unconnected wire
 is not 0. It has no value, and a simulator that quietly treated it as 0 would let
 you ship a design that fails on real silicon. This one is the most valuable error
 in the set, because it is the one that would otherwise find you much later.

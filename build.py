@@ -239,7 +239,12 @@ def inline(s):
     s = re.sub(r"`([^`]+)`", r"<code>\1</code>", s)
     s = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", s)
     s = re.sub(r"(?<![\w*])\*([^*\n]+)\*(?![\w*])", r"<em>\1</em>", s)
-    s = re.sub(r"\[\[([a-z0-9-]+)\]\]", r'<a class="gl" href="#/glossary#\1">\1</a>', s)
+    # [[term]] links and shows the term; [[term|words]] links and shows words,
+    # so a sentence does not have to bend around a slug.
+    s = re.sub(r"\[\[([a-z0-9-]+)\|([^\]]+)\]\]",
+               r'<a class="gl" href="#/glossary#\1">\2</a>', s)
+    s = re.sub(r"\[\[([a-z0-9-]+)\]\]",
+               r'<a class="gl" href="#/glossary#\1">\1</a>', s)
     s = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', s)
     return s
 
@@ -771,13 +776,16 @@ def build(strict=True):
     for sub in ("unit", "ex", "drills"):
         (DATA / sub).mkdir(exist_ok=True)
 
+    atlas = build_atlas()
+    glossary = build_glossary(units)
+
     parts = [{"id": p[0], "roman": p[1], "title": p[2], "blurb": p[3],
               "accent": p[4], "reports": p[5]} for p in track.PARTS]
     write(DATA / "manifest.json", {
         "parts": parts, "units": manifest,
         "backends": list(track.BACKENDS),
         "counts": {
-            "atlas": len(build_atlas()),
+            "atlas": len(atlas), "glossary": len(glossary),
             "parts": len(parts), "units": len(manifest),
             "ready": sum(1 for u in manifest if u["ready"]),
             "words": sum(u["words"] for u in manifest),
@@ -805,11 +813,75 @@ def build(strict=True):
 
     write(DATA / "judges.json", JUDGES_CONFIG)
     write(DATA / "modal-gpus.json", load_gpu_catalog())
-    atlas = build_atlas()
     write(DATA / "atlas.json", {"tables": atlas})
+    write(DATA / "glossary.json", {"terms": glossary})
     write(DATA / "search.json", build_search(manifest, units))
     prune(DATA, units)
     return manifest, units
+
+
+def build_glossary(units):
+    """Terms, and the check that keeps them honest.
+
+    Two rules, and the first is the one that matters:
+
+    * Every [[term]] written in a note must resolve to a defined term. A
+      glossary link that goes nowhere is worse than no link, because the reader
+      trusts it. This is the same shape as the Python handbook's feature-table
+      self-check: the gate is only a gate if it proves it gates.
+    * Every @see must name a term that exists, so the graph has no dead edges.
+
+    An unreferenced term is fine. A reference book may define more than the
+    current text happens to use.
+    """
+    d = CONTENT / "gloss"
+    problems, terms = [], {}
+    for f in sorted(d.glob("*.md")) if d.exists() else []:
+        w = f"gloss/{f.name}"
+        for chunk in re.split(r"^##\s+", f.read_text(), flags=re.M)[1:]:
+            slug, _, rest = chunk.partition("\n")
+            slug = slug.strip()
+            if not re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", slug):
+                problems.append(f"{w}: {slug!r} is not a clean kebab-case term")
+                continue
+            if slug in terms:
+                problems.append(f"{w}: {slug!r} is defined twice")
+            body, sees = [], []
+            for line in rest.split("\n"):
+                if line.startswith("@see"):
+                    sees += [x.strip() for x in line[4:].split(",") if x.strip()]
+                else:
+                    body.append(line)
+            text = "\n".join(body).strip()
+            if not text:
+                problems.append(f"{w}: {slug!r} has no definition")
+            problems += prose.lint(text, f"{w} {slug}")
+            html, _ = render(text)
+            terms[slug] = {"slug": slug, "html": html, "see": sees,
+                           "text": re.sub(r"\s+", " ", text)[:400], "file": f.stem}
+
+    for slug, t in terms.items():
+        for other in t["see"]:
+            if other not in terms:
+                problems.append(f"gloss: {slug!r} points at {other!r}, "
+                                f"which is not defined")
+
+    # the rule that earns the glossary its place
+    used = {}
+    for slug, u in units.items():
+        for m in re.finditer(r'href="#/glossary#([a-z0-9-]+)"', u["html"]):
+            used.setdefault(m.group(1), set()).add(slug)
+    for term, where in used.items():
+        if term not in terms:
+            problems.append(
+                f"units/{sorted(where)[0]}: links to the glossary term "
+                f"[[{term}]], which is not defined. A link that goes nowhere is "
+                f"worse than no link.")
+
+    fail(problems)
+    for slug, t in terms.items():
+        t["usedBy"] = sorted(used.get(slug, []))
+    return sorted(terms.values(), key=lambda t: t["slug"])
 
 
 def build_atlas():

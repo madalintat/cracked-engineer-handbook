@@ -858,7 +858,7 @@
   "slug": "nand",
   "anchor": "what-a-gate-actually-is",
   "title": "What a gate actually is",
-  "text": "Forget schematics for a moment. A gate is a function from bits to bits, and a two-input gate has a domain of exactly four points. You can write the whole function down: That table is the complete specification. There is nothing else to know about a NAND gate. If you build something whose table matches, you have built a NAND gate, whether you did it with transistors, relays, water valves, or dominoes. This matters more than it looks. Once behaviour is a table, checking becomes mechanical. A two-input function has 4 rows, so there are 2^4 = 16 possible two-input functions, and you can enumerate all of them. AND, OR, XOR and NAND are four of the sixteen. The other twelve have no famous names and are no less real.",
+  "text": "Forget schematics for a moment. A gate is a function from bits to bits, and a two-input gate has a domain of exactly four points. You can write the whole function down: That truth-table is the complete specification. There is nothing else to know about a NAND gate. If you build something whose table matches, you have built a NAND gate, whether you did it with transistors, relays, water valves, or dominoes. This matters more than it looks. Once behaviour is a table, checking becomes mechanical. A two-input function has 4 rows, so there are 2^4 = 16 possible two-input functions, and you can enumerate all of them. AND, OR, XOR and NAND are four of the sixteen. The other twelve have no famous names and are no less real.",
   "part": "Logic"
  },
  {
@@ -1098,7 +1098,7 @@
   "slug": "clock-edge",
   "anchor": "two-kinds-of-logic-and-only-two",
   "title": "Two kinds of logic, and only two",
-  "text": "Combinational logic has outputs that are a function of its inputs and nothing else. Give it the same inputs and it settles to the same outputs, every time, with no memory of what came before. That is the entire Part II machine up to the point where you added a clock. Sequential logic has outputs that depend on the inputs and on a stored value, and it updates that value at a clock edge. It remembers. Every construct in Verilog produces one or the other. The trouble is that Verilog will not stop you writing something that produces the one you did not want, and the result usually simulates close enough to correct that you find out much later.",
+  "text": "combinational logic has outputs that are a function of its inputs and nothing else. Give it the same inputs and it settles to the same outputs, every time, with no memory of what came before. That is the entire Part II machine up to the point where you added a clock. sequential logic has outputs that depend on the inputs and on a stored value, and it updates that value at a clock edge. It remembers. Every construct in Verilog produces one or the other. The trouble is that Verilog will not stop you writing something that produces the one you did not want, and the result usually simulates close enough to correct that you find out much later.",
   "part": "Silicon"
  },
  {
@@ -1106,7 +1106,7 @@
   "slug": "clock-edge",
   "anchor": "why-the-assignments-differ",
   "title": "Why the assignments differ",
-  "text": "Both modules describe two flip-flops in the same block, driven by the same edge. Real flip-flops all sample at the edge and drive their outputs shortly after, which is the clock-to-Q delay. Because every flop samples before any flop drives, a chain of them shifts: gets the value held before the edge, not the one it is about to take. Non-blocking assignment models exactly that. The right side is evaluated when the block runs, the value is set aside, and the left side is not updated until every block scheduled for this edge has finished evaluating. So both assignments read the old , and you get a shift register. Blocking assignment evaluates and writes immediately, in order. puts into right now, so the next line's reads the new value. Both flops end up holding , the synthesiser notices they always agree, and it deletes one of them. The rule is short. uses . uses . Never mix them in one block, and never drive one signal from two blocks.",
+  "text": "Both modules describe two flip-flops in the same block, driven by the same edge. Real flip-flops all sample at the edge and drive their outputs shortly after, which is the clock-to-Q delay. Because every flop samples before any flop drives, a chain of them shifts: gets the value held before the edge, not the one it is about to take. non-blocking assignment models exactly that. The right side is evaluated when the block runs, the value is set aside, and the left side is not updated until every block scheduled for this edge has finished evaluating. So both assignments read the old , and you get a shift register. blocking assignment evaluates and writes immediately, in order. puts into right now, so the next line's reads the new value. Both flops end up holding , the synthesiser notices they always agree, and it deletes one of them. The rule is short. uses . uses . Never mix them in one block, and never drive one signal from two blocks.",
   "part": "Silicon"
  },
  {

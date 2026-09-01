@@ -76,7 +76,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] Drills view: marks, explains every answer, persists best and attempts
 - [x] Progress view, with a two-press erase that keeps preferences
 - [x] Search: ranked, snippets around the match, indexes section bodies
-- [ ] Glossary
+- [x] Glossary, with a gate that rejects a link to an undefined term
 - [x] Atlas: data-driven tables with a validation gate, sources and a filter
 - [ ] Errors page
 

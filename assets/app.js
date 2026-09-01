@@ -677,6 +677,101 @@ function renderDiagnosis(ex, res) {
   }
 }
 
+/* -------------------------------------------------------------- glossary */
+
+async function viewGlossary() {
+  const data = await getJSON('data/glossary.json');
+  const terms = data.terms || [];
+  if (!terms.length) {
+    return `<div class="wrap" style="padding:80px 0"><h1>Glossary</h1>
+      <p class="prose">No terms yet.</p></div>`;
+  }
+
+  const byLetter = new Map();
+  terms.forEach(t => {
+    const k = t.slug[0].toUpperCase();
+    if (!byLetter.has(k)) byLetter.set(k, []);
+    byLetter.get(k).push(t);
+  });
+
+  const jump = [...byLetter.keys()].sort().map(k =>
+    `<a href="#/glossary#letter-${k}">${k}</a>`).join('');
+
+  const sections = [...byLetter.entries()].sort().map(([k, list]) => `
+    <section id="letter-${k}" class="gsec">
+      <h2>${k}</h2>
+      ${list.map(termCard).join('')}
+    </section>`).join('');
+
+  return `
+  <div class="wrap" style="padding:48px 0" data-accent="slate">
+    <h1>Glossary</h1>
+    <p class="prose" style="max-width:var(--measure)">${terms.length} terms.
+      Each says where it is used, so a definition is never a dead end.</p>
+    <nav class="atlastabs" style="margin-top:18px">${jump}</nav>
+    <div class="wbbar" style="margin-top:14px">
+      <input class="filter" id="glossq" type="search" spellcheck="false"
+             placeholder="filter ${terms.length} terms" aria-label="Filter terms">
+      <span class="note" id="glosscount"></span>
+    </div>
+    ${sections}
+  </div>`;
+}
+
+function termCard(t) {
+  const seeAlso = t.see.length
+    ? `<p class="see">See also ${t.see.map(x =>
+        `<a href="#/glossary#term-${esc(x)}">${esc(x)}</a>`).join(', ')}.</p>`
+    : '';
+  const used = t.usedBy.length
+    ? `<p class="usedby">Used in ${t.usedBy.map(u => {
+        const m = HH.manifest.units.find(x => x.slug === u);
+        return `<a href="#/unit/${esc(u)}">${esc(m ? m.title : u)}</a>`;
+      }).join(', ')}.</p>`
+    : '';
+  return `
+    <article class="term" id="term-${esc(t.slug)}" data-slug="${esc(t.slug)}">
+      <h3><code>${esc(t.slug)}</code></h3>
+      <div class="prose" style="font-size:var(--t-sm)">${t.html}</div>
+      ${seeAlso}${used}
+    </article>`;
+}
+
+function wireGlossary() {
+  const q = el('#glossq');
+  if (!q) return;
+  const terms = [...document.querySelectorAll('.term')];
+  const secs = [...document.querySelectorAll('.gsec')];
+  const count = el('#glosscount');
+  const paint = () => {
+    const needle = q.value.trim().toLowerCase();
+    let shown = 0;
+    terms.forEach(t => {
+      const hit = !needle || t.textContent.toLowerCase().includes(needle);
+      t.hidden = !hit;
+      if (hit) shown++;
+    });
+    secs.forEach(s => {
+      s.hidden = ![...s.querySelectorAll('.term')].some(t => !t.hidden);
+    });
+    count.textContent = needle ? `${shown} of ${terms.length}` : `${terms.length} terms`;
+  };
+  q.oninput = paint;
+  paint();
+
+  // A glossary link from a note carries the term in the fragment.
+  const frag = HH.fragment || '';
+  if (frag) {
+    const target = document.getElementById(frag.startsWith('term-') || frag.startsWith('letter-')
+      ? frag : `term-${frag}`);
+    if (target) {
+      // render() has already scrolled; this only marks what was landed on.
+      target.classList.add('landed');
+      setTimeout(() => target.classList.remove('landed'), 2400);
+    }
+  }
+}
+
 /* ----------------------------------------------------------------- atlas */
 
 async function viewAtlas(id) {
@@ -1162,7 +1257,7 @@ const ROUTES = {
   'unit': viewUnit,
   'work': viewWork,
   'atlas': viewAtlas,
-  'glossary': () => viewSoon('Glossary'),
+  'glossary': viewGlossary,
   'settings': viewSettings,
   'drills': viewDrills,
   'progress': viewProgress,
@@ -1170,7 +1265,13 @@ const ROUTES = {
 };
 
 async function render() {
-  const raw = location.hash.replace(/^#\/?/, '');
+  // A second '#' is a fragment within the view, as in #/glossary#nand or
+  // #/track#physics. It must be split off before the route is parsed, or the
+  // route becomes literally "glossary#nand" and matches nothing.
+  const full = location.hash.replace(/^#\/?/, '');
+  const hashAt = full.indexOf('#');
+  const raw = hashAt >= 0 ? full.slice(0, hashAt) : full;
+  HH.fragment = hashAt >= 0 ? full.slice(hashAt + 1) : '';
   const [route, a, b] = raw.split('/');
   const main = el('#main');
 
@@ -1191,6 +1292,7 @@ async function render() {
     if (route === 'progress') wireProgress();
     if (route === 'search') wireSearch();
     if (route === 'atlas') wireAtlas();
+    if (route === 'glossary') wireGlossary();
   } catch (err) {
     console.error(err);
     main.innerHTML = viewError(err);
@@ -1202,8 +1304,17 @@ async function render() {
   // rather than back at the top of the document.
   const h = main.querySelector('h1');
   if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
+  // Position the page exactly once, here, and never leave it where the last
+  // view left it. A fragment is handled generically so any view gets it for
+  // free: #/track#gpu works because the section carries that id, without the
+  // track view knowing anything about fragments.
   if (route === 'unit' && b) {
     if (!land(b, 'instant')) window.scrollTo({ top: 0, behavior: 'instant' });
+  } else if (HH.fragment) {
+    const target = document.getElementById(HH.fragment)
+      || document.getElementById(`term-${HH.fragment}`);
+    if (target) target.scrollIntoView({ block: 'start', behavior: 'instant' });
+    else window.scrollTo({ top: 0, behavior: 'instant' });
   } else {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
