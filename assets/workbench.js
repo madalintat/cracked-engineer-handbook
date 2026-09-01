@@ -535,6 +535,99 @@ const WB = (() => {
     },
   });
 
+  /* yosys: real synthesis, as WebAssembly, in a module worker.
+   *
+   * The runtime is a 78 MB download. That is a product decision, not a
+   * footnote, so it is never fetched until a learner asks for it and the size
+   * is stated before anything starts. The Python handbook downloads about
+   * 20 MB in silence and its own analysis flagged that as the thing not to
+   * copy.
+   */
+  const YOSYS_BYTES = 78_300_000;
+
+  const yosysWorker = (() => {
+    let w = null, seq = 0, ready = false;
+    const pending = new Map();
+
+    const start = () => {
+      if (w) return w;
+      w = new Worker('assets/yosys-worker.js', { type: 'module' });
+      w.onmessage = (ev) => {
+        const { id, type, result, message, done, total, version } = ev.data;
+        const p = pending.get(id);
+        if (!p) return;
+        if (type === 'progress') { p.onProgress && p.onProgress(done, total); return; }
+        pending.delete(id);
+        if (type === 'result') { ready = true; p.resolve(result); }
+        else if (type === 'ready') { ready = true; p.resolve({ version }); }
+        else p.resolve({ verdict: 'unavailable', message: message || 'the synthesiser failed' });
+      };
+      w.onerror = (e) => {
+        pending.forEach(p => p.resolve({
+          verdict: 'unavailable',
+          message: 'The synthesiser could not start: ' + (e.message || 'unknown'),
+        }));
+        pending.clear();
+        w = null; ready = false;
+      };
+      return w;
+    };
+
+    return {
+      get ready() { return ready; },
+      send(type, payload, onProgress) {
+        const id = ++seq;
+        return new Promise(resolve => {
+          pending.set(id, { resolve, onProgress });
+          start().postMessage({ id, type, ...payload });
+        });
+      },
+    };
+  })();
+
+  register('yosys', {
+    label: 'synthesis',
+    bytes: YOSYS_BYTES,
+    get loaded() { return yosysWorker.ready; },
+    async run(ex, source, cfg) {
+      if (!ex.spec) {
+        return {
+          pass: false, signals: [],
+          verdicts: [{ who: 'synthesis', state: 'unavailable',
+                       title: 'This exercise has no synthesis specification.' }],
+        };
+      }
+      const r = await yosysWorker.send('run', { src: source, spec: ex.spec },
+                                       cfg.onProgress);
+      if (r.verdict === 'unavailable') {
+        return {
+          pass: false, signals: [],
+          verdicts: [{ who: 'synthesis', state: 'unavailable', title: r.message }],
+        };
+      }
+      const ok = r.verdict === 'ok';
+      const cellList = r.cells && Object.keys(r.cells).length
+        ? '<pre>' + escHtml(Object.entries(r.cells)
+            .map(([k, v]) => `${String(v).padStart(4)}  ${k}`).join('\n')) + '</pre>'
+        : '';
+      return {
+        pass: ok,
+        clean: ok,
+        cells: r.cells,
+        signals: [{ judge: 'verdict', key: r.verdict },
+                  { judge: 'match', key: normalise(r.out || '') }],
+        verdicts: [{
+          who: 'synthesis',
+          state: ok ? 'ok' : (r.verdict === 'cell-budget' ? 'warn' : 'bad'),
+          title: r.message,
+          detail: cellList,
+          code: r.verdict,
+        }],
+        toolchain: 'yosys 0.68',
+      };
+    },
+  });
+
   const escHtml = s => String(s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 

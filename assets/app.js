@@ -498,12 +498,52 @@ function wireWork() {
   if (Store.get(`pass.${slug}.${n}`, false)) el('#afterword').hidden = false;
 
   const runBtn = el('#run');
+  const be = WB.BACKENDS[ex.backend];
+
+  // A large runtime is stated before it is fetched, never during. The learner
+  // decides whether to spend the bandwidth; the page does not decide for them.
+  const needsConsent = () =>
+    be && be.bytes && !be.loaded && !Store.get(`allow.${ex.backend}`, false);
+
+  if (needsConsent()) {
+    const mb = Math.round(be.bytes / 1e6);
+    el('#verdicts').innerHTML = `
+      <div class="vrow" data-state="unavailable">
+        <div class="who">${esc(be.label)}</div>
+        <div class="what">
+          This unit is checked by running the real synthesiser in your browser.
+          It is a <strong>${mb} MB</strong> download the first time, and your
+          browser caches it afterwards. Nothing is sent anywhere.
+          <p style="margin-top:10px">
+            <button class="btn" id="allowbe">Download and run</button>
+          </p>
+        </div>
+      </div>`;
+    el('#allowbe').onclick = () => {
+      Store.set(`allow.${ex.backend}`, true);
+      el('#allowbe').closest('.what').innerHTML = 'Starting.';
+      runBtn.click();
+    };
+  }
+
   runBtn.onclick = async () => {
+    if (needsConsent()) return;
     runBtn.disabled = true;
     renderVerdicts([{ who: ex.backend, state: 'running', title: 'Checking.' }]);
     el('#diagnosis').innerHTML = '';
     try {
-      const res = await WB.run(ex, editor.value, { judges: HH.judges });
+      const res = await WB.run(ex, editor.value, {
+        judges: HH.judges,
+        onProgress: (done, total) => {
+          if (!total) return;
+          const pct = Math.round((done / total) * 100);
+          renderVerdicts([{
+            who: be ? be.label : ex.backend, state: 'running',
+            title: `Fetching the toolchain: ${pct}% of ` +
+                   `${Math.round(total / 1e6)} MB.`,
+          }]);
+        },
+      });
       renderVerdicts(res.verdicts);
       renderDiagnosis(ex, res);
       if (res.pass) {

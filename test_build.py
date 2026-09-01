@@ -135,9 +135,44 @@ def t_sim_without_a_spec_is_an_error():
                    "needs a ```spec block")
 
 
-def t_spec_outside_sim_is_an_error():
+def t_spec_on_a_backend_that_has_none_is_an_error():
     expect_problem(ex_file(GOOD + SPEC),
-                   "only means something on the sim backend")
+                   "means something only on the sim and yosys backends")
+
+
+YSPEC = """```spec
+{"top": "m", "cells": {"$_DFF_P_": 2}}
+```
+"""
+
+
+def t_yosys_needs_a_spec():
+    body = (GOOD.replace("@backend godbolt", "@backend yosys")
+                .replace("@lang cpp", "@lang verilog"))
+    expect_problem(ex_file(body), "the yosys backend needs a ```spec block")
+
+
+def t_a_yosys_spec_must_assert_something():
+    body = (GOOD.replace("@backend godbolt", "@backend yosys")
+                .replace("@lang cpp", "@lang verilog")
+            + '```spec\n{"top": "m"}\n```\n')
+    expect_problem(ex_file(body), "spec asserts nothing")
+
+
+def t_yosys_cell_names_are_checked():
+    body = (GOOD.replace("@backend godbolt", "@backend yosys")
+                .replace("@lang cpp", "@lang verilog")
+            + '```spec\n{"top": "m", "cells": {"DFF": 2}}\n```\n')
+    expect_problem(ex_file(body), "is not a yosys cell name")
+
+
+def t_a_good_yosys_spec_parses():
+    body = (GOOD.replace("@backend godbolt", "@backend yosys")
+                .replace("@lang cpp", "@lang verilog") + YSPEC)
+    ex = build.parse_exercises(ex_file(body), "t", "godbolt")
+    assert ex[0]["backend"] == "yosys"
+    assert ex[0]["lang"] == "verilog"
+    assert ex[0]["spec"]["cells"] == {"$_DFF_P_": 2}
 
 
 def t_spec_table_must_be_exhaustive():

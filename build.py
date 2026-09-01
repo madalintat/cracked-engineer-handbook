@@ -432,8 +432,11 @@ def _check_exercise_shape(ex, w):
 
     if ex["backend"] == "sim":
         p += _check_sim_spec(ex.get("spec"), w)
+    elif ex["backend"] == "yosys":
+        p += _check_yosys_spec(ex.get("spec"), w)
     elif ex.get("spec") is not None:
-        p.append(f"{w}: a spec block only means something on the sim backend")
+        p.append(f"{w}: a spec block means something only on the sim and "
+                 f"yosys backends")
     if not ex["starter"].strip():
         p.append(f"{w}: no starter block")
     if not ex["solution"].strip():
@@ -519,6 +522,32 @@ def _check_sim_spec(spec, w):
             p.append(f"{w}: spec {k} must be a whole number")
     if "minGates" in spec and "maxGates" in spec and spec["maxGates"] < spec["minGates"]:
         p.append(f"{w}: spec maxGates is below minGates, so nothing can pass")
+    return p
+
+
+def _check_yosys_spec(spec, w):
+    """What the synthesiser needs, checked here rather than in the browser."""
+    p = []
+    if spec is None:
+        p.append(f"{w}: the yosys backend needs a ```spec block")
+        return p
+    if not spec.get("top"):
+        p.append(f"{w}: spec has no 'top' module name")
+    has_check = any(k in spec for k in ("cells", "forbid", "gold", "maxCells"))
+    if not has_check:
+        p.append(f"{w}: spec asserts nothing. Give it cells, forbid, gold or "
+                 f"maxCells, or the exercise passes whatever is written.")
+    for k in ("cells",):
+        if k in spec and not isinstance(spec[k], dict):
+            p.append(f"{w}: spec {k} must be a map of cell name to count")
+    if "forbid" in spec and not isinstance(spec["forbid"], list):
+        p.append(f"{w}: spec forbid must be a list of cell names")
+    for name in list(spec.get("cells", {})) + list(spec.get("forbid", [])):
+        if not str(name).startswith("$"):
+            p.append(f"{w}: {name!r} is not a yosys cell name; they start "
+                     f"with a dollar sign, like $_DFF_P_")
+    if "maxCells" in spec and not isinstance(spec["maxCells"], int):
+        p.append(f"{w}: spec maxCells must be a whole number")
     return p
 
 

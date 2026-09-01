@@ -39,7 +39,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] Backend interface: one shape, registry, three distinct non-pass states
 - [x] `sim` — in-page logic simulator, 24 tests, Worker-ready
 - [x] `godbolt` — Compiler Explorer client, nonce proven to defeat the cache
-- [ ] `yosys` — `yowasp-yosys` in a Worker
+- [x] `yosys` — yowasp-yosys 0.68 in a module worker, size gate, progress
 - [ ] `modal` — submit and poll against the learner's own endpoint
 - [x] Judged expectations: `verdict` / `match` / `silent`, per-backend vocabulary
 - [x] Diagnostics UI: prose beside the real error, ordered first-match
