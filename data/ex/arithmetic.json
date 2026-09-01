@@ -1,0 +1,1272 @@
+{
+ "slug": "arithmetic",
+ "backend": "sim",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Two bits in, two bits out",
+   "brief": "<p>Build <code>HalfAdder</code>. The <code>sum</code> output is the low bit of <code>a + b</code> and <code>carry</code> is the high bit.</p>",
+   "kind": "property",
+   "concept": "Addition needs two outputs because two bits can sum to two, and two does not fit in one bit.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Read the two output columns of the table as functions you have already built."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>The sum column is 1 exactly when the inputs differ and the carry column is 1 exactly when both are 1. Those are two parts you built in the last two units, and no new idea is needed.</p>"
+    },
+    {
+     "id": "floating",
+     "judge": "verdict",
+     "key": "floating-input",
+     "prose": "<p>Both outputs need driving. A chip with an output nothing assigns to is not half finished, it is unbuildable.</p>"
+    }
+   ],
+   "after": "<p>Two parts and no new ideas. It is called a half adder because it cannot accept a carry coming in, and every position except the lowest has one.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip HalfAdder(a, b) -> sum, carry {\n  sum = nand(a, b)\n  carry = nand(a, b)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "HalfAdder",
+    "inputs": [
+     "a",
+     "b"
+    ],
+    "outputs": [
+     "sum",
+     "carry"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1
+     ]
+    ],
+    "maxGates": 10
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 2,
+   "title": "Three bits in",
+   "brief": "<p>Build <code>FullAdder</code>, which takes a carry in as well. The two outputs count how many of the three inputs are 1.</p>",
+   "kind": "property",
+   "concept": "One position of any adder is this part, and a wide adder is this part repeated with the carries chained.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Two half adders. Add the operands, then add the carry to that sum."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Read the failing row as a count. With inputs summing to 2 the answer is sum 0 and carry 1; with 3 it is sum 1 and carry 1. A design that fails only on the all-ones row is usually missing the second carry.</p>"
+    },
+    {
+     "id": "non-nand-part",
+     "judge": "verdict",
+     "key": "non-nand-part",
+     "prose": "<p>You called a part that is not defined in this file. <code>HalfAdder</code> and everything it needs has to be defined above the chip that uses it.</p>"
+    }
+   ],
+   "after": "<p>Both half adders can produce a carry and they cannot both produce one at once, so an or gathers them. That is worth checking by hand rather than believing.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip HalfAdder(a, b) -> sum, carry {\n  sum = Xor(a, b)\n  carry = And(a, b)\n}\nchip FullAdder(a, b, cin) -> sum, carry {\n  sum, carry = HalfAdder(a, b)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "FullAdder",
+    "inputs": [
+     "a",
+     "b",
+     "cin"
+    ],
+    "outputs": [
+     "sum",
+     "carry"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 20
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 3,
+   "title": "Two bits plus two bits",
+   "brief": "<p>Build <code>Add2</code>, which adds two two-bit numbers and a carry in. <code>a1</code> and <code>b1</code> are the high bits. Outputs are <code>s1</code>, <code>s0</code> and the carry out.</p>",
+   "kind": "property",
+   "concept": "A wide adder is one part repeated, with each position's carry out feeding the next position's carry in.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Two full adders. The low one takes the carry in, and its carry out feeds the high one."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Read the failing row as two numbers. If it fails only where the low position produces a carry, the chain between the two adders is missing or reversed.</p>"
+    },
+    {
+     "id": "cycle",
+     "judge": "verdict",
+     "key": "cycle",
+     "prose": "<p>Two wires depend on each other. The carry runs one way only, from the low position to the high one, so check which adder you connected to which.</p>"
+    }
+   ],
+   "after": "<p>Notice that the high position cannot finish until the low one has. That is what ripple means, and at any real width it is the longest path in the machine.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip HalfAdder(a, b) -> sum, carry {\n  sum = Xor(a, b)\n  carry = And(a, b)\n}\nchip FullAdder(a, b, cin) -> sum, carry {\n  s1, c1 = HalfAdder(a, b)\n  sum, c2 = HalfAdder(s1, cin)\n  carry = Or(c1, c2)\n}\nchip Add2(a1, a0, b1, b0, cin) -> s1, s0, cout {\n  s0, cout = FullAdder(a0, b0, cin)\n  s1 = nand(a1, b1)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Add2",
+    "inputs": [
+     "a1",
+     "a0",
+     "b1",
+     "b0",
+     "cin"
+    ],
+    "outputs": [
+     "s1",
+     "s0",
+     "cout"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      1,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      1,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 40
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 4,
+   "title": "Adding one",
+   "brief": "<p>Build <code>Inc2</code>, which adds one to a two-bit number and wraps. There is no new circuit here.</p>",
+   "kind": "property",
+   "concept": "An increment is an addition with a constant, and the constant costs nothing because the adder already has a carry input.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "The adder has a spare input on its lowest position and nothing is using it."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Adding one is adding zero with the carry in set. Feeding a 1 into the low operand instead also works, and the wrap at the top is the same either way, so check the row where the input is already 3.</p>"
+    }
+   ],
+   "after": "<p>The counter you build in unit 010 is exactly this part with a register around it, and a jump turns out to be a parallel load into the same register.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip HalfAdder(a, b) -> sum, carry {\n  sum = Xor(a, b)\n  carry = And(a, b)\n}\nchip FullAdder(a, b, cin) -> sum, carry {\n  s1, c1 = HalfAdder(a, b)\n  sum, c2 = HalfAdder(s1, cin)\n  carry = Or(c1, c2)\n}\nchip Inc2(x1, x0) -> s1, s0 {\n  s0 = Not(x0)\n  s1 = Not(x1)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Inc2",
+    "inputs": [
+     "x1",
+     "x0"
+    ],
+    "outputs": [
+     "s1",
+     "s0"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0
+     ]
+    ],
+    "maxGates": 40
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 5,
+   "title": "Negating",
+   "brief": "<p>Build <code>Neg2</code>, which returns the two's complement negation of a two-bit value: invert every bit and add one.</p>",
+   "kind": "property",
+   "concept": "Negation is an inversion and an increment, which are both things you already have.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Invert both bits, then add one to the result."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Check the input 0 first. Its negation is 0, and inverting it gives 3, so the increment has to wrap all the way round. A design that inverts and stops passes no rows at all.</p>"
+    }
+   ],
+   "after": "<p>The value 2 negates to itself, because in two bits it is the most negative value and there is no positive 2 to be its opposite. Part VI is about what that asymmetry does to real programs.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip HalfAdder(a, b) -> sum, carry {\n  sum = Xor(a, b)\n  carry = And(a, b)\n}\nchip FullAdder(a, b, cin) -> sum, carry {\n  s1, c1 = HalfAdder(a, b)\n  sum, c2 = HalfAdder(s1, cin)\n  carry = Or(c1, c2)\n}\nchip Neg2(x1, x0) -> s1, s0 {\n  s1 = Not(x1)\n  s0 = Not(x0)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Neg2",
+    "inputs": [
+     "x1",
+     "x0"
+    ],
+    "outputs": [
+     "s1",
+     "s0"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1
+     ]
+    ],
+    "maxGates": 40
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 6,
+   "title": "One control bit does both",
+   "brief": "<p>Build <code>AddSub2</code>. When <code>sub</code> is 0 it adds the two-bit operands; when <code>sub</code> is 1 it subtracts <code>b</code> from <code>a</code>. Both wrap. No second circuit.</p>",
+   "kind": "property",
+   "concept": "Subtraction is addition with one operand inverted and the carry in set, and the same control bit does both halves.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "The control bit goes to an exclusive or on each bit of <code>b</code>, and to the carry in."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>An exclusive or with the control passes <code>b</code> through when the control is 0 and inverts it when it is 1, which is what makes one circuit do both jobs. If your addition rows pass and your subtraction rows do not, the carry in is not wired to the control.</p>"
+    },
+    {
+     "id": "cycle",
+     "judge": "verdict",
+     "key": "cycle",
+     "prose": "<p>A wire depends on itself. The control signal fans out to several places and each of those needs its own name.</p>"
+    }
+   ],
+   "after": "<p>One control bit, two operations, and no arithmetic hardware added. The saving came from how negative numbers are written down rather than from anything in the wiring.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip HalfAdder(a, b) -> sum, carry {\n  sum = Xor(a, b)\n  carry = And(a, b)\n}\nchip FullAdder(a, b, cin) -> sum, carry {\n  s1, c1 = HalfAdder(a, b)\n  sum, c2 = HalfAdder(s1, cin)\n  carry = Or(c1, c2)\n}\nchip AddSub2(a1, a0, b1, b0, sub) -> s1, s0 {\n  s0, c0 = FullAdder(a0, b0, sub)\n  s1, c1 = FullAdder(a1, b1, c0)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "AddSub2",
+    "inputs": [
+     "a1",
+     "a0",
+     "b1",
+     "b0",
+     "sub"
+    ],
+    "outputs": [
+     "s1",
+     "s0"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      1,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0
+     ]
+    ],
+    "maxGates": 60
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 7,
+   "title": "Is the answer zero",
+   "brief": "<p>Build <code>IsZero2</code>, which outputs 1 when both input bits are 0.</p>",
+   "kind": "property",
+   "concept": "Testing a result against zero is an or across its bits, inverted, and it is how a machine decides whether two values were equal.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Or the bits together and invert the result."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Exactly one row wants a 1. If three rows come out high you have built the inverse, which is \"any bit set\".</p>"
+    }
+   ],
+   "after": "<p>Equality is this part applied to the result of a subtraction. A machine does not need a comparator: it needs an adder and somewhere to look at what came out.</p>",
+   "starter": "chip IsZero2(x1, x0) -> out {\n  out = nand(x1, x0)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "IsZero2",
+    "inputs": [
+     "x1",
+     "x0"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0
+     ]
+    ],
+    "maxGates": 8
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 8,
+   "title": "Which one is smaller",
+   "brief": "<p>Build <code>Lt2</code>, which outputs 1 when the unsigned two-bit value <code>a</code> is less than <code>b</code>.</p>",
+   "kind": "property",
+   "concept": "Less-than is the borrow out of a subtraction, so it comes from the adder rather than from comparison hardware.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Subtract and look at whether the subtraction needed to borrow, which is the carry out being 0."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Sixteen rows, and six of them want a 1. If your answer is high whenever the two values differ you have built \"not equal\" rather than \"less than\", so check a row where <code>a</code> is the larger.</p>"
+    },
+    {
+     "id": "non-nand-part",
+     "judge": "verdict",
+     "key": "non-nand-part",
+     "prose": "<p>Whatever you use has to be defined in this file, including the adder if you build this from a subtraction.</p>"
+    }
+   ],
+   "after": "<p>You can also read this straight off the bits, and that is a fine answer. It is worth knowing both, because a real machine takes it from the adder it already has rather than building a second circuit.</p>",
+   "starter": "chip Not(a) -> out {\n  out = nand(a, a)\n}\nchip And(a, b) -> out {\n  n = nand(a, b)\n  out = Not(n)\n}\nchip Or(a, b) -> out {\n  na = Not(a)\n  nb = Not(b)\n  out = nand(na, nb)\n}\nchip Xor(a, b) -> out {\n  n1 = nand(a, b)\n  n2 = nand(a, n1)\n  n3 = nand(b, n1)\n  out = nand(n2, n3)\n}\nchip Lt2(a1, a0, b1, b0) -> out {\n  out = nand(a1, b1)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Lt2",
+    "inputs": [
+     "a1",
+     "a0",
+     "b1",
+     "b0"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      0
+     ]
+    ],
+    "maxGates": 60
+   },
+   "lang": "netlist"
+  }
+ ]
+}

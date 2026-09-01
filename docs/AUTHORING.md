@@ -161,6 +161,11 @@ cycle", so the build rejects a spec that has both.
     { "chip": "Bit", "inputs": ["in","load"], "outputs": ["out"],
       "trace": [[1,1,0],[0,0,1],[1,0,1],[0,1,1],[0,0,0]] }
 
+A wire may simply be another wire, which is how a chip whose output is one of
+its inputs is written:
+
+    out = a
+
 A part with several outputs is assigned to several names:
 
     sum, carry = FullAdder(a, b, cin)

@@ -1,0 +1,78 @@
+{
+ "slug": "arithmetic",
+ "num": 6,
+ "title": "Arithmetic, and why subtraction is free",
+ "blurb": "One control bit inverting an operand turns the adder into a subtractor. The first time a representation choice buys hardware.",
+ "part": "logic",
+ "partRoman": "II",
+ "partTitle": "Logic",
+ "phase": "build",
+ "accent": "gold",
+ "backend": "sim",
+ "meta": {
+  "needs": [
+   "selection"
+  ],
+  "minutes": "50",
+  "one_idea": "Subtraction is not a second circuit. It is addition with one control bit inverting an operand, and that is a fact about the representation rather than about the hardware.",
+  "sources": [
+   "nand2tetris-eater-scott",
+   "numbers-text-numerics"
+  ]
+ },
+ "html": "<p>Two units ago you had one gate. Last unit you built routing. This unit builds arithmetic, and the interesting part is not that it works. It is how little it costs, and that the saving comes from a decision about how to write numbers down rather than from anything clever in the circuit.</p>\n<h2 id=\"adding-one-bit-to-one-bit\">Adding one bit to one bit</h2>\n<p>Two bits added together give a result that can be 0, 1 or 2, and 2 does not fit in one bit. So the answer needs two outputs: the low bit of the sum, and a carry into the next position.</p>\n<p>Write the table and read what the two columns are.</p>\n<pre class=\"cb\" data-lang=\"text\"><code>a  b  |  sum  carry\n0  0  |   0     0\n0  1  |   1     0\n1  0  |   1     0\n1  1  |   0     1</code></pre>\n<p>The sum column is 1 exactly when the inputs differ, which is exclusive or. The carry column is 1 exactly when both are 1, which is and. Both of those are parts you have already built, so a half adder is two parts and no new ideas.</p>\n<p>It is called a half adder because it cannot take a carry in, and every position except the first has one arriving from below.</p>\n<h2 id=\"adding-three-bits\">Adding three bits</h2>\n<p>A full adder takes two operand bits and a carry in, and produces a sum and a carry out. Three inputs, and the answer counts how many of them are 1.</p>\n<p>The construction is two half adders and an or. Add the two operands, then add the carry to that result. Each of those additions can produce a carry, and at most one of them can, so an or gathers them.</p>\n<figure class=\"fig\" data-kind=\"gates\"><svg viewBox=\"-14 -14 480 210\" class=\"fig-svg\" style=\"max-width:696px\" role=\"img\" aria-label=\"A full adder built from two half adders and an or gate, with the first half adder taking the two operands and the second adding the carry in.\" preserveAspectRatio=\"xMidYMid meet\"><path d=\"M34.0 17.0 H88.0\" class=\"fig-wire\"/><circle cx=\"34.0\" cy=\"17.0\" r=\"2.4\" class=\"fig-junction\"/><path d=\"M34.0 61.0 H69.0 V17.0 H88.0\" class=\"fig-wire\"/><circle cx=\"34.0\" cy=\"61.0\" r=\"2.4\" class=\"fig-junction\"/><path d=\"M34.0 149.0 H75.5 V105.0 H176.0\" class=\"fig-wire\"/><circle cx=\"34.0\" cy=\"149.0\" r=\"2.4\" class=\"fig-junction\"/><path d=\"M134.0 17.0 H152.7 V105.0 H176.0\" class=\"fig-wire\"/><circle cx=\"134.0\" cy=\"17.0\" r=\"2.4\" class=\"fig-junction\"/><text x=\"152.7\" y=\"10.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">sum</text><path d=\"M134.0 17.0 H161.3 V61.0 H264.0\" class=\"fig-wire\"/><circle cx=\"134.0\" cy=\"17.0\" r=\"2.4\" class=\"fig-junction\"/><text x=\"161.3\" y=\"10.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-dim mono\">c1</text><path d=\"M222.0 105.0 H240.7 V61.0 H264.0\" class=\"fig-wire\"/><circle cx=\"222.0\" cy=\"105.0\" r=\"2.4\" class=\"fig-junction\"/><path d=\"M222.0 105.0 H352.0\" class=\"fig-wire\"/><circle cx=\"222.0\" cy=\"105.0\" r=\"2.4\" class=\"fig-junction\"/><path d=\"M310.0 61.0 H352.0\" class=\"fig-wire\"/><text x=\"0.0\" y=\"21.0\" font-size=\"12\" text-anchor=\"start\" class=\"fig-fg mono\" font-weight=\"600\">a</text><text x=\"0.0\" y=\"65.0\" font-size=\"12\" text-anchor=\"start\" class=\"fig-fg mono\" font-weight=\"600\">b</text><text x=\"0.0\" y=\"153.0\" font-size=\"12\" text-anchor=\"start\" class=\"fig-fg mono\" font-weight=\"600\">cin</text><rect x=\"88\" y=\"0\" width=\"46\" height=\"34\" rx=\"3\" class=\"fig-gate\"/><text x=\"107.3\" y=\"21.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">HA</text><rect x=\"176\" y=\"88\" width=\"46\" height=\"34\" rx=\"3\" class=\"fig-gate\"/><text x=\"195.3\" y=\"109.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">HA</text><path d=\"M264 44 Q289.3 61.0 264 78 Q287.0 75.28 310 61.0 Q287.0 46.72 264 44 Z\" class=\"fig-gate\"/><text x=\"283.3\" y=\"65.0\" font-size=\"10\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\"></text><text x=\"386.0\" y=\"109.0\" font-size=\"12\" text-anchor=\"end\" class=\"fig-fg mono\" font-weight=\"600\">sum</text><text x=\"386.0\" y=\"65.0\" font-size=\"12\" text-anchor=\"end\" class=\"fig-fg mono\" font-weight=\"600\">carry</text></svg><figcaption>Two half adders and an or. The second one adds the incoming carry to the first one&#x27;s sum, and the or gathers whichever carry occurred, because both cannot.</figcaption></figure>\n<p>Now chain them. The carry out of each position is the carry in of the next, and a row of full adders adds numbers of any width. That arrangement has a name, ripple carry, and the name is a warning.</p>\n<h2 id=\"what-the-ripple-costs\">What the ripple costs</h2>\n<p>Every position has to wait for the carry from the position below it. So the time to add two numbers is not the delay of one adder, it is the delay of one adder times the number of bits.</p>\n<p>For a wide addition that is the longest path in the machine, and Part III will find it setting the clock period. nand2tetris is honest about its own version: the ripple-carry adder it builds \"is rather inefficient, due to the long delays incurred while the carry bit propagates.\"</p>\n<p>There are faster arrangements. They work by computing, for each position, whether it will generate a carry regardless of what arrives and whether it will pass one along if it does, and then combining those in a tree rather than a chain. The result is delay proportional to the logarithm of the width rather than to the width. That is a real technique with real cost, and it is a Part III subject rather than a Part II one, because building it needs the gate budget Part II is deliberately not giving you.</p>\n<p>The point for now is that the obvious arrangement works and is slow, and that you can see why from the shape of the circuit rather than being told.</p>\n<h2 id=\"the-part-that-is-free\">The part that is free</h2>\n<p>Here is the thing this unit exists for.</p>\n<p>To subtract, you might expect a second circuit: a row of full subtractors with borrow instead of carry. You do not need one, and the reason is not a trick in the wiring.</p>\n<p>In two's complement, negating a number is inverting every bit and adding one. So <code>a - b</code> is <code>a + (not b) + 1</code>. You already have an adder. Inverting <code>b</code> is one gate per bit. And adding one is free, because the adder already has a carry input on its lowest position and nothing was using it.</p>\n<p>So take an adder, put an exclusive or on each bit of <code>b</code> with a control signal, and wire that same control signal to the carry in. When the control is 0 the exclusive or passes <code>b</code> through and the carry in is 0, so the circuit adds. When it is 1 the exclusive or inverts <code>b</code> and the carry in is 1, so the circuit subtracts.</p>\n<p>One control bit, doing both halves of the job, and no new arithmetic hardware at all.</p>\n<h2 id=\"why-that-is-a-fact-about-numbers\">Why that is a fact about numbers</h2>\n<p>It is worth being precise about where the saving came from, because it is the first time in this handbook that a choice of representation buys hardware.</p>\n<p>Two's complement is not the obvious way to write negative numbers. The obvious way is a sign bit and a magnitude, which reads well and breaks addition: adding a positive and a negative number in that representation needs a comparison, a subtraction and a decision about the sign, which is three circuits where you wanted one.</p>\n<p>Two's complement gives the top bit a negative weight instead of a flag meaning. Then the same adder handles signed and unsigned operands with no changes, and subtraction is the identity above. The representation was chosen so the hardware would be cheap, and it is why every machine you will ever touch uses it.</p>\n<p>Part VI takes that further and finds the edges: the asymmetry that leaves one more negative value than positive, and what that does to the smallest integer. Here the point is only that the choice bought you a circuit.</p>\n<h2 id=\"what-the-same-wires-can-do-besides-adding\">What the same wires can do besides adding</h2>\n<p>A last observation before the exercises, and it is the one that turns an adder into an arithmetic unit.</p>\n<p>You now have a circuit with two operands, a control bit that decides whether to invert one of them, and a carry input. Notice how many different operations that already is, without adding anything.</p>\n<p>Hold one operand at zero and the circuit passes the other through. Hold one at zero, set the invert control and the carry, and the circuit negates. Set the carry with both operands present and it adds one more than it otherwise would, which is how an increment falls out of an adder without a separate incrementer.</p>\n<p>That is why a real arithmetic unit is built as an adder with a small collection of control bits in front of it, rather than as a menu of separate circuits. Each control bit changes what the operands look like on the way in, and the same adder does the work every time.</p>\n<p>nand2tetris takes this to its conclusion: its arithmetic unit has six control bits, they zero, invert and select the two inputs and the output, and between them those six bits reach eighteen useful functions from one adder. The negate control on the output is one exclusive or per bit, which is why it is there: building both polarities and choosing between them costs far more.</p>\n<h2 id=\"comparison-for-free-as-well\">Comparison, for free as well</h2>\n<p>One more consequence, and it is the one the machine's branches are built on.</p>\n<p>If subtraction is available, comparison is too. Whether <code>a</code> equals <code>b</code> is whether <code>a - b</code> is zero, which is an or across the result bits, inverted. Whether <code>a</code> is less than <code>b</code> is the sign of <code>a - b</code>, which is the top bit.</p>\n<p>So a machine does not need comparison hardware either. It needs an adder, an inverter per bit, and somewhere to look at the result. The unit on control uses exactly that to decide whether a branch is taken, and the flags it looks at are the leftovers of an addition that already happened.</p>\n<h2 id=\"what-to-carry-into-the-next-unit\">What to carry into the next unit</h2>\n<p>Arithmetic is one part repeated, and the repetition is what makes it slow. Subtraction is addition plus one control bit, and that is a fact about the representation. Comparison is subtraction plus a look at the result.</p>\n<p>Everything so far has been combinational: outputs are a function of inputs, and nothing remembers. That is about to stop. The next unit takes the hold-or-load you built last time, closes the loop the simulator refused to accept, and adds the one thing that makes the loop legal.</p>\n<p>After that the machine can remember, and once it can remember it can count, and once it can count it can fetch instructions in order.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>The specifications here are wider than the ones you have seen, because adding two-bit numbers with a carry needs five inputs and therefore thirty-two rows. The simulator checks all of them and names the first that disagrees.</p>\n<p>Read the inputs on the failing row as numbers rather than as bits. A design that fails only on rows where both operands have their high bit set is failing at the carry, and a design that fails on exactly half the rows is usually ignoring one input entirely.</p>",
+ "headings": [
+  {
+   "id": "adding-one-bit-to-one-bit",
+   "text": "Adding one bit to one bit",
+   "level": 2
+  },
+  {
+   "id": "adding-three-bits",
+   "text": "Adding three bits",
+   "level": 2
+  },
+  {
+   "id": "what-the-ripple-costs",
+   "text": "What the ripple costs",
+   "level": 2
+  },
+  {
+   "id": "the-part-that-is-free",
+   "text": "The part that is free",
+   "level": 2
+  },
+  {
+   "id": "why-that-is-a-fact-about-numbers",
+   "text": "Why that is a fact about numbers",
+   "level": 2
+  },
+  {
+   "id": "what-the-same-wires-can-do-besides-adding",
+   "text": "What the same wires can do besides adding",
+   "level": 2
+  },
+  {
+   "id": "comparison-for-free-as-well",
+   "text": "Comparison, for free as well",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-into-the-next-unit",
+   "text": "What to carry into the next unit",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1497,
+ "needs": [
+  "selection"
+ ],
+ "neededBy": [
+  "integers"
+ ]
+}

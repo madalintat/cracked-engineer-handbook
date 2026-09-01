@@ -470,3 +470,22 @@ chip Use(a) -> o { p, q = Two(a)  o = nand(p, q) }`;
   is(r.verdict !== 'floating-input', `q was reported floating: ${r.message}`);
 });
 
+t('a wire may simply be another wire', () => {
+  // Without this a chip whose output is one of its inputs cannot be written,
+  // and `out = a` fails with "cannot read this line", which reads as a syntax
+  // error in a language that has no syntax for the thing you wanted.
+  const r = SIM.check('chip Pass(a) -> out { out = a }',
+    { chip: 'Pass', inputs: ['a'], outputs: ['out'], table: [[0, 0], [1, 1]] });
+  is(r.verdict === 'ok', r.message);
+  is(r.gates === 0, `a wire cost ${r.gates} gates`);
+});
+
+t('an alias cannot hide a cycle or a floating wire', () => {
+  const loop = SIM.check('chip B(a) -> out {\n x = x\n out = nand(a, x)\n}',
+    { chip: 'B', inputs: ['a'], outputs: ['out'], table: [[0, 1], [1, 1]] });
+  is(loop.verdict === 'cycle', `self-alias gave ${loop.verdict}`);
+  const dangling = SIM.check('chip B(a) -> out { out = ghost }',
+    { chip: 'B', inputs: ['a'], outputs: ['out'], table: [[0, 0], [1, 1]] });
+  is(dangling.verdict === 'floating-input', dangling.verdict);
+});
+

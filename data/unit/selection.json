@@ -71,5 +71,7 @@
  "needs": [
   "nand"
  ],
- "neededBy": []
+ "neededBy": [
+  "arithmetic"
+ ]
 }

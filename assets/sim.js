@@ -50,6 +50,12 @@ const RE_CHIP = /^chip\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*->\s*([^{]+)\{$/;
 const RE_ASSIGN =
   /^([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)\s*=\s*([A-Za-z_]\w*)\s*\(([^)]*)\)$/;
 
+/* A wire may also be another wire. Without this, a chip whose output is simply
+ * one of its inputs cannot be written at all, and `out = in` fails with
+ * "cannot read this line", which reads as a syntax error in a language that
+ * has no syntax for the thing you wanted. */
+const RE_ALIAS = /^([A-Za-z_]\w*)\s*=\s*([A-Za-z_]\w*)$/;
+
 /* Layout is not meaning. A learner may write a chip on one line, or put the
  * brace anywhere, and the netlist is the same graph either way. Normalise
  * before parsing rather than rejecting formatting. Line numbers are carried
@@ -117,6 +123,17 @@ function parse(src) {
       continue;
     }
 
+    const alias = RE_ALIAS.exec(line);
+    if (alias) {
+      if (!cur) throw new SimError('assignment outside a chip', ln + 1);
+      const [, target, source] = alias;
+      cur.stmts.push({
+        target, targets: [target], part: null, alias: source,
+        args: [source], line: ln + 1,
+      });
+      continue;
+    }
+
     throw new SimError(`cannot read this line: ${line}`, ln + 1);
   }
 
@@ -146,6 +163,7 @@ const PRIMITIVES = new Set(['nand', 'dff']);
 function checkParts(chip, library) {
   const bad = [];
   for (const s of chip.stmts) {
+    if (s.alias) continue;                 // a wire, not a part
     if (PRIMITIVES.has(s.part)) continue;
     if (library[s.part]) continue;
     bad.push({ part: s.part, line: s.line });
@@ -238,7 +256,9 @@ function evaluate(chip, inputs, library, state, pending, path = '') {
     const s = producer.get(wire);
     if (!s) throw new SimError(`wire ${wire} has no source`, 0);
     let v;
-    if (s.part === 'dff') {
+    if (s.alias) {
+      v = resolve(s.alias, depth + 1);
+    } else if (s.part === 'dff') {
       if (s.args.length !== 1) {
         throw new SimError(`dff takes 1 input, got ${s.args.length}`, s.line);
       }
@@ -303,6 +323,7 @@ function simulateTrace(chip, rows, library) {
 function countGates(chip, library, seen = new Set()) {
   let n = 0;
   for (const s of chip.stmts) {
+    if (s.alias) continue;               // a wire costs nothing
     if (s.part === 'nand') { n += 1; continue; }
     if (s.part === 'dff') continue;      // an axiom, not a gate
     const sub = library[s.part];
@@ -317,6 +338,7 @@ function countGates(chip, library, seen = new Set()) {
 function countFlops(chip, library) {
   let n = 0;
   for (const s of chip.stmts) {
+    if (s.alias) continue;
     if (s.part === 'dff') { n += 1; continue; }
     const sub = library[s.part];
     if (sub) n += countFlops(sub, library);
