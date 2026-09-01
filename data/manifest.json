@@ -409,7 +409,9 @@
    "needs": [
     "cmos-gate"
    ],
-   "neededBy": []
+   "neededBy": [
+    "selection"
+   ]
   },
   {
    "slug": "selection",
@@ -422,11 +424,13 @@
    "phase": "build",
    "accent": "gold",
    "backend": "sim",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
+   "ready": true,
+   "words": 1484,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "nand"
+   ],
    "neededBy": []
   },
   {
@@ -2559,9 +2563,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 9,
-  "words": 14453,
-  "exercises": 72,
-  "drills": 135
+  "ready": 10,
+  "words": 15937,
+  "exercises": 80,
+  "drills": 150
  }
 }

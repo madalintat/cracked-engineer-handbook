@@ -66,7 +66,8 @@ happened, silently, and was found by looking rather than by checking.
 
 ## State
 
-Nine of 122 units written and validated, and Part I is complete. The other 113 are in the track as
+Ten of 122 units written and validated. Part I is complete and Part II
+is under way. The other 112 are in the track as
 stubs, so the whole spine is visible and no unit is silently missing.
 
 `TODO.md` tracks the rest. `docs/superpowers/specs/` holds the design and, in

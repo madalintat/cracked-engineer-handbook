@@ -2087,6 +2087,262 @@
  },
  {
   "t": "section",
+  "slug": "selection",
+  "anchor": "the-part",
+  "title": "The part",
+  "text": "A multiplexer passes one of its data inputs through, chosen by a third input. When is 0 the output follows ; when it is 1 it follows . Four gates. The select signal is wired into the logic exactly like the data is, and nothing in the circuit distinguishes them. Gate each input with the select signal in the polarity you want, then combine the two. Four gates, and you will build it in the first exercise. Now look at what the circuit thinks is. It is a wire, into a NAND, like every other wire. There is no control input on a NAND gate, no separate mechanism for a signal that means something rather than being something. That is the sentence to keep. Control is data. A control signal is an ordinary input routed somewhere that changes what the rest of the circuit does, and the only difference between a control wire and a data wire is what a human decided to call it.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "selection",
+  "anchor": "running-it-backwards",
+  "title": "Running it backwards",
+  "text": "Reverse the multiplexer and you get its dual. A demultiplexer takes one input and a select signal, and routes the input to one of several outputs while holding the others at zero. Same idea, same gates, opposite direction. And between them they are the two halves of every routing decision in a machine: a multiplexer chooses which value arrives somewhere, a demultiplexer chooses where a value goes. When Part II gets to registers, \"which register do I write to\" is a demultiplexer on the write-enable signal, and \"which register do I read from\" is a multiplexer on the outputs. Not something like them. Those parts.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "selection",
+  "anchor": "the-one-line-version-and-why-it-is-a-lie",
+  "title": "The one-line version, and why it is a lie",
+  "text": "It is tempting to write the multiplexer as a sentence: if then else . That sentence is true about what the circuit computes and false about what the circuit is, and the difference matters more here than almost anywhere else in this handbook. An in a program chooses which code to run. One branch executes and the other does not. A multiplexer does not choose which gates to run, because running is not a thing gates do. All four gates are always powered, both data inputs are always propagating, and both partial results are always being computed. The select signal decides which of two answers reaches the output, and the other answer is computed and discarded, every time, at full cost. That is worth holding onto for two reasons. It is why a branch on a GPU costs both sides, twelve parts from here. That is usually presented as a surprising property of graphics hardware, and it is closer to the default behaviour of logic: computing both and discarding one is what a circuit does naturally, and a processor that skips work has to be built specially to do it. And it is why \"the ALU runs when you tell it to\" is a misconception worth naming now. An arithmetic unit is combinational. It is always ",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "selection",
+  "anchor": "widening-it",
+  "title": "Widening it",
+  "text": "Two data inputs need one select bit. Four need two, eight need three, and in general inputs need bits of select. That relationship is worth stating deliberately, because it is where the word address comes from. A four-way multiplexer's select input is a two-bit number, and that number picks which input is passed through. The number is not a name for the input. It is a position among them. Scott's book puts it as sixteen unnumbered streets with sixteen unnumbered houses. The fourth house on the seventh street still locates a house, and no plaque is needed on the door. An address is a position, not a name. Nothing in the circuit stores an address. There is no table of addresses anywhere. There is a tree of multiplexers, and the address bits are the select signals on that tree.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "selection",
+  "anchor": "building-a-wide-one",
+  "title": "Building a wide one",
+  "text": "Two ways to build a four-way multiplexer, and they are worth comparing because the comparison generalises. Build it from three two-way ones: two of them choose between pairs using the low select bit, and a third chooses between those two results using the high bit. Twelve gates and two stages of delay. Or build it flat, decoding the two select bits into four one-hot lines and gating each input with its line. That costs more gates and one fewer stage. Both are correct and they trade the same way as everything in the last part: gates against delay. The tree scales better, which is why a memory of any real size is a tree rather than a flat decode.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "selection",
+  "anchor": "where-the-address-bits-go",
+  "title": "Where the address bits go",
+  "text": "One more construction, and it is the one that makes memory make sense. A decoder takes bits and raises exactly one of outputs. Two bits in, four lines out, exactly one of them high. That is a demultiplexer with its data input held at 1, which is the kind of observation that looks like a trick and is just the same circuit being used differently. Every addressed thing in a computer is a decoder driving a set of enables, and a multiplexer collecting the results. A memory is that pattern with storage between the two halves, and Part II builds the storage four units from here. Until then, this is the whole mechanism.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "selection",
+  "anchor": "the-other-thing-a-mux-is-for",
+  "title": "The other thing a mux is for",
+  "text": "There is a second use, and it is the one that makes the next few units possible at all. A multiplexer whose two inputs are \"the value currently here\" and \"the value arriving\" is a hold-or-load. Put the select signal on it and call that signal , and you have described a storage element without having built one: when is 0 the output is whatever it already was, and when is 1 the output is the new value. Read that again, because there is something missing. \"Whatever it already was\" is the output feeding back into the input, and a loop with no clock in it is the error the simulator rejected in the last unit. The circuit is not wrong. It is incomplete, and what it is missing is a clock edge. That is the whole content of unit 008, and the diagram is the most valuable one in nand2tetris: a register is not a flip-flop with its output tied to its input, because then there is no way to ever load a new value into it. It is a multiplexer in the loop, and the multiplexer's select bit is what means. So the part you build in the first exercise here is the part that turns a flip-flop into a register three units from now. Nothing new gets added. The routing you build today is the mechanism, and the ",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "selection",
+  "anchor": "what-this-means-for-what-comes-next",
+  "title": "What this means for what comes next",
+  "text": "There is no interpreter anywhere. When the machine reads an instruction and does what it says, no part of it looks up a meaning. Some bits of the instruction are wired to select inputs on multiplexers, and different values on those wires route different things to different places. That is what a decoder is, and it is why the unit on control ends up being shorter than you would expect. Scott's answer to the question in his title is that the machine does not know anything: NAND gates do not know what they are doing, and a million of them connected together still do not. The exercises here build the multiplexer, its dual, a wide one both ways, and a decoder. By the end you will have the routing half of a computer, and it will be four parts.",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
+  "slug": "selection",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "The simulator checks your design against an exhaustive truth table, so a mismatch names the exact input row that disagreed. That is more useful than it sounds: with a select signal, the interesting rows are the ones where the two data inputs differ, because those are the only rows where the select does anything at all. A floating input means a wire is read and never driven, and it stays an error here for the same reason as in the last unit. If your inverted select signal needs a name, it needs an assignment.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "selection",
+  "n": 1,
+  "title": "Choosing between two wires",
+  "text": "A control signal is an ordinary wire. Nothing in the circuit distinguishes it from the data it selects. Build . When is 0 the output follows ; when is 1 it follows . Four NAND gates is enough.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "selection",
+  "n": 2,
+  "title": "The same part, backwards",
+  "text": "A multiplexer chooses which value arrives somewhere and a demultiplexer chooses where a value goes. They are the two halves of routing. Build . One input, one select bit, two outputs: the input goes to when is 0 and to when it is 1, and the other output is 0.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "selection",
+  "n": 3,
+  "title": "Or, which you will need",
+  "text": "Every gate in this part is reachable, and the ones you build early are the parts you build the rest from. Build from NAND. You met De Morgan in the last unit; this is it applied once.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "selection",
+  "n": 4,
+  "title": "One line at a time",
+  "text": "A decoder raises one of <code>2^k</code> lines from <code>k</code> bits, and every addressed thing in a machine is one of these driving a set of enables. Build : two select bits in, four outputs, exactly one of them high. Input is the high bit.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "selection",
+  "n": 5,
+  "title": "Four inputs, two select bits",
+  "text": "<code>2^k</code> inputs need <code>k</code> select bits, and a tree of small multiplexers is how any real width is built. Build from the two-way multiplexer you already have. Two of them choose between pairs on the low bit, and a third chooses between those results on the high bit.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "selection",
+  "n": 6,
+  "title": "Are these the same",
+  "text": "Comparison is not a new kind of operation. It is the function that is true on the rows where the inputs agree. Build , which outputs 1 when its two inputs are equal and 0 when they differ.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "selection",
+  "n": 7,
+  "title": "Hold or load",
+  "text": "The part that becomes a register is one you have already built. What it is missing is a clock, not a circuit. Build , which passes through when is 0 and through when is 1. It is a multiplexer, and the point is what you call its inputs.",
+  "part": "Logic"
+ },
+ {
+  "t": "exercise",
+  "slug": "selection",
+  "n": 8,
+  "title": "Selecting with a spare input",
+  "text": "An input a circuit does not use costs nothing and changes nothing, which is worth seeing once so that a wide bus with unused lines is not mysterious later. Build , which passes when is 0 and when is 1, and ignores entirely. The specification includes so that every row appears twice.",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "selection",
+  "n": 1,
+  "title": "What does a multiplexer do?",
+  "text": " Routing one input to one of several outputs is its dual, the demultiplexer. Between them they are the two halves of every routing decision in a machine. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "selection",
+  "n": 2,
+  "title": "What distinguishes a control wire from a data wire in the circuit?",
+  "text": " There is no control input on a NAND gate. The only difference is what a human decided to call it, which is why \"control is data\" is the sentence to keep from this unit. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "selection",
+  "n": 3,
+  "title": "Writing a multiplexer as \"if sel then b else a\" is:",
+  "text": " All the gates are always powered and both partial results are always being computed. The select decides which answer reaches the output and the other is discarded at full cost. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "selection",
+  "n": 4,
+  "title": "Why does that matter for a GPU twelve parts from here?",
+  "text": " A processor that skips work has to be built specially to do it. Warp divergence is usually presented as surprising, and it is closer to what a circuit does if you leave it alone. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "selection",
+  "n": 5,
+  "title": "An arithmetic unit with no control signal asserted is:",
+  "text": " It is combinational. A control signal does not start it, it decides whether anyone reads the answer. \"The ALU runs when you tell it to\" is a misconception worth naming early. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "selection",
+  "n": 6,
+  "title": "How many select bits does a multiplexer with 16 inputs need?",
+  "text": "  2^k  inputs need  k  bits, and that relationship is where the word address comes from. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "selection",
+  "n": 7,
+  "title": "What is an address?",
+  "text": " Sixteen unnumbered streets with sixteen unnumbered houses: the fourth house on the seventh street still locates a house and no plaque is needed. Nothing in the circuit stores an address. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "selection",
+  "n": 8,
+  "title": "Where do the address bits actually go?",
+  "text": " There is no table of addresses anywhere. There is a tree, and the address bits are the select signals on it. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "selection",
+  "n": 9,
+  "title": "A decoder with <code>k</code> inputs raises how many of its outputs?",
+  "text": " Exactly one, which is what makes it useful as a set of enables. It is a demultiplexer with its data input held at 1. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "selection",
+  "n": 10,
+  "title": "Building a four-way multiplexer as a tree of two-way ones costs:",
+  "text": " It is the same gates-against-delay trade as everything in Part I. The tree scales better, which is why a memory of any real size is a tree rather than a flat decode. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "selection",
+  "n": 11,
+  "title": "\"Which register do I write to\" is implemented by:",
+  "text": " And \"which register do I read from\" is a multiplexer on the outputs. Not parts like those. Those parts. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "selection",
+  "n": 12,
+  "title": "A multiplexer whose inputs are \"what is here\" and \"what is arriving\" is:",
+  "text": " It is not yet a register, because \"what is here\" means the output feeding back to the input, and that loop is illegal without a clock. The circuit is incomplete rather than wrong. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "selection",
+  "n": 13,
+  "title": "Why is a register not simply a flip-flop with its output tied to its input?",
+  "text": " nand2tetris labels that diagram \"invalid design\" for exactly this reason. The fix is a multiplexer in the loop, and the multiplexer's select bit is what  load  means. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "selection",
+  "n": 14,
+  "title": "When the machine executes an instruction, what looks up its meaning?",
+  "text": " NAND gates do not know what they are doing, and a million of them connected together still do not. That is the answer to the question in Scott's title. ",
+  "part": "Logic"
+ },
+ {
+  "t": "drill",
+  "slug": "selection",
+  "n": 15,
+  "title": "A design that ignores one of its inputs is:",
+  "text": " Leaving an input unused is allowed; reading a wire that nothing drives is not, and those are different mistakes. Ignoring inputs is how one part serves several purposes on a shared bus. ",
+  "part": "Logic"
+ },
+ {
+  "t": "section",
   "slug": "clock-edge",
   "anchor": "two-kinds-of-logic-and-only-two",
   "title": "Two kinds of logic, and only two",

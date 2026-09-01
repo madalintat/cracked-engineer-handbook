@@ -67,5 +67,7 @@
  "needs": [
   "cmos-gate"
  ],
- "neededBy": []
+ "neededBy": [
+  "selection"
+ ]
 }

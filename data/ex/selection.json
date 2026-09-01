@@ -1,0 +1,1275 @@
+{
+ "slug": "selection",
+ "backend": "sim",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Choosing between two wires",
+   "brief": "<p>Build <code>Mux</code>. When <code>sel</code> is 0 the output follows <code>a</code>; when <code>sel</code> is 1 it follows <code>b</code>. Four NAND gates is enough.</p>",
+   "kind": "property",
+   "concept": "A control signal is an ordinary wire. Nothing in the circuit distinguishes it from the data it selects.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Gate each input with <code>sel</code> in the polarity you want, then combine."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>The row named in the message tells you which case is wrong. The only rows where <code>sel</code> does anything are the ones where <code>a</code> and <code>b</code> differ, so check those two first: everywhere else the answer is the same whichever input is selected.</p>"
+    },
+    {
+     "id": "floating",
+     "judge": "verdict",
+     "key": "floating-input",
+     "prose": "<p>A wire is read and never driven. Inverting <code>sel</code> needs its own assignment before the inverted value has a name.</p>"
+    }
+   ],
+   "after": "<p>Four gates, and you have just built the part that selects a register, decodes an instruction and addresses memory. The rest of this unit is that same part at different widths.</p>",
+   "starter": "chip Mux(a, b, sel) -> out {\n  out = nand(a, sel)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Mux",
+    "inputs": [
+     "a",
+     "b",
+     "sel"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1
+     ]
+    ],
+    "minGates": 4,
+    "maxGates": 6
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 2,
+   "title": "The same part, backwards",
+   "brief": "<p>Build <code>Demux</code>. One input, one select bit, two outputs: the input goes to <code>a</code> when <code>sel</code> is 0 and to <code>b</code> when it is 1, and the other output is 0.</p>",
+   "kind": "property",
+   "concept": "A multiplexer chooses which value arrives somewhere and a demultiplexer chooses where a value goes. They are the two halves of routing.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "The output that is not selected must be 0, not the input."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Look at the row where the input is 0. Both outputs must be 0 there whatever the select is, because there is nothing to route. A design that inverts rather than gates will pass the rows where the input is 1 and fail those.</p>"
+    }
+   ],
+   "after": "<p>\"Which register do I write to\" is this part on the write-enable signal. Not something like it. This part.</p>",
+   "starter": "chip Demux(in, sel) -> a, b {\n  a = nand(in, sel)\n  b = nand(in, sel)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Demux",
+    "inputs": [
+     "in",
+     "sel"
+    ],
+    "outputs": [
+     "a",
+     "b"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1
+     ]
+    ],
+    "maxGates": 6
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 3,
+   "title": "Or, which you will need",
+   "brief": "<p>Build <code>Or</code> from NAND. You met De Morgan in the last unit; this is it applied once.</p>",
+   "kind": "property",
+   "concept": "Every gate in this part is reachable, and the ones you build early are the parts you build the rest from.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Invert both inputs, then NAND them."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Compare your output column against the specification's. If yours is the exact opposite on every row you have built NOR and stopped one inversion early.</p>"
+    }
+   ],
+   "after": "<p>Three gates. Keep it: the next two exercises both use it.</p>",
+   "starter": "chip Or(a, b) -> out {\n  out = nand(a, b)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Or",
+    "inputs": [
+     "a",
+     "b"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 4
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 4,
+   "title": "One line at a time",
+   "brief": "<p>Build <code>Decoder2</code>: two select bits in, four outputs, exactly one of them high. Input <code>s1</code> is the high bit.</p>",
+   "kind": "property",
+   "concept": "A decoder raises one of <code>2^k</code> lines from <code>k</code> bits, and every addressed thing in a machine is one of these driving a set of enables.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Each output is an AND of the two select bits in the right polarity."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Exactly one output is high in every row. Read which row disagreed and work out which combination of the two bits it is: output 0 wants both low, output 3 wants both high, and the middle two want one of each.</p>"
+    },
+    {
+     "id": "floating",
+     "judge": "verdict",
+     "key": "floating-input",
+     "prose": "<p>Both inverted select signals need names before you can use them, and each is used twice.</p>"
+    }
+   ],
+   "after": "<p>This is a demultiplexer with its data input held at 1. That looks like a trick and it is the same circuit being used differently, which is most of what Part II is.</p>",
+   "starter": "chip Decoder2(s1, s0) -> o0, o1, o2, o3 {\n  o0 = nand(s1, s0)\n  o1 = nand(s1, s0)\n  o2 = nand(s1, s0)\n  o3 = nand(s1, s0)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Decoder2",
+    "inputs": [
+     "s1",
+     "s0"
+    ],
+    "outputs": [
+     "o0",
+     "o1",
+     "o2",
+     "o3"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0,
+      1
+     ]
+    ],
+    "maxGates": 14
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 5,
+   "title": "Four inputs, two select bits",
+   "brief": "<p>Build <code>Mux4</code> from the two-way multiplexer you already have. Two of them choose between pairs on the low bit, and a third chooses between those results on the high bit.</p>",
+   "kind": "property",
+   "concept": "<code>2^k</code> inputs need <code>k</code> select bits, and a tree of small multiplexers is how any real width is built.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "Three <code>Mux</code> parts. The high bit selects between the two results."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Read which of the four inputs the failing row should have selected. <code>s1</code> is the high bit, so <code>s1 s0</code> of <code>1 0</code> selects <code>c</code>, the third input. Getting the two select bits the wrong way round passes half the rows.</p>"
+    },
+    {
+     "id": "non-nand-part",
+     "judge": "verdict",
+     "key": "non-nand-part",
+     "prose": "<p>You called a part that is not defined in this file. Define <code>Mux</code> above the chip that uses it, along with whatever it needs.</p>"
+    }
+   ],
+   "after": "<p>Twelve gates and two stages. Built flat instead it is more gates and one stage, which is the same trade as everything in Part I. The tree scales better, which is why memory is a tree.</p>",
+   "starter": "chip Mux4(a, b, c, d, s1, s0) -> out {\n  out = nand(a, s0)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Mux4",
+    "inputs": [
+     "a",
+     "b",
+     "c",
+     "d",
+     "s1",
+     "s0"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 20
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 6,
+   "title": "Are these the same",
+   "brief": "<p>Build <code>Eq</code>, which outputs 1 when its two inputs are equal and 0 when they differ.</p>",
+   "kind": "property",
+   "concept": "Comparison is not a new kind of operation. It is the function that is true on the rows where the inputs agree.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "This is the opposite of the function that is true when they differ."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Two rows want 1 and two want 0. If your output is high on exactly the rows that should be low, you have built exclusive or and need one more inversion.</p>"
+    }
+   ],
+   "after": "<p>A wide comparison is this part on every bit, with the results ANDed together. The unit on control uses that to decide whether a branch is taken.</p>",
+   "starter": "chip Eq(a, b) -> out {\n  out = nand(a, b)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Eq",
+    "inputs": [
+     "a",
+     "b"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 6
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 7,
+   "title": "Hold or load",
+   "brief": "<p>Build <code>HoldOrLoad</code>, which passes <code>stored</code> through when <code>load</code> is 0 and <code>fresh</code> through when <code>load</code> is 1. It is a multiplexer, and the point is what you call its inputs.</p>",
+   "kind": "property",
+   "concept": "The part that becomes a register is one you have already built. What it is missing is a clock, not a circuit.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "You built this in the first exercise under a different name."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>When <code>load</code> is 0 the output must equal <code>stored</code>, whatever <code>fresh</code> is. Check the rows where those two disagree, since they are the only rows that test anything.</p>"
+    }
+   ],
+   "after": "<p>Now imagine wiring the output back round to <code>stored</code>. That is a register, and the simulator will reject it as a loop with no clock in it, which is exactly the right complaint. Unit 008 supplies the clock.</p>",
+   "starter": "chip HoldOrLoad(stored, fresh, load) -> out {\n  out = nand(stored, load)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "HoldOrLoad",
+    "inputs": [
+     "stored",
+     "fresh",
+     "load"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 6
+   },
+   "lang": "netlist"
+  },
+  {
+   "n": 8,
+   "title": "Selecting with a spare input",
+   "brief": "<p>Build <code>Sel3</code>, which passes <code>a</code> when <code>s</code> is 0 and <code>b</code> when <code>s</code> is 1, and ignores <code>c</code> entirely. The specification includes <code>c</code> so that every row appears twice.</p>",
+   "kind": "property",
+   "concept": "An input a circuit does not use costs nothing and changes nothing, which is worth seeing once so that a wide bus with unused lines is not mysterious later.",
+   "backend": "sim",
+   "gpu": null,
+   "flags": "",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "table-mismatch"
+    }
+   ],
+   "hints": [
+    "The answer does not depend on <code>c</code>. Do not wire it to anything."
+   ],
+   "diagnose": [
+    {
+     "id": "table-mismatch",
+     "judge": "verdict",
+     "key": "table-mismatch",
+     "prose": "<p>Every pair of rows in the table differs only in <code>c</code> and wants the same output. If your two answers differ across such a pair, <code>c</code> is reaching the output when it should not.</p>"
+    },
+    {
+     "id": "floating",
+     "judge": "verdict",
+     "key": "floating-input",
+     "prose": "<p>Leaving an input unused is allowed. Reading a wire nothing drives is not, and those are different mistakes.</p>"
+    }
+   ],
+   "after": "<p>A design does not have to use every input it is given. That is how one part serves several purposes on a shared bus, which is unit 009.</p>",
+   "starter": "chip Sel3(a, b, c, s) -> out {\n  out = nand(a, c)\n}",
+   "tests": "",
+   "spec": {
+    "chip": "Sel3",
+    "inputs": [
+     "a",
+     "b",
+     "c",
+     "s"
+    ],
+    "outputs": [
+     "out"
+    ],
+    "table": [
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      1,
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      0,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    ],
+    "maxGates": 6
+   },
+   "lang": "netlist"
+  }
+ ]
+}
