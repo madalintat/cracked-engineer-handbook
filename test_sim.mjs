@@ -351,3 +351,74 @@ if (failed.length) {
   process.exit(1);
 }
 console.log(`all ${pass} passed`);
+
+/* ------------------------------------------------------- the clock edge */
+
+const LIB = `chip Not(a) -> out { out = nand(a, a) }
+chip And(a, b) -> out { n = nand(a, b)  out = Not(n) }
+chip Or(a, b) -> out { na = Not(a)  nb = Not(b)  out = nand(na, nb) }
+chip Mux(a, b, sel) -> out {
+  nsel = Not(sel)
+  x = And(a, nsel)
+  y = And(b, sel)
+  out = Or(x, y)
+}
+`;
+
+t('a dff holds its input for one cycle', () => {
+  const r = SIM.check('chip R(d) -> q { q = dff(d) }',
+    { chip: 'R', inputs: ['d'], outputs: ['q'], trace: [[1, 0], [0, 1], [0, 0]] });
+  is(r.verdict === 'ok', r.message);
+});
+
+t('a loop through a dff is legal and a loop without one is not', () => {
+  // This is the whole point of the primitive, so both directions are checked.
+  const bit = LIB + `chip Bit(in, load) -> out {
+    m = Mux(out, in, load)
+    out = dff(m)
+  }`;
+  const good = SIM.check(bit, { chip: 'Bit', inputs: ['in', 'load'],
+    outputs: ['out'], trace: [[1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [0, 0, 0]] });
+  is(good.verdict === 'ok', 'a register should be legal: ' + good.message);
+
+  const bad = SIM.check('chip B(a) -> out { x = nand(a, x)  out = nand(x, x) }',
+    { chip: 'B', inputs: ['a'], outputs: ['out'], table: [[0, 1], [1, 0]] });
+  is(bad.verdict === 'cycle', 'a combinational loop must still be rejected');
+});
+
+t('two instances of one sub-chip do not share a bit', () => {
+  // Keying dff state by wire name alone would make these the same flop, and
+  // the design would appear to work while holding one value for two registers.
+  const src = `chip Reg(d) -> q { q = dff(d) }
+chip Pair(a, b) -> x {
+  p = Reg(a)
+  q = Reg(b)
+  x = nand(p, q)
+}`;
+  const r = SIM.check(src, { chip: 'Pair', inputs: ['a', 'b'], outputs: ['x'],
+    trace: [[1, 0, 1], [0, 0, 1], [0, 0, 1]] });
+  is(r.verdict === 'ok', r.message);
+  is(r.flops === 2, `expected 2 flip-flops, counted ${r.flops}`);
+});
+
+t('a dff is an axiom, not a gate', () => {
+  const r = SIM.check('chip R(d) -> q { q = dff(d) }',
+    { chip: 'R', inputs: ['d'], outputs: ['q'], trace: [[1, 0], [0, 1]] });
+  is(r.gates === 0, `dff counted as ${r.gates} gates`);
+  is(r.flops === 1, `counted ${r.flops} flip-flops`);
+});
+
+t('a trace mismatch names the cycle it happened on', () => {
+  const r = SIM.check('chip R(d) -> q { q = dff(d) }',
+    { chip: 'R', inputs: ['d'], outputs: ['q'], trace: [[1, 1], [0, 1]] });
+  is(r.verdict === 'table-mismatch', r.verdict);
+  is(/cycle 0/.test(r.message), `message does not name the cycle: ${r.message}`);
+});
+
+t('a dff chain delays by its length', () => {
+  const r = SIM.check('chip Two(d) -> q { a = dff(d)  q = dff(a) }',
+    { chip: 'Two', inputs: ['d'], outputs: ['q'],
+      trace: [[1, 0], [0, 0], [0, 1], [0, 0]] });
+  is(r.verdict === 'ok', r.message);
+});
+

@@ -27,6 +27,13 @@
  *     floating-input   an input was never connected
  *     gate-budget      correct, but over the allowed gate count
  *
+ * There is a second primitive, `dff`, and it is an axiom rather than something
+ * built from nand. Its output this cycle is its input from the previous one.
+ * That single part is what makes a loop legal: a value may depend on itself if
+ * the dependency passes through a clock edge, and may not otherwise. Part II
+ * builds every register, counter and memory in the machine from nand and dff
+ * and nothing else.
+ *
  * Runs in a Worker in the browser and directly under Node for the tests, so it
  * takes no dependency on either.
  */
@@ -126,21 +133,27 @@ class SimError extends Error {
 
 /* ------------------------------------------------------------- analysis */
 
-/** Walk to the leaves. The only leaf allowed is `nand`.
+/** Walk to the leaves. The only leaves allowed are `nand` and `dff`.
  *  Using a built-in xor to build xor is not an answer. */
+const PRIMITIVES = new Set(['nand', 'dff']);
+
 function checkParts(chip, library) {
   const bad = [];
   for (const s of chip.stmts) {
-    if (s.part === 'nand') continue;
+    if (PRIMITIVES.has(s.part)) continue;
     if (library[s.part]) continue;
     bad.push({ part: s.part, line: s.line });
   }
   return bad;
 }
 
-/** A cycle here is not a clever trick. Nothing in Part II has a clock, so a
- *  value that depends on its own previous value is not a function of the
- *  inputs and the simulator cannot define it. */
+/** A combinational loop is not a clever trick: a value that depends on its own
+ *  present value is not a function of the inputs and cannot be defined.
+ *
+ *  A loop through a `dff` is a different thing entirely and is legal, because
+ *  the dependency is on the previous cycle rather than on this one. So the
+ *  walk does not follow a dff's inputs, and whatever cycles remain after that
+ *  are the genuinely undefined ones. */
 function findCycle(chip) {
   const producer = new Map();
   chip.stmts.forEach(s => producer.set(s.target, s));
@@ -157,9 +170,12 @@ function findCycle(chip) {
     if (c === GREY) return [...stack.slice(stack.indexOf(wire)), wire];
     colour.set(wire, GREY);
     stack.push(wire);
-    for (const a of s.args) {
-      const loop = visit(a);
-      if (loop) return loop;
+    // A dff ends the combinational path. What feeds it is last cycle's problem.
+    if (s.part !== 'dff') {
+      for (const a of s.args) {
+        const loop = visit(a);
+        if (loop) return loop;
+      }
     }
     stack.pop();
     colour.set(wire, BLACK);
@@ -191,7 +207,16 @@ function findFloating(chip) {
 
 /* ----------------------------------------------------------- evaluation */
 
-function evaluate(chip, inputs, library) {
+/* One combinational settle.
+ *
+ * `state` holds every dff's output, keyed by a path that names the instance
+ * rather than the wire, so two copies of the same sub-chip do not share a bit.
+ * `pending` collects what each dff will hold next. Nothing in `pending` is
+ * visible during this pass, which is the two-phase discipline: every dff reads
+ * pre-edge values and every dff writes post-edge values, so the order in which
+ * they are evaluated cannot change the result.
+ */
+function evaluate(chip, inputs, library, state, pending, path = '') {
   const wires = new Map();
   chip.inputs.forEach((n, i) => wires.set(n, inputs[i] ? 1 : 0));
 
@@ -203,9 +228,22 @@ function evaluate(chip, inputs, library) {
     if (depth > 5000) throw new SimError('circuit too deep to evaluate', 0);
     const s = producer.get(wire);
     if (!s) throw new SimError(`wire ${wire} has no source`, 0);
-    const args = s.args.map(a => resolve(a, depth + 1));
     let v;
-    if (s.part === 'nand') {
+    if (s.part === 'dff') {
+      if (s.args.length !== 1) {
+        throw new SimError(`dff takes 1 input, got ${s.args.length}`, s.line);
+      }
+      const key = path + '/' + wire;
+      // Publish the stored bit before resolving what feeds it. That ordering
+      // is the whole difference between a flip-flop and a wire: the feedback
+      // path from this output back to this input terminates here, at last
+      // cycle's value, instead of recursing forever.
+      v = state && state.has(key) ? state.get(key) : 0;
+      wires.set(wire, v);
+      if (pending) pending.set(key, resolve(s.args[0], depth + 1));
+      return v;
+    } else if (s.part === 'nand') {
+      const args = s.args.map(a => resolve(a, depth + 1));
       if (args.length !== 2) {
         throw new SimError(`nand takes 2 inputs, got ${args.length}`, s.line);
       }
@@ -213,7 +251,9 @@ function evaluate(chip, inputs, library) {
     } else {
       const sub = library[s.part];
       if (!sub) throw new SimError(`unknown part ${s.part}`, s.line);
-      v = evaluate(sub, args, library)[0];
+      const args = s.args.map(a => resolve(a, depth + 1));
+      v = evaluate(sub, args, library, state, pending,
+                   path + '/' + wire + ':' + s.part)[0];
     }
     wires.set(wire, v);
     return v;
@@ -222,14 +262,45 @@ function evaluate(chip, inputs, library) {
   return chip.outputs.map(o => resolve(o, 0));
 }
 
+/** Run a design for several cycles, one row of the trace per cycle.
+ *
+ * Returns what the outputs were on each cycle. The state carries forward; the
+ * caller starts it empty, so every dff begins at 0 the way a real one does
+ * after reset. */
+function simulateTrace(chip, rows, library) {
+  const state = new Map();
+  const out = [];
+  for (const inputs of rows) {
+    const pending = new Map();
+    out.push(evaluate(chip, inputs, library, state, pending));
+    // Commit every dff at once, after the whole circuit has settled.
+    for (const [k, v] of pending) state.set(k, v);
+  }
+  return out;
+}
+
 /** Every nand in the design, following sub-chips. This is what a gate count
  *  actually means: the primitives, not the lines you wrote. */
 function countGates(chip, library, seen = new Set()) {
   let n = 0;
   for (const s of chip.stmts) {
     if (s.part === 'nand') { n += 1; continue; }
+    if (s.part === 'dff') continue;      // an axiom, not a gate
     const sub = library[s.part];
     if (sub) n += countGates(sub, library, seen);
+  }
+  return n;
+}
+
+/** Flip-flops, counted separately. A gate budget is about combinational cost
+ *  and a flop budget is about how much state a design carries, which are two
+ *  different mistakes to make. */
+function countFlops(chip, library) {
+  let n = 0;
+  for (const s of chip.stmts) {
+    if (s.part === 'dff') { n += 1; continue; }
+    const sub = library[s.part];
+    if (sub) n += countFlops(sub, library);
   }
   return n;
 }
@@ -312,11 +383,55 @@ function check(src, spec) {
     if (loop) {
       return {
         verdict: 'cycle', loop,
-        message: `these wires form a loop: ${loop.join(' -> ')}. ` +
-                 `Nothing here has a clock yet, so a value cannot depend on ` +
-                 `itself.`,
+        message: `these wires form a loop with no clock in it: ` +
+                 `${loop.join(' -> ')}. A value may depend on itself only ` +
+                 `through a dff, where the dependency is on the previous ` +
+                 `cycle rather than on this one.`,
       };
     }
+  }
+
+  const gatesN = countGates(chip, library);
+  const flops = countFlops(chip, library);
+
+  // A trace is a table over time: one row per cycle, evaluated in order with
+  // the state carried forward. Anything with a dff in it needs one, because a
+  // truth table cannot express "what it held last cycle".
+  if (spec.trace) {
+    const nI = spec.inputs.length;
+    let got;
+    try {
+      got = simulateTrace(chip, spec.trace.map(r => r.slice(0, nI)), library);
+    } catch (e) {
+      return { verdict: 'parse-error', line: e.line || chip.line,
+               message: e.message };
+    }
+    const cycles = [];
+    let bad = null;
+    spec.trace.forEach((row, i) => {
+      const want = row.slice(nI);
+      const ok = want.every((w, j) => (w ? 1 : 0) === got[i][j]);
+      cycles.push({ cycle: i, ins: row.slice(0, nI), want, got: got[i], ok });
+      if (!ok && bad === null) bad = cycles[i];
+    });
+    if (bad) {
+      const names = spec.inputs.map((n, i) => `${n}=${bad.ins[i]}`).join(' ');
+      return {
+        verdict: 'table-mismatch', row: bad, rows: cycles,
+        gates: gatesN, flops,
+        message: `on cycle ${bad.cycle} with ${names} the specification says ` +
+                 `${bad.want.join(',')} and yours gives ${bad.got.join(',')}.`,
+      };
+    }
+    if (spec.maxGates && gatesN > spec.maxGates) {
+      return { verdict: 'gate-budget', gates: gatesN, flops, rows: cycles,
+               message: `correct, but ${plural(gatesN, 'nand gate')} against ` +
+                        `a budget of ${spec.maxGates}.` };
+    }
+    return { verdict: 'ok', gates: gatesN, flops, rows: cycles,
+             message: `every cycle matches, in ` +
+                      `${plural(gatesN, 'nand gate')} and ` +
+                      `${plural(flops, 'flip-flop')}.` };
   }
 
   const nIn = spec.inputs.length;
@@ -336,7 +451,7 @@ function check(src, spec) {
     if (!ok && !firstBad) firstBad = { ins, want, got };
   }
 
-  const gates = countGates(chip, library);
+  const gates = gatesN;
 
   if (firstBad) {
     const names = spec.inputs.map((n, i) => `${n}=${firstBad.ins[i]}`).join(' ');
@@ -384,7 +499,8 @@ function tableOf(src, chipName) {
   return out;
 }
 
-const SIM = { parse, check, tableOf, countGates, SimError };
+const SIM = { parse, check, tableOf, countGates, countFlops,
+              simulateTrace, SimError };
 
 if (typeof module !== 'undefined' && module.exports) module.exports = SIM;
 if (typeof self !== 'undefined' && typeof window === 'undefined') {

@@ -600,9 +600,15 @@ def _check_sim_spec(spec, w):
     if spec is None:
         p.append(f"{w}: the sim backend needs a ```spec block")
         return p
-    for k in ("chip", "inputs", "outputs", "table"):
+    for k in ("chip", "inputs", "outputs"):
         if k not in spec:
             p.append(f"{w}: spec has no {k!r}")
+    if "table" not in spec and "trace" not in spec:
+        p.append(f"{w}: spec needs a 'table' for combinational logic or a "
+                 f"'trace' for anything with a dff in it")
+    if "table" in spec and "trace" in spec:
+        p.append(f"{w}: spec has both a table and a trace. A table cannot "
+                 f"express state and a trace already covers what one does.")
     if p:
         return p
     if not isinstance(spec["inputs"], list) or not spec["inputs"]:
@@ -613,6 +619,26 @@ def _check_sim_spec(spec, w):
         return p
 
     n_in, n_out = len(spec["inputs"]), len(spec["outputs"])
+
+    if "trace" in spec:
+        # A trace is a table over time, so it is not exhaustive and must not be
+        # checked for exhaustiveness. What it must be is long enough to show
+        # the state doing something, and rectangular.
+        tr = spec["trace"]
+        if not isinstance(tr, list) or len(tr) < 3:
+            p.append(f"{w}: a trace needs at least three cycles, or it cannot "
+                     f"show a value being held")
+            return p
+        for i, row in enumerate(tr):
+            if not isinstance(row, list) or len(row) != n_in + n_out:
+                p.append(f"{w}: trace cycle {i} has "
+                         f"{len(row) if isinstance(row, list) else '?'} values; "
+                         f"{n_in} inputs and {n_out} outputs means "
+                         f"{n_in + n_out}")
+            elif any(v not in (0, 1) for v in row):
+                p.append(f"{w}: trace cycle {i} has a value that is not 0 or 1")
+        return p
+
     want_rows = 2 ** n_in
     if not isinstance(spec["table"], list):
         p.append(f"{w}: spec table must be a list of rows")

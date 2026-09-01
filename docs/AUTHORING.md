@@ -146,6 +146,28 @@ Exactly eight, separated by `##`. Anything else fails the build.
 Everything else may not, and prose that follows a directive without belonging
 to it is a build error rather than something quietly appended to the brief.
 
+### Simulator specs
+
+A `sim` exercise carries a `spec` block. Combinational logic uses an exhaustive
+`table`, which must have `2^n` rows for `n` inputs:
+
+    { "chip": "Xor", "inputs": ["a","b"], "outputs": ["out"],
+      "table": [[0,0,0],[0,1,1],[1,0,1],[1,1,0]], "maxGates": 4 }
+
+Anything holding state uses a `trace` instead: one row per cycle, evaluated in
+order with the state carried forward. A table cannot express "what it held last
+cycle", so the build rejects a spec that has both.
+
+    { "chip": "Bit", "inputs": ["in","load"], "outputs": ["out"],
+      "trace": [[1,1,0],[0,0,1],[1,0,1],[0,1,1],[0,0,0]] }
+
+There are two primitives. `nand` is the one everything is built from. `dff` is
+an axiom: its output this cycle is its input from the previous one, every flop
+starts at 0, and a loop is legal exactly when it passes through one. A `dff` is
+not counted against a gate budget, and flip-flops are reported separately,
+because combinational cost and how much state a design carries are two
+different mistakes.
+
 ### The three judges
 
     @expect verdict <key>     the tool reported this verdict

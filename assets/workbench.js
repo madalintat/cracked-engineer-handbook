@@ -281,11 +281,17 @@ const WB = (() => {
 
       let detail = '';
       if (r.verdict === 'table-mismatch' && r.rows) {
-        const head = [...spec.inputs, ...spec.outputs, 'yours'];
+        // A trace row is identified by when it happened, not by its inputs:
+        // the same inputs appear on many cycles and mean different things,
+        // which is the entire difference between a table and a trace.
+        const timed = r.rows.length > 0 && r.rows[0].cycle !== undefined;
+        const head = [...(timed ? ['cycle'] : []),
+                      ...spec.inputs, ...spec.outputs, 'yours'];
         detail = '<table class="truth"><thead><tr>' +
           head.map(h => `<th>${esc(h)}</th>`).join('') + '</tr></thead><tbody>' +
           r.rows.map(row =>
             `<tr class="${row.ok ? '' : 'bad'}">` +
+            (timed ? `<td class="cyc">${row.cycle}</td>` : '') +
             row.ins.map(v => `<td>${v}</td>`).join('') +
             row.want.map(v => `<td>${v}</td>`).join('') +
             row.got.map(v => `<td>${v}</td>`).join('') + '</tr>').join('') +

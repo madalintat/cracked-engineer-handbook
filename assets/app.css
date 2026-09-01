@@ -1795,3 +1795,6 @@ a.gl:hover { text-decoration-style: solid; color: var(--accent-ink); }
 .fig-line { fill: none; stroke: var(--accent); stroke-width: 2;
             stroke-linejoin: round; stroke-linecap: round; }
 .fig-axis { stroke: var(--border); stroke-width: 1.2; }
+/* A trace's cycle number is its identity, so it reads as an index rather than
+   as another data column. */
+.truth td.cyc { color: var(--ink-4); font-variant-numeric: tabular-nums; }
