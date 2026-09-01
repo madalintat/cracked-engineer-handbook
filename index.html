@@ -25,6 +25,7 @@
       <a href="#/atlas" data-route="atlas">Atlas</a>
       <a href="#/progress" data-route="progress">Progress</a>
       <a href="#/glossary" data-route="glossary">Glossary</a>
+      <a href="#/errors" data-route="errors">Errors</a>
       <a href="#/search" data-route="search">Search</a>
       <a href="#/settings" data-route="settings">Settings</a>
     </nav>
@@ -36,8 +37,10 @@
 
 <main id="main" tabindex="-1"></main>
 
-<!-- Below 900px nav.main is hidden, so this is the only navigation there.
-     Without it those routes are unreachable on a phone. -->
+<!-- Below 900px nav.main is hidden. This carries the five routes a reader
+     moves between while working; the footer below carries every route, which
+     is what actually makes Glossary, Errors and Settings reachable on a
+     phone. They were not, before. -->
 <nav class="tabs" aria-label="Sections">
   <a href="#/" data-route=""><span class="ti" aria-hidden="true">▚</span>Home</a>
   <a href="#/track" data-route="track"><span class="ti" aria-hidden="true">≡</span>Track</a>
@@ -53,6 +56,16 @@
 <footer class="bot">
   <div class="wrap">
     <p id="footcount">Loading the track.</p>
+    <nav class="footnav" aria-label="All sections">
+      <a href="#/">Home</a>
+      <a href="#/track">Track</a>
+      <a href="#/atlas">Atlas</a>
+      <a href="#/progress">Progress</a>
+      <a href="#/glossary">Glossary</a>
+      <a href="#/errors">Errors</a>
+      <a href="#/search">Search</a>
+      <a href="#/settings">Settings</a>
+    </nav>
     <p>Built against real tools. Every exercise is checked by something that
       complains specifically: an in-page simulator, Compiler Explorer, Yosys, or
       a GPU you own.</p>

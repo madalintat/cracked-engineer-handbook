@@ -755,7 +755,8 @@ function wireWork() {
           }]);
         },
       });
-      renderVerdicts(res.verdicts);
+      renderVerdicts(res.verdicts, undefined, ex.backend,
+                     (res.signals.find(s => s.judge === 'verdict') || {}).key);
       renderDiagnosis(ex, res);
       if (res.pass) {
         Store.set(`pass.${slug}.${n}`, true);
@@ -774,18 +775,24 @@ function wireWork() {
   };
 }
 
-function renderVerdicts(verdicts, toolchain) {
+function renderVerdicts(verdicts, toolchain, backend, verdictKey) {
   const box = el('#verdicts');
   if (!box) return;
   const foot = toolchain
     ? `<p style="margin:2px 0 0;color:var(--ink-4);font:500 var(--t-micro)/1.5 var(--mono)">
          checked by ${esc(toolchain)}</p>` : '';
-  box.innerHTML = verdicts.map(v => `
+  // The reader is looking at a verdict slug at exactly the moment they want to
+  // know what it means, so the row carries the link rather than making them go
+  // and find the page.
+  const explain = (i) => (i === 0 && backend && verdictKey)
+    ? ` <a class="what-is" href="#/errors#${esc(backend)}-${esc(verdictKey)}"
+         >what <code>${esc(verdictKey)}</code> means</a>` : '';
+  box.innerHTML = verdicts.map((v, i) => `
     <div class="vrow" data-state="${esc(v.state)}">
       <div class="who">${esc(v.who)}</div>
       <div class="what">
         ${v.state === 'ok' ? '<span class="stamp">Correct</span><br>' : ''}
-        ${esc(v.title)}
+        ${esc(v.title)}${explain(i)}
         ${v.detail || ''}
       </div>
     </div>`).join('') + foot;
@@ -1443,6 +1450,87 @@ function wireSettings() {
   };
 }
 
+/* ---------------------------------------------------------------- errors */
+
+/* Every verdict every backend can report. The build refuses to ship a verdict
+ * that is not here and an entry for a verdict no backend can emit, so this
+ * page cannot drift away from what the workbench actually says. */
+async function viewErrors() {
+  const data = await getJSON('data/errors.json');
+  const entries = data.entries || [];
+  const label = {
+    sim: 'The simulator, in this page',
+    godbolt: 'Compiler Explorer',
+    yosys: 'Yosys, in this page',
+    modal: 'Your GPU runner',
+  };
+
+  const sections = data.backends.map(b => {
+    const list = entries.filter(e => e.backend === b);
+    if (!list.length) return '';
+    return `
+    <section class="ebackend" id="backend-${esc(b)}" data-backend="${esc(b)}">
+      <h2>${esc(b)} <span class="note">${esc(label[b] || '')}</span></h2>
+      ${list.map(e => `
+        <article class="eentry" id="${esc(e.id)}" data-hay="${
+          esc((e.verdict + ' ' + e.short).toLowerCase())}">
+          <h3><code>${esc(e.verdict)}</code></h3>
+          <p class="eshort">${e.short}</p>
+          <div class="prose">${e.html}</div>
+        </article>`).join('')}
+    </section>`;
+  }).join('');
+
+  return `
+  <div class="wrap errors" style="padding:48px 0" data-accent="slate">
+    <h1>Errors</h1>
+    <p class="prose" style="max-width:var(--measure)">Every verdict the four
+      backends can report, and what each one usually means. A result row in the
+      workbench links straight to its entry here.</p>
+    <nav class="atlastabs" style="margin-top:18px">${
+      data.backends.map(b => `<a href="#/errors#backend-${esc(b)}">${esc(b)}</a>`
+      ).join('')}</nav>
+    <div class="wbbar" style="margin-top:14px">
+      <input class="filter" id="errq" type="search" spellcheck="false"
+             placeholder="filter ${entries.length} verdicts"
+             aria-label="Filter verdicts">
+      <span class="note" id="errcount"></span>
+    </div>
+    <p id="errnone" class="empty" hidden>
+      No verdict matches that. These are the only ones the backends can report,
+      so if you saw something else on a result row it is a bug in this handbook
+      rather than a verdict missing from this page.</p>
+    ${sections}
+  </div>`;
+}
+
+function wireErrors() {
+  const q = el('#errq');
+  if (!q) return;
+  const entries = [...document.querySelectorAll('.eentry')];
+  const secs = [...document.querySelectorAll('.ebackend')];
+  const count = el('#errcount');
+  const none = el('#errnone');
+  const paint = () => {
+    const needle = q.value.trim().toLowerCase();
+    let shown = 0;
+    entries.forEach(e => {
+      const hit = !needle || e.dataset.hay.includes(needle);
+      e.hidden = !hit;
+      if (hit) shown++;
+    });
+    secs.forEach(s => {
+      s.hidden = ![...s.querySelectorAll('.eentry')].some(e => !e.hidden);
+    });
+    count.textContent = needle
+      ? `${shown} of ${entries.length}` : `${entries.length} verdicts`;
+    none.hidden = !(needle && shown === 0);
+  };
+  q.oninput = paint;
+  paint();
+  HH.teardown.push(() => { q.value = ''; });
+}
+
 function viewNotFound(hash) {
   // A 404 here is usually a mistyped or renamed unit slug, so say which unit
   // was probably meant rather than only that this one does not exist.
@@ -1496,6 +1584,7 @@ const ROUTES = {
   'work': viewWork,
   'atlas': viewAtlas,
   'glossary': viewGlossary,
+  'errors': viewErrors,
   'settings': viewSettings,
   'drills': viewDrills,
   'progress': viewProgress,
@@ -1532,6 +1621,7 @@ async function render() {
     if (route === 'track') wireTrack();
     if (route === 'atlas') wireAtlas();
     if (route === 'glossary') wireGlossary();
+    if (route === 'errors') wireErrors();
   } catch (err) {
     console.error(err);
     main.innerHTML = viewError(err);

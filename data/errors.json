@@ -1,0 +1,220 @@
+{
+ "entries": [
+  {
+   "backend": "sim",
+   "verdict": "cycle",
+   "id": "sim-cycle",
+   "short": "An output feeds back into its own input with no clock.",
+   "html": "<p>The simulator evaluates combinational logic by settling it, and a loop with no storage in it never settles: the output changes the input which changes the output. Real silicon does something worse, oscillating at whatever frequency the propagation delay allows.</p>\n<p>The trace names the wires in the loop. Combinational feedback is almost always a typo in a wire name. Deliberate feedback needs a clocked element, which is what Part II builds next.</p>"
+  },
+  {
+   "backend": "sim",
+   "verdict": "floating-input",
+   "id": "sim-floating-input",
+   "short": "A gate input is connected to nothing.",
+   "html": "<p>Every input of every part must be driven by something: a circuit input, or another part's output. An undriven input has no value to compute with, so the simulator stops rather than guessing zero.</p>\n<p>In hardware this is worse than an error, because a floating CMOS input sits at an undefined voltage, draws current through both halves of the gate at once, and can read as either level depending on the weather.</p>"
+  },
+  {
+   "backend": "sim",
+   "verdict": "gate-budget",
+   "id": "sim-gate-budget",
+   "short": "The design is correct and uses more gates than the exercise allows.",
+   "html": "<p>The answer matches on every row. There is a smaller one, and the budget is there because finding it is the exercise.</p>\n<p>Look for a signal you compute twice. Reusing one NAND output in two places is almost always where the saving is, and it is the same idea as common subexpression elimination in a compiler.</p>"
+  },
+  {
+   "backend": "sim",
+   "verdict": "non-nand-part",
+   "id": "sim-non-nand-part",
+   "short": "You used a part the exercise does not give you.",
+   "html": "<p>The point of Part II is that NAND alone is enough, so the simulator refuses any other primitive until the exercise says otherwise. Writing <code>and</code> is not a shortcut here, it is skipping the thing being demonstrated.</p>\n<p>Build the part you want out of NAND, in its own module, then use that. The exercises are ordered so the part you need was built two exercises ago.</p>"
+  },
+  {
+   "backend": "sim",
+   "verdict": "ok",
+   "id": "sim-ok",
+   "short": "The truth table matches on every row, using only NAND.",
+   "html": "<p>Every input combination in the exercise's table produced the output the table says it should, and the design used nothing but NAND parts. This is the only passing verdict the simulator has.</p>\n<p>Passing is not the same as minimal. The gate count is reported alongside the result, and several exercises have a target you can beat.</p>"
+  },
+  {
+   "backend": "sim",
+   "verdict": "table-mismatch",
+   "id": "sim-table-mismatch",
+   "short": "The circuit is well formed and computes the wrong function.",
+   "html": "<p>The netlist parsed, every wire is driven, and the simulator evaluated it successfully. The answer is wrong for at least one input row, and the row it names is the one to reason about first.</p>\n<p>Take that row, set the inputs by hand, and walk forward through your gates. The first gate whose output surprises you is the bug. Reading the table for a pattern is usually slower than tracing one row.</p>"
+  },
+  {
+   "backend": "godbolt",
+   "verdict": "assert-failed",
+   "id": "godbolt-assert-failed",
+   "short": "A check fired, and its text names the condition.",
+   "html": "<p>An <code>assert</code> in the exercise's checks was false. The message carries the file, the line, the enclosing function and the source text of the condition itself.</p>\n<p>Worth knowing for later: Compiler Explorer reports the process as killed by signal 6 for an assertion, and its own stderr says the assertion failed. This handbook keys on the text rather than the number, because the number has moved before.</p>"
+  },
+  {
+   "backend": "godbolt",
+   "verdict": "compile-error",
+   "id": "godbolt-compile-error",
+   "short": "The compiler rejected the program.",
+   "html": "<p>The message names a file and a line, and the line it names is where the compiler gave up rather than always where the mistake is. A missing semicolon is reported on the line after it.</p>\n<p>C and C++ diagnostics are worth reading to the end rather than to the first line. The note lines under an error frequently contain the actual answer, and a template error's first line is usually its least useful.</p>"
+  },
+  {
+   "backend": "godbolt",
+   "verdict": "link-error",
+   "id": "godbolt-link-error",
+   "short": "Every file compiled and a name has no definition.",
+   "html": "<p>The compiler was satisfied that the name exists, because a declaration promised it would. The linker went looking for the body and found nothing.</p>\n<p>In C++ the name in the message is mangled. The undefined symbol is usually a function you declared and never defined, a member function defined outside its class with the wrong signature, or a template instantiated in a translation unit that cannot see its definition.</p>"
+  },
+  {
+   "backend": "godbolt",
+   "verdict": "nonzero-exit",
+   "id": "godbolt-nonzero-exit",
+   "short": "It compiled, it ran, and it reported a wrong result.",
+   "html": "<p>Nothing crashed. The program ran to completion and returned a nonzero status, which for these exercises means one of the checks disagreed with your answer.</p>\n<p>This is the most informative failure the toolchain offers, because the output above the status usually names the input, what your code gave and what was expected.</p>"
+  },
+  {
+   "backend": "godbolt",
+   "verdict": "ok",
+   "id": "godbolt-ok",
+   "short": "It compiled, it ran, and every check passed.",
+   "html": "<p>The compiler reported no errors, the program exited zero, and the assertions in the exercise's checks all held.</p>\n<p>Where an exercise also asks for something in the generated assembly, that is judged separately and shown as its own row.</p>"
+  },
+  {
+   "backend": "godbolt",
+   "verdict": "sanitizer",
+   "id": "godbolt-sanitizer",
+   "short": "The sanitizer caught undefined behaviour as it happened.",
+   "html": "<p>This is the good outcome for the exercises that ask for it. Undefined behaviour is normally silent, and the whole difficulty of it is that the wrong answer arrives with no complaint. The sanitizer makes the moment visible.</p>\n<p>The message names the operation, the operand values and the type. Signed overflow reports the exact addition that overflowed and the type it did not fit in, which is far more useful than a wrong number arriving later.</p>"
+  },
+  {
+   "backend": "godbolt",
+   "verdict": "signal",
+   "id": "godbolt-signal",
+   "short": "The program was killed by the operating system.",
+   "html": "<p>A segmentation fault means a memory access the kernel refused, usually through a null or dangling pointer, or past the end of an array. A bus error means a misaligned access. An abort is usually an uncaught exception or a failed assertion.</p>\n<p>The signal tells you the kind of fault and nothing about where. Compiling with the sanitizer flags an exercise offers turns most of these into a message that names the line.</p>"
+  },
+  {
+   "backend": "godbolt",
+   "verdict": "timeout",
+   "id": "godbolt-timeout",
+   "short": "It compiled and did not finish in time.",
+   "html": "<p>The executor allows roughly ten seconds of wall clock. A program that exceeds it is usually in a loop whose condition can never become false.</p>\n<p>The classic version of this in Part VI is a loop counting down with an unsigned index, where the condition <code>i &gt;= 0</code> is true for every possible value of the type. Nothing is wrong with the arithmetic; the loop simply cannot end.</p>"
+  },
+  {
+   "backend": "godbolt",
+   "verdict": "warning",
+   "id": "godbolt-warning",
+   "short": "It compiled, and the compiler told you something you should read.",
+   "html": "<p>The program was accepted and the exercise treats the warning as the result, because that is the point: the exercises in Part VI are largely about code that compiles cleanly under default flags and is still wrong.</p>\n<p>Warnings are enabled deliberately per exercise. The flags used are shown with the result, so you can see which one caught this.</p>"
+  },
+  {
+   "backend": "yosys",
+   "verdict": "cell-budget",
+   "id": "yosys-cell-budget",
+   "short": "It synthesised correctly and used more cells than the exercise allows.",
+   "html": "<p>The design is right. The exercise names a cell count because reaching it is the exercise, and the count the tool reports is the honest measure rather than a guess from reading the source.</p>\n<p>Read the cell list rather than the total. A flip-flop where you expected none, or a wide adder where a comparator would do, is usually the whole difference.</p>"
+  },
+  {
+   "backend": "yosys",
+   "verdict": "latch-inferred",
+   "id": "yosys-latch-inferred",
+   "short": "A combinational block does not assign its output on every path.",
+   "html": "<p>Verilog says a signal that is not assigned on some path keeps its previous value. Keeping a previous value requires storage, so the synthesiser gives you storage: a level-sensitive latch you did not ask for.</p>\n<p>The fix is to assign a default at the top of the block, or to add the missing <code>else</code> or <code>default</code>. This is judged on the cell that appeared rather than on the warning text, because Yosys prints a message containing the same words when it did not infer one.</p>"
+  },
+  {
+   "backend": "yosys",
+   "verdict": "multi-driver",
+   "id": "yosys-multi-driver",
+   "short": "Two blocks drive the same signal.",
+   "html": "<p>A wire has one value at a time. Two sources for it is not a design, it is a question with no answer, and in silicon it is a short between two outputs.</p>\n<p>Combine the logic into one block. If the two blocks are meant to apply in different situations, that is a condition inside a single block, not two blocks racing.</p>"
+  },
+  {
+   "backend": "yosys",
+   "verdict": "ok",
+   "id": "yosys-ok",
+   "short": "It synthesised, and the netlist is what the exercise asked for.",
+   "html": "<p>The design parsed and synthesised, the cells it produced match what the exercise specified, and no latch was inferred where none was wanted.</p>\n<p>The cell counts are shown with the result. They are the answer to most of the questions in Part III, and they are worth reading even when the result passes.</p>"
+  },
+  {
+   "backend": "yosys",
+   "verdict": "sat-fail",
+   "id": "yosys-sat-fail",
+   "short": "Your design and the reference disagree on some input.",
+   "html": "<p>The equivalence check ran and found a counterexample, which it prints. That counterexample is a specific set of input values where the two circuits produce different outputs.</p>\n<p>This is a stronger statement than a failing test. It is a proof of difference, found by search rather than by trying cases, so there is no question of whether you simply missed the input that breaks it.</p>"
+  },
+  {
+   "backend": "yosys",
+   "verdict": "syntax-error",
+   "id": "yosys-syntax-error",
+   "short": "Yosys could not read the design.",
+   "html": "<p>The message names a line. Verilog's grammar is unforgiving about a missing <code>end</code>, <code>endmodule</code> or semicolon, and the error is often reported some distance after the omission because the parser only fails once it cannot continue.</p>\n<p>Check the construct that opened before the line named, not only the line itself.</p>"
+  },
+  {
+   "backend": "modal",
+   "verdict": "assert-failed",
+   "id": "modal-assert-failed",
+   "short": "A check fired, on the host or inside the kernel.",
+   "html": "<p>An <code>assert</code> in device code prints the block and thread that failed it, which narrows the search enormously compared with a host-side check that only sees the final array.</p>\n<p>Device-side assertions stop the kernel and put the context into an unusable state, so nothing after the failure is meaningful.</p>"
+  },
+  {
+   "backend": "modal",
+   "verdict": "compile-error",
+   "id": "modal-compile-error",
+   "short": "nvcc rejected the program.",
+   "html": "<p>The message names a file and a line the way a host compiler does, with one difference worth knowing: <code>nvcc</code> has no stable error codes. Its warnings are numbered, as <code>#549-D</code>, and its errors are prose.</p>\n<p>The most common cause in these exercises is calling something in device code that only exists on the host, or the reverse. A <code>__global__</code> function cannot call an ordinary host function, and the error says so without using those words.</p>"
+  },
+  {
+   "backend": "modal",
+   "verdict": "cuda-error",
+   "id": "modal-cuda-error",
+   "short": "The runtime reported a fault during execution.",
+   "html": "<p>An illegal memory access means the kernel touched memory outside any valid mapping. An unspecified launch failure is usually the same thing, reported less precisely.</p>\n<p>Take seriously how little this tells you about where. The fault is reported at the next synchronisation, not at the instruction that caused it, and a kernel writing out of bounds inside its own allocation does not produce this error at all. It produces a wrong answer and no complaint.</p>"
+  },
+  {
+   "backend": "modal",
+   "verdict": "launch-error",
+   "id": "modal-launch-error",
+   "short": "The kernel never started.",
+   "html": "<p>The launch itself was rejected, before any of your device code ran. An invalid configuration means the block size exceeds what the device allows, which is 1024 threads for every capability this handbook covers, or the shared memory requested exceeds what a block can have.</p>\n<p>Because a launch is asynchronous, this error is often reported later, at the next synchronising call rather than at the launch. Checking the error immediately after the launch is how you find out which launch it was.</p>"
+  },
+  {
+   "backend": "modal",
+   "verdict": "no-endpoint",
+   "id": "modal-no-endpoint",
+   "short": "There is no GPU runner configured in this browser.",
+   "html": "<p>These exercises run on hardware you rent, so there is no shared endpoint and there should not be one. Nothing here can reach a GPU until you deploy the runner to your own account and paste its two addresses into settings.</p>\n<p>The settings page has the deploy command and explains what the runner does. It is a single file, it holds no state, and everything else in this handbook keeps working without it.</p>"
+  },
+  {
+   "backend": "modal",
+   "verdict": "nonzero-exit",
+   "id": "modal-nonzero-exit",
+   "short": "The kernel ran, and computed the wrong answer.",
+   "html": "<p>Nothing crashed and nothing complained. The program ran to completion and one of the checks disagreed, which on a GPU usually means a warp did not do what the code appears to say.</p>\n<p>This is the failure to take most seriously. A kernel that faults tells you where to look; a kernel that quietly computes the wrong number tells you nothing, and the same bug on a cluster shows up as a model that trains slightly worse.</p>"
+  },
+  {
+   "backend": "modal",
+   "verdict": "ok",
+   "id": "modal-ok",
+   "short": "It compiled, the kernel ran on a real GPU, and the checks passed.",
+   "html": "<p><code>nvcc</code> accepted the program, the kernel launched on the GPU you selected, and the exercise's checks agreed with the result.</p>\n<p>The GPU it ran on is named with the result, because a kernel that passes on one compute capability is not automatically correct on another.</p>"
+  },
+  {
+   "backend": "modal",
+   "verdict": "sanitizer",
+   "id": "modal-sanitizer",
+   "short": "compute-sanitizer caught the access as it happened.",
+   "html": "<p>This is the outcome worth having. It names the kind of access, the thread and block that made it, and with <code>-lineinfo</code> the line of source it came from.</p>\n<p>It costs execution speed, which is why it is not on for every exercise. When something is wrong and nothing is complaining, it is the first thing to reach for.</p>"
+  },
+  {
+   "backend": "modal",
+   "verdict": "timeout",
+   "id": "modal-timeout",
+   "short": "The job did not finish inside its budget.",
+   "html": "<p>The runner allows a fixed wall clock per submission, including the time to start a container and compile. A kernel that exceeds it is usually in a loop that cannot terminate, or waiting at a barrier some threads never reach.</p>\n<p><code>__syncthreads()</code> inside a branch that only some threads take is the classic version. Every thread in the block has to reach the barrier, so the ones that skipped it never arrive and the ones that did wait forever.</p>"
+  }
+ ],
+ "backends": [
+  "sim",
+  "godbolt",
+  "yosys",
+  "modal"
+ ]
+}

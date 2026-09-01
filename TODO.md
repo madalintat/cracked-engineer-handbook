@@ -85,7 +85,9 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] Search: ranked, snippets around the match, indexes section bodies
 - [x] Glossary, with a gate that rejects a link to an undefined term
 - [x] Atlas: data-driven tables with a validation gate, sources and a filter
-- [~] Errors page
+- [x] Errors page: all 30 verdicts across the four backends, gated both ways
+      so a verdict cannot ship undocumented and an entry cannot describe a
+      verdict no backend emits. Result rows link to their entry
 
 ## 6. Ship
 

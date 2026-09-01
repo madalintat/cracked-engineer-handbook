@@ -841,6 +841,7 @@ def build(strict=True):
 
     atlas = build_atlas()
     glossary = build_glossary(units)
+    errors = build_errors()
 
     parts = [{"id": p[0], "roman": p[1], "title": p[2], "blurb": p[3],
               "phase": track.PHASE_OF[p[0]], "accent": track.accent_of(p[0]),
@@ -852,6 +853,7 @@ def build(strict=True):
         "backends": list(track.BACKENDS),
         "counts": {
             "atlas": len(atlas), "glossary": len(glossary),
+            "errors": len(errors),
             "phases": len(phases),
             "parts": len(parts), "units": len(manifest),
             "ready": sum(1 for u in manifest if u["ready"]),
@@ -883,11 +885,86 @@ def build(strict=True):
     write(DATA / "modal-gpus.json", load_gpu_catalog())
     write(DATA / "atlas.json", {"tables": atlas})
     write(DATA / "glossary.json", {"terms": glossary})
+    write(DATA / "errors.json", {"entries": errors,
+                                 "backends": list(VERDICTS)})
     search_index = build_search(manifest, units)
     fail(check_search_examples(search_index))
     write(DATA / "search.json", search_index)
     prune(DATA, units)
     return manifest, units
+
+
+def build_errors():
+    """Every verdict every backend can report, with prose.
+
+    The gate is the point: VERDICTS is what the browser is allowed to judge
+    against, so a verdict that exists in code and not here would reach a reader
+    as a bare slug with no explanation, and one here that no backend can emit
+    is a page nobody will ever land on.
+    """
+    path = CONTENT / "errors.md"
+    if not path.exists():
+        raise BuildError("content/errors.md is missing, so every verdict the "
+                         "workbench reports would be an unexplained slug")
+    problems, entries, seen = [], [], set()
+
+    for chunk in re.split(r"^##\s+", path.read_text(), flags=re.M)[1:]:
+        head, _, rest = chunk.partition("\n")
+        head = head.strip()
+        m = re.fullmatch(r"([a-z]+)\s*/\s*([a-z0-9-]+)", head)
+        if not m:
+            problems.append(f"errors.md: heading {head!r} is not "
+                            f"'<backend> / <verdict>'")
+            continue
+        backend, verdict = m.group(1), m.group(2)
+        w = f"errors.md {backend}/{verdict}"
+        if backend not in VERDICTS:
+            problems.append(f"{w}: unknown backend")
+            continue
+        if verdict not in VERDICTS[backend]:
+            problems.append(
+                f"{w}: {backend} cannot report {verdict!r}. It reports "
+                + ", ".join(sorted(VERDICTS[backend])))
+            continue
+        if (backend, verdict) in seen:
+            problems.append(f"{w}: documented twice")
+        seen.add((backend, verdict))
+
+        short, body = "", []
+        for line in rest.split("\n"):
+            dm = re.match(r"^@(\w+)\s*(.*)$", line)
+            if dm:
+                if dm.group(1) != "short":
+                    problems.append(f"{w}: unknown directive @{dm.group(1)}")
+                elif short:
+                    problems.append(f"{w}: two @short lines")
+                else:
+                    short = dm.group(2).strip()
+                continue
+            body.append(line)
+        if not short:
+            problems.append(f"{w}: no @short, so the table has no summary")
+        html_body, _ = render("\n".join(body).strip())
+        if not html_body:
+            problems.append(f"{w}: no prose. A slug and a one-liner is what "
+                            f"the reader already had")
+        problems += prose.lint(
+            re.sub(r"<[^>]+>", " ", prose.strip_code(html_body)), w)
+        problems += prose.check_summary(short, f"{w} @short")
+        entries.append({"backend": backend, "verdict": verdict,
+                        "id": f"{backend}-{verdict}",
+                        "short": inline(short), "html": html_body})
+
+    for backend, verdicts in VERDICTS.items():
+        for v in sorted(verdicts):
+            if (backend, v) not in seen:
+                problems.append(
+                    f"errors.md: {backend} can report {v!r} and it is not "
+                    f"documented, so a reader would get the bare slug")
+    fail(problems)
+    order = list(VERDICTS)
+    entries.sort(key=lambda e: (order.index(e["backend"]), e["verdict"]))
+    return entries
 
 
 def build_glossary(units):

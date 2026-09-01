@@ -117,6 +117,13 @@
   --rail: 232px;
   --shell: 1240px;
 
+  /* The sticky header measures 57px; --stick is that plus a little air, and
+   * it is the single number for both sticky tops and scroll-margin. It was
+   * four copies of 76px, one of which meant the tab bar instead. */
+  --header-h: 57px;
+  --tabbar-h: 76px;   /* the bottom bar, not the header */
+  --stick: calc(var(--header-h) + 12px);
+
   --r-1: 4px;
   --r-2: 6px;
   --r-3: 8px;
@@ -514,7 +521,7 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
  * header. scroll-margin-top does this in CSS, so no JS has to know the header
  * height. The Medical handbook solves the same problem with an offset computed
  * in its jumpTo; this needs no code at all. */
-.body :is(h2, h3) { scroll-margin-top: 76px; }
+.body :is(h2, h3) { scroll-margin-top: var(--stick); }
 
 /* And say where you landed, because a silent jump leaves the reader hunting
  * for what moved. */
@@ -532,7 +539,7 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
   grid-column: 1;
   grid-row: 1 / span 2;
   position: sticky;
-  top: 76px;
+  top: var(--stick);
   align-self: start;
   max-height: calc(100vh - 100px);
   overflow-y: auto;
@@ -934,7 +941,7 @@ footer.bot a { color: var(--ink-3); }
     display: inline-flex;
     position: fixed;
     right: 16px;
-    bottom: calc(76px + env(safe-area-inset-bottom, 0));
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0));
     z-index: 50;
   }
   .rail.in-sheet {
@@ -1142,7 +1149,6 @@ nav.tabs { display: none; }
   padding: 12px 14px;
   margin-bottom: 10px;
   border-left: 2px solid var(--border-soft);
-  scroll-margin-top: 76px;
   transition: border-color var(--fast) var(--ease);
 }
 .term:target, .term.landed {
@@ -1168,9 +1174,11 @@ a.gl {
 }
 a.gl:hover { color: var(--accent-ink); text-decoration: none; }
 
-/* A section reached by fragment must clear the sticky header, the same way a
-   heading does. */
-.gsec, section[id], .term { scroll-margin-top: 76px; }
+/* Anything that can be a fragment target must clear the sticky header. This
+   was a list of three class names, so every new kind of anchor had to remember
+   to join it, and the errors page's entries did not. An id inside #main is
+   exactly the set of things a fragment can address. */
+#main [id] { scroll-margin-top: var(--stick); }
 
 /* ------------------------------------------------------------- the track */
 /* Three levels: phase, part, unit. The unit is a row rather than a card,
@@ -1213,7 +1221,7 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
   gap: 12px;
   margin: 20px 0 8px;
   position: sticky;
-  top: 60px;
+  top: var(--header-h);
   z-index: 3;
   background: var(--bg);
   padding: 10px 0;
@@ -1364,3 +1372,58 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
 /* Dimming by opacity is how text ends up below 4.5:1 without anyone choosing
  * it: the colour still says --ink-2 in devtools. Dim by ink instead. */
 .dim { color: var(--ink-4); }
+
+/* ------------------------------------------------------------- the errors */
+
+.errors .ebackend { margin-top: 40px; }
+.errors .ebackend > h2 {
+  border-top: 2px solid var(--accent);
+  padding-top: 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--mono);
+}
+.errors .eentry { margin-top: 22px; max-width: var(--measure); }
+.errors .eentry h3 { margin: 0; font-size: var(--t-body); }
+.errors .eentry h3 code {
+  background: var(--code-bg);
+  color: var(--code-ink);
+  padding: 3px 7px;
+  border-radius: var(--r-1);
+}
+.errors .eshort {
+  margin: 8px 0 0;
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.errors .eentry .prose { margin-top: 6px; font-size: var(--t-sm); }
+.errors .eentry .prose p { margin: 8px 0 0; }
+
+/* The link from a result row to the verdict it just reported. */
+.what-is {
+  white-space: nowrap;
+  font-size: var(--t-tiny);
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+}
+.what-is:hover { text-decoration-color: var(--accent); }
+.what-is code { font-size: inherit; background: none; padding: 0; }
+
+/* Every route, at every width. The header nav hides below 900px and the tab
+ * bar only holds five, so without this Glossary, Errors and Settings had no
+ * way in on a phone. */
+.footnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0 0 14px;
+}
+.footnav a {
+  font: 600 var(--t-sm)/1.4 var(--sans);
+  color: var(--ink-2);
+  text-decoration: none;
+}
+.footnav a:hover { color: var(--accent-ink); text-decoration: underline; }

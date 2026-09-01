@@ -173,6 +173,29 @@ def check_blurb(blurb, where):
     return out
 
 
+def check_summary(text, where, lo=4, hi=20):
+    """A one-line summary, as opposed to a blurb.
+
+    check_blurb wants at least eight words, which is right for a unit blurb and
+    wrong for a table cell: the whole job of a summary is to be shorter than
+    the thing it summarises.
+    """
+    out = lint(text, where)
+    if not text.strip():
+        out.append(f"{where}: empty")
+        return out
+    if not text.rstrip().endswith((".", "?", "!")):
+        out.append(f"{where}: does not end in a full stop")
+    n = len(text.split())
+    if n < lo:
+        out.append(f"{where}: {n} words, too short to say anything")
+    if n > hi:
+        out.append(f"{where}: {n} words, too long for a one-line summary")
+    if re.search(r"\b(\w+)\s+\1\b", text, re.I):
+        out.append(f"{where}: doubled word")
+    return out
+
+
 def _selfcheck():
     bad = "This delves into the vibrant tapestry — in order to showcase it."
     got = lint(bad, "t")
