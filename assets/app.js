@@ -210,6 +210,9 @@ function viewTrack() {
         return `<span class="tick${on ? ' on' : ''}${
           u.ready ? '' : ' stub'}"></span>`;
       }).join('');
+      /* `.ticks`, not `.rail`: the contents rail on a unit page owns that
+       * name, and sharing it hid these below 1060px and laid the rail's
+       * heading beside its list above it. */
 
       return `
       <section class="part" id="${esc(p.id)}" data-part="${esc(p.id)}">
@@ -218,7 +221,7 @@ function viewTrack() {
           <h3>${esc(p.title)}</h3>
           <p class="pb">${esc(p.blurb)}</p>
           <div class="part-meta">
-            <span class="rail" role="img"
+            <span class="ticks" role="img"
                   aria-label="${read} of ${us.length} started">${rail}</span>
             <span class="part-tool">${
               written === us.length ? `All ${us.length} written`
@@ -413,10 +416,9 @@ async function viewUnit(slug) {
       ${edges}
     </header>
     <article class="body prose">${u.html}</article>
-    <p class="head" style="grid-column:2;margin-top:28px">
+    <p class="cta">
       <a class="btn" href="#/work/${esc(slug)}/1">Start the exercises</a>
-      <a class="btn ghost" href="#/drills/${esc(slug)}"
-         style="margin-left:8px">Drills</a>
+      <a class="btn ghost" href="#/drills/${esc(slug)}">Drills</a>
     </p>
     <nav class="unitnav" aria-label="Adjacent units">
       ${navLink(prev, 'prev')}${navLink(next, 'next')}
@@ -696,7 +698,7 @@ async function viewWork(slug, nRaw) {
     </div>
 
     <aside class="pane">
-      <div class="card" style="position:sticky;top:76px">
+      <div class="card about">
         <div class="meta"><span>What this is about</span></div>
         <p style="color:var(--ink-2);font-size:var(--t-sm)">${ex.concept}</p>
         <div class="hintbox" id="hints">
