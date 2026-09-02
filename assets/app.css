@@ -986,6 +986,24 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
   }
 }
 
+/* A page is on its way. Nothing is shown for the first 180ms, so a cached
+ * view never flickers a bar; past that, a slow fetch is visibly in progress
+ * rather than a page that seems not to have heard the click. */
+#main[aria-busy="true"]::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0;
+  height: 2px;
+  width: 30vw;
+  background: var(--accent);
+  z-index: 60;
+  animation: hh-loading .9s linear 180ms infinite both;
+}
+@keyframes hh-loading {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100vw); }
+}
+
 /* -------------------------------------------------------------- footer */
 
 footer.bot {

@@ -93,7 +93,12 @@ function viewHome() {
   }).join('');
 
   const ready = HH.manifest.units.filter(u => u.ready).length;
-  const started = HH.manifest.units.find(u => Store.get(`read.${u.slug}`, -1) >= 0);
+  /* The unit opened most recently. Before `last` was recorded this found the
+   * first unit with any read state, which after fourteen units still said
+   * "Continue: The switch". The fallback is for a store from before then. */
+  const last = Store.get('last');
+  const started = HH.manifest.units.find(u => u.slug === last && u.ready)
+    || HH.manifest.units.find(u => Store.get(`read.${u.slug}`, -1) >= 0);
 
   return `
   <div class="wrap">
@@ -178,7 +183,7 @@ function viewTrack() {
       </span>`;
     return `
     <li class="${cls}"
-        data-hay="${esc([u.title, u.blurb, u.backend].join(' ').toLowerCase())}">
+        data-hay="${esc([unitNo(u), u.title, u.blurb, u.backend].join(' ').toLowerCase())}">
       ${u.ready
         ? `<a href="#/unit/${esc(u.slug)}">${inner}</a>`
         : `<div class="u-card">${inner}</div>`}
@@ -523,6 +528,7 @@ function wireUnit(slug) {
   wireGlossHover();
   const unit = el('.unit');
   if (!unit) return;
+  Store.set('last', slug);
   const rail = el('.rail');
   const items = [...document.querySelectorAll('.rail li')];
   const heads = [...document.querySelectorAll('.body h2, .body h3')];
@@ -723,6 +729,7 @@ function wireWork() {
   const { slug, n, ex } = w;
   const host = el('#ed');
   if (!host) return;
+  Store.set('last', slug);
 
   /* The exercise declares its language and the build validates it against the
    * backend, so use it. Deriving it from the backend instead meant every
@@ -875,13 +882,17 @@ function wireWork() {
           }]);
         },
       });
+      const wasNew = res.pass && !Store.get(`pass.${slug}.${n}`, false);
+      if (res.pass) Store.set(`pass.${slug}.${n}`, true);
+      // The reader may have moved on while the tool was thinking. The solve
+      // is recorded either way; the verdict is drawn only on the page that
+      // asked for it, not on whatever page is there now.
+      if (!host.isConnected) return;
       renderVerdicts(res.verdicts, undefined, ex.backend,
                      (res.signals.find(s => s.judge === 'verdict') || {}).key,
                      res.pass);
       renderDiagnosis(ex, res);
       if (res.pass) {
-        const wasNew = !Store.get(`pass.${slug}.${n}`, false);
-        Store.set(`pass.${slug}.${n}`, true);
         el('#afterword').hidden = false;
         document.querySelector(`.exnav a[href$="/${n}"]`)?.classList.add('done');
         announce('Correct. ' + (res.verdicts[0]?.title || ''));
@@ -899,6 +910,7 @@ function wireWork() {
         announce('Not yet. ' + (res.verdicts[0]?.title || ''));
       }
     } catch (err) {
+      if (!host.isConnected) return;
       renderVerdicts([{ who: ex.backend, state: 'unavailable',
                         title: 'The checker could not run: ' + err.message }]);
     } finally {
@@ -1304,9 +1316,17 @@ function wirePopover({ openers, cardFor, cls }) {
     pop.style.left = `${left}px`;
   };
 
+  /* Leaving the term does not close the card at once: the pointer has to
+   * cross an 8px gap to reach the link inside it, and a card that closes on
+   * the gap is a card no mouse can use. Re-entering either cancels the close.
+   * (`cls` can be two class names, so it is not a selector; `contains` is.) */
+  let leaving = null;
   const onOver = e => {
+    clearTimeout(leaving);
     const el = e.target.closest(openers);
-    if (el) open(el); else if (!e.target.closest('.' + cls)) close();
+    if (el) return open(el);
+    if (pop.contains(e.target)) return;
+    leaving = setTimeout(close, 220);
   };
   const onFocus = e => {
     const el = e.target.closest(openers);
@@ -1316,7 +1336,7 @@ function wirePopover({ openers, cardFor, cls }) {
   const onClick = e => {
     const el = e.target.closest(openers);
     if (el) { e.preventDefault(); current === el ? close() : open(el); }
-    else if (!e.target.closest('.' + cls)) close();
+    else if (!pop.contains(e.target)) close();
   };
 
   addEventListener('pointerover', onOver);
@@ -1325,6 +1345,7 @@ function wirePopover({ openers, cardFor, cls }) {
   addEventListener('click', onClick);
   addEventListener('scroll', close, { passive: true });
   HH.teardown.push(() => {
+    clearTimeout(leaving);
     removeEventListener('pointerover', onOver);
     removeEventListener('focusin', onFocus);
     removeEventListener('keydown', onKey);
@@ -1970,13 +1991,6 @@ function viewError(err) {
   </div>`;
 }
 
-function viewSoon(title) {
-  return `<div class="wrap" style="padding:80px 0">
-    <h1>${esc(title)}</h1>
-    <p class="prose">Not built yet.</p>
-  </div>`;
-}
-
 /* ---------------------------------------------------------------- routing */
 
 const ROUTES = {
@@ -1994,7 +2008,13 @@ const ROUTES = {
   'search': viewSearch,
 };
 
+let renderSeq = 0;
+
 async function render() {
+  // Views fetch, so two navigations can be in flight at once, and without
+  // this they paint in the order they finish: a slow unit overwrites the
+  // fast one the reader clicked to afterwards, wired to the wrong DOM.
+  const seq = ++renderSeq;
   // A second '#' is a fragment within the view, as in #/glossary#nand or
   // #/track#physics. It must be split off before the route is parsed, or the
   // route becomes literally "glossary#nand" and matches nothing.
@@ -2014,7 +2034,10 @@ async function render() {
 
   try {
     const fn = ROUTES[route];
-    main.innerHTML = fn ? await fn(a, b) : viewNotFound(location.hash || '#/');
+    main.setAttribute('aria-busy', 'true');
+    const html = fn ? await fn(a, b) : viewNotFound(location.hash || '#/');
+    if (seq !== renderSeq) return;
+    main.innerHTML = html;
     if (route === 'unit' && a) wireUnit(a);
     if (route === 'work') wireWork();
     if (route === 'settings') wireSettings();
@@ -2027,9 +2050,12 @@ async function render() {
     if (route === 'errors') wireErrors();
   } catch (err) {
     console.error(err);
+    if (seq !== renderSeq) return;
     main.innerHTML = viewError(err);
     const r = el('#retry');
     if (r) r.onclick = () => { HH.cache.clear(); render(); };
+  } finally {
+    if (seq === renderSeq) main.removeAttribute('aria-busy');
   }
 
   // Focus the heading so a keyboard or screen-reader user lands in the content
@@ -2055,16 +2081,29 @@ async function render() {
 
 /* ----------------------------------------------------------------- theme */
 
+/* The theme itself is chosen by the inline script in index.html, before the
+ * stylesheet loads, so a light-preference reader never sees a dark frame.
+ * This wires the button, names the theme it would switch to, and keeps the
+ * browser chrome the colour of the page. */
 function initTheme() {
-  const saved = Store.get('theme');
-  const sys = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-  document.documentElement.dataset.theme = saved || sys;
-  el('#theme').onclick = () => {
+  const btn = el('#theme');
+  const meta = document.querySelector('meta[name="theme-color"]');
+  const paint = () => {
+    const cur = document.documentElement.dataset.theme;
+    const label = `Switch to ${cur === 'dark' ? 'light' : 'dark'} theme`;
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+    if (meta) meta.content =
+      getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  };
+  btn.onclick = () => {
     const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
     Store.set('theme', next);
+    paint();
     announce(`${next} theme`);
   };
+  paint();
 }
 
 /* ------------------------------------------------------------------ boot */
@@ -2076,6 +2115,8 @@ async function boot() {
   // scroll-margin-top too far down. Take the wheel.
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   initTheme();
+  // "#main" would otherwise reach the router as a route and render the 404.
+  el('.skip').onclick = ev => { ev.preventDefault(); el('#main').focus(); };
   try {
     HH.manifest = await getJSON('data/manifest.json');
     // The backend configuration comes from the build, not from this file, so
