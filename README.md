@@ -60,6 +60,7 @@ happened, silently, and was found by looking rather than by checking.
 - A verdict a backend can emit and the errors page does not document, or an
   entry for a verdict no backend can emit
 - A palette where any text drops below 4.5:1 on the ground it sits on
+- A `var()` in the stylesheet that nothing defines and nothing falls back from
 - A figure with no description, or one that follows a heading with nothing
   saying what the reader is about to look at
 - A glossary link in front matter or in a heading, where it renders as nothing

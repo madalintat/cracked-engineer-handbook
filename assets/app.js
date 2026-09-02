@@ -18,6 +18,10 @@ const HH = {
   cache: new Map(),
   KEY: 'hh-v1',
   teardown: [],      // listeners the current view owns; run on navigate away
+  scrollMem: new Map(),   // hash -> scrollY, for back and forward
+  at: '',                 // the hash the reader is on now
+  pushed: false,          // the pending hashchange came from a click here
+  restore: undefined,     // where render() should put the page, if not the top
 };
 
 /* ------------------------------------------------------------------ store */
@@ -434,7 +438,11 @@ async function viewUnit(slug) {
   </button>
   <div class="scrim" id="scrim"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Contents"
-       data-open="false"></div>`;
+       data-open="false">
+    <div class="sheet-bar">
+      <button class="btn ghost sheet-close" type="button">Close</button>
+    </div>
+  </div>`;
 }
 
 /* Scroll to a heading and mark it, so the reader can see what moved. The
@@ -596,7 +604,7 @@ function openSheet() {
   scrim.dataset.open = 'true';
   btn.setAttribute('aria-expanded', 'true');
   document.body.style.overflow = 'hidden';
-  const first = sheet.querySelector('a, button');
+  const first = sheet.querySelector('.rail a') || sheet.querySelector('a, button');
   if (first) first.focus();
   announce('Contents opened');
 }
@@ -625,6 +633,7 @@ function wireSheet(rail) {
     openSheet();
   };
   scrim.onclick = closeSheet;
+  sheet.querySelector('.sheet-close').onclick = closeSheet;
 
   const onKey = ev => {
     if (sheet.dataset.open !== 'true') return;
@@ -773,10 +782,19 @@ function wireWork() {
 
   HH.teardown.push(() => clearTimeout(HH._saveT));
 
-  el('#wrap').onclick = ev => {
-    const on = ev.currentTarget.getAttribute('aria-pressed') !== 'true';
-    ev.currentTarget.setAttribute('aria-pressed', String(on));
+  /* Wrap is a preference, and its default depends on the screen: a line of
+   * C that scrolls sideways on a phone is a line the reader cannot see whole,
+   * so narrow screens start wrapped and the choice is kept either way. */
+  const wrapBtn = el('#wrap');
+  const setWrap = on => {
+    wrapBtn.setAttribute('aria-pressed', String(on));
     editor.setWrap(on);
+  };
+  setWrap(Store.get('wrap', matchMedia('(max-width: 760px)').matches));
+  wrapBtn.onclick = () => {
+    const on = wrapBtn.getAttribute('aria-pressed') !== 'true';
+    Store.set('wrap', on);
+    setWrap(on);
   };
 
   el('#reset').onclick = () => {
@@ -829,6 +847,18 @@ function wireWork() {
 
   const runBtn = el('#run');
   const be = WB.BACKENDS[ex.backend];
+
+  // Run without leaving the editor. Vim mode leaves modified keys alone, so
+  // this works in both. The button says so for anyone who hovers it.
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+  runBtn.title = `Run (${mac ? '\u2318' : 'Ctrl'}+Enter)`;
+  runBtn.setAttribute('aria-keyshortcuts', 'Control+Enter Meta+Enter');
+  editor.el.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter' && (ev.metaKey || ev.ctrlKey)) {
+      ev.preventDefault();
+      if (!runBtn.disabled) runBtn.click();
+    }
+  });
 
   // A large runtime is stated before it is fetched, never during. The learner
   // decides whether to spend the bandwidth; the page does not decide for them.
@@ -1706,6 +1736,18 @@ function snippet(text, query) {
   return (from ? '…' : '') + cut + (from + 200 < t.length ? '…' : '');
 }
 
+/* Escaped, with every query term wrapped in <mark>. Split on the terms first
+ * and escape the pieces, so the markup is added to text that is already safe
+ * rather than searched for in text that has been escaped. */
+function mark(text, query) {
+  const terms = String(query || '').toLowerCase().split(/\s+/).filter(Boolean)
+    .map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (!terms.length) return esc(text);
+  const re = new RegExp(`(${terms.join('|')})`, 'gi');
+  return String(text).split(re)
+    .map((p, i) => i % 2 ? `<mark>${esc(p)}</mark>` : esc(p)).join('');
+}
+
 function resultRow(r) {
   const href = r.t === 'section' ? `#/unit/${r.slug}/${r.anchor}`
              : r.t === 'exercise' ? `#/work/${r.slug}/${r.n}`
@@ -1714,8 +1756,8 @@ function resultRow(r) {
   return `
     <a class="card" href="${esc(href)}" style="margin-top:10px">
       <div class="meta"><span>${esc(r.t)}</span><span>${esc(r.part)}</span></div>
-      <h3 style="font-size:var(--t-lede)">${esc(r.title)}</h3>
-      ${r.text ? `<p>${esc(snippet(r.text, HH.lastQuery))}</p>` : ''}
+      <h3 style="font-size:var(--t-lede)">${mark(r.title, HH.lastQuery)}</h3>
+      ${r.text ? `<p>${mark(snippet(r.text, HH.lastQuery), HH.lastQuery)}</p>` : ''}
     </a>`;
 }
 
@@ -1725,6 +1767,7 @@ function wireSearch() {
   f.onsubmit = (ev) => {
     ev.preventDefault();
     const v = f.elements.q.value.trim();
+    HH.pushed = true;   // a new search is a forward step, not a return
     location.hash = v ? `#/search/${encodeURIComponent(v)}` : '#/search';
   };
 }
@@ -2059,9 +2102,16 @@ async function render() {
   }
 
   // Focus the heading so a keyboard or screen-reader user lands in the content
-  // rather than back at the top of the document.
+  // rather than back at the top of the document. A view that names a field
+  // with `autofocus` gets that instead: the attribute does nothing on its own
+  // in markup that arrived through innerHTML.
   const h = main.querySelector('h1');
-  if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
+  const field = main.querySelector('[autofocus]');
+  if (h) h.setAttribute('tabindex', '-1');
+  const target = field || h;
+  if (target) target.focus({ preventScroll: true });
+  const restore = HH.restore;
+  HH.restore = undefined;
   // Position the page exactly once, here, and never leave it where the last
   // view left it. A fragment is handled generically so any view gets it for
   // free: #/track#gpu works because the section carries that id, without the
@@ -2074,7 +2124,10 @@ async function render() {
     if (target) target.scrollIntoView({ block: 'start', behavior: 'instant' });
     else window.scrollTo({ top: 0, behavior: 'instant' });
   } else {
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    // Back or forward returns to where the reader was on that page. The
+    // track is 122 units long, and a Back that lands at the top of it loses
+    // the place the reader had just left.
+    window.scrollTo({ top: restore || 0, behavior: 'instant' });
   }
   announce(h ? h.textContent.trim() : 'Page changed');
 }
@@ -2131,7 +2184,21 @@ async function boot() {
     el('#main').innerHTML = viewError(err);
     return;
   }
-  addEventListener('hashchange', render);
+  // A click on a link in this document is a step forward; anything else that
+  // changes the hash is the browser's Back or Forward, and gets its position
+  // back. This is the one distinction hashchange does not make itself.
+  addEventListener('click', ev => {
+    const a = ev.target.closest('a[href^="#"]');
+    if (a) HH.pushed = true;
+  }, true);
+  HH.at = location.hash;
+  addEventListener('hashchange', () => {
+    HH.scrollMem.set(HH.at, scrollY);
+    HH.at = location.hash;
+    HH.restore = HH.pushed ? undefined : HH.scrollMem.get(location.hash);
+    HH.pushed = false;
+    render();
+  });
   render();
 }
 

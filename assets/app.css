@@ -1004,6 +1004,19 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
   to   { transform: translateX(100vw); }
 }
 
+/* The sheet's own close control. Escape and the scrim also close it, but a
+ * reader who does not know that, or who is in a screen reader inside the
+ * trap, needs a button that says so. */
+.sheet-bar { display: flex; justify-content: flex-end; margin: -6px 0 6px; }
+
+/* The term the reader searched for, where it is in the result. */
+.results mark {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
 /* -------------------------------------------------------------- footer */
 
 footer.bot {
