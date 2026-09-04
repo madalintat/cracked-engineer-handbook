@@ -138,7 +138,10 @@
    "assumes": [
     "clock-bus",
     "encoding",
-    "universal"
+    "universal",
+    "languages",
+    "compile-time",
+    "integers"
    ],
    "stages": [
     {
@@ -182,8 +185,8 @@
     }
    ],
    "unitCount": 15,
-   "readyCount": 7,
-   "minutes": 370
+   "readyCount": 10,
+   "minutes": 535
   },
   {
    "id": "moving-things",

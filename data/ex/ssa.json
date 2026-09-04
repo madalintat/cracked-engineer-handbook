@@ -1,0 +1,310 @@
+{
+ "slug": "ssa",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "One name per definition",
+   "brief": "<p>Write <code>version_at_use</code>, returning which SSA name a use refers to, given how many assignments to that variable appear before the use in a straight line of code.</p>\n<p>Names are numbered from 1 at the first assignment. Return 0 when the variable has not been assigned yet, which is a use of an undefined value.</p>",
+   "kind": "output",
+   "concept": "A name is a definition, so finding the reaching definition is reading the name rather than searching backwards for it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "In a straight line there is no choice to make. The use sees the most recent assignment, and the names count from one."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. After three assignments the live name is <code>x3</code>, not <code>x1</code> and not <code>x4</code>. Numbering from zero gives an answer that collides with the case where nothing has been assigned at all.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>In real IR the name carries the definition with it, which is why reaching definitions stops being a dataflow problem in SSA and becomes a dereference.</p>",
+   "starter": "unsigned version_at_use(unsigned assignments_before) {\n    return assignments_before ? 1 : 0;\n}",
+   "tests": "#include <assert.h>\nunsigned version_at_use(unsigned);\nint main(void) {\n    assert(version_at_use(0) == 0);\n    assert(version_at_use(1) == 1);\n    assert(version_at_use(2) == 2);\n    assert(version_at_use(3) == 3);\n    assert(version_at_use(17) == 17);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "Where a phi is needed",
+   "brief": "<p>Write <code>needs_phi</code>, deciding whether a join block needs a phi node for a variable, given how many predecessors the block has and how many distinct definitions of that variable reach it.</p>\n<p>A phi is needed when more than one distinct definition arrives. One definition arriving along several edges is still one value, and a block with a single predecessor never needs one.</p>",
+   "kind": "output",
+   "concept": "The dominance condition is about distinct values arriving, not about the shape of the control flow graph, which is why a join can need no phi at all.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Count values, not edges. Two edges carrying the same definition need nothing."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Inserting a phi at every join with two predecessors puts one where both arms assigned nothing, which costs an instruction and buys no information. The question is how many distinct definitions arrive.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Real construction computes the dominance frontier to answer this for every definition at once, and the answer it gives for a single block is exactly this rule.</p>",
+   "starter": "int needs_phi(unsigned predecessors, unsigned distinct_defs) {\n    (void)distinct_defs;\n    return predecessors > 1;\n}",
+   "tests": "#include <assert.h>\nint needs_phi(unsigned, unsigned);\nint main(void) {\n    assert(needs_phi(1, 1) == 0);   /* straight line */\n    assert(needs_phi(2, 1) == 0);   /* both arms carry the same value */\n    assert(needs_phi(2, 2) == 1);   /* the classic if-else */\n    assert(needs_phi(3, 2) == 1);\n    assert(needs_phi(2, 0) == 0);   /* nothing defined on either arm */\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Dominance, from an immediate dominator array",
+   "brief": "<p>Write <code>dominates</code>, deciding whether block <code>a</code> dominates block <code>b</code>, given the immediate dominator of every block.</p>\n<p>Block 0 is the entry and its immediate dominator is itself. A block dominates itself. Otherwise walk up from <code>b</code> through immediate dominators and see whether <code>a</code> is on the way.</p>",
+   "kind": "output",
+   "concept": "Dominance is what makes SSA construction decidable, and the whole relation is recoverable from one parent pointer per block.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Walk from <code>b</code> upwards. Stop at the entry, whose immediate dominator is itself, or the walk never ends."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Every block dominates itself, and the entry dominates everything. A walk that does not stop at the entry either loops or reports the wrong answer for the entry.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The dominator tree is computed once and reused by most of the middle end, which is why a pass that only reorders instructions inside a block does not force it to be rebuilt.</p>",
+   "starter": "int dominates(const unsigned *idom, unsigned a, unsigned b) {\n    (void)idom;\n    return a == b;\n}",
+   "tests": "#include <assert.h>\nint dominates(const unsigned *, unsigned, unsigned);\nint main(void) {\n    /* 0 -> 1 -> 2, and 0 -> 3 */\n    unsigned idom[] = {0, 0, 1, 0};\n    assert(dominates(idom, 0, 0) == 1);\n    assert(dominates(idom, 0, 3) == 1);\n    assert(dominates(idom, 1, 2) == 1);\n    assert(dominates(idom, 2, 2) == 1);\n    assert(dominates(idom, 2, 1) == 0);\n    assert(dominates(idom, 1, 3) == 0);\n    assert(dominates(idom, 3, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "The sweep that removes dead code",
+   "brief": "<p>Write <code>live_defs</code>, returning how many definitions survive dead code elimination, given a use count for each definition and, for each one, which definition it uses.</p>\n<p>A definition is dead when nothing uses it. Removing it removes its own uses, so a definition that was only used by dead code becomes dead in turn. Keep going until nothing changes.</p>\n<p><code>uses[i]</code> is how many live things currently use definition <code>i</code>. <code>operand[i]</code> is the definition that <code>i</code> reads, or -1 if it reads nothing. Definitions with a side effect are marked in <code>rooted</code> and are never removed.</p>",
+   "kind": "output",
+   "concept": "Dead code elimination in SSA is a sweep with a worklist, not an analysis, because a definition with no uses is dead with no further argument.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Removing a definition decrements the use count of whatever it read, which can make that one dead too. One pass is not enough."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A chain of three definitions where only the last is unused collapses entirely: removing it makes the second dead, and removing that makes the first dead. A single pass finds only the first of the three.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The same shape appears in every mark and sweep collector. What SSA contributes is that the use count is exact rather than conservative.</p>",
+   "starter": "unsigned live_defs(unsigned *uses, const int *operand, const int *rooted,\n                   unsigned n) {\n    (void)operand;\n    unsigned live = 0;\n    for (unsigned i = 0; i < n; i++)\n        if (uses[i] || rooted[i]) live++;\n    return live;\n}",
+   "tests": "#include <assert.h>\nunsigned live_defs(unsigned *, const int *, const int *, unsigned);\nint main(void) {\n    /* 0 <- 1 <- 2, nothing rooted: all three go. */\n    { unsigned u[] = {1, 1, 0}; int op[] = {-1, 0, 1}; int r[] = {0, 0, 0};\n      assert(live_defs(u, op, r, 3) == 0); }\n    /* Same chain, but 2 has a side effect: all three stay. */\n    { unsigned u[] = {1, 1, 0}; int op[] = {-1, 0, 1}; int r[] = {0, 0, 1};\n      assert(live_defs(u, op, r, 3) == 3); }\n    /* A rooted definition and one dead one beside it. */\n    { unsigned u[] = {0, 0}; int op[] = {-1, -1}; int r[] = {1, 0};\n      assert(live_defs(u, op, r, 2) == 1); }\n    /* Nothing to do. */\n    { unsigned u[] = {0}; int op[] = {-1}; int r[] = {1};\n      assert(live_defs(u, op, r, 1) == 1); }\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Two computations of the same value",
+   "brief": "<p>Write <code>value_number</code>, assigning a value number to an expression given its operator and the names of its two operands, using a table of expressions already numbered.</p>\n<p>Two expressions with the same operator and the same operand names are the same value and get the same number. A new expression gets the next unused number.</p>\n<p>Operands are already SSA names, so equal names mean equal values. Commutativity is not to be assumed: only exact matches count.</p>",
+   "kind": "output",
+   "concept": "A name is a definition, so comparing names compares values, which is what makes global value numbering nearly free in this form.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Scan the table for an exact match on all three fields. Only when there is none does a new number get handed out."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The same operator over different operands is a different value, and the same operands under a different operator are too. All three fields have to match.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>In non-SSA form this needs a proof that neither operand was reassigned between the two computations. Here the names carry that proof.</p>",
+   "starter": "unsigned value_number(const char *ops, const unsigned *lhs,\n                      const unsigned *rhs, unsigned n,\n                      char op, unsigned a, unsigned b) {\n    (void)ops; (void)lhs; (void)rhs; (void)op; (void)a; (void)b;\n    return n;\n}",
+   "tests": "#include <assert.h>\nunsigned value_number(const char *, const unsigned *, const unsigned *,\n                      unsigned, char, unsigned, unsigned);\nint main(void) {\n    char ops[]      = {'+', '*', '+'};\n    unsigned lhs[]  = { 1,   2,   3 };\n    unsigned rhs[]  = { 2,   3,   4 };\n    /* Already in the table: reuse the number. */\n    assert(value_number(ops, lhs, rhs, 3, '+', 1, 2) == 0);\n    assert(value_number(ops, lhs, rhs, 3, '*', 2, 3) == 1);\n    assert(value_number(ops, lhs, rhs, 3, '+', 3, 4) == 2);\n    /* New: different operands, or a different operator. */\n    assert(value_number(ops, lhs, rhs, 3, '+', 2, 1) == 3);\n    assert(value_number(ops, lhs, rhs, 3, '*', 1, 2) == 3);\n    assert(value_number(ops, lhs, rhs, 3, '+', 9, 9) == 3);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Taking the phi nodes out again",
+   "brief": "<p>Write <code>copies_inserted</code>, returning how many copy instructions phi elimination adds for one join block, given the number of phi nodes there and the number of predecessors.</p>\n<p>Every phi takes one argument per predecessor, and each argument becomes a copy at the end of that predecessor. A copy whose source and destination are already the same register is not emitted, and <code>same</code> says how many of the arguments are in that position.</p>",
+   "kind": "output",
+   "concept": "A phi is not an instruction, so it has to become one somewhere, and where it goes is the edge rather than the join.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "One copy per phi per predecessor, less the ones that would copy a register to itself."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Two phis at a join with two predecessors are four copies before any are elided, not two. Each phi contributes one per incoming edge.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The copies go at the end of each predecessor rather than at the join, which is where the lost copy and swap problems come from, and why real phi elimination is longer than it sounds.</p>",
+   "starter": "unsigned copies_inserted(unsigned phis, unsigned preds, unsigned same) {\n    (void)preds; (void)same;\n    return phis;\n}",
+   "tests": "#include <assert.h>\nunsigned copies_inserted(unsigned, unsigned, unsigned);\nint main(void) {\n    assert(copies_inserted(0, 2, 0) == 0);\n    assert(copies_inserted(1, 2, 0) == 2);\n    assert(copies_inserted(2, 2, 0) == 4);\n    assert(copies_inserted(2, 3, 0) == 6);\n    assert(copies_inserted(2, 2, 3) == 1);   /* three would be self copies */\n    assert(copies_inserted(1, 2, 2) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "What a promise buys the optimiser",
+   "brief": "<p>Write <code>can_widen</code>, deciding whether a loop counter may be widened to 64 bits, given whether the counter is signed and whether the loop is known to run few enough times that it cannot wrap.</p>\n<p>Signed overflow is undefined, so a signed counter may be widened without checking anything. Unsigned overflow is defined to wrap, so an unsigned counter may be widened only when the compiler can prove the wrap never happens.</p>",
+   "kind": "output",
+   "concept": "The difference between undefined and defined is what the optimiser is allowed to assume, and it shows up as different machine code for the same loop.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The signed case needs no proof, because the standard already supplied it."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. An unsigned counter with no bound cannot be widened, because a wrapping 32 bit sequence and a 64 bit one are different programs. A signed one can, because the standard says the wrap cannot happen.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Change <code>int i</code> to <code>unsigned i</code> in a summation loop and the generated code changes for exactly this reason. Undefined behaviour is not there to trap you; a defined behaviour is a promise the optimiser then has to keep.</p>",
+   "starter": "int can_widen(int is_signed, int bound_known) {\n    (void)is_signed;\n    return bound_known;\n}",
+   "tests": "#include <assert.h>\nint can_widen(int, int);\nint main(void) {\n    assert(can_widen(1, 0) == 1);   /* signed, no proof needed */\n    assert(can_widen(1, 1) == 1);\n    assert(can_widen(0, 1) == 1);   /* unsigned, but bounded */\n    assert(can_widen(0, 0) == 0);   /* unsigned and unbounded */\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Constants, and the branch that stops existing",
+   "brief": "<p>Write <code>reachable_blocks</code>, returning how many blocks of a small function remain reachable once constants have been propagated.</p>\n<p>The function is a chain of <code>n</code> blocks. Block <code>i</code> ends in a conditional branch whose condition is described by <code>cond[i]</code>: 1 for a condition folded to true, 0 for one folded to false, and -1 for one that is not constant. A true condition takes the next block in the chain and a false condition skips it, jumping to the one after. The last block ends the function.</p>\n<p>Count block 0 and every block reachable from it.</p>",
+   "kind": "output",
+   "concept": "Constant propagation and unreachable code elimination feed each other, which is why doing them at once beats doing either alone.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A non-constant condition reaches both successors. A constant one reaches only the side it selects, and the other side may then have nothing reaching it."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A folded condition removes an edge, and a block that has lost its only incoming edge is unreachable even though the code for it is still there. Counting every block reaches the answer only when nothing folded.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is sparse conditional constant propagation in miniature. Each folded condition removes an edge, an unreachable block cannot contribute a value, and that can fold the next condition, which is why the two passes are one pass.</p>",
+   "starter": "unsigned reachable_blocks(const int *cond, unsigned n) {\n    (void)cond;\n    return n;\n}",
+   "tests": "#include <assert.h>\nunsigned reachable_blocks(const int *, unsigned);\nint main(void) {\n    { int c[] = {-1, -1, -1};  assert(reachable_blocks(c, 3) == 3); }\n    /* Block 0 always skips block 1, which nothing else reaches. */\n    { int c[] = {0, -1, -1};   assert(reachable_blocks(c, 3) == 2); }\n    { int c[] = {1, -1, -1};   assert(reachable_blocks(c, 3) == 3); }\n    /* Two skips in a row. */\n    { int c[] = {0, -1, 0, -1, -1};\n      assert(reachable_blocks(c, 5) == 3); }\n    { int c[] = {-1};          assert(reachable_blocks(c, 1) == 1); }\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

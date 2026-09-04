@@ -132,3 +132,16 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
       hover cards; the render race; the theme flash; scroll memory on Back;
       and `tools/check-css.mjs`, which fails the release on a `var()` that
       nothing defines
+
+## 8. Content, from unit 047
+
+- [x] 047 `parsing`, source text to syntax tree. Note, 8 exercises validated
+      against gcc and clang, 15 drills. Its `needs` are `languages` and
+      `compile-time`, which the under-the-code path now declares it skips
+- [x] 048 `ssa`, the middle end. Note, 8 exercises validated, 15 drills.
+      Needs `integers`, because the note reads a widened induction variable
+      and the reason it is legal is that signed overflow is undefined
+- [x] 049 `codegen`, the back end. Selection as pattern matching, allocation
+      as graph colouring, and the two -O jumps that are permissions rather
+      than passes: strict aliasing and undefined signed overflow
+- [ ] 050 `interpreters`, and the rest of Part IX

@@ -71,6 +71,7 @@
  ],
  "neededBy": [
   "floats",
-  "text"
+  "text",
+  "ssa"
  ]
 }

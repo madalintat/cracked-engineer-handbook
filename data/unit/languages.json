@@ -74,6 +74,7 @@
  ],
  "neededBy": [
   "computability",
-  "complexity"
+  "complexity",
+  "parsing"
  ]
 }

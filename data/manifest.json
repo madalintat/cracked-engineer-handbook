@@ -739,7 +739,8 @@
    ],
    "neededBy": [
     "computability",
-    "complexity"
+    "complexity",
+    "parsing"
    ],
    "minutes": 55
   },
@@ -809,7 +810,8 @@
     "universal"
    ],
    "neededBy": [
-    "addressing"
+    "addressing",
+    "codegen"
    ],
    "minutes": 50
   },
@@ -981,7 +983,8 @@
    ],
    "neededBy": [
     "floats",
-    "text"
+    "text",
+    "ssa"
    ],
    "minutes": 50
   },
@@ -1119,7 +1122,9 @@
    "needs": [
     "raii"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "parsing"
+   ],
    "minutes": 55
   },
   {
@@ -1418,12 +1423,18 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1869,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "languages",
+    "compile-time"
+   ],
+   "neededBy": [
+    "ssa"
+   ],
+   "minutes": 55
   },
   {
    "slug": "ssa",
@@ -1436,12 +1447,18 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1568,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "integers",
+    "parsing"
+   ],
+   "neededBy": [
+    "codegen"
+   ],
+   "minutes": 55
   },
   {
    "slug": "codegen",
@@ -1454,12 +1471,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1566,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "registers",
+    "ssa"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "interpreters",
@@ -2798,9 +2819,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 47,
-  "words": 70933,
-  "exercises": 376,
-  "drills": 705
+  "ready": 50,
+  "words": 75936,
+  "exercises": 400,
+  "drills": 750
  }
 }

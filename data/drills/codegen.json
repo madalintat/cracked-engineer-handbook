@@ -1,0 +1,185 @@
+{
+ "slug": "codegen",
+ "drills": [
+  {
+   "n": 1,
+   "q": "Why does <code>x * 5</code> often compile to an address calculation?",
+   "options": [
+    "The address unit computes a base plus a scaled index, and scaling by four then adding the base is a multiply by five",
+    "The multiply instruction is not available in 32 bit mode",
+    "The compiler is avoiding a multiply because it sets the flags",
+    "Address calculations are the only instructions that can take three operands"
+   ],
+   "correct": 0,
+   "why": "<p>It is one instruction, and it does not touch the flags. It falls out of a cost model over patterns rather than being a rule written down for the number five.</p>"
+  },
+  {
+   "n": 2,
+   "q": "What kind of problem is instruction selection?",
+   "options": [
+    "Covering the IR with the cheapest available set of patterns",
+    "Translating each IR operation into its corresponding instruction",
+    "Choosing between the instruction sets the target supports",
+    "Deciding the order instructions are emitted in"
+   ],
+   "correct": 0,
+   "why": "<p>If it were a translation there would be nothing to decide. The classic formulation is pattern matching over a grammar of instructions with costs.</p>"
+  },
+  {
+   "n": 3,
+   "q": "What is an edge in an interference graph?",
+   "options": [
+    "Two live ranges overlap, so they cannot share a register",
+    "One value is computed from the other",
+    "Two values are copied between each other",
+    "Two values are used by the same instruction"
+   ],
+   "correct": 0,
+   "why": "<p>Overlapping means both are live at some point. A copy between two values is the opposite: it is the reason to try to give them the same register.</p>"
+  },
+  {
+   "n": 4,
+   "q": "Assigning <code>k</code> registers to an interference graph is which problem?",
+   "options": [
+    "<code>k</code> colouring the graph, which is NP complete in general",
+    "Topologically sorting the graph",
+    "Finding a maximum matching",
+    "Computing the graph's dominance frontier"
+   ],
+   "correct": 0,
+   "why": "<p>That is why real allocators run a heuristic rather than an exact algorithm.</p>"
+  },
+  {
+   "n": 5,
+   "q": "With <code>k</code> colours, which node can the simplify step always remove?",
+   "options": [
+    "One with strictly fewer than <code>k</code> neighbours",
+    "One with <code>k</code> or fewer neighbours",
+    "One with no neighbours at all",
+    "The one with the highest degree"
+   ],
+   "correct": 0,
+   "why": "<p>A node with exactly <code>k</code> neighbours can have every colour taken. Strictly fewer means a colour is guaranteed to be free whatever the neighbours get.</p>"
+  },
+  {
+   "n": 6,
+   "q": "What does coalescing do?",
+   "options": [
+    "Merges two nodes joined by a copy, when the merge cannot make the graph harder to colour",
+    "Combines two instructions into one during selection",
+    "Merges adjacent basic blocks with a single edge between them",
+    "Reuses one stack slot for two spilled values"
+   ],
+   "correct": 0,
+   "why": "<p>It is where register to register moves go. A move you never see in the output was usually removed here rather than by a peephole pass.</p>"
+  },
+  {
+   "n": 7,
+   "q": "Why is the coalescing test conservative?",
+   "options": [
+    "A merge that makes the graph uncolourable costs a spill, which is worse than the move it saved",
+    "The exact test is undecidable",
+    "The allocator has not built the full graph yet",
+    "Merging changes the meaning of the program unless it is provably safe"
+   ],
+   "correct": 0,
+   "why": "<p>Removing one instruction is a small win, and adding memory traffic to a loop is a large loss, so the test errs towards refusing.</p>"
+  },
+  {
+   "n": 8,
+   "q": "When an allocator has to spill, how does it choose the victim?",
+   "options": [
+    "By cost, weighting uses by loop depth and dividing by degree",
+    "By the value with the longest live range",
+    "By the value defined earliest",
+    "By the value with the fewest uses, without further weighting"
+   ],
+   "correct": 0,
+   "why": "<p>A use inside a loop is paid every iteration. Ignoring depth spills the one value the hot loop needs, which is the decision that makes the function slower.</p>"
+  },
+  {
+   "n": 9,
+   "q": "Which registers does the allocator not get to choose?",
+   "options": [
+    "Those fixed by the calling convention, by instructions that clobber specific registers, and by register class",
+    "None; the allocator chooses all of them",
+    "Only the stack pointer",
+    "Only the callee-saved registers"
+   ],
+   "correct": 0,
+   "why": "<p>It is colouring a graph in which some nodes already have their colour, which is most of what the textbook version leaves out.</p>"
+  },
+  {
+   "n": 10,
+   "q": "An x86-64 core renames its sixteen architectural registers onto a much larger physical file. So why does register allocation still matter?",
+   "options": [
+    "Because spilling adds real memory traffic and instructions, not because the machine runs out of places",
+    "It does not; on an out-of-order core the allocator is decorative",
+    "Because renaming only applies to floating point registers",
+    "Because the rename table is smaller than the register file"
+   ],
+   "correct": 0,
+   "why": "<p>The machine can keep far more than sixteen values in flight. What it cannot do is make a spill and reload disappear.</p>"
+  },
+  {
+   "n": 11,
+   "q": "Where does instruction scheduling still matter on an out-of-order machine?",
+   "options": [
+    "It decides how many values are live at once, which decides what the allocator sees",
+    "It is the main source of performance, as on an in-order machine",
+    "It only matters after register allocation, to fix up spill code",
+    "It has no effect, because the hardware reorders anyway"
+   ],
+   "correct": 0,
+   "why": "<p>It shapes the problem rather than solving it. The hardware reorders across a window of a few hundred instructions; it cannot undo a spill.</p>"
+  },
+  {
+   "n": 12,
+   "q": "Why is <code>-O1</code> the level to start reading assembly at?",
+   "options": [
+    "Enough has happened to be interesting, and not so much that it cannot be followed",
+    "It is the level distributions ship",
+    "It is the only level where the output matches the source line by line",
+    "It is the last level before undefined behaviour is exploited"
+   ],
+   "correct": 0,
+   "why": "<p><code>-O0</code> output is mostly stack traffic, because every variable lives in memory. <code>-O2</code> output is dominated by transformations that need explaining first.</p>"
+  },
+  {
+   "n": 13,
+   "q": "What does strict aliasing, on from <code>-O2</code>, permit?",
+   "options": [
+    "Assuming two pointers of incompatible types do not refer to the same object",
+    "Assuming no two pointers alias, whatever their types",
+    "Reordering floating point operations",
+    "Assuming a pointer is never null"
+   ],
+   "correct": 0,
+   "why": "<p>It is what lets a value stay in a register across a store through an unrelated pointer type, which is why the same program prints a different number at <code>-O0</code> and <code>-O2</code>.</p>"
+  },
+  {
+   "n": 14,
+   "q": "A program prints 0 at <code>-O0</code>, 1 at <code>-O2</code>, and 0 at <code>-O2 -fno-strict-aliasing</code>. What happened?",
+   "options": [
+    "At <code>-O2</code> the compiler reused a value it had just stored, because the promise said the pointers could not alias",
+    "The optimiser has a bug that the flag works around",
+    "The stored value was in a register at one level and in memory at another, by chance",
+    "Undefined behaviour made the output arbitrary, and it could print anything"
+   ],
+   "correct": 0,
+   "why": "<p>The middle line is a promise being kept. The third line is the same program with the promise withdrawn, and it costs a reload.</p>"
+  },
+  {
+   "n": 15,
+   "q": "What does <code>-Ofast</code> add on top of <code>-O3</code>?",
+   "options": [
+    "Flags that violate the standard, including reassociating floating point",
+    "Only more aggressive inlining and unrolling",
+    "Link time optimisation",
+    "Target-specific instruction selection for the host machine"
+   ],
+   "correct": 0,
+   "why": "<p>Floating point addition is not associative, so reassociating it changes results. It can be a large win and it is not something to ship without knowing which promise was given away.</p>"
+  }
+ ]
+}

@@ -1,0 +1,185 @@
+{
+ "slug": "ssa",
+ "drills": [
+  {
+   "n": 1,
+   "q": "What does static single assignment mean?",
+   "options": [
+    "Every value is assigned exactly once, and a name refers to one definition",
+    "Every variable is assigned once at run time, however many times it appears",
+    "Assignments are moved to the top of the function",
+    "Each variable lives in exactly one register"
+   ],
+   "correct": 0,
+   "why": "<p>It is a property of the text, not of what happens when the program runs. A loop body can execute a definition many times; there is still one instruction that defines that name.</p>"
+  },
+  {
+   "n": 2,
+   "q": "In SSA, what does it cost to find the definition that reaches a use?",
+   "options": [
+    "Nothing beyond reading the name, which is the definition",
+    "A backwards walk through the control flow graph",
+    "A fixpoint iteration over the whole function",
+    "A query to the dominator tree"
+   ],
+   "correct": 0,
+   "why": "<p>This is the trade the whole form exists to make. Renaming is cheap, and it removes an analysis that otherwise has to be redone after every transformation.</p>"
+  },
+  {
+   "n": 3,
+   "q": "What is a phi node for?",
+   "options": [
+    "Selecting a value according to which predecessor control arrived from",
+    "Copying a value between registers at a join",
+    "Marking a variable as live across a branch",
+    "Comparing two values and branching on the result"
+   ],
+   "correct": 0,
+   "why": "<p>It exists so that the block after a join can still name exactly one definition, even though two different values could have arrived.</p>"
+  },
+  {
+   "n": 4,
+   "q": "Which instruction set has a phi instruction?",
+   "options": [
+    "None; it exists only while the program is in SSA form",
+    "All of them, as a conditional move",
+    "x86-64 only, as part of the conditional move family",
+    "Whichever ones support predicated execution"
+   ],
+   "correct": 0,
+   "why": "<p>It is bookkeeping. Before register allocation it is removed, and it becomes a copy on each incoming edge.</p>"
+  },
+  {
+   "n": 5,
+   "q": "A join block has two predecessors, and both arms leave a variable untouched. What does SSA construction insert?",
+   "options": [
+    "Nothing, because only one definition arrives",
+    "A phi with two identical arguments",
+    "A phi with one argument",
+    "A copy on each incoming edge"
+   ],
+   "correct": 0,
+   "why": "<p>The question is how many distinct definitions arrive, not how many edges there are. A phi with nothing to choose between costs an instruction and buys no information.</p>"
+  },
+  {
+   "n": 6,
+   "q": "What decides where phi nodes belong?",
+   "options": [
+    "The dominance frontier of each definition",
+    "The order the blocks appear in the source",
+    "Every block with more than one predecessor, without exception",
+    "The register allocator, once it knows the pressure"
+   ],
+   "correct": 0,
+   "why": "<p>Roughly, the dominance frontier is the set of blocks control can reach without having passed through the definition, which is exactly where a value might or might not have been defined.</p>"
+  },
+  {
+   "n": 7,
+   "q": "Why does SSA make analyses sparse?",
+   "options": [
+    "Facts propagate along definition-to-use edges, touching only instructions that could care",
+    "Fewer instructions survive, so there is less to analyse",
+    "The dominator tree caches the results of every previous analysis",
+    "Each block can be analysed independently of the others"
+   ],
+   "correct": 0,
+   "why": "<p>Classical dataflow carries facts through every program point whether or not anything there is affected. SSA gives you the edges to follow instead.</p>"
+  },
+  {
+   "n": 8,
+   "q": "Why does sparse conditional constant propagation beat running constant propagation and unreachable code elimination separately?",
+   "options": [
+    "Each one feeds the other, and doing them together reaches conclusions neither reaches alone",
+    "It runs in one pass, so it is faster for the same result",
+    "It can fold floating point that the separate passes must leave alone",
+    "Separate passes cannot be run on SSA form"
+   ],
+   "correct": 0,
+   "why": "<p>A folded condition removes an edge, which can make a block unreachable, which removes a value from a phi, which can fold the next condition. Stopping between the two loses everything after the first step.</p>"
+  },
+  {
+   "n": 9,
+   "q": "What does renaming remove that helps reordering?",
+   "options": [
+    "False dependencies from reusing one variable for unrelated purposes",
+    "Real data dependencies between a definition and its use",
+    "Memory aliasing between two pointers",
+    "The need for a dominator tree"
+   ],
+   "correct": 0,
+   "why": "<p>It is the same idea hardware applies with register renaming, so by the time the code runs the trick has been used twice, once on names and once on registers.</p>"
+  },
+  {
+   "n": 10,
+   "q": "In SSA, how is a definition known to be dead?",
+   "options": [
+    "Nothing uses it, and no further analysis is needed",
+    "It is not reachable from the entry block",
+    "It writes a register that is later overwritten",
+    "It appears after a return"
+   ],
+   "correct": 0,
+   "why": "<p>A name cannot be redefined somewhere you did not look, so an empty use list is the whole argument.</p>"
+  },
+  {
+   "n": 11,
+   "q": "When are two computations the same value, in SSA?",
+   "options": [
+    "Same operator, and operand names that are equal",
+    "Same operator, and operands that hold equal values at run time",
+    "Same operator, in the same block",
+    "Same operator, with neither operand reassigned in between"
+   ],
+   "correct": 0,
+   "why": "<p>The last one is what non-SSA form has to prove. Here the names carry the proof, which is what makes global value numbering nearly free.</p>"
+  },
+  {
+   "n": 12,
+   "q": "Why is inlining the highest leverage optimisation in real code?",
+   "options": [
+    "It enables the others, by letting constants and branches cross the old call boundary",
+    "Calls are the most expensive instructions on modern processors",
+    "It removes the stack frame, which is most of the cost",
+    "It is the only pass that can run more than once"
+   ],
+   "correct": 0,
+   "why": "<p>Most of what people attribute to other optimisations is inlining making them possible.</p>"
+  },
+  {
+   "n": 13,
+   "q": "A summation loop with an <code>int</code> counter compiles to a 64 bit induction variable. Why is that legal?",
+   "options": [
+    "Signed overflow is undefined, so the compiler may assume the counter never wraps",
+    "A 64 bit register is faster to increment than a 32 bit one",
+    "The array index is 64 bits, so the counter must match",
+    "The C standard requires loop counters to be widened"
+   ],
+   "correct": 0,
+   "why": "<p>The <code>nsw</code> flag in the IR is the compiler writing that assumption down so later passes can use it without rediscovering it. Change the counter to <code>unsigned</code> and the widening becomes illegal, because wrapping is defined.</p>"
+  },
+  {
+   "n": 14,
+   "q": "What happens to a phi node before register allocation?",
+   "options": [
+    "It becomes a copy at the end of each predecessor block",
+    "It becomes a conditional move at the join",
+    "It is deleted, because the values are already in the right registers",
+    "It is left in place and the allocator handles it directly"
+   ],
+   "correct": 0,
+   "why": "<p>There is no phi to allocate a register for. Putting the copies on the edges rather than at the join is what makes the placement subtle.</p>"
+  },
+  {
+   "n": 15,
+   "q": "What are the lost copy and swap problems?",
+   "options": [
+    "The two ways naive phi elimination places copies wrongly and changes the program",
+    "Two failure modes of register allocation under high pressure",
+    "Bugs in dominance frontier computation on irreducible graphs",
+    "Cases where value numbering merges values that are not equal"
+   ],
+   "correct": 0,
+   "why": "<p>They are why real phi elimination is longer than the two lines it sounds like: a copy inserted on an edge reached from elsewhere, and two phis at one join that exchange values.</p>"
+  }
+ ]
+}
