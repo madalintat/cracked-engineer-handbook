@@ -1,0 +1,72 @@
+{
+ "slug": "ssa",
+ "num": 47,
+ "title": "SSA and the middle end",
+ "blurb": "One definition per value turns 'where did this come from' into a pointer dereference. That is what made optimisation tractable.",
+ "part": "tools",
+ "partRoman": "IX",
+ "partTitle": "Tools",
+ "phase": "system",
+ "accent": "clay",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "parsing",
+   "integers"
+  ],
+  "minutes": 55,
+  "one_idea": "Giving every value exactly one definition turns \"where did this come from\" from a dataflow problem you resolve after every change into the name itself, and almost every optimisation in a modern compiler is downstream of that.",
+  "sources": [
+   "compilers-interpreters-terminals-unix"
+  ]
+ },
+ "html": "<p>The tree the parser built is shaped for a human. It has statements and blocks and scopes, because that is how the language is written down. An optimiser wants none of that. It wants to know which values flow where, and the tree makes that question hard to ask.</p>\n<p>So compilers lower the tree into an intermediate representation, and the form almost all of them use is static single assignment. The idea takes one sentence. Every value is assigned exactly once, and a name refers to exactly one definition, forever.</p>\n<p>The listings below are LLVM IR from clang, taken from Compiler Explorer at <code>-O1</code> with value names kept.</p>\n<h2 id=\"one-name-one-definition\">One name, one definition</h2>\n<p>In the source, a variable is a box you write to repeatedly. In SSA it is not a box at all. Each assignment creates a new name.</p>\n<pre class=\"cb\" data-lang=\"text\"><code>   source            SSA\n   x = 1;            x1 = 1\n   x = x + 2;        x2 = x1 + 2\n   x = x * 3;        x3 = x2 * 3</code></pre>\n<p>Nothing has changed about what the program computes. What changed is what a question costs. Ask \"which definition of <code>x</code> reaches this use\" of the left column and you have to look backwards through the control flow, conservatively, and do it again after every transformation that moves anything. Ask it of the right column and the answer is the name you are already holding. There is one definition of <code>x2</code> and it is the instruction that defines <code>x2</code>.</p>\n<p>That is the whole trade. Renaming is cheap; the analysis it removes is not.</p>\n<h2 id=\"what-happens-where-control-flow-joins\">What happens where control flow joins</h2>\n<p>The obvious objection arrives immediately. If a variable is assigned in both arms of a branch, which name does the code after the branch use?</p>\n<p>Neither, and that is what the phi node is for. At a join point, a phi selects a value according to which edge control arrived on.</p>\n<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 486 272\" class=\"fig-svg\" style=\"max-width:705px\" role=\"img\" aria-label=\"A branch splitting into two blocks, one assigning x1 equals 1 and the other x2 equals 2, both flowing into a join block whose first instruction is a phi node choosing between x1 and x2.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><line x1=\"242\" y1=\"44\" x2=\"101\" y2=\"97\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"242\" y1=\"44\" x2=\"383\" y2=\"97\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"101\" y1=\"141\" x2=\"242\" y2=\"194\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"383\" y1=\"141\" x2=\"242\" y2=\"194\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><rect x=\"176.0\" y=\"0.0\" width=\"132.0\" height=\"44.0\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--slate-ink, var(--accent));stroke:var(--slate-ink, var(--accent))\"/><text x=\"242.0\" y=\"26.0\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">br c</text><rect x=\"26.4\" y=\"96.8\" width=\"149.6\" height=\"44.0\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"101.2\" y=\"122.8\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">x1 = 1</text><rect x=\"308.0\" y=\"96.8\" width=\"149.6\" height=\"44.0\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"382.8\" y=\"122.8\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">x2 = 2</text><rect x=\"149.6\" y=\"193.6\" width=\"184.8\" height=\"44.0\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--gold-ink, var(--accent));stroke:var(--gold-ink, var(--accent))\"/><text x=\"242.0\" y=\"219.6\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">x3 = phi(x1, x2)</text></svg><figcaption>The phi is not an instruction the machine runs. It is a record of which predecessor supplied the value, and it exists so that the block after the join can still name exactly one definition.</figcaption></figure>\n<p>A phi is not something the processor executes. There is no phi instruction in any instruction set. It is bookkeeping that exists only while the program is in SSA form, and it is removed before registers are allocated, by inserting a copy on each incoming edge.</p>\n<p>Where phi nodes have to go is the one genuinely fiddly part of the construction. The standard algorithm computes the dominance frontier of each definition, which is roughly the set of blocks where control could arrive without having passed through that definition. A block that only ever gets one value needs no phi, and putting one there anyway costs code without buying anything.</p>\n<h2 id=\"what-it-buys\">What it buys</h2>\n<p>Five things, and they are worth separating, because the reason SSA is everywhere is that one representation change pays for several passes at once.</p>\n<p>Reaching definitions collapses. The question that used to need a fixpoint iteration over the whole function is now a pointer.</p>\n<p>Analyses become sparse. Classical dataflow carries facts through every point in the program, whether or not anything there cares. With SSA you propagate along the edges from a definition to its uses, which touches only the instructions that could be affected. Sparse conditional constant propagation is the example worth knowing: it does constant propagation and unreachable code elimination at the same time, and gets strictly better results than running either alone, because each one feeds the other. It is practical only in this form.</p>\n<p>False dependencies disappear. Reusing one variable for two unrelated purposes creates an ordering constraint that the program does not actually need. Renaming destroys it. This is the same trick the hardware plays with register renaming, so by the time the code reaches the processor the idea has been applied twice, once by the compiler on names and once by the machine on registers.</p>\n<p>Value numbering is nearly free. Two values with the same operator and the same operand names are the same value, and since a name is a definition, comparing names is comparing definitions.</p>\n<p>Dead code elimination becomes a sweep. A definition with no uses is dead. There is nothing to analyse and no case to be careful about, because a name cannot be redefined somewhere you did not look.</p>\n<h2 id=\"reading-a-real-loop\">Reading a real loop</h2>\n<p>Here is a summation loop after clang has lowered and optimised it. The source is four lines and the shape below is what the middle end actually works on.</p>\n<pre class=\"cb\" data-lang=\"text\"><code>for.body:\n  %iv    = phi i64 [ 0, %preheader ], [ %iv.next, %for.body ]\n  %s.05  = phi i32 [ 0, %preheader ], [ %add, %for.body ]\n  %p     = getelementptr inbounds i32, ptr %a, i64 %iv\n  %v     = load i32, ptr %p\n  %add   = add nsw i32 %v, %s.05\n  %iv.next = add nuw nsw i64 %iv, 1\n  %done  = icmp eq i64 %iv.next, %count\n  br i1 %done, label %cleanup, label %for.body</code></pre>\n<p>Two phi nodes carry the loop. Each says the same thing: on the first arrival take the value from the preheader, and on every later arrival take the value this block itself computed last time round. That is what a loop variable is, once you stop having boxes.</p>\n<p>The counter is worth a second look. In the source <code>i</code> was an <code>int</code>, and here the induction variable is 64 bits wide. The compiler widened it so that the index arithmetic matches the pointer arithmetic and no sign extension is needed inside the loop. That is legal only because signed overflow is undefined, which lets the compiler assume <code>i</code> never wraps. The <code>nsw</code> flag on the addition is the compiler writing that assumption into the IR so that later passes can rely on it without rediscovering it.</p>\n<p>Change the loop counter to <code>unsigned</code> and the widening becomes illegal, because unsigned overflow is defined to wrap and a wrapping 32 bit counter is not the same sequence as a 64 bit one. The generated code is measurably different. This is the most concrete answer available to why undefined behaviour is in the language at all: not to trap you, but because a defined behaviour is a promise the optimiser then has to keep.</p>\n<h2 id=\"the-passes-this-makes-cheap\">The passes this makes cheap</h2>\n<p>Constant folding evaluates what is already known, so <code>3 * 4</code> becomes <code>12</code>. It is local and almost trivial, except in floating point, where it has to respect rounding and NaN payloads, and around anything undefined.</p>\n<p>Inlining replaces a call with the body of the callee. It is the highest leverage transformation in real code, and not because calls are expensive. It is an enabling transformation: once the body is in place, constants from the caller flow into it, branches become decidable, and every other pass gets a larger window. Most of what people attribute to other optimisations is inlining making them possible.</p>\n<p>Dead code elimination sweeps definitions nothing uses. Global value numbering finds two computations of the same thing. Loop invariant code motion hoists work that does not change out of the loop. All of these are stated in a paragraph because SSA already did the hard part.</p>\n<h2 id=\"getting-out-again\">Getting out again</h2>\n<p>SSA has to be destroyed before register allocation, because there is no phi instruction to allocate registers for. Each phi becomes a copy on each incoming edge, placed at the end of the predecessor block rather than at the join.</p>\n<p>Doing that naively is wrong in two known ways, both with names. The lost copy problem is where the copy is inserted on an edge that is also reached from somewhere else, and the value is overwritten before it is read. The swap problem is where two phis at the same join exchange their values, and turning them into copies in sequence makes the second copy read what the first just wrote. Both are avoided by inserting the copies carefully, and they are the reason a real compiler's phi elimination is longer than the two lines it sounds like.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>SSA gives every value exactly one definition, so a name is a definition. That single property turns reaching definitions into a dereference, makes analyses sparse, removes false dependencies, makes value numbering and dead code elimination nearly free, and is why the middle end of every serious compiler looks the way it does.</p>\n<p>A phi node records which predecessor a value came from. It is not an instruction, it is removed before register allocation, and where phis belong is decided by the dominance frontier.</p>\n<p>The flags in the IR are promises. Signed overflow being undefined is what lets a 32 bit loop counter become a 64 bit induction variable, and the same loop written with an unsigned counter compiles differently for that reason alone.</p>\n<p>Next is the back end: choosing instructions for this IR, allocating registers under a fixed budget, and what the linker does with what comes out.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These exercises work on small models of the structures a middle end uses, an array of definitions with use counts, an immediate dominator array, a list of phi arguments, rather than calling into a real optimiser.</p>\n<p><code>assert-failed</code> names the case your model got wrong. Several exercises assert that a block needs no phi where a naive rule would insert one, which is the dominance condition doing its job rather than a check being wrong.</p>",
+ "headings": [
+  {
+   "id": "one-name-one-definition",
+   "text": "One name, one definition",
+   "level": 2
+  },
+  {
+   "id": "what-happens-where-control-flow-joins",
+   "text": "What happens where control flow joins",
+   "level": 2
+  },
+  {
+   "id": "what-it-buys",
+   "text": "What it buys",
+   "level": 2
+  },
+  {
+   "id": "reading-a-real-loop",
+   "text": "Reading a real loop",
+   "level": 2
+  },
+  {
+   "id": "the-passes-this-makes-cheap",
+   "text": "The passes this makes cheap",
+   "level": 2
+  },
+  {
+   "id": "getting-out-again",
+   "text": "Getting out again",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1568,
+ "needs": [
+  "integers",
+  "parsing"
+ ],
+ "neededBy": []
+}

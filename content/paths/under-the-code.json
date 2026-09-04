@@ -9,7 +9,8 @@
     "encoding",
     "universal",
     "languages",
-    "compile-time"
+    "compile-time",
+    "integers"
   ],
   "stages": [
     {

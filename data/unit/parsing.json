@@ -73,5 +73,7 @@
   "languages",
   "compile-time"
  ],
- "neededBy": []
+ "neededBy": [
+  "ssa"
+ ]
 }

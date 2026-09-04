@@ -13047,6 +13047,254 @@
  },
  {
   "t": "section",
+  "slug": "ssa",
+  "anchor": "one-name-one-definition",
+  "title": "One name, one definition",
+  "text": "In the source, a variable is a box you write to repeatedly. In SSA it is not a box at all. Each assignment creates a new name. Nothing has changed about what the program computes. What changed is what a question costs. Ask \"which definition of reaches this use\" of the left column and you have to look backwards through the control flow, conservatively, and do it again after every transformation that moves anything. Ask it of the right column and the answer is the name you are already holding. There is one definition of and it is the instruction that defines . That is the whole trade. Renaming is cheap; the analysis it removes is not.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "ssa",
+  "anchor": "what-happens-where-control-flow-joins",
+  "title": "What happens where control flow joins",
+  "text": "The obvious objection arrives immediately. If a variable is assigned in both arms of a branch, which name does the code after the branch use? Neither, and that is what the phi node is for. At a join point, a phi selects a value according to which edge control arrived on. The phi is not an instruction the machine runs. It is a record of which predecessor supplied the value, and it exists so that the block after the join can still name exactly one definition. A phi is not something the processor executes. There is no phi instruction in any instruction set. It is bookkeeping that exists only while the program is in SSA form, and it is removed before registers are allocated, by inserting a copy on each incoming edge. Where phi nodes have to go is the one genuinely fiddly part of the construction. The standard algorithm computes the dominance frontier of each definition, which is roughly the set of blocks where control could arrive without having passed through that definition. A block that only ever gets one value needs no phi, and putting one there anyway costs code without buying anything.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "ssa",
+  "anchor": "what-it-buys",
+  "title": "What it buys",
+  "text": "Five things, and they are worth separating, because the reason SSA is everywhere is that one representation change pays for several passes at once. Reaching definitions collapses. The question that used to need a fixpoint iteration over the whole function is now a pointer. Analyses become sparse. Classical dataflow carries facts through every point in the program, whether or not anything there cares. With SSA you propagate along the edges from a definition to its uses, which touches only the instructions that could be affected. Sparse conditional constant propagation is the example worth knowing: it does constant propagation and unreachable code elimination at the same time, and gets strictly better results than running either alone, because each one feeds the other. It is practical only in this form. False dependencies disappear. Reusing one variable for two unrelated purposes creates an ordering constraint that the program does not actually need. Renaming destroys it. This is the same trick the hardware plays with register renaming, so by the time the code reaches the processor the idea has been applied twice, once by the compiler on names and once by the machine on registers. Va",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "ssa",
+  "anchor": "reading-a-real-loop",
+  "title": "Reading a real loop",
+  "text": "Here is a summation loop after clang has lowered and optimised it. The source is four lines and the shape below is what the middle end actually works on. Two phi nodes carry the loop. Each says the same thing: on the first arrival take the value from the preheader, and on every later arrival take the value this block itself computed last time round. That is what a loop variable is, once you stop having boxes. The counter is worth a second look. In the source was an , and here the induction variable is 64 bits wide. The compiler widened it so that the index arithmetic matches the pointer arithmetic and no sign extension is needed inside the loop. That is legal only because signed overflow is undefined, which lets the compiler assume never wraps. The flag on the addition is the compiler writing that assumption into the IR so that later passes can rely on it without rediscovering it. Change the loop counter to and the widening becomes illegal, because unsigned overflow is defined to wrap and a wrapping 32 bit counter is not the same sequence as a 64 bit one. The generated code is measurably different. This is the most concrete answer available to why undefined behaviour is in the lang",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "ssa",
+  "anchor": "the-passes-this-makes-cheap",
+  "title": "The passes this makes cheap",
+  "text": "Constant folding evaluates what is already known, so becomes . It is local and almost trivial, except in floating point, where it has to respect rounding and NaN payloads, and around anything undefined. Inlining replaces a call with the body of the callee. It is the highest leverage transformation in real code, and not because calls are expensive. It is an enabling transformation: once the body is in place, constants from the caller flow into it, branches become decidable, and every other pass gets a larger window. Most of what people attribute to other optimisations is inlining making them possible. Dead code elimination sweeps definitions nothing uses. Global value numbering finds two computations of the same thing. Loop invariant code motion hoists work that does not change out of the loop. All of these are stated in a paragraph because SSA already did the hard part.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "ssa",
+  "anchor": "getting-out-again",
+  "title": "Getting out again",
+  "text": "SSA has to be destroyed before register allocation, because there is no phi instruction to allocate registers for. Each phi becomes a copy on each incoming edge, placed at the end of the predecessor block rather than at the join. Doing that naively is wrong in two known ways, both with names. The lost copy problem is where the copy is inserted on an edge that is also reached from somewhere else, and the value is overwritten before it is read. The swap problem is where two phis at the same join exchange their values, and turning them into copies in sequence makes the second copy read what the first just wrote. Both are avoided by inserting the copies carefully, and they are the reason a real compiler's phi elimination is longer than the two lines it sounds like.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "ssa",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "SSA gives every value exactly one definition, so a name is a definition. That single property turns reaching definitions into a dereference, makes analyses sparse, removes false dependencies, makes value numbering and dead code elimination nearly free, and is why the middle end of every serious compiler looks the way it does. A phi node records which predecessor a value came from. It is not an instruction, it is removed before register allocation, and where phis belong is decided by the dominance frontier. The flags in the IR are promises. Signed overflow being undefined is what lets a 32 bit loop counter become a 64 bit induction variable, and the same loop written with an unsigned counter compiles differently for that reason alone. Next is the back end: choosing instructions for this IR, allocating registers under a fixed budget, and what the linker does with what comes out.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "ssa",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These exercises work on small models of the structures a middle end uses, an array of definitions with use counts, an immediate dominator array, a list of phi arguments, rather than calling into a real optimiser. names the case your model got wrong. Several exercises assert that a block needs no phi where a naive rule would insert one, which is the dominance condition doing its job rather than a check being wrong.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "ssa",
+  "n": 1,
+  "title": "One name per definition",
+  "text": "A name is a definition, so finding the reaching definition is reading the name rather than searching backwards for it. Write , returning which SSA name a use refers to, given how many assignments to that variable appear before the use in a straight line of code. Names are numbered from 1 at the first assignment. Return 0 when the variable has not been assigned yet, which is a use of an undefined value.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "ssa",
+  "n": 2,
+  "title": "Where a phi is needed",
+  "text": "The dominance condition is about distinct values arriving, not about the shape of the control flow graph, which is why a join can need no phi at all. Write , deciding whether a join block needs a phi node for a variable, given how many predecessors the block has and how many distinct definitions of that variable reach it. A phi is needed when more than one distinct definition arrives. One definition arriving along several edges is still one value, and a block with a single predecessor never needs one.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "ssa",
+  "n": 3,
+  "title": "Dominance, from an immediate dominator array",
+  "text": "Dominance is what makes SSA construction decidable, and the whole relation is recoverable from one parent pointer per block. Write , deciding whether block dominates block , given the immediate dominator of every block. Block 0 is the entry and its immediate dominator is itself. A block dominates itself. Otherwise walk up from through immediate dominators and see whether is on the way.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "ssa",
+  "n": 4,
+  "title": "The sweep that removes dead code",
+  "text": "Dead code elimination in SSA is a sweep with a worklist, not an analysis, because a definition with no uses is dead with no further argument. Write , returning how many definitions survive dead code elimination, given a use count for each definition and, for each one, which definition it uses. A definition is dead when nothing uses it. Removing it removes its own uses, so a definition that was only used by dead code becomes dead in turn. Keep going until nothing changes. is how many live things currently use definition . is the definition that reads, or -1 if it reads nothing. Definitions with",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "ssa",
+  "n": 5,
+  "title": "Two computations of the same value",
+  "text": "A name is a definition, so comparing names compares values, which is what makes global value numbering nearly free in this form. Write , assigning a value number to an expression given its operator and the names of its two operands, using a table of expressions already numbered. Two expressions with the same operator and the same operand names are the same value and get the same number. A new expression gets the next unused number. Operands are already SSA names, so equal names mean equal values. Commutativity is not to be assumed: only exact matches count.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "ssa",
+  "n": 6,
+  "title": "Taking the phi nodes out again",
+  "text": "A phi is not an instruction, so it has to become one somewhere, and where it goes is the edge rather than the join. Write , returning how many copy instructions phi elimination adds for one join block, given the number of phi nodes there and the number of predecessors. Every phi takes one argument per predecessor, and each argument becomes a copy at the end of that predecessor. A copy whose source and destination are already the same register is not emitted, and says how many of the arguments are in that position.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "ssa",
+  "n": 7,
+  "title": "What a promise buys the optimiser",
+  "text": "The difference between undefined and defined is what the optimiser is allowed to assume, and it shows up as different machine code for the same loop. Write , deciding whether a loop counter may be widened to 64 bits, given whether the counter is signed and whether the loop is known to run few enough times that it cannot wrap. Signed overflow is undefined, so a signed counter may be widened without checking anything. Unsigned overflow is defined to wrap, so an unsigned counter may be widened only when the compiler can prove the wrap never happens.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "ssa",
+  "n": 8,
+  "title": "Constants, and the branch that stops existing",
+  "text": "Constant propagation and unreachable code elimination feed each other, which is why doing them at once beats doing either alone. Write , returning how many blocks of a small function remain reachable once constants have been propagated. The function is a chain of blocks. Block ends in a conditional branch whose condition is described by : 1 for a condition folded to true, 0 for one folded to false, and -1 for one that is not constant. A true condition takes the next block in the chain and a false condition skips it, jumping to the one after. The last block ends the function. Count block 0 and ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "ssa",
+  "n": 1,
+  "title": "What does static single assignment mean?",
+  "text": " It is a property of the text, not of what happens when the program runs. A loop body can execute a definition many times; there is still one instruction that defines that name. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "ssa",
+  "n": 2,
+  "title": "In SSA, what does it cost to find the definition that reaches a use?",
+  "text": " This is the trade the whole form exists to make. Renaming is cheap, and it removes an analysis that otherwise has to be redone after every transformation. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "ssa",
+  "n": 3,
+  "title": "What is a phi node for?",
+  "text": " It exists so that the block after a join can still name exactly one definition, even though two different values could have arrived. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "ssa",
+  "n": 4,
+  "title": "Which instruction set has a phi instruction?",
+  "text": " It is bookkeeping. Before register allocation it is removed, and it becomes a copy on each incoming edge. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "ssa",
+  "n": 5,
+  "title": "A join block has two predecessors, and both arms leave a variable untouched. What does SSA construction insert?",
+  "text": " The question is how many distinct definitions arrive, not how many edges there are. A phi with nothing to choose between costs an instruction and buys no information. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "ssa",
+  "n": 6,
+  "title": "What decides where phi nodes belong?",
+  "text": " Roughly, the dominance frontier is the set of blocks control can reach without having passed through the definition, which is exactly where a value might or might not have been defined. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "ssa",
+  "n": 7,
+  "title": "Why does SSA make analyses sparse?",
+  "text": " Classical dataflow carries facts through every program point whether or not anything there is affected. SSA gives you the edges to follow instead. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "ssa",
+  "n": 8,
+  "title": "Why does sparse conditional constant propagation beat running constant propagation and unreachable code elimination separately?",
+  "text": " A folded condition removes an edge, which can make a block unreachable, which removes a value from a phi, which can fold the next condition. Stopping between the two loses everything after the first step. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "ssa",
+  "n": 9,
+  "title": "What does renaming remove that helps reordering?",
+  "text": " It is the same idea hardware applies with register renaming, so by the time the code runs the trick has been used twice, once on names and once on registers. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "ssa",
+  "n": 10,
+  "title": "In SSA, how is a definition known to be dead?",
+  "text": " A name cannot be redefined somewhere you did not look, so an empty use list is the whole argument. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "ssa",
+  "n": 11,
+  "title": "When are two computations the same value, in SSA?",
+  "text": " The last one is what non-SSA form has to prove. Here the names carry the proof, which is what makes global value numbering nearly free. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "ssa",
+  "n": 12,
+  "title": "Why is inlining the highest leverage optimisation in real code?",
+  "text": " Most of what people attribute to other optimisations is inlining making them possible. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "ssa",
+  "n": 13,
+  "title": "A summation loop with an <code>int</code> counter compiles to a 64 bit induction variable. Why is that legal?",
+  "text": " The  nsw  flag in the IR is the compiler writing that assumption down so later passes can use it without rediscovering it. Change the counter to  unsigned  and the widening becomes illegal, because wrapping is defined. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "ssa",
+  "n": 14,
+  "title": "What happens to a phi node before register allocation?",
+  "text": " There is no phi to allocate a register for. Putting the copies on the edges rather than at the join is what makes the placement subtle. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "ssa",
+  "n": 15,
+  "title": "What are the lost copy and swap problems?",
+  "text": " They are why real phi elimination is longer than the two lines it sounds like: a copy inserted on an edge reached from elsewhere, and two phis at one join that exchange values. ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

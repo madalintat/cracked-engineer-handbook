@@ -982,7 +982,8 @@
    ],
    "neededBy": [
     "floats",
-    "text"
+    "text",
+    "ssa"
    ],
    "minutes": 50
   },
@@ -1429,7 +1430,9 @@
     "languages",
     "compile-time"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "ssa"
+   ],
    "minutes": 55
   },
   {
@@ -1443,12 +1446,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1568,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "integers",
+    "parsing"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "codegen",
@@ -2805,9 +2812,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 48,
-  "words": 72802,
-  "exercises": 384,
-  "drills": 720
+  "ready": 49,
+  "words": 74370,
+  "exercises": 392,
+  "drills": 735
  }
 }

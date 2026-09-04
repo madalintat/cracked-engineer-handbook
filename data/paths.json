@@ -140,7 +140,8 @@
     "encoding",
     "universal",
     "languages",
-    "compile-time"
+    "compile-time",
+    "integers"
    ],
    "stages": [
     {
@@ -184,8 +185,8 @@
     }
    ],
    "unitCount": 15,
-   "readyCount": 8,
-   "minutes": 425
+   "readyCount": 9,
+   "minutes": 480
   },
   {
    "id": "moving-things",

@@ -138,4 +138,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] 047 `parsing`, source text to syntax tree. Note, 8 exercises validated
       against gcc and clang, 15 drills. Its `needs` are `languages` and
       `compile-time`, which the under-the-code path now declares it skips
-- [ ] 048 `ssa`, and the rest of Part IX
+- [x] 048 `ssa`, the middle end. Note, 8 exercises validated, 15 drills.
+      Needs `integers`, because the note reads a widened induction variable
+      and the reason it is legal is that signed overflow is undefined
+- [ ] 049 `codegen`, and the rest of Part IX
