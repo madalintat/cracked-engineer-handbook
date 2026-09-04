@@ -862,7 +862,8 @@
    "neededBy": [
     "elf",
     "processes",
-    "terminal"
+    "terminal",
+    "debugger"
    ],
    "minutes": 50
   },
@@ -887,7 +888,8 @@
    "neededBy": [
     "processes",
     "linking",
-    "build"
+    "build",
+    "debugger"
    ],
    "minutes": 55
   },
@@ -1541,12 +1543,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1515,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "syscalls",
+    "elf"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "measurement",
@@ -2831,9 +2837,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 52,
-  "words": 78988,
-  "exercises": 416,
-  "drills": 780
+  "ready": 53,
+  "words": 80503,
+  "exercises": 424,
+  "drills": 795
  }
 }

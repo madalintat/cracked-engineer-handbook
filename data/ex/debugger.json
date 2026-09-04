@@ -1,0 +1,310 @@
+{
+ "slug": "debugger",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Patching one byte of a word",
+   "brief": "<p>Write <code>patch_trap</code>, returning the word to write back when installing a breakpoint, given the original word read from the program.</p>\n<p>Only the lowest byte is replaced, with the trap byte 0xCC. Every other byte of the word has to survive, because those bytes are the instructions that follow.</p>",
+   "kind": "output",
+   "concept": "The unit of a read and a write here is a word, and the unit of the change is a byte, so the other seven bytes have to be put back exactly.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Clear the low byte, then set it. Anything that touches the upper bytes corrupts the instructions after the breakpoint."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Writing 0xCC into the word without clearing the byte that was there leaves the original bits set as well, so the byte becomes neither the trap nor the instruction.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A real transcript: the original word is 0x10ec8348e5894855 and the patched word is 0x10ec8348e58948cc. Only the last two hex digits differ.</p>",
+   "starter": "unsigned long patch_trap(unsigned long word) {\n    return word | 0xCCUL;\n}",
+   "tests": "#include <assert.h>\nunsigned long patch_trap(unsigned long);\nint main(void) {\n    assert(patch_trap(0x10ec8348e5894855UL) == 0x10ec8348e58948ccUL);\n    assert(patch_trap(0x00UL) == 0xccUL);\n    assert(patch_trap(0xffffffffffffffffUL) == 0xffffffffffffffccUL);\n    assert(patch_trap(0xaabbccddeeff0011UL) == 0xaabbccddeeff00ccUL);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "Putting the instruction back",
+   "brief": "<p>Write <code>restore_word</code>, returning the word to write back when removing a breakpoint, given the word currently in memory and the original first byte that was saved when the breakpoint was installed.</p>\n<p>Everything except the lowest byte comes from what is in memory now, because the program may have been modified since, and the lowest byte is the saved one.</p>",
+   "kind": "output",
+   "concept": "The debugger saves one byte and restores one byte. Saving the whole word and writing it back would undo any other change made in the meantime.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The saved byte replaces the trap byte and nothing else moves."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Only the lowest byte was ever changed, so only the lowest byte is restored, and it comes from the saved value rather than from the word in memory.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Restoring, stepping one instruction and writing the trap byte again is what every resume costs, which is several system calls and two context switches per breakpoint hit.</p>",
+   "starter": "unsigned long restore_word(unsigned long current, unsigned char saved) {\n    (void)saved;\n    return current;\n}",
+   "tests": "#include <assert.h>\nunsigned long restore_word(unsigned long, unsigned char);\nint main(void) {\n    assert(restore_word(0x10ec8348e58948ccUL, 0x55) == 0x10ec8348e5894855UL);\n    assert(restore_word(0xccUL, 0x90) == 0x90UL);\n    assert(restore_word(0xffffffffffffffccUL, 0x00) == 0xffffffffffffff00UL);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Where the program actually stopped",
+   "brief": "<p>Write <code>report_stop</code>, returning the address to report to the user when the program stops, given the instruction pointer at the stop and whether the stop was a breakpoint trap rather than some other signal.</p>\n<p>After a trap byte the instruction pointer is one past the breakpoint, so the breakpoint's address is one less. Any other kind of stop reports the instruction pointer as it is.</p>",
+   "kind": "output",
+   "concept": "The correction is not cosmetic. The same value has to be written back to the registers, or the program resumes into the middle of an instruction.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Only a trap consumed a byte. A segmentation fault did not."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Subtracting one from every stop moves the reported address of a genuine fault, and a fault is exactly the case where the address matters most.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Distinguishing a breakpoint trap from a real fault is a separate request to the same system call, and getting it wrong is how a debugger reports a crash one byte away from where it happened.</p>",
+   "starter": "unsigned long report_stop(unsigned long rip, int was_breakpoint) {\n    (void)was_breakpoint;\n    return rip - 1;\n}",
+   "tests": "#include <assert.h>\nunsigned long report_stop(unsigned long, int);\nint main(void) {\n    assert(report_stop(0x401177, 1) == 0x401176);\n    assert(report_stop(0x401177, 0) == 0x401177);\n    assert(report_stop(0x1000, 1) == 0x0fff);\n    assert(report_stop(0x1000, 0) == 0x1000);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "What a hardware watchpoint can cover",
+   "brief": "<p>Write <code>watch_in_hardware</code>, deciding whether a watchpoint request fits in the processor's debug registers, given how many are already in use and how many bytes the request covers.</p>\n<p>There are four registers and each covers at most eight bytes. A request larger than eight bytes does not fit in one, and this model does not split it across several. Return 1 when it fits and 0 when the debugger will fall back to single stepping.</p>",
+   "kind": "output",
+   "concept": "The budget is small and fixed, and the fallback is not a refusal, so the difference between fitting and not fitting is the difference between free and hundreds of times slower.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Two limits, both hard: how many are left, and how wide one can be."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A four byte counter with all four registers already in use does not fit, and neither does a sixteen byte structure with every register free. Both end up single stepping.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Someone who does not know about the fallback concludes that the debugger has hung, which is the most common way this budget is discovered.</p>",
+   "starter": "int watch_in_hardware(unsigned in_use, unsigned bytes) {\n    (void)bytes;\n    return in_use < 4;\n}",
+   "tests": "#include <assert.h>\nint watch_in_hardware(unsigned, unsigned);\nint main(void) {\n    assert(watch_in_hardware(0, 4) == 1);\n    assert(watch_in_hardware(3, 8) == 1);\n    assert(watch_in_hardware(4, 4) == 0);   /* no register left */\n    assert(watch_in_hardware(0, 16) == 0);  /* too wide */\n    assert(watch_in_hardware(0, 9) == 0);\n    assert(watch_in_hardware(2, 1) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Eight bytes to one",
+   "brief": "<p>Write <code>shadow_addr</code>, returning the address of the shadow byte that describes a given address, using the sanitizer's mapping.</p>\n<p>Eight application bytes map to one shadow byte, and the shadow region starts at a fixed offset.</p>",
+   "kind": "output",
+   "concept": "The mapping is a shift and an add, which is why the check in front of every load and store is cheap enough to leave on.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Eight to one is a shift of three, and it happens before the offset is added rather than after."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Adding the offset before shifting scales the offset too, and the whole shadow region lands somewhere else. Eight consecutive addresses have to give the same shadow byte.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>One eighth of the address space is reserved for this, almost all of it untouched virtual memory, which is the other half of why the technique is affordable.</p>",
+   "starter": "unsigned long shadow_addr(unsigned long addr, unsigned long offset) {\n    return (addr + offset) >> 3;\n}",
+   "tests": "#include <assert.h>\nunsigned long shadow_addr(unsigned long, unsigned long);\nint main(void) {\n    assert(shadow_addr(0, 0x7fff8000UL) == 0x7fff8000UL);\n    assert(shadow_addr(8, 0x7fff8000UL) == 0x7fff8001UL);\n    /* Eight consecutive bytes share one shadow byte. */\n    assert(shadow_addr(16, 0x7fff8000UL) == shadow_addr(23, 0x7fff8000UL));\n    assert(shadow_addr(16, 0x7fff8000UL) != shadow_addr(24, 0x7fff8000UL));\n    assert(shadow_addr(0x1000, 0) == 0x200UL);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Reading a shadow byte",
+   "brief": "<p>Write <code>access_ok</code>, deciding whether an access is allowed, given the shadow byte covering it, the offset of the access within those eight bytes, and its size in bytes.</p>\n<p>A shadow byte of 0 means all eight are addressable. A value from 1 to 7 means the first that many bytes are addressable and the rest are not. Anything else, which is any value with the top bit set, means all eight are poisoned.</p>\n<p>The access runs from the offset for its size, and every byte it touches has to be addressable.</p>",
+   "kind": "output",
+   "concept": "The partial case exists only because allocations are eight byte aligned, so a block can be partial at its end and never at its start.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The last byte touched is at offset plus size minus one, and it has to be below the count of addressable bytes."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. An access of four bytes at offset 0 with a shadow byte of 4 is entirely inside the addressable prefix and is allowed. The same access at offset 1 is not, because its last byte is the fifth.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is two well predicted branches in front of every memory operation in your program, and it is why the cost is around a factor of two rather than a factor of twenty.</p>",
+   "starter": "int access_ok(unsigned char shadow, unsigned offset, unsigned size) {\n    (void)offset; (void)size;\n    return shadow == 0;\n}",
+   "tests": "#include <assert.h>\nint access_ok(unsigned char, unsigned, unsigned);\nint main(void) {\n    assert(access_ok(0, 0, 8) == 1);    /* all eight usable */\n    assert(access_ok(0, 4, 4) == 1);\n    assert(access_ok(4, 0, 4) == 1);    /* exactly the prefix */\n    assert(access_ok(4, 0, 5) == 0);    /* one past it */\n    assert(access_ok(4, 1, 4) == 0);\n    assert(access_ok(4, 3, 1) == 1);\n    assert(access_ok(4, 4, 1) == 0);\n    assert(access_ok(0xfd, 0, 1) == 0); /* freed memory */\n    assert(access_ok(0xfa, 0, 1) == 0); /* heap redzone */\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "The window a quarantine buys",
+   "brief": "<p>Write <code>uaf_detected</code>, deciding whether a use after free is caught, given how many bytes have been allocated since the block was freed and the size of the quarantine.</p>\n<p>A freed block is poisoned and held rather than reused. It is only recycled once allocation traffic since the free has exceeded the quarantine's size, and after that the address is handed out again and the access is silent.</p>",
+   "kind": "output",
+   "concept": "The detector has a window, and the window is a memory budget, so a clean run is evidence rather than proof.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Traffic exactly equal to the quarantine has not yet exceeded it."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Inside the window the block is still poisoned and the report is precise. Past it the address has been reused and nothing is reported at all, which is the case worth knowing about.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A clean sanitizer run does not prove your program has no use after free. It proves that none happened inside this window, on the paths this run took, in code that was recompiled.</p>",
+   "starter": "int uaf_detected(unsigned long traffic, unsigned long quarantine) {\n    (void)traffic; (void)quarantine;\n    return 1;\n}",
+   "tests": "#include <assert.h>\nint uaf_detected(unsigned long, unsigned long);\nint main(void) {\n    assert(uaf_detected(0, 1000) == 1);\n    assert(uaf_detected(999, 1000) == 1);\n    assert(uaf_detected(1000, 1000) == 1);   /* not yet exceeded */\n    assert(uaf_detected(1001, 1000) == 0);   /* recycled */\n    assert(uaf_detected(5000, 1000) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "What a breakpoint costs per hit",
+   "brief": "<p>Write <code>stops_per_hit</code>, returning how many times the traced program stops for one breakpoint hit, given whether the breakpoint has to stay armed afterwards.</p>\n<p>Hitting the trap stops it once. Resuming through an armed breakpoint means restoring the byte and stepping one instruction, which stops it again, before the trap byte is written back. A breakpoint being removed does not need the second stop.</p>",
+   "kind": "output",
+   "concept": "The cost is not the check. It is the restore, step and re-arm dance, paid on every hit, in system calls and context switches.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "One stop for the trap, and one more only if the byte has to go back."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A breakpoint that stays armed costs two stops per hit, not one, because the single step is a stop of its own.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is why a breakpoint inside a hot loop feels like a hang, and why timing a program under a debugger measures the debugger.</p>",
+   "starter": "unsigned stops_per_hit(int stays_armed) {\n    (void)stays_armed;\n    return 1;\n}",
+   "tests": "#include <assert.h>\nunsigned stops_per_hit(int);\nint main(void) {\n    assert(stops_per_hit(1) == 2);\n    assert(stops_per_hit(0) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

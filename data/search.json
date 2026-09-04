@@ -14023,6 +14023,254 @@
  },
  {
   "t": "section",
+  "slug": "debugger",
+  "anchor": "a-breakpoint-is-a-byte",
+  "title": "A breakpoint is a byte",
+  "text": "On x86 there is a one byte instruction whose only purpose is to raise a debug trap. Setting a breakpoint at an address means putting that byte there. Read the word at the address and keep the original first byte. Write the word back with that byte replaced by the trap. Resume. When control reaches the address the processor raises the trap, the kernel turns it into a signal, and the debugger's wait returns. The instruction pointer is one past the breakpoint when the debugger regains control, because the trap byte has already been consumed. Backing it up by one is not a detail; without it the program resumes into the middle of an instruction. Here is a real tracer stopping three times on the same function: Two things in that transcript are the whole lesson. The instruction pointer is one past the breakpoint every time, because the trap byte was executed and consumed, so the debugger has to read the registers, subtract one, and write them back before it can do anything else. And the register holding the first argument reads 0, then 1, then 2, straight out of the register file according to the calling convention. That is a debugger printing a function argument, with no library involved",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "debugger",
+  "anchor": "four-registers-and-the-cliff-behind-them",
+  "title": "Four registers, and the cliff behind them",
+  "text": "A watchpoint stops the program when a particular address is written. The processor can do this in hardware: there are four debug address registers, and the check happens in the path a load or a store already takes, so it costs nothing while the program runs. Four, each covering at most eight bytes. That is the entire budget. Ask to watch a fifth variable, or a structure larger than eight bytes, and the debugger does not refuse. It falls back to a software watchpoint, which means single stepping the whole program and re-evaluating the expression after every single instruction. The manual's own description is hundreds of times slower than normal execution, and someone who does not know about the fallback concludes that the debugger has hung. Knowing the size of the budget is the useful part. Watch a four byte counter and you are in hardware. Watch a large structure and you have quietly asked for something else entirely.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "debugger",
+  "anchor": "what-turns-an-address-into-a-name",
+  "title": "What turns an address into a name",
+  "text": "None of the above knows anything about your source. The mapping from an address to a file and line, from a stack frame to a function, and from a name to a location that may be a register at one instruction and a stack slot at the next, lives in debug information the compiler emitted alongside the code. That is why an optimised build is harder to debug, and the reason is worth stating precisely. It is not that the information is missing. It is that the question has become ambiguous: a variable that was optimised into a register has no address, an inlined function has no frame, and an instruction can belong to two source lines because the scheduler interleaved them. The debugger reports what the tables say, and the tables are telling the truth about a program whose shape no longer matches the source you are reading.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "debugger",
+  "anchor": "the-other-kind-of-tool",
+  "title": "The other kind of tool",
+  "text": "A debugger watches a program from outside and answers questions when you ask. That is the wrong shape for a bug that happens once in a thousand runs and corrupts something quietly. A sanitizer is the other approach: a compiler pass that rewrites your program to check itself, plus a runtime library that keeps the metadata those checks consult. Three consequences follow immediately. It needs a recompile. Code that was not recompiled is invisible to it. And it is far faster than a tool that has to work all this out from the binary alone, because the compiler already knew where every variable was.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "debugger",
+  "anchor": "shadow-memory-in-one-formula",
+  "title": "Shadow memory, in one formula",
+  "text": "The address sanitizer keeps a second map of memory that says what each byte means. Eight bytes of your program map to one byte of shadow, and the mapping is a shift and an add: The value in that shadow byte is the whole design. Zero means all eight bytes are usable. A small positive number means the first bytes are usable and the rest are not, which works only because allocations are eight byte aligned, so a partial block can only be partial at its end. A negative value means all eight are poisoned, and the particular value says why: a redzone before a heap block, freed memory, a stack redzone, use after return, a global's redzone. Every load and store in your program gets a check inserted in front of it: look up the shadow byte, and if it is not clear, report. For an access smaller than eight bytes there is a second comparison against the addressable prefix. That is two well predicted branches per memory operation, which is why the cost is around a factor of two rather than a factor of twenty. The redzones are the other half. Every allocation is padded on both sides with poisoned bytes, so an overflow of one element lands in shadow that is already marked bad, rather than in the ne",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "debugger",
+  "anchor": "the-limitation-to-say-out-loud",
+  "title": "The limitation to say out loud",
+  "text": "Use after free is caught by not really freeing. A freed block is poisoned and put on a queue rather than returned for reuse, and only when that queue fills does the oldest block get recycled. So detection has a window, and the window is a memory budget. Within a few hundred megabytes of subsequent allocation traffic, a use after free is caught with a precise report. Beyond it, the address has been handed out again and the bug is silent once more. This is worth holding onto because it corrects the usual belief. A clean sanitizer run does not prove your program has no use after free. It proves that none happened inside the window, on the paths this run took, in code that was recompiled. That is a great deal more than nothing and it is not a proof.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "debugger",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "A debugger is one system call plus bookkeeping. Everything else, lines, variables, frames, comes from tables the compiler emitted. A breakpoint is a byte of your program replaced by a trap byte. The instruction pointer is one past it when you stop, resuming means restore, step and re-arm, and both facts explain why breakpoints are neither free nor invisible. There are four hardware watchpoints of eight bytes each. Past that the debugger silently single steps your whole program. A sanitizer is a compiler pass plus a runtime. The address sanitizer keeps one shadow byte per eight bytes of memory, checks it before every access, and pads allocations with poisoned redzones. It finds use after free by delaying reuse, which makes it a detector with a window rather than a proof. Next is the other half of finding out what your program is doing: measuring it, and why most measurements of fast code are wrong.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "debugger",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the arithmetic a debugger and a sanitizer actually do: patching a word, correcting the instruction pointer, computing a shadow address, reading a shadow byte. names the case your model got wrong. Several exercises assert that an access ending exactly at the addressable prefix is allowed, which is the partial block rule being read correctly rather than an off by one.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 1,
+  "title": "Patching one byte of a word",
+  "text": "The unit of a read and a write here is a word, and the unit of the change is a byte, so the other seven bytes have to be put back exactly. Write , returning the word to write back when installing a breakpoint, given the original word read from the program. Only the lowest byte is replaced, with the trap byte 0xCC. Every other byte of the word has to survive, because those bytes are the instructions that follow.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 2,
+  "title": "Putting the instruction back",
+  "text": "The debugger saves one byte and restores one byte. Saving the whole word and writing it back would undo any other change made in the meantime. Write , returning the word to write back when removing a breakpoint, given the word currently in memory and the original first byte that was saved when the breakpoint was installed. Everything except the lowest byte comes from what is in memory now, because the program may have been modified since, and the lowest byte is the saved one.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 3,
+  "title": "Where the program actually stopped",
+  "text": "The correction is not cosmetic. The same value has to be written back to the registers, or the program resumes into the middle of an instruction. Write , returning the address to report to the user when the program stops, given the instruction pointer at the stop and whether the stop was a breakpoint trap rather than some other signal. After a trap byte the instruction pointer is one past the breakpoint, so the breakpoint's address is one less. Any other kind of stop reports the instruction pointer as it is.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 4,
+  "title": "What a hardware watchpoint can cover",
+  "text": "The budget is small and fixed, and the fallback is not a refusal, so the difference between fitting and not fitting is the difference between free and hundreds of times slower. Write , deciding whether a watchpoint request fits in the processor's debug registers, given how many are already in use and how many bytes the request covers. There are four registers and each covers at most eight bytes. A request larger than eight bytes does not fit in one, and this model does not split it across several. Return 1 when it fits and 0 when the debugger will fall back to single stepping.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 5,
+  "title": "Eight bytes to one",
+  "text": "The mapping is a shift and an add, which is why the check in front of every load and store is cheap enough to leave on. Write , returning the address of the shadow byte that describes a given address, using the sanitizer's mapping. Eight application bytes map to one shadow byte, and the shadow region starts at a fixed offset.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 6,
+  "title": "Reading a shadow byte",
+  "text": "The partial case exists only because allocations are eight byte aligned, so a block can be partial at its end and never at its start. Write , deciding whether an access is allowed, given the shadow byte covering it, the offset of the access within those eight bytes, and its size in bytes. A shadow byte of 0 means all eight are addressable. A value from 1 to 7 means the first that many bytes are addressable and the rest are not. Anything else, which is any value with the top bit set, means all eight are poisoned. The access runs from the offset for its size, and every byte it touches has to be ",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 7,
+  "title": "The window a quarantine buys",
+  "text": "The detector has a window, and the window is a memory budget, so a clean run is evidence rather than proof. Write , deciding whether a use after free is caught, given how many bytes have been allocated since the block was freed and the size of the quarantine. A freed block is poisoned and held rather than reused. It is only recycled once allocation traffic since the free has exceeded the quarantine's size, and after that the address is handed out again and the access is silent.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 8,
+  "title": "What a breakpoint costs per hit",
+  "text": "The cost is not the check. It is the restore, step and re-arm dance, paid on every hit, in system calls and context switches. Write , returning how many times the traced program stops for one breakpoint hit, given whether the breakpoint has to stay armed afterwards. Hitting the trap stops it once. Resuming through an armed breakpoint means restoring the byte and stepping one instruction, which stops it again, before the trap byte is written back. A breakpoint being removed does not need the second stop.",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 1,
+  "title": "What is a Unix debugger built out of?",
+  "text": " There is no debugger subsystem. Read and write memory, read and write registers, resume, single step, and wait: everything else is built from those. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 2,
+  "title": "How is a breakpoint installed on x86?",
+  "text": " The trap byte's entire purpose is to raise a debug trap. Installing a breakpoint is a read of one word and a write of one word. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 3,
+  "title": "Where is the instruction pointer when a breakpoint trap is taken?",
+  "text": " The debugger has to read the registers, subtract one and write them back. Without that the program resumes into the middle of an instruction. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 4,
+  "title": "What does resuming from an armed breakpoint require?",
+  "text": " That dance is several system calls and two context switches on every hit, which is why a breakpoint in a hot loop feels like a hang. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 5,
+  "title": "Why is timing a program under a debugger meaningless?",
+  "text": " It also means anything that checksums its own code notices that its text has changed. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 6,
+  "title": "How many hardware watchpoints does x86-64 have, and how wide is each?",
+  "text": " Small, fixed, and worth remembering, because exceeding it does not produce an error. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 7,
+  "title": "What happens when you ask to watch something that does not fit in the debug registers?",
+  "text": " The manual describes the fallback as hundreds of times slower than normal execution. Someone who does not know about it concludes the debugger has hung. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 8,
+  "title": "Why is optimised code harder to debug?",
+  "text": " The tables are telling the truth about a program whose shape no longer matches the source you are reading. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 9,
+  "title": "What is a sanitizer?",
+  "text": " That is why it needs a recompile, why uninstrumented code is invisible to it, and why it is far faster than a tool working from the binary alone. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 10,
+  "title": "What is the address sanitizer's shadow mapping?",
+  "text": " A shift and an add, which is why the check in front of every load and store is cheap enough to leave on. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 11,
+  "title": "A shadow byte holds the value 4. What does that mean?",
+  "text": " The partial case works only because allocations are eight byte aligned, so a block can be partial at its end and never at its start. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 12,
+  "title": "What does a negative shadow byte encode?",
+  "text": " Those values are what the legend in a sanitizer report is decoding for you. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 13,
+  "title": "What is a redzone for?",
+  "text": " Without it, an overflow of one element lands in the next object, where it is silent and corrupts real data. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 14,
+  "title": "How does the address sanitizer catch use after free at all?",
+  "text": " Not reusing the address is what keeps the shadow byte saying freed rather than describing whatever was allocated there next. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 15,
+  "title": "What does a clean address sanitizer run prove?",
+  "text": " The quarantine gives a window measured in allocation traffic. Beyond it the address is handed out again and the bug is silent, so this is a detector rather than a proof. ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

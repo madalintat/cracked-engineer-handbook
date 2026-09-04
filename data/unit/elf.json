@@ -80,6 +80,7 @@
  "neededBy": [
   "processes",
   "linking",
-  "build"
+  "build",
+  "debugger"
  ]
 }

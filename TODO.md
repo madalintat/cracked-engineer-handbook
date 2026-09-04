@@ -151,4 +151,8 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] 051 `build`, the build graph. Under-build against over-build, the five
       ways a timestamp is a wrong cache key, hashing and early cutoff, the
       header edge nobody declared, and the critical path
-- [ ] 052 `debugger`, 053 `measurement`, 054 `testing`, which finish Part IX
+- [x] 052 `debugger`. One system call, a breakpoint as a patched byte with
+      the instruction pointer one past it, four hardware watchpoints and the
+      single stepping cliff behind them, and the sanitizer's shadow byte per
+      eight bytes, with the quarantine window said out loud
+- [ ] 053 `measurement`, 054 `testing`, which finish Part IX
