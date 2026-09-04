@@ -15015,6 +15015,254 @@
  },
  {
   "t": "section",
+  "slug": "rasteriser",
+  "anchor": "coverage-is-three-linear-functions",
+  "title": "Coverage is three linear functions",
+  "text": "For each edge of the triangle, define a function of the position on screen: That is the signed area of the triangle formed by the edge and the point, which is positive on one side of the line and negative on the other. Do it for all three edges. A point is inside the triangle exactly when all three have the same sign. Written out, each one is a constant times x plus a constant times y plus a constant, with the constants fixed for the whole triangle. Two properties follow from that form, and they are the entire reason this algorithm won. It is incremental. Moving one pixel to the right adds a constant. Moving one pixel down adds a different constant. So evaluating an edge across a row is one addition per pixel, not a multiplication. It is order free. There is no dependency from one pixel to the next, so you can evaluate sixty four pixels at once with sixty four adders, in any order you like. A scanline algorithm has a sequential dependency along each span and cannot do that. That second property is why the rasteriser is a wide parallel block instead of a state machine, and it is the first place in this part where independence buys a different machine. There is a bonus. Normalise the",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "rasteriser",
+  "anchor": "the-rule-that-stops-seams",
+  "title": "The rule that stops seams",
+  "text": "Two triangles that share an edge will both contain any pixel whose centre lies exactly on that edge. Shade it twice and a blended scene shows a bright seam; shade it in neither and there is a hole. The specification's answer is the top left rule: a pixel exactly on an edge belongs to the triangle if that edge is a top edge or a left edge, and not otherwise. In an implementation it is a bias of minus one applied to the initial value of every edge that is not top or left. The part worth noticing is why that works at all. It is exact only because the coordinates are integers in fixed point, so lying exactly on an edge is a decision a comparison can make. In floating point, exactly on the line is not a well defined condition, and watertight rasterisation is impossible. That is the argument for snapping vertex positions to a fixed point grid, and it is a correctness argument rather than a performance one.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "rasteriser",
+  "anchor": "two-levels-and-why-a-sliver-is-pathological",
+  "title": "Two levels, and why a sliver is pathological",
+  "text": "Testing every pixel of the screen against every triangle would be absurd, so rasterisation happens at two granularities. A coarse stage tests whole tiles, say eight by eight, against the edge equations by evaluating them at the tile's corners. A tile entirely outside is rejected with no per pixel work at all; a tile entirely inside is accepted wholesale; only the tiles straddling an edge go to the next stage. A fine stage then evaluates per pixel inside those, producing coverage. This is why a long thin triangle is the worst case. It touches a great many tiles while covering very few pixels, so the coarse stage rejects almost nothing and the fine stage finds almost nothing to do in each tile it was handed.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "rasteriser",
+  "anchor": "the-block-of-four-and-the-reason-for-it",
+  "title": "The block of four, and the reason for it",
+  "text": "The fine rasteriser does not emit single pixels. It emits two by two blocks. The reason is mipmap selection. Every texture read has to know how fast the texture coordinate is changing across the screen, so it can pick a level of detail: a surface seen edge on needs a blurrier version of the texture than one seen flat, or it aliases horribly. That rate of change is a derivative. A shader is a program run per pixel. It has no analytic knowledge of its own derivative, and computing one properly would mean differentiating arbitrary shader code. The cheap answer is a finite difference against a neighbour, and that only works if the neighbour is right there: Two subtractions and a read across lanes. So: shade in blocks of four, and the derivative is free. The exclusive or is the whole addressing scheme. Flipping the low bit crosses the block horizontally and flipping the next one crosses it vertically, which is why a derivative costs a subtraction. This is exposed in every shading language, and every ordinary texture read calls it for you. The variants that take an explicit derivative exist for the case where the implicit one would be wrong, inside branchy code, because the hardware woul",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "rasteriser",
+  "anchor": "what-the-block-costs",
+  "title": "What the block costs",
+  "text": "A block is shaded as a unit even when the triangle covers one of its four pixels. The other three run anyway, as helper lanes: they execute the whole shader, they issue memory traffic, they occupy arithmetic slots, and their results are discarded. They have to run, because the covered pixel needs their values to compute its derivative. The published figure for blocks generated along triangle edges is that between a quarter and three quarters of the shading work is wasted. The floor is one covered pixel in four. Three consequences follow. Small triangles are catastrophically inefficient. Count the blocks a triangle touches and it is roughly its area over four plus half its perimeter, so efficiency runs with the ratio of area to perimeter. A triangle eight pixels on a side wastes about two thirds of its shading; at sixty four pixels a side it wastes under a fifth. That is why very small triangles are the current crisis in rendering, and why at least one modern engine rasterises them in software on the general purpose cores instead. The fixed function path stops paying for itself when the triangle is smaller than the block it insists on. Graphics work moving back onto the machine that",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "rasteriser",
+  "anchor": "where-the-warp-comes-from",
+  "title": "Where the warp comes from",
+  "text": "Here is the payoff. The block of four pixels is the unit of fragment shading. To fill an instruction issue slot the hardware groups eight of those blocks together, and schedules them as one thread of control. Eight blocks of four is thirty two. A warp is not a number somebody chose for tidiness. It is the pixel quad, replicated eight times to fill an issue slot, and the pixel quad exists so that a shader can compute a derivative by subtracting its neighbour, so that a texture read can pick a mipmap level. Every person who has memorised that the warp size is thirty two has memorised a fact about mipmap selection.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "rasteriser",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Coverage is three linear edge functions and a sign test. They are incremental, so a step is an addition, and order free, so the rasteriser is a wide parallel block rather than a state machine. Normalised, they are the interpolation weights as well. The top left rule makes shared edges watertight, and it is exact only because the coordinates are fixed point integers. Rasterisation is hierarchical, which is why a long thin sliver is the pathological case: many tiles, few pixels. Shading happens in two by two blocks so that a derivative is a subtraction against a neighbour, which is what mipmap selection needs. Uncovered pixels in a block run anyway and are thrown away, so small triangles waste most of their shading. And a warp is eight of those blocks. Next is what that means for the machine underneath: why the streaming multiprocessor is shaped the way it is, and which of its features were built for triangles rather than for the kernels people now write.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "rasteriser",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These are the rasteriser's own arithmetic: an edge function, the incremental step, the sign test, the fill rule bias, the lane addressing inside a block, and the efficiency of a small triangle. names the case your model got wrong. Several exercises assert that a point exactly on an edge is inside, which is the fill rule rather than a comparison written the wrong way round.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "rasteriser",
+  "n": 1,
+  "title": "The edge function",
+  "text": "Coverage is a sign test on three of these, and everything else in the rasteriser is a consequence of their form. Write , returning the value of an edge function at a point, given the two endpoints of the edge and the point. The value is , which is the signed area of the triangle formed by the edge and the point. Its sign says which side of the line the point is on.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "rasteriser",
+  "n": 2,
+  "title": "One addition per pixel",
+  "text": "Being incremental is half of why this algorithm won: a step across a row is an addition rather than two multiplications. Write , returning how much an edge function changes when the point moves one pixel to the right, given the edge's endpoints. The function is linear, so the change is a constant that does not depend on where you are.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "rasteriser",
+  "n": 3,
+  "title": "Inside, by sign",
+  "text": "The whole coverage test is a comparison of signs, which is why it can be done for many pixels at once with no dependency between them. Write , deciding whether a point is inside a triangle, given the three edge function values at that point. A point is inside when all three have the same sign. A value of zero is on an edge and counts as inside here, so that the two triangles sharing an edge do not leave a hole between them.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "rasteriser",
+  "n": 4,
+  "title": "The rule that stops the seam",
+  "text": "Without this, a pixel on a shared edge is either shaded twice, which shows as a seam under blending, or not at all, which shows as a hole. Write , returning the bias to apply to an edge's initial value under the top left rule, given the edge's change in x and change in y. An edge is a top edge when it is exactly horizontal and its interior is below, which for this winding means the change in y is zero and the change in x is negative. An edge is a left edge when its change in y is positive. A top or left edge gets a bias of 0. Every other edge gets a bias of -1, so that a pixel exactly on it is",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "rasteriser",
+  "n": 5,
+  "title": "Reaching your neighbour",
+  "text": "The whole addressing scheme is an exclusive or, which is why a derivative costs a subtraction rather than a differentiated shader. Write , returning the lane index a shader reads to compute a derivative, given its own lane index inside a two by two block and which direction it wants. Direction 0 is horizontal and direction 1 is vertical. Lanes are numbered 0 to 3 with 0 and 1 the top row and 2 and 3 the bottom.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "rasteriser",
+  "n": 6,
+  "title": "The lanes that run for nothing",
+  "text": "The waste is not an oversight. The uncovered lanes have to run, or the covered one cannot difference against them. Write , returning how many lanes of a two by two block execute the shader and have their results discarded, given the coverage as a four bit mask. A block with no coverage at all is not shaded, so it has no helper lanes. Otherwise every uncovered lane in the block runs anyway, because the covered ones need its values to compute a derivative.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "rasteriser",
+  "n": 7,
+  "title": "How much of a small triangle is wasted",
+  "text": "Efficiency runs with the ratio of area to perimeter, so it collapses as triangles get small, whatever the shader does. Write , returning the shading efficiency of a triangle as a percentage, given its area and perimeter in pixels. A triangle touches roughly its area over four, plus half its perimeter, blocks of four pixels. The efficiency is the area over four times the blocks touched, which simplifies to the area over the area plus twice the perimeter. Return the percentage, truncated. An area of zero has no efficiency to report, so return 0.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "rasteriser",
+  "n": 8,
+  "title": "Where thirty two comes from",
+  "text": "The number was not chosen for tidiness. It is the pixel block, replicated enough times to fill an issue slot. Write , returning how many lanes a warp holds, given how many blocks of pixels the hardware groups into one instruction issue slot. A block is two by two, so it is four pixels, and a warp is that many blocks.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "rasteriser",
+  "n": 1,
+  "title": "How does a rasteriser decide whether a pixel is inside a triangle?",
+  "text": " Each edge function is the signed area of the triangle formed by that edge and the point, so its sign says which side the point is on. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "rasteriser",
+  "n": 2,
+  "title": "What does it cost to move an edge function one pixel to the right?",
+  "text": " Being incremental is half of why this algorithm won. Three edges is three adds per pixel, and that is the whole inner loop. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "rasteriser",
+  "n": 3,
+  "title": "Why can a rasteriser be a wide parallel block rather than a state machine?",
+  "text": " A scanline algorithm has a sequential dependency along each span and cannot be spread across sixty four adders. This is the first place in the part where independence buys a different machine. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "rasteriser",
+  "n": 4,
+  "title": "What do the three edge functions give you besides coverage?",
+  "text": " The same hardware that decides coverage produces the weights for interpolating every attribute across the triangle, for free. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "rasteriser",
+  "n": 5,
+  "title": "What problem does the top left rule solve?",
+  "text": " Shade it twice and a blended scene shows a seam; shade it in neither and there is a hole. The rule assigns it to one of the two. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "rasteriser",
+  "n": 6,
+  "title": "Why does the top left rule need fixed point coordinates?",
+  "text": " Watertight rasterisation is impossible in floating point, and that is a correctness argument for snapping vertices to a grid rather than a performance one. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "rasteriser",
+  "n": 7,
+  "title": "What does the coarse stage of a hierarchical rasteriser do?",
+  "text": " Only tiles straddling an edge reach the per pixel stage, which is most of what makes the cost proportional to the triangle rather than to the screen. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "rasteriser",
+  "n": 8,
+  "title": "Why is a long thin sliver triangle the pathological case?",
+  "text": " Both stages do work proportional to the tiles touched, and a sliver maximises tiles per covered pixel. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "rasteriser",
+  "n": 9,
+  "title": "Why does the rasteriser emit two by two blocks rather than single pixels?",
+  "text": " A shader has no analytic knowledge of its own derivative, and differentiating arbitrary shader code would be enormously expensive. A finite difference against the pixel next door is two subtractions. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "rasteriser",
+  "n": 10,
+  "title": "Within a two by two block, how does a lane reach its neighbours?",
+  "text": " Flipping a bit stays inside the block from every lane, where adding falls out of it at the end of a row. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "rasteriser",
+  "n": 11,
+  "title": "What is a helper lane?",
+  "text": " It has to run, because the covered pixel in its block needs its interpolated values to compute a derivative. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "rasteriser",
+  "n": 12,
+  "title": "How much shading work is wasted in blocks along a triangle's edge?",
+  "text": " The floor is one covered pixel in four, and it is why a triangle's efficiency runs with its ratio of area to perimeter. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "rasteriser",
+  "n": 13,
+  "title": "Why are very small triangles the current crisis in rendering?",
+  "text": " It is why at least one modern engine rasterises small triangles in software on the general purpose cores instead, which is graphics work moving back onto the machine that graphics work created. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "rasteriser",
+  "n": 14,
+  "title": "Can quad granularity be switched off for a shader that needs no derivatives?",
+  "text": " Removing it would mean redesigning all of those blocks for a modest win. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "rasteriser",
+  "n": 15,
+  "title": "Where does the warp size of thirty two come from?",
+  "text": " Four pixels to a block, eight blocks to a warp. Everyone who has memorised that a warp is thirty two has memorised a fact about mipmap selection. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

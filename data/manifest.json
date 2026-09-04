@@ -2180,7 +2180,9 @@
     "cache",
     "pipeline"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "rasteriser"
+   ],
    "minutes": 55
   },
   {
@@ -2194,12 +2196,15 @@
    "phase": "parallel",
    "accent": "jade",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1550,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "frame-budget"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "sm-shape",
@@ -2854,9 +2859,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 56,
-  "words": 85433,
-  "exercises": 448,
-  "drills": 840
+  "ready": 57,
+  "words": 86983,
+  "exercises": 456,
+  "drills": 855
  }
 }
