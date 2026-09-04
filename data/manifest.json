@@ -1553,7 +1553,9 @@
     "syscalls",
     "elf"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "testing"
+   ],
    "minutes": 55
   },
   {
@@ -1589,12 +1591,15 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1854,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "debugger"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "cost-model",
@@ -2843,9 +2848,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 54,
-  "words": 82134,
-  "exercises": 432,
-  "drills": 810
+  "ready": 55,
+  "words": 83988,
+  "exercises": 440,
+  "drills": 825
  }
 }

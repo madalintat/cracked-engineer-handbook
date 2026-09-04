@@ -159,4 +159,8 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
       introduces, the frame pointer argument with its measured cost, and
       coordinated omission, where every number is true and the system is an
       order of magnitude worse than it says
-- [ ] 054 `testing`, which finishes Part IX
+- [x] 054 `testing`. Generation against oracle, properties as laws, shrinking,
+      the three generations of fuzzing with the edge hash and the bucketing,
+      and coverage as a diagnostic that is blind to the missing check
+- [x] Part IX is complete: all 8 units of the tools part written and validated
+- [ ] Part X onwards, 67 units still stubs
