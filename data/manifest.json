@@ -739,7 +739,8 @@
    ],
    "neededBy": [
     "computability",
-    "complexity"
+    "complexity",
+    "parsing"
    ],
    "minutes": 55
   },
@@ -1119,7 +1120,9 @@
    "needs": [
     "raii"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "parsing"
+   ],
    "minutes": 55
   },
   {
@@ -1418,12 +1421,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1869,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "languages",
+    "compile-time"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "ssa",
@@ -2798,9 +2805,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 47,
-  "words": 70933,
-  "exercises": 376,
-  "drills": 705
+  "ready": 48,
+  "words": 72802,
+  "exercises": 384,
+  "drills": 720
  }
 }

@@ -7,7 +7,9 @@
   "assumes": [
     "clock-bus",
     "encoding",
-    "universal"
+    "universal",
+    "languages",
+    "compile-time"
   ],
   "stages": [
     {

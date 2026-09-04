@@ -132,3 +132,10 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
       hover cards; the render race; the theme flash; scroll memory on Back;
       and `tools/check-css.mjs`, which fails the release on a `var()` that
       nothing defines
+
+## 8. Content, from unit 047
+
+- [x] 047 `parsing`, source text to syntax tree. Note, 8 exercises validated
+      against gcc and clang, 15 drills. Its `needs` are `languages` and
+      `compile-time`, which the under-the-code path now declares it skips
+- [ ] 048 `ssa`, and the rest of Part IX

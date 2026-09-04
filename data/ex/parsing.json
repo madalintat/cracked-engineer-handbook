@@ -1,0 +1,310 @@
+{
+ "slug": "parsing",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Longest token wins",
+   "brief": "<p>Write <code>plus_tokens</code>, returning how many tokens a lexer produces from a run of <code>n</code> consecutive <code>+</code> characters.</p>\n<p>The rule is maximal munch: at each position take the longest valid token, which is <code>++</code> when two are left and <code>+</code> when one is.</p>",
+   "kind": "output",
+   "concept": "The lexer decides by length alone, so a run of plus characters splits the same way whether or not the result is a program that compiles.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Every pair of characters is one token, and an odd character left over is one more."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Counting one token per character is what the lexer would do if it took the shortest match. It takes the longest, so five characters are <code>++</code>, <code>++</code>, <code>+</code>, which is three tokens rather than five.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Five plus characters lex as three tokens, and <code>a+++++b</code> is therefore <code>(a++)++ + b</code>, which is why every C compiler rejects it. The parse a human sees is never looked for.</p>",
+   "starter": "unsigned plus_tokens(unsigned n) {\n    return n;\n}",
+   "tests": "#include <assert.h>\nunsigned plus_tokens(unsigned);\nint main(void) {\n    assert(plus_tokens(0) == 0);\n    assert(plus_tokens(1) == 1);   /* + */\n    assert(plus_tokens(2) == 1);   /* ++ */\n    assert(plus_tokens(3) == 2);   /* ++ + */\n    assert(plus_tokens(4) == 2);   /* ++ ++ */\n    assert(plus_tokens(5) == 3);   /* ++ ++ + */\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "Precedence, before there is a tree",
+   "brief": "<p>Write <code>eval3</code>, evaluating <code>a op1 b op2 c</code> for the four operators <code>+ - * /</code>, grouping the way C does rather than the way the characters are ordered.</p>\n<p>Operators are given as characters. Division is integer division and no test divides by zero.</p>",
+   "kind": "output",
+   "concept": "Precedence is not a property of the sequence, so a parser that walks left to right without it produces a different number.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Multiplication and division bind tighter than addition and subtraction. Decide which of the two operators binds tighter, and do that one first."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Folding strictly left to right gives <code>2 + 3 * 4</code> as 20, the answer a calculator without precedence gives. C groups the multiplication first and gives 14.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The tree the parser builds records this, and every later pass reads the shape rather than reapplying the rule.</p>",
+   "starter": "int eval3(int a, char op1, int b, char op2, int c) {\n    int r = a;\n    r = op1 == '+' ? r + b : op1 == '-' ? r - b : op1 == '*' ? r * b : r / b;\n    r = op2 == '+' ? r + c : op2 == '-' ? r - c : op2 == '*' ? r * c : r / c;\n    return r;\n}",
+   "tests": "#include <assert.h>\nint eval3(int, char, int, char, int);\nint main(void) {\n    assert(eval3(2, '+', 3, '*', 4) == 14);\n    assert(eval3(2, '*', 3, '+', 4) == 10);\n    assert(eval3(20, '-', 3, '*', 4) == 8);\n    assert(eval3(20, '/', 4, '-', 1) == 4);\n    assert(eval3(1, '+', 2, '+', 3) == 6);\n    assert(eval3(8, '/', 4, '/', 2) == 1);\n    assert(eval3(2, '+', 8, '/', 4) == 4);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Which side the tree leans",
+   "brief": "<p>Write <code>fold</code>, applying one operator across an array of values with the associativity that operator has in C.</p>\n<p><code>-</code> groups to the left, so three values are <code>(a - b) - c</code>. <code>=</code> groups to the right; model it as the rightmost value winning, which is what a chain of assignments leaves behind. Only these two operators are tested.</p>",
+   "kind": "output",
+   "concept": "Associativity is one number in a precedence table, and it decides which of two different answers a chain of the same operator produces.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "For <code>-</code>, start from the first value and subtract each of the rest. For <code>=</code>, nothing is computed at all: the last value is the answer."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. <code>2 - 3 - 4</code> is <code>(2 - 3) - 4</code>, which is -5, and not <code>2 - (3 - 4)</code>, which is 3. Both are subtraction and only the grouping differs.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>In a precedence climbing parser these two cases differ by one: recurse with the same binding power to lean right, one higher to lean left.</p>",
+   "starter": "int fold(char op, const int *vals, unsigned n) {\n    (void)op;\n    return n ? vals[0] : 0;\n}",
+   "tests": "#include <assert.h>\nint fold(char, const int *, unsigned);\nint main(void) {\n    { int v[] = {2, 3, 4};       assert(fold('-', v, 3) == -5); }\n    { int v[] = {10, 1};         assert(fold('-', v, 2) == 9); }\n    { int v[] = {7};             assert(fold('-', v, 1) == 7); }\n    { int v[] = {1, 2, 3, 4};    assert(fold('-', v, 4) == -8); }\n    { int v[] = {2, 3, 4};       assert(fold('=', v, 3) == 4); }\n    { int v[] = {9, 1};          assert(fold('=', v, 2) == 1); }\n    { int v[] = {5};             assert(fold('=', v, 1) == 5); }\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "The same tokens, two programs",
+   "brief": "<p>Write <code>classify</code>, deciding what <code>A * B;</code> is, given whether <code>A</code> has been declared as a <code>typedef</code> name and whether <code>B</code> has been declared already.</p>\n<p>Return 1 for a declaration and 0 for an expression statement. If <code>A</code> is a <code>typedef</code> name the statement declares <code>B</code>, whatever <code>B</code> was before. Otherwise it is a multiplication, and it is only a valid one if <code>B</code> already exists.</p>\n<p>Return -1 for the case that is neither: <code>A</code> is not a type and <code>B</code> is undeclared.</p>",
+   "kind": "output",
+   "concept": "The parse of a statement depends on a declaration that is not in the statement, which is what makes the language context sensitive rather than the grammar deficient.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Ask about <code>A</code> first. Nothing about <code>B</code> matters when <code>A</code> is a type."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. When <code>A</code> is a <code>typedef</code> name the statement is a declaration even if <code>B</code> already exists, because the reading does not depend on <code>B</code> at all. When <code>A</code> is an ordinary variable there is nothing to declare, so <code>B</code> must already exist or the line is an error.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Real compilers answer this by feeding the symbol table back into the lexer, so that a <code>typedef</code> name arrives at the parser as a different kind of token from an identifier. It is called the lexer hack, and there is no way around it.</p>",
+   "starter": "int classify(int a_is_typedef, int b_declared) {\n    (void)a_is_typedef;\n    return b_declared ? 0 : -1;\n}",
+   "tests": "#include <assert.h>\nint classify(int, int);\nint main(void) {\n    assert(classify(1, 0) == 1);    /* typedef A; A * B; declares B */\n    assert(classify(1, 1) == 1);    /* still a declaration */\n    assert(classify(0, 1) == 0);    /* int A, B; A * B; multiplies */\n    assert(classify(0, 0) == -1);   /* neither reading works */\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Anything that could be a declaration",
+   "brief": "<p>Write <code>vexing</code>, deciding whether a C++ construct of the form <code>T x(...)</code> declares a function rather than a variable.</p>\n<p>The argument list is described by two counts: how many arguments are written as a type with no name, like <code>Gadget()</code> or <code>int</code>, and how many are written as an expression, like <code>3</code> or <code>y</code>. An empty list has both counts zero.</p>\n<p>Return 1 if the standard reads it as a declaration. Anything that could be a declaration is one, so a list that is entirely types, including an empty list, is a function declaration. A single expression argument makes it a variable.</p>",
+   "kind": "output",
+   "concept": "The rule is a preference stated in the standard, not a consequence of the grammar, and it resolves in the direction almost nobody wants.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The empty list is the case people meet first, and it is a declaration."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. <code>Widget w();</code> declares a function taking nothing and returning a <code>Widget</code>. It is the case that looks least like a declaration and it is the one people write by accident.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Clang warns about this under <code>-Wvexing-parse</code>, and C++11 added <code>{}</code> as the escape, because braces cannot be read as a parameter list.</p>",
+   "starter": "int vexing(unsigned type_args, unsigned expr_args) {\n    (void)expr_args;\n    return type_args > 0;\n}",
+   "tests": "#include <assert.h>\nint vexing(unsigned, unsigned);\nint main(void) {\n    assert(vexing(0, 0) == 1);   /* Widget w();          a function */\n    assert(vexing(1, 0) == 1);   /* Widget w(Gadget());  a function */\n    assert(vexing(2, 0) == 1);   /* two type arguments   a function */\n    assert(vexing(0, 1) == 0);   /* Widget w(3);         a variable */\n    assert(vexing(1, 1) == 0);   /* one of each          a variable */\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "The parse you have to supply",
+   "brief": "<p>Write <code>dependent</code>, deciding how <code>T::x * y;</code> parses inside a template, given whether the programmer wrote <code>typename</code> in front of it.</p>\n<p>Return 1 for a declaration and 0 for a multiplication. Without <code>typename</code> a dependent qualified name is assumed not to be a type.</p>\n<p>Also handle the non-dependent case: when the name is not dependent, the compiler can look it up, so <code>is_dependent</code> of 0 means the answer follows whether the name actually is a type.</p>",
+   "kind": "output",
+   "concept": "The keyword is the parse. A mainstream language asks the programmer which tree to build, because at that point the front end genuinely cannot know.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "When the name is dependent the compiler has no <code>T</code> yet, so only the keyword can decide. When it is not dependent the keyword is not needed."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A dependent name with no <code>typename</code> is not a type, so the line is a multiplication, whatever the eventual instantiation turns out to make <code>T::x</code>. That default is why the keyword exists.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is the sharpest form of the unit's argument. The grammar cannot decide, the symbol table cannot decide yet, so the standard adds a keyword whose only job is to tell the parser which tree to build.</p>",
+   "starter": "int dependent(int is_dependent, int wrote_typename, int name_is_type) {\n    (void)is_dependent; (void)wrote_typename;\n    return name_is_type;\n}",
+   "tests": "#include <assert.h>\nint dependent(int, int, int);\nint main(void) {\n    /* Dependent: only the keyword decides. */\n    assert(dependent(1, 0, 1) == 0);\n    assert(dependent(1, 0, 0) == 0);\n    assert(dependent(1, 1, 1) == 1);\n    /* Not dependent: the compiler can look the name up. */\n    assert(dependent(0, 0, 1) == 1);\n    assert(dependent(0, 0, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "What the tree throws away",
+   "brief": "<p>Write <code>ast_nodes</code>, returning how many nodes an abstract syntax tree holds for a fully parenthesised chain of binary operators over <code>n</code> values.</p>\n<p>A parse tree would record every parenthesis. The abstract tree keeps only the values and the operators, because the grouping the parentheses specified is now the shape of the tree.</p>",
+   "kind": "output",
+   "concept": "Parentheses exist to tell the parser what to build, and once it is built they have no work left to do.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Every operator is one node and every value is one node. Count how many operators join <code>n</code> values."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Three values joined by two operators are five nodes, not three and not eight. The parentheses that forced the grouping are not nodes.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Clang deliberately keeps more than this, including the parentheses and every source location, which is what makes clang-format and clang-tidy possible. A tree that keeps only meaning compiles just as well and supports none of it.</p>",
+   "starter": "unsigned ast_nodes(unsigned values) {\n    return values;\n}",
+   "tests": "#include <assert.h>\nunsigned ast_nodes(unsigned);\nint main(void) {\n    assert(ast_nodes(0) == 0);\n    assert(ast_nodes(1) == 1);   /* a */\n    assert(ast_nodes(2) == 3);   /* (a + b) */\n    assert(ast_nodes(3) == 5);   /* ((a + b) + c) */\n    assert(ast_nodes(4) == 7);\n    assert(ast_nodes(10) == 19);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Where the else goes",
+   "brief": "<p>Write <code>else_owner</code>, returning which <code>if</code> an <code>else</code> attaches to, given a chain of <code>n</code> nested <code>if</code> statements with no braces and a single <code>else</code> at the end.</p>\n<p>Number the <code>if</code> statements from 0 at the outermost. An <code>else</code> binds to the nearest <code>if</code> that does not already have one.</p>\n<p>Return -1 when there is no <code>if</code> for it to bind to.</p>",
+   "kind": "output",
+   "concept": "The dangling else is ambiguous in the grammar, and every language that has it resolves the ambiguity by a rule written outside the grammar.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Nearest means innermost, which is the largest number rather than the smallest."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The <code>else</code> goes to the innermost <code>if</code>, which is why indentation that suggests otherwise is a real source of wrong programs and why compilers warn about it.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A parser generator reports this as a shift-reduce conflict and resolves it by shifting, which happens to give the same answer the C standard requires. Braces make the question go away, which is why the style guides insist on them.</p>",
+   "starter": "int else_owner(unsigned ifs) {\n    return ifs ? 0 : -1;\n}",
+   "tests": "#include <assert.h>\nint else_owner(unsigned);\nint main(void) {\n    assert(else_owner(0) == -1);\n    assert(else_owner(1) == 0);\n    assert(else_owner(2) == 1);\n    assert(else_owner(3) == 2);\n    assert(else_owner(9) == 8);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

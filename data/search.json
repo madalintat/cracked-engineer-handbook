@@ -12791,6 +12791,262 @@
  },
  {
   "t": "section",
+  "slug": "parsing",
+  "anchor": "the-lexer-takes-the-longest-match-it-can",
+  "title": "The lexer takes the longest match it can",
+  "text": "Give a C compiler the text and ask what it means. There is more than one way to cut it up. It could be , or , and both are sequences of real C tokens. The compiler chooses the first, and it does not do so by thinking about which one type checks. It applies one rule, over and over: at each position, take the longest sequence of characters that forms a valid token. That is maximal munch, and it is the whole of the lexer's decision procedure. So is , , , , and it compiles as . If is declared as a pointer and the result is nonsense, the lexer will not revisit its decision. It has no idea. It produced tokens and moved on. The consequence people meet is , which every C compiler rejects. Maximal munch gives , , , , , and is not something you can write, because is not an lvalue. A human reading it can see the parse that would have worked, , and the compiler will not look for it. The error you get is about the increment, never about the tokenization. C++ had the same rule bite it in a more visible place. Before C++11, writing two closing template brackets together, as in a vector of vectors, produced the shift operator, because is the longer match. Everyone learned to type a space. The fix ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "parsing",
+  "anchor": "precedence-is-a-shape-not-a-rule",
+  "title": "Precedence is a shape, not a rule",
+  "text": "Given the tokens for , a parser has to decide what groups with what. The answer is not in the tokens, which are a flat sequence, and it is not recoverable afterwards. The tokens are a sequence and the tree is not. Once the tree exists, precedence is not a rule that has to be remembered any more; it is the shape, and every later pass reads the shape. Two ways of getting there are worth knowing. The textbook one is a cascade of functions, one per precedence level, each calling the next tighter one and then looking for its own operator. C has around fifteen levels, so that is fifteen functions, most of which do nothing but call the next. The compact one gives every operator token a binding power, a number, and runs a single loop: parse something, look at the next operator, and if it binds tighter than the level you are at, recurse to gather its right side first. Fifteen functions collapse into one loop and a table. It is usually called precedence climbing, or Pratt parsing after its author, and it is what most hand-written parsers do. Associativity falls out of the same table. Subtraction groups to the left, so is and not , which differ by 8. Assignment groups to the right, which is w",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "parsing",
+  "anchor": "two-readings-and-a-rule-that-is-not-about-grammar",
+  "title": "Two readings, and a rule that is not about grammar",
+  "text": "Now the interesting part, and the reason this unit exists. Take the statement in C. It has two readings that are both perfectly good C. If is a type, it declares as a pointer to . If is a variable, it multiplies by and throws the result away. Nothing in the token sequence distinguishes them. They are the same four tokens in the same order. The grammar cannot decide, and the difference is not a subtlety of the grammar that a cleverer grammar would resolve: the two parses depend on a declaration that appeared earlier in the file, possibly in a header, possibly a hundred thousand lines away. Real compilers resolve it by feeding the symbol table back into the front end, so that an identifier already declared as a lexes as a different token kind from an ordinary identifier. The name for this is the lexer hack, which is unfair, because there is no way to avoid it. The language is context sensitive and the parser has to be too. You can watch it happen. Compile a file where is a and the compiler is happy. Delete the , so becomes an variable, and the same line compiles as a multiplication whose result is unused. Same characters, same tokens, two different programs, decided by a line somewhe",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "parsing",
+  "anchor": "anything-that-could-be-a-declaration-is-one",
+  "title": "Anything that could be a declaration is one",
+  "text": "C++ took the same ambiguity and wrote down a resolution that catches people daily. Write inside a function, meaning a default-constructed widget. It declares a function named that takes nothing and returns a . Nothing is constructed and nothing runs. The rule is stated as a preference: if a construct could be a declaration, it is a declaration. It gets worse with an argument. looks like a widget built from a temporary gadget, and it declares a function taking a pointer to a function returning a gadget. This is the most vexing parse, and it is a parse that the standard requires rather than a compiler being difficult. Clang will warn about it if you ask, with , and the warning exists because the correct parse is almost never what was meant. The escape added in C++11 was braces. cannot be read as a declaration, so it constructs. That is most of why the feature exists.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "parsing",
+  "anchor": "when-the-compiler-asks-you-for-the-parse",
+  "title": "When the compiler asks you for the parse",
+  "text": "Inside a template, the same ambiguity becomes something the compiler cannot resolve at all, because the deciding declaration has not been chosen yet. Write in a template on . Whether names a type depends on which the template is instantiated with, and at the point the template is parsed there is no . Both readings stay open. C++ resolves this by demanding an answer from you. An unqualified dependent name is assumed not to be a type, so the line parses as multiplication, and if you meant a declaration you write . The keyword is not decoration and it is not a hint to the reader. It is the parse, supplied by the programmer, because the front end genuinely cannot work it out. That is the sharpest statement of this unit's point available. There is a mainstream language whose syntax is not decidable from its text, and whose standard therefore includes a keyword whose entire job is to tell the parser which tree to build.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "parsing",
+  "anchor": "where-this-stops-being-a-parsing-problem",
+  "title": "Where this stops being a parsing problem",
+  "text": "One more step and the ground gives way. Template instantiation in C++ can compute anything a Turing machine can, so deciding whether a given C++ file is a valid program can require running an arbitrary computation, which in general does not finish. This is why compilers ship an instantiation depth limit, and why gcc's exists at all. A depth limit is not a memory guard. It is a compiler choosing to stop rather than to run forever on a question that has no general answer, which is the same result Part IV proved about the halting problem, arriving from a completely different direction.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "parsing",
+  "anchor": "what-the-tree-keeps-and-what-it-drops",
+  "title": "What the tree keeps, and what it drops",
+  "text": "The parse tree records every production the grammar took. The abstract syntax tree keeps what carries meaning and drops what only helped the parser get there. Parentheses are the clearest case. Once is a tree, the parentheses have no work left to do, because the grouping they specified is the shape. Most punctuation goes the same way. A semicolon separated two statements and the tree has two statements in it. What gets kept beyond meaning is a design decision with visible consequences. Clang keeps a great deal: source locations on every node, the name you wrote rather than what it expanded to, explicit nodes for implicit conversions, and even parenthesized expressions marked as such. That is more than compiling needs, and it is why clang-format can reprint your code, why clang-tidy can rewrite it, and why editors can rename a symbol without regular expressions. A lossy tree compiles just as well and supports none of that.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "parsing",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "The lexer takes the longest token it can at every position, without ever consulting meaning, and that single rule explains and the old requirement for a space between two closing template brackets. The parser turns a flat sequence into a tree, and precedence and associativity stop being rules at that moment and become shape. A grammar is enough only when meaning does not affect syntax. In C the same four tokens are a declaration or a multiplication depending on a elsewhere, in C++ anything that could be a declaration is one, and inside a template you have to supply the parse yourself with . Deciding validity in general is undecidable, which is why there is a depth limit. Next comes what happens to that tree: the middle end turns it into a form built for analysis rather than for a human, and every optimisation you have ever seen in an assembly listing happens there.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "parsing",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These exercises model the front end's decisions rather than calling into a real one, because a test that shells out to a compiler is a test about your machine. names a case your model got wrong, and the checks are written so the failing case tells you which rule you missed rather than only that something is wrong. Several exercises assert that a longer token wins even where the shorter one would have produced a program that compiles. That is maximal munch working, not the model failing.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "parsing",
+  "n": 1,
+  "title": "Longest token wins",
+  "text": "The lexer decides by length alone, so a run of plus characters splits the same way whether or not the result is a program that compiles. Write , returning how many tokens a lexer produces from a run of consecutive characters. The rule is maximal munch: at each position take the longest valid token, which is when two are left and when one is.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "parsing",
+  "n": 2,
+  "title": "Precedence, before there is a tree",
+  "text": "Precedence is not a property of the sequence, so a parser that walks left to right without it produces a different number. Write , evaluating for the four operators , grouping the way C does rather than the way the characters are ordered. Operators are given as characters. Division is integer division and no test divides by zero.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "parsing",
+  "n": 3,
+  "title": "Which side the tree leans",
+  "text": "Associativity is one number in a precedence table, and it decides which of two different answers a chain of the same operator produces. Write , applying one operator across an array of values with the associativity that operator has in C. groups to the left, so three values are . groups to the right; model it as the rightmost value winning, which is what a chain of assignments leaves behind. Only these two operators are tested.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "parsing",
+  "n": 4,
+  "title": "The same tokens, two programs",
+  "text": "The parse of a statement depends on a declaration that is not in the statement, which is what makes the language context sensitive rather than the grammar deficient. Write , deciding what is, given whether has been declared as a name and whether has been declared already. Return 1 for a declaration and 0 for an expression statement. If is a name the statement declares , whatever was before. Otherwise it is a multiplication, and it is only a valid one if already exists. Return -1 for the case that is neither: is not a type and is undeclared.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "parsing",
+  "n": 5,
+  "title": "Anything that could be a declaration",
+  "text": "The rule is a preference stated in the standard, not a consequence of the grammar, and it resolves in the direction almost nobody wants. Write , deciding whether a C++ construct of the form declares a function rather than a variable. The argument list is described by two counts: how many arguments are written as a type with no name, like or , and how many are written as an expression, like or . An empty list has both counts zero. Return 1 if the standard reads it as a declaration. Anything that could be a declaration is one, so a list that is entirely types, including an empty list, is a funct",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "parsing",
+  "n": 6,
+  "title": "The parse you have to supply",
+  "text": "The keyword is the parse. A mainstream language asks the programmer which tree to build, because at that point the front end genuinely cannot know. Write , deciding how parses inside a template, given whether the programmer wrote in front of it. Return 1 for a declaration and 0 for a multiplication. Without a dependent qualified name is assumed not to be a type. Also handle the non-dependent case: when the name is not dependent, the compiler can look it up, so of 0 means the answer follows whether the name actually is a type.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "parsing",
+  "n": 7,
+  "title": "What the tree throws away",
+  "text": "Parentheses exist to tell the parser what to build, and once it is built they have no work left to do. Write , returning how many nodes an abstract syntax tree holds for a fully parenthesised chain of binary operators over values. A parse tree would record every parenthesis. The abstract tree keeps only the values and the operators, because the grouping the parentheses specified is now the shape of the tree.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "parsing",
+  "n": 8,
+  "title": "Where the else goes",
+  "text": "The dangling else is ambiguous in the grammar, and every language that has it resolves the ambiguity by a rule written outside the grammar. Write , returning which an attaches to, given a chain of nested statements with no braces and a single at the end. Number the statements from 0 at the outermost. An binds to the nearest that does not already have one. Return -1 when there is no for it to bind to.",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "parsing",
+  "n": 1,
+  "title": "What does a lexer produce?",
+  "text": " The lexer turns characters into words. Structure appears in the next step, when the parser turns that flat sequence into a tree. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "parsing",
+  "n": 2,
+  "title": "How does a lexer decide where one token ends and the next begins?",
+  "text": " Maximal munch, applied at each position with no reference to meaning. It is the whole of the lexer's decision procedure. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "parsing",
+  "n": 3,
+  "title": "How does a C lexer split <code>a+++b</code>?",
+  "text": " Longest match at each position. The first two plus characters make  ++ , which leaves a single  +  before  b , so it compiles as  (a++) + b . ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "parsing",
+  "n": 4,
+  "title": "Why does every C compiler reject <code>a+++++b</code>?",
+  "text": " The lexer produces  ++ ,  ++ ,  +  and never reconsiders. A human can see that  a++ + ++b  would work, and the compiler does not look for it, which is why the error is about the increment rather than about the tokenization. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "parsing",
+  "n": 5,
+  "title": "Before C++11, why did a vector of vectors need a space between the closing brackets?",
+  "text": " The same rule as  a+++b , in a place people met daily. C++11 fixed it in the parser rather than the lexer: the token is still  &gt;&gt; , and the parser is required to treat it as two brackets inside a template argument list. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "parsing",
+  "n": 6,
+  "title": "What is <code>2 - 3 - 4</code> in C, and why?",
+  "text": " Associativity decides the grouping, and grouping decides the answer. Order of evaluation is a different question and does not change this one. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "parsing",
+  "n": 7,
+  "title": "After the parser has built the tree, where does precedence live?",
+  "text": "  a + b * c  becomes an addition whose right child is a multiplication. No later pass has to know the rule, because the grouping is now structure. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "parsing",
+  "n": 8,
+  "title": "In a precedence climbing parser, what is the difference between a left-associative and a right-associative operator?",
+  "text": " Recurse with the same binding power and the operator leans right; recurse with one higher and it leans left. That is the whole difference. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "parsing",
+  "n": 9,
+  "title": "In C, what is <code>A * B;</code> at statement level?",
+  "text": " The same four tokens are two different programs, and which one they are depends on a declaration that appeared earlier, possibly in a header. This is what makes the language context sensitive. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "parsing",
+  "n": 10,
+  "title": "What is the lexer hack?",
+  "text": " The name is unfair, because there is no way to avoid it. The language is context sensitive, so the parser has to be too. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "parsing",
+  "n": 11,
+  "title": "What does <code>Widget w();</code> declare inside a function?",
+  "text": " Anything that could be a declaration is a declaration. It is the case that looks least like one, and it is the one people write by accident. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "parsing",
+  "n": 12,
+  "title": "Why was <code>Widget w{};</code> added in C++11?",
+  "text": " Giving people an escape from the most vexing parse is a large part of why the syntax exists. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "parsing",
+  "n": 13,
+  "title": "Inside a template, how does <code>T::x * y;</code> parse without <code>typename</code>?",
+  "text": " The parse is fixed when the template is parsed, long before any  T  exists, so the standard picks a default and gives you a keyword to override it. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "parsing",
+  "n": 14,
+  "title": "Why do C++ compilers have a template instantiation depth limit?",
+  "text": " It is the halting problem arriving from a new direction. The limit is a compiler choosing to stop rather than run forever on a question with no general answer. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "parsing",
+  "n": 15,
+  "title": "What does an abstract syntax tree drop that a parse tree keeps?",
+  "text": " It keeps what carries meaning. Clang deliberately keeps more than that, including parentheses and every source location, which is what makes clang-format and clang-tidy possible. ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",
