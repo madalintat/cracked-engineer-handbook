@@ -79,6 +79,8 @@
  ],
  "neededBy": [
   "processes",
-  "linking"
+  "linking",
+  "build",
+  "debugger"
  ]
 }

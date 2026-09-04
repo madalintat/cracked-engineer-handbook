@@ -80,6 +80,7 @@
  "neededBy": [
   "elf",
   "processes",
-  "terminal"
+  "terminal",
+  "debugger"
  ]
 }

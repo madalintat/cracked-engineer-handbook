@@ -862,7 +862,8 @@
    "neededBy": [
     "elf",
     "processes",
-    "terminal"
+    "terminal",
+    "debugger"
    ],
    "minutes": 50
   },
@@ -886,7 +887,9 @@
    ],
    "neededBy": [
     "processes",
-    "linking"
+    "linking",
+    "build",
+    "debugger"
    ],
    "minutes": 55
   },
@@ -911,7 +914,8 @@
    "neededBy": [
     "pipeline",
     "object-model",
-    "virtual-memory"
+    "virtual-memory",
+    "measurement"
    ],
    "minutes": 55
   },
@@ -934,7 +938,9 @@
     "cache"
    ],
    "neededBy": [
-    "atomics"
+    "atomics",
+    "interpreters",
+    "measurement"
    ],
    "minutes": 55
   },
@@ -1123,7 +1129,8 @@
     "raii"
    ],
    "neededBy": [
-    "parsing"
+    "parsing",
+    "build"
    ],
    "minutes": 55
   },
@@ -1432,7 +1439,8 @@
     "compile-time"
    ],
    "neededBy": [
-    "ssa"
+    "ssa",
+    "interpreters"
    ],
    "minutes": 55
   },
@@ -1493,12 +1501,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1590,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "pipeline",
+    "parsing"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "build",
@@ -1511,12 +1523,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1462,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "elf",
+    "compile-time"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "debugger",
@@ -1529,12 +1545,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1515,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "syscalls",
+    "elf"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "measurement",
@@ -1547,12 +1567,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1631,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "cache",
+    "pipeline"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "testing",
@@ -2819,9 +2843,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 50,
-  "words": 75936,
-  "exercises": 400,
-  "drills": 750
+  "ready": 54,
+  "words": 82134,
+  "exercises": 432,
+  "drills": 810
  }
 }

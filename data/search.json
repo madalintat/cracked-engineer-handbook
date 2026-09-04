@@ -13535,6 +13535,990 @@
  },
  {
   "t": "section",
+  "slug": "interpreters",
+  "anchor": "three-designs-and-what-each-pays",
+  "title": "Three designs, and what each pays",
+  "text": "A tree walking interpreter evaluates the syntax tree directly, with a recursive function that switches on the node. It is the simplest thing that works and the right answer for a configuration file or an expression evaluator. It is also between ten and a hundred times slower than the next design, and the reason is not arithmetic. Every operation pays a dispatch, and every node visit chases a pointer into a tree whose parts were allocated at different times and sit in different cache lines. A bytecode virtual machine compiles the tree into a flat instruction stream for an abstract machine, then runs a loop that fetches and dispatches. The tree is walked once, at compile time, where constant folding and peephole work can happen. What runs afterwards is a dense array of small instructions with good locality, and the result can be cached to disk. A just in time compiler goes further and emits real machine code while the program runs, using facts it collected: which types actually appeared, which branches were actually taken, which method the call site actually reached. That last point is why a JIT can beat an ahead of time compiler on a dynamic language. Adding two values in Python is ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "interpreters",
+  "anchor": "stack-or-registers",
+  "title": "Stack or registers",
+  "text": "A bytecode machine has to say where operands come from, and there are two answers. A stack machine takes operands from an operand stack and pushes results back. Instructions are tiny, often one byte and one argument, because the operand locations are implicit. CPython, the Java virtual machine and WebAssembly all work this way. The cost is that more instructions execute: pushing and popping are instructions too. A register machine gives each frame an array of slots and instructions name their operands by index. Instructions are fewer and fatter, there are fewer dispatches, and the slots map more directly onto real registers if a compiler ever gets involved. Lua moved from a stack machine to a register machine in version 5, and it remains the clearest case study of the change. Adding two locals and storing the result is four instructions on a stack machine and one on a register machine. The register machine executes fewer dispatches for the same work, which matters because dispatch is where the time goes.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "interpreters",
+  "anchor": "dispatch-and-why-the-loop-is-shaped-the-way-it-is",
+  "title": "Dispatch, and why the loop is shaped the way it is",
+  "text": "The obvious loop reads an opcode and switches on it. That compiles to an indirect jump through a table, and the important consequence is that every opcode in the program shares one indirect branch instruction. The same work, arranged so the branch predictor has something to learn. One site cannot tell which opcode is coming next; one site per opcode can learn that a comparison is usually followed by a conditional jump. A branch predictor keyed on a single site cannot learn anything about which opcode follows which, because from that site's point of view the target is whatever the program is doing. So interpreters use a compiler extension that lets a label be taken as a value, and end each opcode's body with its own jump to the next one. Now there is a branch site per opcode, and the predictor can learn that a comparison is usually followed by a conditional jump. The reported gain when CPython adopted it was in the range of fifteen to twenty percent, for a change that computes exactly the same thing. CPython 3.14 added a further variant, where each opcode is a separate small function and dispatch is a tail call to the next one. The reason is not elegance. A single function of severa",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "interpreters",
+  "anchor": "what-the-interpreter-knows-and-writes-down",
+  "title": "What the interpreter knows and writes down",
+  "text": "Here is where the trade starts paying. An instruction like an attribute load or a binary operation is general: it must work for every type. But a given site in a real program is usually not general at all. It sees the same shapes over and over. So the interpreter watches. After a code object has run enough times, its instructions are replaced by adaptive versions carrying a small counter, and space for a cache is embedded in the instruction stream right after the instruction itself. When the counter fires, a family specific routine looks at the operands that actually turned up and rewrites the instruction into a specialised member of its family. A general binary operation becomes an integer add, or a float add, or a string concatenation, depending on what it saw. Every specialised instruction begins with a cheap check: is the type still what we assumed, is the class still the version we recorded. On a miss it decrements a counter and does the general thing; if the counter bottoms out the instruction reverts to the adaptive form and may specialise differently later. This is the mechanism to remember, because it is the same in every fast dynamic language runtime under different names",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "interpreters",
+  "anchor": "tiers-and-becoming-hot-while-running",
+  "title": "Tiers, and becoming hot while running",
+  "text": "A JIT does not compile everything. Compiling costs time, and most code runs once. So runtimes are tiered: a cheap tier runs immediately and counts, and when a function or a loop crosses a threshold, an expensive tier compiles it using what the cheap tier recorded. Two kinds of hot are worth distinguishing. A function called many times can be compiled before its next call, which is easy. A function entered once containing a loop that runs ten million times is hot while it is executing, and waiting for it to return means waiting forever. The answer is on stack replacement: compile a new version, then transfer the running frame into it mid flight, with the loop counter and every live value moved across. It is fiddly and it is not optional, because the long running loop is exactly the case that most needs compiling. There are two shapes of JIT. A method JIT compiles a function at a time, like an ordinary compiler with better information. A tracing JIT records the actual sequence of operations through one hot loop, following calls as it goes, and turns that recording into straight line code with a guard at every point where the recorded path could be left. Tracing gets aggressive inlini",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "interpreters",
+  "anchor": "what-a-cached-bytecode-file-is-not",
+  "title": "What a cached bytecode file is not",
+  "text": "One correction, because the belief is widespread. A compiled bytecode file next to a source file is a cache of the parse, not an optimisation of the program. It holds the same code object the compiler would have produced, so loading it skips tokenising and parsing and nothing else. It carries a magic number that changes whenever the bytecode format changes, which is why a file from another version is rejected rather than misread, and either a timestamp or a hash of the source so that a stale one is not used. The program does not run faster afterwards. It starts faster.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "interpreters",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "A tree walker is simple and slow because it pays a dispatch and a pointer chase per node. A bytecode machine walks the tree once and then runs a dense array of instructions. A JIT emits machine code using facts that only exist at run time. A stack machine has smaller instructions and executes more of them; a register machine has fewer and fatter ones. Dispatch is the cost either way, which is why the shape of the dispatch loop is worth fifteen percent and why the loop is built to give the branch predictor something it can learn. Specialisation is observe, assume, guard, deoptimise. A site that has seen two integers ten thousand times gets an integer add and a check, and the check is what makes the assumption safe. Tiering exists because compiling costs time, and on stack replacement exists because the loop that most needs compiling is the one already running. Next comes the thing that decides when any of this is rebuilt at all: the build graph, and why a build system's only real job is knowing what changed.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "interpreters",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model an interpreter's decisions, counters, caches, stack depth and dispatch counts, rather than running a real one. names the case your model got wrong. Several exercises assert that a specialised instruction does not immediately give up on its first miss, which is the saturating counter working rather than a check being wrong.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 1,
+  "title": "What a tree costs per operation",
+  "text": "The cost of a tree walker is one dispatch per node, which is why it is slow for reasons that have nothing to do with the arithmetic. Write , returning how many dispatches a tree walking interpreter performs for a fully parenthesised expression over values. Every node is visited once and every visit is a dispatch, leaves included. A bytecode machine walks the tree once at compile time and pays nothing per node afterwards.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 2,
+  "title": "How deep the operand stack goes",
+  "text": "The maximum depth is a property the compiler can work out statically, which is what lets a frame be allocated once rather than grown while running. Write , returning the greatest operand stack depth a stack machine reaches while running a sequence of instructions, or -1 if the sequence ever pops from an empty stack. Each instruction is given by how many operands it pops and how many results it pushes. The stack starts empty. The compiler computes this number once so the frame can be allocated in one go.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 3,
+  "title": "Two ways to say the same thing",
+  "text": "Fewer, fatter instructions mean fewer dispatches for the same work, which is the whole argument for a register machine. Write , returning how many instructions each kind of bytecode machine executes for a chain of binary operations over values already in locals. A stack machine must load each value and then apply each operator, so it runs one instruction per value plus one per operator. A register machine names its operands, so it runs one instruction per operator and no loads at all. Return the stack machine's count when is non-zero, and the register machine's otherwise.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 4,
+  "title": "One branch site, or many",
+  "text": "A predictor keyed on one site cannot learn which opcode follows which, because from that site the target is whatever the program happens to be doing. Write , returning how many indirect branch sites a dispatch loop has, given the number of distinct opcodes and which dispatch scheme is used. A switch compiles to one jump through a table, shared by every opcode. Ending each opcode's body with its own jump gives one site per opcode. Scheme 0 is the switch and scheme 1 is the jump per opcode. A loop with no opcodes has no sites at all.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 5,
+  "title": "When to specialise",
+  "text": "The assumption has to be worth making. Specialising a site that has already contradicted itself buys a guard and no speed. Write , deciding whether an adaptive instruction should rewrite itself, given how many times it has run and the threshold, and how many distinct operand shapes it has seen. Specialise once the counter reaches the threshold, but only when exactly one shape has been seen. A site that has already seen two different shapes is polymorphic, and a guard that fails half the time costs more than it saves.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 6,
+  "title": "The guard that can be taken back",
+  "text": "Deoptimisation is what makes the assumption safe. Without a way back, a wrong guess is a wrong program rather than a slow one. Write , returning a specialised instruction's remaining confidence after a guard fails, and -1 when it should revert to the adaptive form. Confidence starts at some value and a miss decrements it. It never goes below zero by decrementing; instead, a miss at zero means the instruction reverts.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 7,
+  "title": "Worth compiling, and worth compiling now",
+  "text": "On stack replacement is not an optimisation on top of tiering. It is what makes tiering work for the case that most needs it. Write , deciding what a tiered runtime should do with a code unit, given how many times it has been entered, how many iterations its loop has run, the threshold, and whether it is currently executing. Return 0 to keep interpreting, 1 to compile it for next time, and 2 to compile it and transfer the running frame into the new code. A unit crosses the threshold on entries or on loop iterations, whichever comes first. When it is not currently executing, compiling for next ",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 8,
+  "title": "A cache of the parse, and nothing else",
+  "text": "The file is a cache of the parse, not an optimisation of the program, so every check is about whether it is still the same source. Write , deciding whether a cached bytecode file may be loaded instead of parsing the source, given whether the format magic matches, whether the recorded source stamp matches, and whether the cache records a hash rather than a timestamp. The magic must match or the file is from another version and cannot be read at all. Then the stamp must match the source. A hash based cache is checked the same way; the difference is what the stamp is, not whether it is checked.",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 1,
+  "title": "Why is a tree walking interpreter slow?",
+  "text": " The arithmetic is the cheap part. The nodes were allocated separately and sit in different cache lines, which is why the measured gap to a bytecode machine is a factor of ten and not a factor of two. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 2,
+  "title": "What does compiling to bytecode buy over walking the tree?",
+  "text": " Dispatch is still paid per instruction. What goes away is the per-node pointer chase, and the compile step can fold constants and cache the result. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 3,
+  "title": "What is the difference between a stack machine and a register machine?",
+  "text": " It is about where an instruction says its operands are. Naming them makes instructions fatter and fewer. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 4,
+  "title": "Which executes more instructions for the same work?",
+  "text": " Adding two locals is four instructions on a stack machine and one on a register machine. Dispatch is where the time goes, so that matters. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 5,
+  "title": "Why does a <code>switch</code> based dispatch loop hurt branch prediction?",
+  "text": " From that one site the target is whatever the program happens to be doing next, so there is no correlation to learn. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 6,
+  "title": "What does ending each opcode body with its own jump achieve?",
+  "text": " The reported gain when CPython adopted it was fifteen to twenty percent, for code that computes the same thing in the same order. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 7,
+  "title": "Why did CPython 3.14 add an interpreter built from small functions and tail calls?",
+  "text": " The measured gain is three to five percent on the standard benchmark suite. It is a register allocation problem, not a control flow one. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 8,
+  "title": "What can a JIT know that an ahead of time compiler cannot?",
+  "text": " Knowing the target processor is possible ahead of time too. Knowing that this site has seen two integers ten thousand times running is not. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 9,
+  "title": "In a specialising interpreter, where does the inline cache live?",
+  "text": " Putting it next to the instruction means the interpreter has already loaded the cache line it needs by the time it wants the cache. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 10,
+  "title": "What are the four steps of specialisation?",
+  "text": " The same shape appears in every fast dynamic language runtime under different names. The last step is what makes the second one safe. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 11,
+  "title": "A specialised instruction's guard fails once. What happens?",
+  "text": " One unusual value should not undo a site that is right the rest of the time. The instruction reverts only when the counter has run out. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 12,
+  "title": "Why is a specialised instruction allowed to assume anything at all?",
+  "text": " Deoptimisation is what converts a guess into an optimisation. Without a way back it would be a bug. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 13,
+  "title": "Why do runtimes have tiers?",
+  "text": " The cheap tier also collects the information the expensive tier needs, so the counting is not wasted work. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 14,
+  "title": "What problem does on stack replacement solve?",
+  "text": " It compiles a new version and transfers the running frame into it, moving every live value and the loop counter across mid flight. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 15,
+  "title": "What does a cached bytecode file do for a program?",
+  "text": " It holds the same code object the compiler would have produced. Its magic number is rejected outright when the format changed, and a stamp or hash says whether the source is still the same. ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "build",
+  "anchor": "two-ways-to-be-wrong-and-only-one-of-them-hurts",
+  "title": "Two ways to be wrong, and only one of them hurts",
+  "text": "Over-building means running work that was not needed. It costs time and nothing else. Under-building means not running work that was needed. The binary no longer matches the source, the tests pass here and fail elsewhere, and the symptom is the sentence everyone has said: it works after a clean build. The two errors are not symmetric. One is a slow build and the other is a wrong program that no tool reports, which is why a build system may over-build and may never under-build. So a clean build is not a fix. It is a diagnosis. If building from scratch gives a different answer from building incrementally, the graph is missing an edge, and the useful response is to find the edge rather than to delete everything and start again. That gives a definition worth holding onto. A build system is correct when, for every possible edit to the source tree, the incremental build produces the same bytes as a build from nothing. Most build systems are not correct in that sense, and knowing which failures you have is the difference between losing an afternoon and losing a week.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "build",
+  "anchor": "what-a-timestamp-cannot-tell-you",
+  "title": "What a timestamp cannot tell you",
+  "text": "The classic rule is one line: rebuild the output if any input is newer than it. It costs one system call per file and no reading of contents, which is why a tree of fifty thousand files can decide it has nothing to do in under a second. It is also wrong in at least five ways. The first is granularity. An older make compares whole seconds. Edit a header, rebuild, and if the object file was written earlier in the same second, the two truncate to the same number, and equal is not newer. Measured on ten rapid edit and rebuild cycles, eight produced a binary that did not match the source, in silence. A build tool with nanosecond timestamps scored zero misses on the same test. The second is that time does not only move forwards. Timestamps assume it does. Extracting an archive, copying with attributes preserved, restoring a backup and several version control operations all write old times onto new content. Give a header new content and a timestamp from 2020 and every timestamp based system on earth says there is nothing to do. This is not a bug in one tool. It is a property of the model. The third is that a shared filesystem has more than one clock. When the file server and the build mac",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "build",
+  "anchor": "hashing-the-inputs-instead",
+  "title": "Hashing the inputs instead",
+  "text": "The other family asks a different question: is the hash of every input, plus the command, plus the parts of the environment that matter, a key already in the cache? That is a cache key rather than a comparison, and it removes all five failures. Content that did not change hashes the same however its timestamp moved. A different command is a different key. An identical file restored from a backup is a hit. It also buys something a timestamp cannot express. If you edit a comment and recompile, the object file may come out byte for byte identical. A hashing system notices that the output did not change and stops there, so nothing downstream runs. A timestamp system relinks the entire program because a file got newer. That is early cutoff, and on a large tree it is the difference between a rebuild you wait for and one you do not notice. The cost is real. Hashing means reading every input rather than looking at its size and date, and the cache has to live somewhere. What you are buying is a build whose answer does not depend on the order things happened to be written in.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "build",
+  "anchor": "the-edge-that-is-not-in-the-makefile",
+  "title": "The edge that is not in the makefile",
+  "text": "There is one more way to under-build, and it is the most common of all: the edge simply is not there. A source file includes a header. Nothing in the source file's build rule says so, because the rule was written by a person and the include was added later. So the object never rebuilds when the header changes. Compilers solve this by generating the dependency list as a side effect of compiling. The compiler already found every header it read, so it writes them out in a form the build system can include, and the graph gains the edges nobody maintained. If a project's rules do not do this, it has this bug, and the bug shows up as a header edit that changes nothing until someone builds from clean. There is a structural version of the same mistake. A build split into one invocation per directory, each with its own view of the world, gives every invocation an incomplete graph. Nothing can be scheduled across the boundaries, because no single process ever holds the whole thing, and a dependency that crosses a directory is a dependency nobody checks. The fix is the same in either case: one graph, complete, in one place.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "build",
+  "anchor": "where-the-time-actually-goes",
+  "title": "Where the time actually goes",
+  "text": "Two numbers describe a build graph. The total work is the sum of every node's cost, and it is what a single core takes. The critical path is the longest chain of nodes that must run in order, and it is what infinitely many cores take. The gap between them is what parallelism can buy, and it explains why adding cores stops helping. A tree with one enormous header included everywhere has a long critical path no matter how wide the machine is, because everything waits for the same node. Splitting that header does more for build time than any number of cores. It also explains why linking is so often the last thing you wait for. Every object is on the critical path to it, and there is exactly one of it.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "build",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "A build is a graph, and a build system knows only nodes, edges and commands. Over-building costs time; under-building costs correctness, silently, which is why a system may do the first and must never do the second. A timestamp is a cheap and wrong cache key: it fails on granularity, on time moving backwards, on two clocks, on a changed command line, and it confuses changed with different. Hashing the inputs, the command and the environment fixes all five and adds early cutoff. The most common missing edge is a header nobody declared, and the fix is to let the compiler write the dependency list, because it is the only party that knows. The critical path, not the total work, is what a parallel build takes. Next is what happens when the program that came out of all this does the wrong thing: the debugger, and the sanitizers that answer questions a debugger cannot.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "build",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the decisions a build system makes, staleness, cache keys, early cutoff and critical paths, on small graphs given as arrays. names the case your model got wrong. Several exercises assert that an input with an equal timestamp counts as stale, which is the granularity failure being avoided rather than a comparison written the wrong way round.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 1,
+  "title": "Equal is not older",
+  "text": "The two errors are not symmetric, so a tie is resolved towards over-building, which costs time, rather than towards under-building, which costs correctness. Write , deciding whether an output must be rebuilt, given the output's timestamp and the timestamps of its inputs. Rebuild when any input is at least as new as the output. Equal counts, because two files written in the same tick are indistinguishable and the safe reading of a tie is that the input may have come second. An output with no inputs is never stale. An output that does not exist yet has a timestamp of 0 and must be built.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 2,
+  "title": "Time that moves backwards",
+  "text": "This is not a bug in one tool. Any system whose cache key is a timestamp has it, because the key is not a function of the content. Write , deciding whether a timestamp based build system will under-build, given the previous and current content hashes of an input and its previous and current timestamps. The system rebuilds when the timestamp moved forwards. It under-builds when the content changed and the timestamp did not move forwards, which is what extracting an archive or restoring a backup does. Return 1 for an under-build and 0 otherwise.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 3,
+  "title": "A key, not a comparison",
+  "text": "The command line is not a file, so a timestamp cannot see it change. A key made from the command can. Write , deciding whether a content addressed build system can skip a node, given the hash of its inputs, the hash of its command, the hash of the environment it depends on, and the same three values recorded when the output was made. All three have to match. Any difference is a different key, and a different key is a miss.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 4,
+  "title": "Stopping when nothing changed",
+  "text": "Early cutoff is what a timestamp cannot express, because a timestamp records that work happened rather than whether the result differs. Write , returning how many downstream nodes must run in a chain of nodes, given whether each node's output came out byte identical to what was there before. A node runs when the node before it produced something different. If a node's output is unchanged, nothing after it needs to run, and the propagation stops there. The first node always runs, because its input is what you edited. is non-zero when node produced an identical output. Count the nodes that run, ",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 5,
+  "title": "The header nobody declared",
+  "text": "The compiler is the only party that knows which headers were actually read, which is why the dependency list is a side effect of compiling rather than something a person maintains. Write , deciding whether a build will under-build after a header edit, given whether the rule declares the header and whether the compiler generated a dependency file that does. The graph has the edge if either the rule names it or a generated dependency file names it. Without the edge, the object does not rebuild and the binary stops matching the source.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 6,
+  "title": "What infinitely many cores cannot buy",
+  "text": "The total work is what one core takes. The critical path is what infinitely many take, and the gap is all that parallelism can buy. Write , returning the length of the longest chain of work in a build graph, given each node's cost and the index of the node it depends on. Node depends on , or on nothing when is -1. A node cannot start until what it depends on has finished. Every node's dependency has a lower index than the node itself.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 7,
+  "title": "Which nodes may run now",
+  "text": "A build system walks a graph. Everything else it does is a consequence of which nodes are ready and which are not. Write , returning how many nodes of a build graph can start immediately, given for each node how many of its dependencies have not finished yet, and whether it has already been built. A node is ready when it has not been built and nothing it depends on is outstanding. This is the width of the graph at this moment, and it is what limits how many cores are worth having right now.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 8,
+  "title": "Naming the failure",
+  "text": "The words are worth having, because one of these is a slow build and the other is a wrong program that no tool reports. Write , returning which kind of build failure occurred, given whether the node was rebuilt and whether its inputs had actually changed. Return 1 for an under-build, which is a rebuild that should have happened and did not; 2 for an over-build, which is work that was not needed; and 0 when the decision was right.",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 1,
+  "title": "What does a build system actually know about compilers?",
+  "text": " That is why the whole subject reduces to one question: how does it decide a node is out of date. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 2,
+  "title": "Which build error is the dangerous one?",
+  "text": " Over-building costs time. Under-building produces a wrong program, and the symptom is that it works after a clean build. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 3,
+  "title": "What does it mean when a clean build behaves differently from an incremental one?",
+  "text": " A clean build is a diagnosis rather than a fix. The useful response is to find the edge. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 4,
+  "title": "When is a build system correct?",
+  "text": " It is a strong definition and most build systems do not meet it. Knowing which failures you have is what makes it useful. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 5,
+  "title": "Why is a timestamp comparison cheap?",
+  "text": " That is how a tree of fifty thousand files decides it has nothing to do in under a second, and it is the reason the model survives its failures. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 6,
+  "title": "An older make compares timestamps at one second granularity. What goes wrong?",
+  "text": " Measured over ten rapid edit and rebuild cycles: eight produced a binary that did not match the source, silently. A tool with nanosecond timestamps missed none. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 7,
+  "title": "Extracting an archive writes old timestamps onto new content. What does a timestamp based build system do?",
+  "text": " Timestamps assume time only moves forwards. Restoring a backup, copying with attributes preserved and several version control operations all break that assumption, and it is a property of the model rather than a bug in one tool. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 8,
+  "title": "You change the optimisation level and run make again. What happens?",
+  "text": " The command line is not a file. Tools that record the command string beside the output treat a changed command as a changed input, and that is the argument for them almost nobody makes. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 9,
+  "title": "What is the difference between a timestamp saying changed and a hash saying different?",
+  "text": " Saving a file without editing it moves the timestamp and changes no content, which is over-building. The reverse case, new content with an old timestamp, is the dangerous one. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 10,
+  "title": "What goes into a content addressed build system's cache key?",
+  "text": " Leaving the command out is what lets an object built with different flags be reused, which is the failure the timestamp model also has. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 11,
+  "title": "What is early cutoff?",
+  "text": " Edit a comment, recompile, and the object may be byte identical. A hashing system notices and does not relink; a timestamp system relinks the program because a file got newer. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 12,
+  "title": "What does content hashing cost?",
+  "text": " What it buys is a build whose answer does not depend on the order things happened to be written in. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 13,
+  "title": "Why does the compiler generate the dependency list rather than a person writing it?",
+  "text": " A rule written by a person goes stale the moment somebody adds an include, and the symptom is a header edit that changes nothing until a clean build. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 14,
+  "title": "What limits how much a parallel build can be sped up?",
+  "text": " The total work is what one core takes. The gap between that and the critical path is all that parallelism can buy. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 15,
+  "title": "Why does one header included everywhere make a build slow on any machine?",
+  "text": " Both effects are real, and only the first one is immune to buying a wider machine. Splitting that header does more for build time than more cores. ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "debugger",
+  "anchor": "a-breakpoint-is-a-byte",
+  "title": "A breakpoint is a byte",
+  "text": "On x86 there is a one byte instruction whose only purpose is to raise a debug trap. Setting a breakpoint at an address means putting that byte there. Read the word at the address and keep the original first byte. Write the word back with that byte replaced by the trap. Resume. When control reaches the address the processor raises the trap, the kernel turns it into a signal, and the debugger's wait returns. The instruction pointer is one past the breakpoint when the debugger regains control, because the trap byte has already been consumed. Backing it up by one is not a detail; without it the program resumes into the middle of an instruction. Here is a real tracer stopping three times on the same function: Two things in that transcript are the whole lesson. The instruction pointer is one past the breakpoint every time, because the trap byte was executed and consumed, so the debugger has to read the registers, subtract one, and write them back before it can do anything else. And the register holding the first argument reads 0, then 1, then 2, straight out of the register file according to the calling convention. That is a debugger printing a function argument, with no library involved",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "debugger",
+  "anchor": "four-registers-and-the-cliff-behind-them",
+  "title": "Four registers, and the cliff behind them",
+  "text": "A watchpoint stops the program when a particular address is written. The processor can do this in hardware: there are four debug address registers, and the check happens in the path a load or a store already takes, so it costs nothing while the program runs. Four, each covering at most eight bytes. That is the entire budget. Ask to watch a fifth variable, or a structure larger than eight bytes, and the debugger does not refuse. It falls back to a software watchpoint, which means single stepping the whole program and re-evaluating the expression after every single instruction. The manual's own description is hundreds of times slower than normal execution, and someone who does not know about the fallback concludes that the debugger has hung. Knowing the size of the budget is the useful part. Watch a four byte counter and you are in hardware. Watch a large structure and you have quietly asked for something else entirely.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "debugger",
+  "anchor": "what-turns-an-address-into-a-name",
+  "title": "What turns an address into a name",
+  "text": "None of the above knows anything about your source. The mapping from an address to a file and line, from a stack frame to a function, and from a name to a location that may be a register at one instruction and a stack slot at the next, lives in debug information the compiler emitted alongside the code. That is why an optimised build is harder to debug, and the reason is worth stating precisely. It is not that the information is missing. It is that the question has become ambiguous: a variable that was optimised into a register has no address, an inlined function has no frame, and an instruction can belong to two source lines because the scheduler interleaved them. The debugger reports what the tables say, and the tables are telling the truth about a program whose shape no longer matches the source you are reading.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "debugger",
+  "anchor": "the-other-kind-of-tool",
+  "title": "The other kind of tool",
+  "text": "A debugger watches a program from outside and answers questions when you ask. That is the wrong shape for a bug that happens once in a thousand runs and corrupts something quietly. A sanitizer is the other approach: a compiler pass that rewrites your program to check itself, plus a runtime library that keeps the metadata those checks consult. Three consequences follow immediately. It needs a recompile. Code that was not recompiled is invisible to it. And it is far faster than a tool that has to work all this out from the binary alone, because the compiler already knew where every variable was.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "debugger",
+  "anchor": "shadow-memory-in-one-formula",
+  "title": "Shadow memory, in one formula",
+  "text": "The address sanitizer keeps a second map of memory that says what each byte means. Eight bytes of your program map to one byte of shadow, and the mapping is a shift and an add: The value in that shadow byte is the whole design. Zero means all eight bytes are usable. A small positive number means the first bytes are usable and the rest are not, which works only because allocations are eight byte aligned, so a partial block can only be partial at its end. A negative value means all eight are poisoned, and the particular value says why: a redzone before a heap block, freed memory, a stack redzone, use after return, a global's redzone. Every load and store in your program gets a check inserted in front of it: look up the shadow byte, and if it is not clear, report. For an access smaller than eight bytes there is a second comparison against the addressable prefix. That is two well predicted branches per memory operation, which is why the cost is around a factor of two rather than a factor of twenty. The redzones are the other half. Every allocation is padded on both sides with poisoned bytes, so an overflow of one element lands in shadow that is already marked bad, rather than in the ne",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "debugger",
+  "anchor": "the-limitation-to-say-out-loud",
+  "title": "The limitation to say out loud",
+  "text": "Use after free is caught by not really freeing. A freed block is poisoned and put on a queue rather than returned for reuse, and only when that queue fills does the oldest block get recycled. So detection has a window, and the window is a memory budget. Within a few hundred megabytes of subsequent allocation traffic, a use after free is caught with a precise report. Beyond it, the address has been handed out again and the bug is silent once more. This is worth holding onto because it corrects the usual belief. A clean sanitizer run does not prove your program has no use after free. It proves that none happened inside the window, on the paths this run took, in code that was recompiled. That is a great deal more than nothing and it is not a proof.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "debugger",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "A debugger is one system call plus bookkeeping. Everything else, lines, variables, frames, comes from tables the compiler emitted. A breakpoint is a byte of your program replaced by a trap byte. The instruction pointer is one past it when you stop, resuming means restore, step and re-arm, and both facts explain why breakpoints are neither free nor invisible. There are four hardware watchpoints of eight bytes each. Past that the debugger silently single steps your whole program. A sanitizer is a compiler pass plus a runtime. The address sanitizer keeps one shadow byte per eight bytes of memory, checks it before every access, and pads allocations with poisoned redzones. It finds use after free by delaying reuse, which makes it a detector with a window rather than a proof. Next is the other half of finding out what your program is doing: measuring it, and why most measurements of fast code are wrong.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "debugger",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the arithmetic a debugger and a sanitizer actually do: patching a word, correcting the instruction pointer, computing a shadow address, reading a shadow byte. names the case your model got wrong. Several exercises assert that an access ending exactly at the addressable prefix is allowed, which is the partial block rule being read correctly rather than an off by one.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 1,
+  "title": "Patching one byte of a word",
+  "text": "The unit of a read and a write here is a word, and the unit of the change is a byte, so the other seven bytes have to be put back exactly. Write , returning the word to write back when installing a breakpoint, given the original word read from the program. Only the lowest byte is replaced, with the trap byte 0xCC. Every other byte of the word has to survive, because those bytes are the instructions that follow.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 2,
+  "title": "Putting the instruction back",
+  "text": "The debugger saves one byte and restores one byte. Saving the whole word and writing it back would undo any other change made in the meantime. Write , returning the word to write back when removing a breakpoint, given the word currently in memory and the original first byte that was saved when the breakpoint was installed. Everything except the lowest byte comes from what is in memory now, because the program may have been modified since, and the lowest byte is the saved one.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 3,
+  "title": "Where the program actually stopped",
+  "text": "The correction is not cosmetic. The same value has to be written back to the registers, or the program resumes into the middle of an instruction. Write , returning the address to report to the user when the program stops, given the instruction pointer at the stop and whether the stop was a breakpoint trap rather than some other signal. After a trap byte the instruction pointer is one past the breakpoint, so the breakpoint's address is one less. Any other kind of stop reports the instruction pointer as it is.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 4,
+  "title": "What a hardware watchpoint can cover",
+  "text": "The budget is small and fixed, and the fallback is not a refusal, so the difference between fitting and not fitting is the difference between free and hundreds of times slower. Write , deciding whether a watchpoint request fits in the processor's debug registers, given how many are already in use and how many bytes the request covers. There are four registers and each covers at most eight bytes. A request larger than eight bytes does not fit in one, and this model does not split it across several. Return 1 when it fits and 0 when the debugger will fall back to single stepping.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 5,
+  "title": "Eight bytes to one",
+  "text": "The mapping is a shift and an add, which is why the check in front of every load and store is cheap enough to leave on. Write , returning the address of the shadow byte that describes a given address, using the sanitizer's mapping. Eight application bytes map to one shadow byte, and the shadow region starts at a fixed offset.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 6,
+  "title": "Reading a shadow byte",
+  "text": "The partial case exists only because allocations are eight byte aligned, so a block can be partial at its end and never at its start. Write , deciding whether an access is allowed, given the shadow byte covering it, the offset of the access within those eight bytes, and its size in bytes. A shadow byte of 0 means all eight are addressable. A value from 1 to 7 means the first that many bytes are addressable and the rest are not. Anything else, which is any value with the top bit set, means all eight are poisoned. The access runs from the offset for its size, and every byte it touches has to be ",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 7,
+  "title": "The window a quarantine buys",
+  "text": "The detector has a window, and the window is a memory budget, so a clean run is evidence rather than proof. Write , deciding whether a use after free is caught, given how many bytes have been allocated since the block was freed and the size of the quarantine. A freed block is poisoned and held rather than reused. It is only recycled once allocation traffic since the free has exceeded the quarantine's size, and after that the address is handed out again and the access is silent.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "debugger",
+  "n": 8,
+  "title": "What a breakpoint costs per hit",
+  "text": "The cost is not the check. It is the restore, step and re-arm dance, paid on every hit, in system calls and context switches. Write , returning how many times the traced program stops for one breakpoint hit, given whether the breakpoint has to stay armed afterwards. Hitting the trap stops it once. Resuming through an armed breakpoint means restoring the byte and stepping one instruction, which stops it again, before the trap byte is written back. A breakpoint being removed does not need the second stop.",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 1,
+  "title": "What is a Unix debugger built out of?",
+  "text": " There is no debugger subsystem. Read and write memory, read and write registers, resume, single step, and wait: everything else is built from those. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 2,
+  "title": "How is a breakpoint installed on x86?",
+  "text": " The trap byte's entire purpose is to raise a debug trap. Installing a breakpoint is a read of one word and a write of one word. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 3,
+  "title": "Where is the instruction pointer when a breakpoint trap is taken?",
+  "text": " The debugger has to read the registers, subtract one and write them back. Without that the program resumes into the middle of an instruction. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 4,
+  "title": "What does resuming from an armed breakpoint require?",
+  "text": " That dance is several system calls and two context switches on every hit, which is why a breakpoint in a hot loop feels like a hang. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 5,
+  "title": "Why is timing a program under a debugger meaningless?",
+  "text": " It also means anything that checksums its own code notices that its text has changed. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 6,
+  "title": "How many hardware watchpoints does x86-64 have, and how wide is each?",
+  "text": " Small, fixed, and worth remembering, because exceeding it does not produce an error. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 7,
+  "title": "What happens when you ask to watch something that does not fit in the debug registers?",
+  "text": " The manual describes the fallback as hundreds of times slower than normal execution. Someone who does not know about it concludes the debugger has hung. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 8,
+  "title": "Why is optimised code harder to debug?",
+  "text": " The tables are telling the truth about a program whose shape no longer matches the source you are reading. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 9,
+  "title": "What is a sanitizer?",
+  "text": " That is why it needs a recompile, why uninstrumented code is invisible to it, and why it is far faster than a tool working from the binary alone. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 10,
+  "title": "What is the address sanitizer's shadow mapping?",
+  "text": " A shift and an add, which is why the check in front of every load and store is cheap enough to leave on. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 11,
+  "title": "A shadow byte holds the value 4. What does that mean?",
+  "text": " The partial case works only because allocations are eight byte aligned, so a block can be partial at its end and never at its start. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 12,
+  "title": "What does a negative shadow byte encode?",
+  "text": " Those values are what the legend in a sanitizer report is decoding for you. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 13,
+  "title": "What is a redzone for?",
+  "text": " Without it, an overflow of one element lands in the next object, where it is silent and corrupts real data. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 14,
+  "title": "How does the address sanitizer catch use after free at all?",
+  "text": " Not reusing the address is what keeps the shadow byte saying freed rather than describing whatever was allocated there next. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "debugger",
+  "n": 15,
+  "title": "What does a clean address sanitizer run prove?",
+  "text": " The quarantine gives a window measured in allocation traffic. Beyond it the address is handed out again and the bug is silent, so this is a detector rather than a proof. ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "measurement",
+  "anchor": "two-ways-to-find-out-biased-in-opposite-directions",
+  "title": "Two ways to find out, biased in opposite directions",
+  "text": "There are exactly two ways to learn where a program spends time. Instrumenting means inserting code at every function entry and exit. You get exact call counts and a complete call graph, and you get two biases with them. The overhead is proportional to how often a function is called rather than to how long it takes, so a tiny function called a billion times is measured mostly measuring the measurement. And instrumentation prevents inlining, so the binary you profiled is not the binary you ship, and the function you were staring at may not exist at all in the shipped one. Sampling means interrupting the program many times a second and recording where it was. The overhead is proportional to the sample rate rather than to the program's shape, which is why it is what modern profilers do. Its biases are different and worth knowing individually. You only see what you sample, so sampling finds hot and never finds rare and expensive. An event that takes a hundred microseconds and happens once will be missed at any sane rate. The recorded address is not exactly the guilty instruction, because the interrupt arrives some cycles after the event that caused it. Attribution at instruction granul",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "measurement",
+  "anchor": "getting-a-stack-out-of-a-sample",
+  "title": "Getting a stack out of a sample",
+  "text": "A sample without a stack says what was running. A sample with a stack says why, and getting the stack is where profiling gets awkward. The cheap way is to walk the chain of frame pointers: each frame points at the previous one, with the return address beside it. It costs a few loads, it can be done in the kernel at interrupt time, and it needs every frame in the stack to have kept its frame pointer. Compilers stopped keeping them by default, because the register is worth having and the exercise looked free. The consequence was that profiles of real programs filled up with unknown frames: you could see that a third of the time was inside the system library and nothing whatever about which of your paths got there. The alternative is to copy a chunk of the stack at every sample and unwind it later using the tables the compiler emitted for exception handling. It works on binaries built without frame pointers and needs no rebuild. It also produces kilobytes per sample instead of tens of bytes, drops samples when the buffer overflows, silently truncates stacks deeper than the copied chunk, and makes reporting slow. So the industry measured the other option and changed its mind. Putting f",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "measurement",
+  "anchor": "what-a-profile-looks-like-when-it-is-aggregated",
+  "title": "What a profile looks like when it is aggregated",
+  "text": "A flame graph takes many thousands of stack samples and merges them. Width is the fraction of samples containing that frame, so wide means much time, and height is stack depth rather than time. It is not a timeline, and the left to right order carries no meaning beyond sorting. The variant worth reaching for first is the differential one: two profiles, before and after, with each box coloured by whether it grew or shrank. A regular flame graph invites you to stare at the widest tower, which is usually something you already knew about. A differential graph shows you what changed, which is the question you actually had.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "measurement",
+  "anchor": "the-average-is-the-least-useful-number",
+  "title": "The average is the least useful number",
+  "text": "Report a distribution rather than a number, because the shape is the information. In anything user facing the number that matters is a high percentile, since that is the experience a real user has some of the time, and one request in a page load being slow makes the page slow. Percentiles have a trap in them that is worth the rest of this unit.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "measurement",
+  "anchor": "what-coordinated-omission-hides",
+  "title": "What coordinated omission hides",
+  "text": "Here is the failure. A load generator is meant to send a request every ten milliseconds. It sends one, and that request takes a second because the system stalled. During that second it sends nothing, because it is waiting. Then it resumes, and records one slow sample of one second, plus a great many fast ones afterwards. But a real world that sends a request every ten milliseconds sent a hundred requests during that stall, and every one of them waited: the first for a second, the next for slightly less, and so on. Those ninety nine slow samples were never recorded, because the measuring tool coordinated with the system under test and politely stopped asking while it was struggling. The result is a set of percentiles that are all true about the samples taken and badly wrong about the system. The samples that would have been slow are exactly the ones missing. Reported tail latency can be off by an order of magnitude. The fix is to record latency from when a request was supposed to be sent rather than from when it was actually sent. That single change converts one slow sample into the hundred slow samples the world would have seen, and the percentile becomes an honest one. The general",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "measurement",
+  "anchor": "measuring-something-the-compiler-deleted",
+  "title": "Measuring something the compiler deleted",
+  "text": "One more hazard, on the small scale. Write a loop that computes something and throws it away, and the optimiser is entitled to delete the whole thing. The timing then measures an empty loop, which is fast and encouraging and worthless. Benchmark libraries offer a function to stop that, and the caveat is the part people miss: it prevents the result from being discarded, and it does not stop the compiler from simplifying the expression that produced it. A constant folded computation is still constant folded. What you are keeping alive is the answer, not the work. Alignment is the other small scale trap, and the frame pointer story above is the evidence. Two versions of a function that differ by an instruction can differ by a few percent for reasons that have nothing to do with the change, so a few percent on a microbenchmark is not a result. It is a hypothesis to test on something bigger.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "measurement",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Instrumenting gives exact counts and over-reports small hot functions, in a binary that is not the one you ship. Sampling gives an unbiased view of on processor time and cannot see anything else, which is the most common way a profile misleads. The default rate is prime for a reason, the recorded address is not the guilty instruction without precise sampling, and time spent blocked is invisible until you sample the scheduler instead. A stack needs either frame pointers or a slow unwind through exception tables. The industry measured the tradeoff and put frame pointers back, at around one percent, because a profile full of unknown frames is not a profile. Report a distribution. And know coordinated omission by name, because it is the failure where every number on the page is true and the system is nine times worse than it says. Next is the last unit in this part: how to find the inputs that break a program rather than the ones you thought of, and what it takes to prove that none exist.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "measurement",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the arithmetic behind the tools: percentiles over a sorted sample, the correction that undoes coordinated omission, how many samples an event of a given length can expect, and walking a chain of frame pointers. names the case your model got wrong. Several exercises assert that a corrected latency is larger than the one the naive tool recorded, which is the omission being undone rather than a sign error.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 1,
+  "title": "The number in the middle is not the answer",
+  "text": "A percentile is a rank rather than an interpolation, and the rounding decides which of two samples you report at small counts. Write , returning the value at a given percentile of a sorted sample, using the nearest rank method. The rank is the percentile times the count, rounded up, and at least 1. The value returned is the one at that rank, counting from 1. A percentile of 0 gives the first value, and 100 gives the last.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 2,
+  "title": "The latency that was actually experienced",
+  "text": "This one line is the whole of coordinated omission. The tool stopped asking while the system was struggling, so the waiting never got recorded. Write , returning the latency a request really suffered, given when it was supposed to be sent, when it was actually sent, and when the response came back. A tool that measures from the actual send time reports only the service time. A request that should have gone out earlier was already waiting before it was sent, and that wait is part of what the world experienced.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 3,
+  "title": "The samples that were never taken",
+  "text": "The missing samples are exactly the slow ones, which is why the percentiles come out true about the sample and wrong about the system. Write , returning how many requests a fixed rate load generator failed to send during a stall, given the length of the stall and the interval between requests. The generator should have sent one request per interval throughout the stall. It sent one, at the start, and then waited. Everything that should have gone out during the stall was never sent and never recorded.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 4,
+  "title": "What a sampler can expect to see",
+  "text": "Sampling finds hot and never finds rare and expensive, and this is the arithmetic that says so. Write , returning how many times a sampling profiler running at a given rate can expect to interrupt an event, given the event's duration in microseconds and the sample rate in hertz. Return the expected count in hundredths, so that a fraction of a sample is visible rather than rounded to nothing. An event shorter than one sampling interval has an expected count below one, which is the useful answer.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 5,
+  "title": "Sampling at a round number",
+  "text": "This is why the usual default is 999 rather than 1000. A prime offset from every round number in the system is the entire reason. Write , deciding whether a sampling rate will alias against a periodic event in the system, given both frequencies in hertz. Two frequencies alias when one divides the other exactly, in either direction, because then the sampler keeps landing at the same point in the event's cycle and either always sees it or never does. A rate of zero aliases with nothing.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 6,
+  "title": "Walking the frames",
+  "text": "Missing one frame pointer does not lose one frame. It loses everything below it, which is why a profile of a program built without them is a forest of stumps. Write , returning how many frames a frame pointer walk recovers, given each frame's saved pointer to the previous one. Start at frame and follow the chain. Frame 0 is the outermost frame: it is counted and the walk ends there. A saved pointer of -1 means that frame kept none, and the walk stops without counting it, so every frame below it is lost. Count the frames actually recovered, including the one you started at.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 7,
+  "title": "What the processor profiler cannot see",
+  "text": "A profile that shows an idle machine is not wrong. It is silent, and the answer is in the half it cannot see. Write , returning what percentage of a program's wall clock a processor sampling profiler can account for, given the time spent running and the time spent blocked. Only the running time produces samples. Return the answer as a whole percentage, rounded down. A program that never ran at all is reported as 0.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 8,
+  "title": "Is that a result or is that noise",
+  "text": "A few percent on a microbenchmark can come from alignment alone, so the threshold is not a formality. Write , deciding whether a difference between two measurements should be believed, given the two values and the spread of the noise as a percentage. Believe the difference when it is larger than the noise, measured as that percentage of the first value. Anything at or below the noise is a hypothesis rather than a result.",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 1,
+  "title": "What are the two ways of finding out where a program spends time?",
+  "text": " They are biased in opposite directions, which is why knowing which one a tool is doing matters more than knowing its name. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 2,
+  "title": "What does instrumentation systematically over-report?",
+  "text": " A tiny function called a billion times is measured mostly measuring the measurement. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 3,
+  "title": "Why is a profiled instrumented binary not the binary you ship?",
+  "text": " The function you spent an afternoon staring at may not exist in the shipped build at all. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 4,
+  "title": "What can sampling never find?",
+  "text": " An event of a hundred microseconds that happens once will be missed at any sane rate, whatever it did to the person who hit it. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 5,
+  "title": "Why is the recorded address not the guilty instruction?",
+  "text": " Attribution at instruction granularity is fiction unless the hardware's precise sampling mode is switched on. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 6,
+  "title": "Why do profilers sample at 999 hertz rather than 1000?",
+  "text": " A prime offset from every round number means the sampler does not keep landing at the same point in someone else's cycle. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 7,
+  "title": "Your program is slow because it waits on a lock. What does a processor sampling profile show?",
+  "text": " This is the most common way a profile misleads. The fix is to sample the scheduler switching threads out rather than the processor. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 8,
+  "title": "What does a frame pointer walk need to work?",
+  "text": " Miss one and the walk either stops or follows garbage, so a single library built without them truncates every stack that passes through it. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 9,
+  "title": "What does unwinding through the compiler's exception tables cost, compared to a frame pointer walk?",
+  "text": " It does work without a rebuild, which is its real advantage. The costs are what sent the industry back to frame pointers. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 10,
+  "title": "Roughly what does compiling with frame pointers cost?",
+  "text": " Two major distributions turned them back on in 2023 and 2024, having decided that a profile you can read is worth a percent. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 11,
+  "title": "In a flame graph, what does the width of a box mean?",
+  "text": " It is not a timeline, and left to right order carries no meaning beyond sorting. A flame chart, where the x axis is time, is a different thing. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 12,
+  "title": "Which flame graph answers the question you usually have?",
+  "text": " The widest tower is usually something you already knew about. What changed is the question you actually had. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 13,
+  "title": "A load generator sends a request every ten milliseconds. The system stalls for one second. What does a naive tool record?",
+  "text": " The requests that would have been slow were never sent. The tool coordinated with the system under test and stopped asking while it struggled. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 14,
+  "title": "How is coordinated omission corrected?",
+  "text": " That single change turns one slow sample into the many slow samples the world would have experienced, and makes the percentile honest. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 15,
+  "title": "A benchmark library's function to keep a result alive. What does it not do?",
+  "text": " What you are keeping alive is the answer, not the work. A constant folded computation is still constant folded, and the timing then measures nothing. ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

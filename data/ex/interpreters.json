@@ -1,0 +1,310 @@
+{
+ "slug": "interpreters",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "What a tree costs per operation",
+   "brief": "<p>Write <code>tree_dispatches</code>, returning how many dispatches a tree walking interpreter performs for a fully parenthesised expression over <code>n</code> values.</p>\n<p>Every node is visited once and every visit is a dispatch, leaves included. A bytecode machine walks the tree once at compile time and pays nothing per node afterwards.</p>",
+   "kind": "output",
+   "concept": "The cost of a tree walker is one dispatch per node, which is why it is slow for reasons that have nothing to do with the arithmetic.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The tree has a node per value and a node per operator joining them."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Three values joined by two operators are five nodes, so five dispatches. Counting only the operators misses that reading a variable is a dispatch too, and it is the most common node in real code.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The pointer chase matters as much as the count. Each of those nodes was allocated separately and sits in a different cache line, which is why the measured gap to a bytecode machine is a factor of ten and not a factor of two.</p>",
+   "starter": "unsigned tree_dispatches(unsigned values) {\n    return values ? values - 1 : 0;\n}",
+   "tests": "#include <assert.h>\nunsigned tree_dispatches(unsigned);\nint main(void) {\n    assert(tree_dispatches(0) == 0);\n    assert(tree_dispatches(1) == 1);\n    assert(tree_dispatches(2) == 3);\n    assert(tree_dispatches(3) == 5);\n    assert(tree_dispatches(8) == 15);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "How deep the operand stack goes",
+   "brief": "<p>Write <code>max_depth</code>, returning the greatest operand stack depth a stack machine reaches while running a sequence of instructions, or -1 if the sequence ever pops from an empty stack.</p>\n<p>Each instruction is given by how many operands it pops and how many results it pushes. The stack starts empty. The compiler computes this number once so the frame can be allocated in one go.</p>",
+   "kind": "output",
+   "concept": "The maximum depth is a property the compiler can work out statically, which is what lets a frame be allocated once rather than grown while running.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Track the running depth and remember the largest it reached, not the depth it ends at."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The depth at the end is usually zero or one, because the value gets consumed. The number the frame needs is the highest point reached along the way.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>In a code object this is one field, computed by the compiler and stored beside the bytecode. Getting it wrong by one is a stack overflow that only some inputs reach.</p>",
+   "starter": "int max_depth(const unsigned *pops, const unsigned *pushes, unsigned n) {\n    int depth = 0;\n    for (unsigned i = 0; i < n; i++) {\n        if ((unsigned)depth < pops[i]) return -1;\n        depth -= (int)pops[i];\n        depth += (int)pushes[i];\n    }\n    return depth;\n}",
+   "tests": "#include <assert.h>\nint max_depth(const unsigned *, const unsigned *, unsigned);\nint main(void) {\n    /* push a, push b, add: depth reaches 2 and ends at 1. */\n    { unsigned po[] = {0, 0, 2}, pu[] = {1, 1, 1};\n      assert(max_depth(po, pu, 3) == 2); }\n    /* push, push, push, add, add: reaches 3. */\n    { unsigned po[] = {0, 0, 0, 2, 2}, pu[] = {1, 1, 1, 1, 1};\n      assert(max_depth(po, pu, 5) == 3); }\n    /* nothing at all */\n    { unsigned po[] = {0}, pu[] = {0};\n      assert(max_depth(po, pu, 1) == 0); }\n    /* popping an empty stack */\n    { unsigned po[] = {1}, pu[] = {0};\n      assert(max_depth(po, pu, 1) == -1); }\n    { unsigned po[] = {0, 2}, pu[] = {1, 1};\n      assert(max_depth(po, pu, 2) == -1); }\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Two ways to say the same thing",
+   "brief": "<p>Write <code>dispatch_count</code>, returning how many instructions each kind of bytecode machine executes for a chain of binary operations over <code>n</code> values already in locals.</p>\n<p>A stack machine must load each value and then apply each operator, so it runs one instruction per value plus one per operator. A register machine names its operands, so it runs one instruction per operator and no loads at all.</p>\n<p>Return the stack machine's count when <code>is_stack</code> is non-zero, and the register machine's otherwise.</p>",
+   "kind": "output",
+   "concept": "Fewer, fatter instructions mean fewer dispatches for the same work, which is the whole argument for a register machine.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Three values and two operators are five instructions on a stack and two in registers."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The register machine does not load anything: the operands are already slots in the frame, and the instruction names them. That is the difference the two designs are arguing about.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Lua moved from a stack machine to a register machine in version 5, and it is still the clearest case study of what that costs and buys.</p>",
+   "starter": "unsigned dispatch_count(unsigned values, int is_stack) {\n    (void)is_stack;\n    return values ? 2 * values - 1 : 0;\n}",
+   "tests": "#include <assert.h>\nunsigned dispatch_count(unsigned, int);\nint main(void) {\n    assert(dispatch_count(3, 1) == 5);   /* load, load, load, add, add */\n    assert(dispatch_count(3, 0) == 2);   /* add, add */\n    assert(dispatch_count(2, 1) == 3);\n    assert(dispatch_count(2, 0) == 1);\n    assert(dispatch_count(1, 1) == 1);\n    assert(dispatch_count(1, 0) == 0);\n    assert(dispatch_count(0, 1) == 0);\n    assert(dispatch_count(0, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "One branch site, or many",
+   "brief": "<p>Write <code>branch_sites</code>, returning how many indirect branch sites a dispatch loop has, given the number of distinct opcodes and which dispatch scheme is used.</p>\n<p>A switch compiles to one jump through a table, shared by every opcode. Ending each opcode's body with its own jump gives one site per opcode.</p>\n<p>Scheme 0 is the switch and scheme 1 is the jump per opcode. A loop with no opcodes has no sites at all.</p>",
+   "kind": "output",
+   "concept": "A predictor keyed on one site cannot learn which opcode follows which, because from that site the target is whatever the program happens to be doing.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The switch has one site however many opcodes there are. That is the problem with it."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The number of opcodes does not change how many branch sites a switch has, and that is exactly why the predictor has nothing to work with.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The reported gain when CPython adopted the jump per opcode was fifteen to twenty percent, for a change that computes exactly the same thing in exactly the same order.</p>",
+   "starter": "unsigned branch_sites(unsigned opcodes, int scheme) {\n    (void)scheme;\n    return opcodes;\n}",
+   "tests": "#include <assert.h>\nunsigned branch_sites(unsigned, int);\nint main(void) {\n    assert(branch_sites(0, 0) == 0);\n    assert(branch_sites(0, 1) == 0);\n    assert(branch_sites(1, 0) == 1);\n    assert(branch_sites(90, 0) == 1);\n    assert(branch_sites(1, 1) == 1);\n    assert(branch_sites(90, 1) == 90);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "When to specialise",
+   "brief": "<p>Write <code>should_specialise</code>, deciding whether an adaptive instruction should rewrite itself, given how many times it has run and the threshold, and how many distinct operand shapes it has seen.</p>\n<p>Specialise once the counter reaches the threshold, but only when exactly one shape has been seen. A site that has already seen two different shapes is polymorphic, and a guard that fails half the time costs more than it saves.</p>",
+   "kind": "output",
+   "concept": "The assumption has to be worth making. Specialising a site that has already contradicted itself buys a guard and no speed.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Both conditions have to hold. Reaching the threshold is not enough on its own."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A site that has seen two shapes is not specialised however hot it is, because the guard would fail on whichever shape it did not pick.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Real families are finer than this: an attribute load specialises differently for an instance, a module and a slot, and the routine that decides looks at the operands that actually turned up.</p>",
+   "starter": "int should_specialise(unsigned runs, unsigned threshold, unsigned shapes) {\n    (void)shapes;\n    return runs >= threshold;\n}",
+   "tests": "#include <assert.h>\nint should_specialise(unsigned, unsigned, unsigned);\nint main(void) {\n    assert(should_specialise(8, 8, 1) == 1);\n    assert(should_specialise(9, 8, 1) == 1);\n    assert(should_specialise(7, 8, 1) == 0);\n    assert(should_specialise(9, 8, 2) == 0);   /* polymorphic */\n    assert(should_specialise(9, 8, 0) == 0);   /* nothing seen yet */\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "The guard that can be taken back",
+   "brief": "<p>Write <code>after_miss</code>, returning a specialised instruction's remaining confidence after a guard fails, and -1 when it should revert to the adaptive form.</p>\n<p>Confidence starts at some value and a miss decrements it. It never goes below zero by decrementing; instead, a miss at zero means the instruction reverts.</p>",
+   "kind": "output",
+   "concept": "Deoptimisation is what makes the assumption safe. Without a way back, a wrong guess is a wrong program rather than a slow one.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "One miss is not a reason to give up. Reverting happens when the counter has already run out."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A single miss decrements and keeps the specialisation, which is what stops one unusual value undoing a site that is right the rest of the time. Only a miss at zero reverts.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Once reverted, the instruction can specialise again on whatever it sees next, which is how a site that changes shape halfway through a program ends up fast for both halves.</p>",
+   "starter": "int after_miss(unsigned confidence) {\n    return confidence ? (int)confidence - 1 : 0;\n}",
+   "tests": "#include <assert.h>\nint after_miss(unsigned);\nint main(void) {\n    assert(after_miss(3) == 2);\n    assert(after_miss(1) == 0);\n    assert(after_miss(0) == -1);   /* out of confidence: revert */\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "Worth compiling, and worth compiling now",
+   "brief": "<p>Write <code>tier_action</code>, deciding what a tiered runtime should do with a code unit, given how many times it has been entered, how many iterations its loop has run, the threshold, and whether it is currently executing.</p>\n<p>Return 0 to keep interpreting, 1 to compile it for next time, and 2 to compile it and transfer the running frame into the new code.</p>\n<p>A unit crosses the threshold on entries or on loop iterations, whichever comes first. When it is not currently executing, compiling for next time is enough. When it is executing, the frame has to be moved, or a loop entered once never benefits.</p>",
+   "kind": "output",
+   "concept": "On stack replacement is not an optimisation on top of tiering. It is what makes tiering work for the case that most needs it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Two questions, in order: has it got hot at all, and is it hot right now while running."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A function entered once whose loop has run ten million times is hot, and waiting for it to return before compiling means waiting forever. That is the case that needs the frame moved.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Transferring the frame means moving every live value and the loop counter into the compiled version's layout, mid flight. It is fiddly and it is not optional.</p>",
+   "starter": "int tier_action(unsigned entries, unsigned iterations, unsigned threshold,\n                int executing) {\n    (void)iterations; (void)executing;\n    return entries >= threshold ? 1 : 0;\n}",
+   "tests": "#include <assert.h>\nint tier_action(unsigned, unsigned, unsigned, int);\nint main(void) {\n    assert(tier_action(2, 0, 10, 0) == 0);          /* cold */\n    assert(tier_action(10, 0, 10, 0) == 1);         /* hot by entries */\n    assert(tier_action(1, 10000, 10, 1) == 2);      /* hot loop, running now */\n    assert(tier_action(1, 10000, 10, 0) == 1);      /* hot, but not running */\n    assert(tier_action(1, 2, 10, 1) == 0);          /* still cold */\n    assert(tier_action(10, 0, 10, 1) == 2);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "A cache of the parse, and nothing else",
+   "brief": "<p>Write <code>use_cached</code>, deciding whether a cached bytecode file may be loaded instead of parsing the source, given whether the format magic matches, whether the recorded source stamp matches, and whether the cache records a hash rather than a timestamp.</p>\n<p>The magic must match or the file is from another version and cannot be read at all. Then the stamp must match the source. A hash based cache is checked the same way; the difference is what the stamp is, not whether it is checked.</p>",
+   "kind": "output",
+   "concept": "The file is a cache of the parse, not an optimisation of the program, so every check is about whether it is still the same source.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A mismatched magic is fatal on its own. Nothing else is worth looking at after that."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A file whose magic does not match is from a different bytecode format and is rejected rather than read, whatever its stamp says.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Loading it skips tokenising and parsing and nothing else. The program does not run faster afterwards; it starts faster.</p>",
+   "starter": "int use_cached(int magic_ok, int stamp_ok, int hash_based) {\n    (void)magic_ok; (void)hash_based;\n    return stamp_ok;\n}",
+   "tests": "#include <assert.h>\nint use_cached(int, int, int);\nint main(void) {\n    assert(use_cached(1, 1, 0) == 1);\n    assert(use_cached(1, 1, 1) == 1);\n    assert(use_cached(1, 0, 0) == 0);   /* source changed */\n    assert(use_cached(0, 1, 0) == 0);   /* wrong bytecode version */\n    assert(use_cached(0, 0, 1) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

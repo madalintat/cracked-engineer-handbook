@@ -1,0 +1,72 @@
+{
+ "slug": "interpreters",
+ "num": 49,
+ "title": "Interpreters and JITs",
+ "blurb": "An interpreter trades ahead-of-time optimisation for knowing what actually happened. A JIT spends that knowledge.",
+ "part": "tools",
+ "partRoman": "IX",
+ "partTitle": "Tools",
+ "phase": "system",
+ "accent": "clay",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "parsing",
+   "pipeline"
+  ],
+  "minutes": 55,
+  "one_idea": "An interpreter gives up the optimisation a compiler does before running in exchange for watching what actually happens, and everything fast about a modern interpreter is a way of spending that knowledge.",
+  "sources": [
+   "compilers-interpreters-terminals-unix"
+  ]
+ },
+ "html": "<p>A compiler decides everything before the program runs, which means it has to be right about every case that could occur. An interpreter decides while the program is running, which costs time at every step and buys a fact no compiler can have: what actually happened this time.</p>\n<p>That trade is the whole subject. The three designs below sit at different points on it, and everything fast in a modern interpreter is a way of turning the observation into code.</p>\n<p>The Python figures here are from CPython, and the C listings are from gcc on Compiler Explorer.</p>\n<h2 id=\"three-designs-and-what-each-pays\">Three designs, and what each pays</h2>\n<p>A tree walking interpreter evaluates the syntax tree directly, with a recursive function that switches on the node. It is the simplest thing that works and the right answer for a configuration file or an expression evaluator. It is also between ten and a hundred times slower than the next design, and the reason is not arithmetic. Every operation pays a dispatch, and every node visit chases a pointer into a tree whose parts were allocated at different times and sit in different cache lines.</p>\n<p>A bytecode virtual machine compiles the tree into a flat instruction stream for an abstract machine, then runs a loop that fetches and dispatches. The tree is walked once, at compile time, where constant folding and peephole work can happen. What runs afterwards is a dense array of small instructions with good locality, and the result can be cached to disk.</p>\n<p>A just in time compiler goes further and emits real machine code while the program runs, using facts it collected: which types actually appeared, which branches were actually taken, which method the call site actually reached. That last point is why a JIT can beat an ahead of time compiler on a dynamic language. Adding two values in Python is a fully general operation, but at this one site it has been two integers ten thousand times running, so emit an integer add with a check in front of it.</p>\n<h2 id=\"stack-or-registers\">Stack or registers</h2>\n<p>A bytecode machine has to say where operands come from, and there are two answers.</p>\n<p>A stack machine takes operands from an operand stack and pushes results back. Instructions are tiny, often one byte and one argument, because the operand locations are implicit. CPython, the Java virtual machine and WebAssembly all work this way. The cost is that more instructions execute: pushing and popping are instructions too.</p>\n<p>A register machine gives each frame an array of slots and instructions name their operands by index. Instructions are fewer and fatter, there are fewer dispatches, and the slots map more directly onto real registers if a compiler ever gets involved. Lua moved from a stack machine to a register machine in version 5, and it remains the clearest case study of the change.</p>\n<p>Adding two locals and storing the result is four instructions on a stack machine and one on a register machine. The register machine executes fewer dispatches for the same work, which matters because dispatch is where the time goes.</p>\n<h2 id=\"dispatch-and-why-the-loop-is-shaped-the-way-it-is\">Dispatch, and why the loop is shaped the way it is</h2>\n<p>The obvious loop reads an opcode and switches on it. That compiles to an indirect jump through a table, and the important consequence is that every opcode in the program shares one indirect branch instruction.</p>\n<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 512 170\" class=\"fig-svg\" style=\"max-width:742px\" role=\"img\" aria-label=\"Two dispatch shapes: on the left a single switch with one indirect branch shared by every opcode, and on the right one indirect jump at the end of each opcode body, so each has its own branch site.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><line x1=\"92\" y1=\"48\" x2=\"92\" y2=\"88\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"383\" y1=\"48\" x2=\"383\" y2=\"88\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><rect x=\"0.0\" y=\"0.0\" width=\"184.8\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--clay-ink, var(--accent));stroke:var(--clay-ink, var(--accent))\"/><text x=\"92.4\" y=\"28.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">switch (opcode)</text><rect x=\"0.0\" y=\"88.0\" width=\"184.8\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--clay-ink, var(--accent));stroke:var(--clay-ink, var(--accent))\"/><text x=\"92.4\" y=\"116.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">one branch site</text><rect x=\"281.6\" y=\"0.0\" width=\"202.4\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"382.8\" y=\"28.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">op body, then jump</text><rect x=\"281.6\" y=\"88.0\" width=\"202.4\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"382.8\" y=\"116.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">one site per opcode</text></svg><figcaption>The same work, arranged so the branch predictor has something to learn. One site cannot tell which opcode is coming next; one site per opcode can learn that a comparison is usually followed by a conditional jump.</figcaption></figure>\n<p>A branch predictor keyed on a single site cannot learn anything about which opcode follows which, because from that site's point of view the target is whatever the program is doing. So interpreters use a compiler extension that lets a label be taken as a value, and end each opcode's body with its own jump to the next one. Now there is a branch site per opcode, and the predictor can learn that a comparison is usually followed by a conditional jump. The reported gain when CPython adopted it was in the range of fifteen to twenty percent, for a change that computes exactly the same thing.</p>\n<p>CPython 3.14 added a further variant, where each opcode is a separate small function and dispatch is a tail call to the next one. The reason is not elegance. A single function of several thousand lines defeats register allocation, and splitting it lets the compiler allocate registers per opcode. The measured gain is three to five percent on the standard benchmark suite.</p>\n<h2 id=\"what-the-interpreter-knows-and-writes-down\">What the interpreter knows and writes down</h2>\n<p>Here is where the trade starts paying.</p>\n<p>An instruction like an attribute load or a binary operation is general: it must work for every type. But a given site in a real program is usually not general at all. It sees the same shapes over and over.</p>\n<p>So the interpreter watches. After a code object has run enough times, its instructions are replaced by adaptive versions carrying a small counter, and space for a cache is embedded in the instruction stream right after the instruction itself. When the counter fires, a family specific routine looks at the operands that actually turned up and rewrites the instruction into a specialised member of its family. A general binary operation becomes an integer add, or a float add, or a string concatenation, depending on what it saw.</p>\n<p>Every specialised instruction begins with a cheap check: is the type still what we assumed, is the class still the version we recorded. On a miss it decrements a counter and does the general thing; if the counter bottoms out the instruction reverts to the adaptive form and may specialise differently later.</p>\n<p>This is the mechanism to remember, because it is the same in every fast dynamic language runtime under different names. Observe, assume, guard, and be able to take it back.</p>\n<h2 id=\"tiers-and-becoming-hot-while-running\">Tiers, and becoming hot while running</h2>\n<p>A JIT does not compile everything. Compiling costs time, and most code runs once. So runtimes are tiered: a cheap tier runs immediately and counts, and when a function or a loop crosses a threshold, an expensive tier compiles it using what the cheap tier recorded.</p>\n<p>Two kinds of hot are worth distinguishing. A function called many times can be compiled before its next call, which is easy. A function entered once containing a loop that runs ten million times is hot while it is executing, and waiting for it to return means waiting forever. The answer is on stack replacement: compile a new version, then transfer the running frame into it mid flight, with the loop counter and every live value moved across. It is fiddly and it is not optional, because the long running loop is exactly the case that most needs compiling.</p>\n<p>There are two shapes of JIT. A method JIT compiles a function at a time, like an ordinary compiler with better information. A tracing JIT records the actual sequence of operations through one hot loop, following calls as it goes, and turns that recording into straight line code with a guard at every point where the recorded path could be left. Tracing gets aggressive inlining and specialisation for free, and it fails badly when the code is unpredictable, because then it produces either an explosion of traces or a trace whose guards keep firing.</p>\n<h2 id=\"what-a-cached-bytecode-file-is-not\">What a cached bytecode file is not</h2>\n<p>One correction, because the belief is widespread. A compiled bytecode file next to a source file is a cache of the parse, not an optimisation of the program. It holds the same code object the compiler would have produced, so loading it skips tokenising and parsing and nothing else. It carries a magic number that changes whenever the bytecode format changes, which is why a file from another version is rejected rather than misread, and either a timestamp or a hash of the source so that a stale one is not used.</p>\n<p>The program does not run faster afterwards. It starts faster.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>A tree walker is simple and slow because it pays a dispatch and a pointer chase per node. A bytecode machine walks the tree once and then runs a dense array of instructions. A JIT emits machine code using facts that only exist at run time.</p>\n<p>A stack machine has smaller instructions and executes more of them; a register machine has fewer and fatter ones. Dispatch is the cost either way, which is why the shape of the dispatch loop is worth fifteen percent and why the loop is built to give the branch predictor something it can learn.</p>\n<p>Specialisation is observe, assume, guard, deoptimise. A site that has seen two integers ten thousand times gets an integer add and a check, and the check is what makes the assumption safe.</p>\n<p>Tiering exists because compiling costs time, and on stack replacement exists because the loop that most needs compiling is the one already running.</p>\n<p>Next comes the thing that decides when any of this is rebuilt at all: the build graph, and why a build system's only real job is knowing what changed.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These model an interpreter's decisions, counters, caches, stack depth and dispatch counts, rather than running a real one.</p>\n<p><code>assert-failed</code> names the case your model got wrong. Several exercises assert that a specialised instruction does not immediately give up on its first miss, which is the saturating counter working rather than a check being wrong.</p>",
+ "headings": [
+  {
+   "id": "three-designs-and-what-each-pays",
+   "text": "Three designs, and what each pays",
+   "level": 2
+  },
+  {
+   "id": "stack-or-registers",
+   "text": "Stack or registers",
+   "level": 2
+  },
+  {
+   "id": "dispatch-and-why-the-loop-is-shaped-the-way-it-is",
+   "text": "Dispatch, and why the loop is shaped the way it is",
+   "level": 2
+  },
+  {
+   "id": "what-the-interpreter-knows-and-writes-down",
+   "text": "What the interpreter knows and writes down",
+   "level": 2
+  },
+  {
+   "id": "tiers-and-becoming-hot-while-running",
+   "text": "Tiers, and becoming hot while running",
+   "level": 2
+  },
+  {
+   "id": "what-a-cached-bytecode-file-is-not",
+   "text": "What a cached bytecode file is not",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1590,
+ "needs": [
+  "pipeline",
+  "parsing"
+ ],
+ "neededBy": []
+}
