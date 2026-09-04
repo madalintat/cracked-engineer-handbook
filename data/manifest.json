@@ -914,7 +914,8 @@
    "neededBy": [
     "pipeline",
     "object-model",
-    "virtual-memory"
+    "virtual-memory",
+    "measurement"
    ],
    "minutes": 55
   },
@@ -938,7 +939,8 @@
    ],
    "neededBy": [
     "atomics",
-    "interpreters"
+    "interpreters",
+    "measurement"
    ],
    "minutes": 55
   },
@@ -1565,12 +1567,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1631,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "cache",
+    "pipeline"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "testing",
@@ -2837,9 +2843,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 53,
-  "words": 80503,
-  "exercises": 424,
-  "drills": 795
+  "ready": 54,
+  "words": 82134,
+  "exercises": 432,
+  "drills": 810
  }
 }

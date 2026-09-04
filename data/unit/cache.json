@@ -85,6 +85,7 @@
  "neededBy": [
   "pipeline",
   "object-model",
-  "virtual-memory"
+  "virtual-memory",
+  "measurement"
  ]
 }

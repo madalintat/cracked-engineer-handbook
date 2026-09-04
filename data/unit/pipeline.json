@@ -74,6 +74,7 @@
  ],
  "neededBy": [
   "atomics",
-  "interpreters"
+  "interpreters",
+  "measurement"
  ]
 }

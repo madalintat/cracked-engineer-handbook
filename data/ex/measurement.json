@@ -1,0 +1,310 @@
+{
+ "slug": "measurement",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "The number in the middle is not the answer",
+   "brief": "<p>Write <code>percentile</code>, returning the value at a given percentile of a sorted sample, using the nearest rank method.</p>\n<p>The rank is the percentile times the count, rounded up, and at least 1. The value returned is the one at that rank, counting from 1. A percentile of 0 gives the first value, and 100 gives the last.</p>",
+   "kind": "output",
+   "concept": "A percentile is a rank rather than an interpolation, and the rounding decides which of two samples you report at small counts.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Rounding up is what makes the 99th percentile of a hundred samples the hundredth value rather than the ninety ninth."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Rounding down puts the 50th percentile of four samples at the second value, and it puts the 100th percentile one short of the largest value, which is the wrong answer for the number people actually look at.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>In anything user facing the high percentile is the number that matters, because one slow request in a page load makes the page slow.</p>",
+   "starter": "unsigned long percentile(const unsigned long *sorted, unsigned n, unsigned p) {\n    (void)p;\n    if (!n) return 0;\n    return sorted[n / 2];\n}",
+   "tests": "#include <assert.h>\nunsigned long percentile(const unsigned long *, unsigned, unsigned);\nint main(void) {\n    unsigned long s[] = {10, 20, 30, 40};\n    assert(percentile(s, 4, 0) == 10);\n    assert(percentile(s, 4, 25) == 10);\n    assert(percentile(s, 4, 50) == 20);\n    assert(percentile(s, 4, 75) == 30);\n    assert(percentile(s, 4, 100) == 40);\n    { unsigned long one[] = {7};\n      assert(percentile(one, 1, 99) == 7); }\n    assert(percentile(s, 0, 50) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "The latency that was actually experienced",
+   "brief": "<p>Write <code>true_latency</code>, returning the latency a request really suffered, given when it was supposed to be sent, when it was actually sent, and when the response came back.</p>\n<p>A tool that measures from the actual send time reports only the service time. A request that should have gone out earlier was already waiting before it was sent, and that wait is part of what the world experienced.</p>",
+   "kind": "output",
+   "concept": "This one line is the whole of coordinated omission. The tool stopped asking while the system was struggling, so the waiting never got recorded.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Measure from the moment the request was due, not from the moment the tool managed to send it."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A request due at 100 and sent at 900 was already 800 late before the service time began, and reporting only the service time is what makes a tail latency ten times better than the truth.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A request sent on time reports the same number either way, which is why the bug is invisible until the system is under stress, which is when the measurement matters.</p>",
+   "starter": "unsigned long true_latency(unsigned long due, unsigned long sent,\n                           unsigned long done) {\n    (void)due;\n    return done - sent;\n}",
+   "tests": "#include <assert.h>\nunsigned long true_latency(unsigned long, unsigned long, unsigned long);\nint main(void) {\n    assert(true_latency(100, 100, 105) == 5);     /* sent on time */\n    assert(true_latency(100, 900, 905) == 805);   /* delayed by the stall */\n    assert(true_latency(0, 1000, 1001) == 1001);\n    assert(true_latency(50, 50, 50) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "The samples that were never taken",
+   "brief": "<p>Write <code>omitted_samples</code>, returning how many requests a fixed rate load generator failed to send during a stall, given the length of the stall and the interval between requests.</p>\n<p>The generator should have sent one request per interval throughout the stall. It sent one, at the start, and then waited. Everything that should have gone out during the stall was never sent and never recorded.</p>",
+   "kind": "output",
+   "concept": "The missing samples are exactly the slow ones, which is why the percentiles come out true about the sample and wrong about the system.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The one sent at the start was recorded. Count the ones due during the stall after it."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A one second stall at ten milliseconds per request omits ninety nine samples, not a hundred: the first request is the one that got sent and measured.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Those ninety nine would each have waited, the first nearly a second and the last barely at all. Recording one slow sample instead of a hundred is how a tail latency is reported an order of magnitude too good.</p>",
+   "starter": "unsigned long omitted_samples(unsigned long stall, unsigned long interval) {\n    if (!interval) return 0;\n    return stall / interval;\n}",
+   "tests": "#include <assert.h>\nunsigned long omitted_samples(unsigned long, unsigned long);\nint main(void) {\n    assert(omitted_samples(1000, 10) == 99);\n    assert(omitted_samples(10, 10) == 0);      /* the next one was due exactly at the end */\n    assert(omitted_samples(25, 10) == 1);\n    assert(omitted_samples(0, 10) == 0);\n    assert(omitted_samples(1000, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "What a sampler can expect to see",
+   "brief": "<p>Write <code>expected_samples</code>, returning how many times a sampling profiler running at a given rate can expect to interrupt an event, given the event's duration in microseconds and the sample rate in hertz.</p>\n<p>Return the expected count in hundredths, so that a fraction of a sample is visible rather than rounded to nothing. An event shorter than one sampling interval has an expected count below one, which is the useful answer.</p>",
+   "kind": "output",
+   "concept": "Sampling finds hot and never finds rare and expensive, and this is the arithmetic that says so.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Expected samples are the duration times the rate. Watch the units: microseconds against samples per second."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. An event of a hundred microseconds at 999 hertz expects about a tenth of a sample, which in hundredths is 9. Reporting a whole number here rounds the interesting cases to zero and hides them.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The consequence is that a hundred microsecond stall that happens once will almost certainly be missed at any sane rate, whatever it did to the user who hit it.</p>",
+   "starter": "unsigned long expected_samples(unsigned long micros, unsigned long hz) {\n    return micros * hz / 1000000UL;\n}",
+   "tests": "#include <assert.h>\nunsigned long expected_samples(unsigned long, unsigned long);\nint main(void) {\n    /* 100 us at 999 Hz is 0.0999 samples, which is 9 hundredths. */\n    assert(expected_samples(100, 999) == 9);\n    /* One second at 999 Hz is 999 samples. */\n    assert(expected_samples(1000000, 999) == 99900);\n    /* 10 ms at 1000 Hz is 10 samples. */\n    assert(expected_samples(10000, 1000) == 1000);\n    assert(expected_samples(0, 999) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Sampling at a round number",
+   "brief": "<p>Write <code>aliases</code>, deciding whether a sampling rate will alias against a periodic event in the system, given both frequencies in hertz.</p>\n<p>Two frequencies alias when one divides the other exactly, in either direction, because then the sampler keeps landing at the same point in the event's cycle and either always sees it or never does. A rate of zero aliases with nothing.</p>",
+   "kind": "output",
+   "concept": "This is why the usual default is 999 rather than 1000. A prime offset from every round number in the system is the entire reason.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Either direction counts, because the sampler being faster or slower than the event both give a fixed phase relationship."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Sampling at 1000 aliases against an event at 100 as well as one at 1000, because the sampler lands at the same phase every time.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>999 divides nothing anyone else runs at, which is the whole of the design decision.</p>",
+   "starter": "int aliases(unsigned long sample_hz, unsigned long event_hz) {\n    return sample_hz == event_hz;\n}",
+   "tests": "#include <assert.h>\nint aliases(unsigned long, unsigned long);\nint main(void) {\n    assert(aliases(1000, 1000) == 1);\n    assert(aliases(1000, 100) == 1);    /* sampler is a multiple */\n    assert(aliases(100, 1000) == 1);    /* event is a multiple */\n    assert(aliases(999, 1000) == 0);\n    assert(aliases(999, 100) == 0);\n    assert(aliases(0, 1000) == 0);\n    assert(aliases(1000, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Walking the frames",
+   "brief": "<p>Write <code>stack_depth</code>, returning how many frames a frame pointer walk recovers, given each frame's saved pointer to the previous one.</p>\n<p>Start at frame <code>top</code> and follow the chain. Frame 0 is the outermost frame: it is counted and the walk ends there. A saved pointer of -1 means that frame kept none, and the walk stops without counting it, so every frame below it is lost.</p>\n<p>Count the frames actually recovered, including the one you started at.</p>",
+   "kind": "output",
+   "concept": "Missing one frame pointer does not lose one frame. It loses everything below it, which is why a profile of a program built without them is a forest of stumps.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The walk ends in two different ways, and only one of them counts the frame it ended on."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Reaching a frame that kept no pointer ends the walk without counting it, and everything it would have led to is unreachable. That is the difference between a stack you can read and one that stops in a library.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A third of your time being inside the system library, with no idea which of your call paths got there, is what this looks like in practice.</p>",
+   "starter": "unsigned stack_depth(const int *prev, int top) {\n    unsigned n = 0;\n    while (top >= 0) {\n        n++;\n        if (prev[top] == 0) break;\n        top = prev[top];\n    }\n    return n;\n}",
+   "tests": "#include <assert.h>\nunsigned stack_depth(const int *, int);\nint main(void) {\n    /* frame 3 -> 2 -> 1 -> 0 (outermost) */\n    { int p[] = {0, 0, 1, 2};\n      assert(stack_depth(p, 3) == 4); }\n    /* frame 2 kept no pointer: the walk gets 3 and stops. */\n    { int p[] = {0, 0, -1, 2};\n      assert(stack_depth(p, 3) == 1); }\n    /* starting at the outermost frame */\n    { int p[] = {0};\n      assert(stack_depth(p, 0) == 1); }\n    /* the top frame itself kept none */\n    { int p[] = {0, -1};\n      assert(stack_depth(p, 1) == 0); }\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "What the processor profiler cannot see",
+   "brief": "<p>Write <code>visible_fraction</code>, returning what percentage of a program's wall clock a processor sampling profiler can account for, given the time spent running and the time spent blocked.</p>\n<p>Only the running time produces samples. Return the answer as a whole percentage, rounded down. A program that never ran at all is reported as 0.</p>",
+   "kind": "output",
+   "concept": "A profile that shows an idle machine is not wrong. It is silent, and the answer is in the half it cannot see.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The denominator is the whole wall clock, which is both parts added together."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A program that runs for one second and waits for nine has ten percent of its time visible to a processor profiler, not a hundred. Dividing by the running time alone always gives a hundred, which is the mistake the tool itself invites.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The fix is to sample the scheduler switching threads out rather than the processor, which is what an off processor profile is.</p>",
+   "starter": "unsigned visible_fraction(unsigned long on_cpu, unsigned long blocked) {\n    (void)blocked;\n    return on_cpu ? 100 : 0;\n}",
+   "tests": "#include <assert.h>\nunsigned visible_fraction(unsigned long, unsigned long);\nint main(void) {\n    assert(visible_fraction(1000, 9000) == 10);\n    assert(visible_fraction(1000, 0) == 100);\n    assert(visible_fraction(0, 1000) == 0);\n    assert(visible_fraction(1, 2) == 33);\n    assert(visible_fraction(0, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Is that a result or is that noise",
+   "brief": "<p>Write <code>is_real_change</code>, deciding whether a difference between two measurements should be believed, given the two values and the spread of the noise as a percentage.</p>\n<p>Believe the difference when it is larger than the noise, measured as that percentage of the first value. Anything at or below the noise is a hypothesis rather than a result.</p>",
+   "kind": "output",
+   "concept": "A few percent on a microbenchmark can come from alignment alone, so the threshold is not a formality.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The comparison is on the size of the difference, in either direction, against a threshold computed from the baseline."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A change is a change whichever way it went, and a difference exactly equal to the noise is not evidence.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Several regressions blamed on frame pointers turned out to be cache line and alignment effects, where adding any two instructions would have moved the number the same way.</p>",
+   "starter": "int is_real_change(unsigned long before, unsigned long after,\n                   unsigned noise_pct) {\n    return after < before && (before - after) * 100 > before * noise_pct;\n}",
+   "tests": "#include <assert.h>\nint is_real_change(unsigned long, unsigned long, unsigned);\nint main(void) {\n    assert(is_real_change(1000, 900, 5) == 1);    /* 10 percent faster */\n    assert(is_real_change(1000, 1100, 5) == 1);   /* 10 percent slower */\n    assert(is_real_change(1000, 980, 5) == 0);    /* inside the noise */\n    assert(is_real_change(1000, 950, 5) == 0);    /* exactly the noise */\n    assert(is_real_change(1000, 1000, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

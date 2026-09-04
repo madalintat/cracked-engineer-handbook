@@ -14271,6 +14271,254 @@
  },
  {
   "t": "section",
+  "slug": "measurement",
+  "anchor": "two-ways-to-find-out-biased-in-opposite-directions",
+  "title": "Two ways to find out, biased in opposite directions",
+  "text": "There are exactly two ways to learn where a program spends time. Instrumenting means inserting code at every function entry and exit. You get exact call counts and a complete call graph, and you get two biases with them. The overhead is proportional to how often a function is called rather than to how long it takes, so a tiny function called a billion times is measured mostly measuring the measurement. And instrumentation prevents inlining, so the binary you profiled is not the binary you ship, and the function you were staring at may not exist at all in the shipped one. Sampling means interrupting the program many times a second and recording where it was. The overhead is proportional to the sample rate rather than to the program's shape, which is why it is what modern profilers do. Its biases are different and worth knowing individually. You only see what you sample, so sampling finds hot and never finds rare and expensive. An event that takes a hundred microseconds and happens once will be missed at any sane rate. The recorded address is not exactly the guilty instruction, because the interrupt arrives some cycles after the event that caused it. Attribution at instruction granul",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "measurement",
+  "anchor": "getting-a-stack-out-of-a-sample",
+  "title": "Getting a stack out of a sample",
+  "text": "A sample without a stack says what was running. A sample with a stack says why, and getting the stack is where profiling gets awkward. The cheap way is to walk the chain of frame pointers: each frame points at the previous one, with the return address beside it. It costs a few loads, it can be done in the kernel at interrupt time, and it needs every frame in the stack to have kept its frame pointer. Compilers stopped keeping them by default, because the register is worth having and the exercise looked free. The consequence was that profiles of real programs filled up with unknown frames: you could see that a third of the time was inside the system library and nothing whatever about which of your paths got there. The alternative is to copy a chunk of the stack at every sample and unwind it later using the tables the compiler emitted for exception handling. It works on binaries built without frame pointers and needs no rebuild. It also produces kilobytes per sample instead of tens of bytes, drops samples when the buffer overflows, silently truncates stacks deeper than the copied chunk, and makes reporting slow. So the industry measured the other option and changed its mind. Putting f",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "measurement",
+  "anchor": "what-a-profile-looks-like-when-it-is-aggregated",
+  "title": "What a profile looks like when it is aggregated",
+  "text": "A flame graph takes many thousands of stack samples and merges them. Width is the fraction of samples containing that frame, so wide means much time, and height is stack depth rather than time. It is not a timeline, and the left to right order carries no meaning beyond sorting. The variant worth reaching for first is the differential one: two profiles, before and after, with each box coloured by whether it grew or shrank. A regular flame graph invites you to stare at the widest tower, which is usually something you already knew about. A differential graph shows you what changed, which is the question you actually had.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "measurement",
+  "anchor": "the-average-is-the-least-useful-number",
+  "title": "The average is the least useful number",
+  "text": "Report a distribution rather than a number, because the shape is the information. In anything user facing the number that matters is a high percentile, since that is the experience a real user has some of the time, and one request in a page load being slow makes the page slow. Percentiles have a trap in them that is worth the rest of this unit.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "measurement",
+  "anchor": "what-coordinated-omission-hides",
+  "title": "What coordinated omission hides",
+  "text": "Here is the failure. A load generator is meant to send a request every ten milliseconds. It sends one, and that request takes a second because the system stalled. During that second it sends nothing, because it is waiting. Then it resumes, and records one slow sample of one second, plus a great many fast ones afterwards. But a real world that sends a request every ten milliseconds sent a hundred requests during that stall, and every one of them waited: the first for a second, the next for slightly less, and so on. Those ninety nine slow samples were never recorded, because the measuring tool coordinated with the system under test and politely stopped asking while it was struggling. The result is a set of percentiles that are all true about the samples taken and badly wrong about the system. The samples that would have been slow are exactly the ones missing. Reported tail latency can be off by an order of magnitude. The fix is to record latency from when a request was supposed to be sent rather than from when it was actually sent. That single change converts one slow sample into the hundred slow samples the world would have seen, and the percentile becomes an honest one. The general",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "measurement",
+  "anchor": "measuring-something-the-compiler-deleted",
+  "title": "Measuring something the compiler deleted",
+  "text": "One more hazard, on the small scale. Write a loop that computes something and throws it away, and the optimiser is entitled to delete the whole thing. The timing then measures an empty loop, which is fast and encouraging and worthless. Benchmark libraries offer a function to stop that, and the caveat is the part people miss: it prevents the result from being discarded, and it does not stop the compiler from simplifying the expression that produced it. A constant folded computation is still constant folded. What you are keeping alive is the answer, not the work. Alignment is the other small scale trap, and the frame pointer story above is the evidence. Two versions of a function that differ by an instruction can differ by a few percent for reasons that have nothing to do with the change, so a few percent on a microbenchmark is not a result. It is a hypothesis to test on something bigger.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "measurement",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Instrumenting gives exact counts and over-reports small hot functions, in a binary that is not the one you ship. Sampling gives an unbiased view of on processor time and cannot see anything else, which is the most common way a profile misleads. The default rate is prime for a reason, the recorded address is not the guilty instruction without precise sampling, and time spent blocked is invisible until you sample the scheduler instead. A stack needs either frame pointers or a slow unwind through exception tables. The industry measured the tradeoff and put frame pointers back, at around one percent, because a profile full of unknown frames is not a profile. Report a distribution. And know coordinated omission by name, because it is the failure where every number on the page is true and the system is nine times worse than it says. Next is the last unit in this part: how to find the inputs that break a program rather than the ones you thought of, and what it takes to prove that none exist.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "measurement",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the arithmetic behind the tools: percentiles over a sorted sample, the correction that undoes coordinated omission, how many samples an event of a given length can expect, and walking a chain of frame pointers. names the case your model got wrong. Several exercises assert that a corrected latency is larger than the one the naive tool recorded, which is the omission being undone rather than a sign error.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 1,
+  "title": "The number in the middle is not the answer",
+  "text": "A percentile is a rank rather than an interpolation, and the rounding decides which of two samples you report at small counts. Write , returning the value at a given percentile of a sorted sample, using the nearest rank method. The rank is the percentile times the count, rounded up, and at least 1. The value returned is the one at that rank, counting from 1. A percentile of 0 gives the first value, and 100 gives the last.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 2,
+  "title": "The latency that was actually experienced",
+  "text": "This one line is the whole of coordinated omission. The tool stopped asking while the system was struggling, so the waiting never got recorded. Write , returning the latency a request really suffered, given when it was supposed to be sent, when it was actually sent, and when the response came back. A tool that measures from the actual send time reports only the service time. A request that should have gone out earlier was already waiting before it was sent, and that wait is part of what the world experienced.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 3,
+  "title": "The samples that were never taken",
+  "text": "The missing samples are exactly the slow ones, which is why the percentiles come out true about the sample and wrong about the system. Write , returning how many requests a fixed rate load generator failed to send during a stall, given the length of the stall and the interval between requests. The generator should have sent one request per interval throughout the stall. It sent one, at the start, and then waited. Everything that should have gone out during the stall was never sent and never recorded.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 4,
+  "title": "What a sampler can expect to see",
+  "text": "Sampling finds hot and never finds rare and expensive, and this is the arithmetic that says so. Write , returning how many times a sampling profiler running at a given rate can expect to interrupt an event, given the event's duration in microseconds and the sample rate in hertz. Return the expected count in hundredths, so that a fraction of a sample is visible rather than rounded to nothing. An event shorter than one sampling interval has an expected count below one, which is the useful answer.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 5,
+  "title": "Sampling at a round number",
+  "text": "This is why the usual default is 999 rather than 1000. A prime offset from every round number in the system is the entire reason. Write , deciding whether a sampling rate will alias against a periodic event in the system, given both frequencies in hertz. Two frequencies alias when one divides the other exactly, in either direction, because then the sampler keeps landing at the same point in the event's cycle and either always sees it or never does. A rate of zero aliases with nothing.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 6,
+  "title": "Walking the frames",
+  "text": "Missing one frame pointer does not lose one frame. It loses everything below it, which is why a profile of a program built without them is a forest of stumps. Write , returning how many frames a frame pointer walk recovers, given each frame's saved pointer to the previous one. Start at frame and follow the chain. Frame 0 is the outermost frame: it is counted and the walk ends there. A saved pointer of -1 means that frame kept none, and the walk stops without counting it, so every frame below it is lost. Count the frames actually recovered, including the one you started at.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 7,
+  "title": "What the processor profiler cannot see",
+  "text": "A profile that shows an idle machine is not wrong. It is silent, and the answer is in the half it cannot see. Write , returning what percentage of a program's wall clock a processor sampling profiler can account for, given the time spent running and the time spent blocked. Only the running time produces samples. Return the answer as a whole percentage, rounded down. A program that never ran at all is reported as 0.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "measurement",
+  "n": 8,
+  "title": "Is that a result or is that noise",
+  "text": "A few percent on a microbenchmark can come from alignment alone, so the threshold is not a formality. Write , deciding whether a difference between two measurements should be believed, given the two values and the spread of the noise as a percentage. Believe the difference when it is larger than the noise, measured as that percentage of the first value. Anything at or below the noise is a hypothesis rather than a result.",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 1,
+  "title": "What are the two ways of finding out where a program spends time?",
+  "text": " They are biased in opposite directions, which is why knowing which one a tool is doing matters more than knowing its name. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 2,
+  "title": "What does instrumentation systematically over-report?",
+  "text": " A tiny function called a billion times is measured mostly measuring the measurement. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 3,
+  "title": "Why is a profiled instrumented binary not the binary you ship?",
+  "text": " The function you spent an afternoon staring at may not exist in the shipped build at all. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 4,
+  "title": "What can sampling never find?",
+  "text": " An event of a hundred microseconds that happens once will be missed at any sane rate, whatever it did to the person who hit it. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 5,
+  "title": "Why is the recorded address not the guilty instruction?",
+  "text": " Attribution at instruction granularity is fiction unless the hardware's precise sampling mode is switched on. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 6,
+  "title": "Why do profilers sample at 999 hertz rather than 1000?",
+  "text": " A prime offset from every round number means the sampler does not keep landing at the same point in someone else's cycle. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 7,
+  "title": "Your program is slow because it waits on a lock. What does a processor sampling profile show?",
+  "text": " This is the most common way a profile misleads. The fix is to sample the scheduler switching threads out rather than the processor. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 8,
+  "title": "What does a frame pointer walk need to work?",
+  "text": " Miss one and the walk either stops or follows garbage, so a single library built without them truncates every stack that passes through it. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 9,
+  "title": "What does unwinding through the compiler's exception tables cost, compared to a frame pointer walk?",
+  "text": " It does work without a rebuild, which is its real advantage. The costs are what sent the industry back to frame pointers. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 10,
+  "title": "Roughly what does compiling with frame pointers cost?",
+  "text": " Two major distributions turned them back on in 2023 and 2024, having decided that a profile you can read is worth a percent. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 11,
+  "title": "In a flame graph, what does the width of a box mean?",
+  "text": " It is not a timeline, and left to right order carries no meaning beyond sorting. A flame chart, where the x axis is time, is a different thing. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 12,
+  "title": "Which flame graph answers the question you usually have?",
+  "text": " The widest tower is usually something you already knew about. What changed is the question you actually had. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 13,
+  "title": "A load generator sends a request every ten milliseconds. The system stalls for one second. What does a naive tool record?",
+  "text": " The requests that would have been slow were never sent. The tool coordinated with the system under test and stopped asking while it struggled. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 14,
+  "title": "How is coordinated omission corrected?",
+  "text": " That single change turns one slow sample into the many slow samples the world would have experienced, and makes the percentile honest. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "measurement",
+  "n": 15,
+  "title": "A benchmark library's function to keep a result alive. What does it not do?",
+  "text": " What you are keeping alive is the answer, not the work. A constant folded computation is still constant folded, and the timing then measures nothing. ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

@@ -155,4 +155,8 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
       the instruction pointer one past it, four hardware watchpoints and the
       single stepping cliff behind them, and the sanitizer's shadow byte per
       eight bytes, with the quarantine window said out loud
-- [ ] 053 `measurement`, 054 `testing`, which finish Part IX
+- [x] 053 `measurement`. Instrumenting against sampling and the bias each
+      introduces, the frame pointer argument with its measured cost, and
+      coordinated omission, where every number is true and the system is an
+      order of magnitude worse than it says
+- [ ] 054 `testing`, which finishes Part IX
