@@ -2189,7 +2189,15 @@ async function boot() {
   // back. This is the one distinction hashchange does not make itself.
   addEventListener('click', ev => {
     const a = ev.target.closest('a[href^="#"]');
-    if (a) HH.pushed = true;
+    if (!a) return;
+    HH.pushed = true;
+    // The link for the page already open changes nothing, so the browser
+    // fires nothing. Treat it as "take me to the top of this page".
+    if (a.getAttribute('href') === (location.hash || '#/')) {
+      ev.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      HH.pushed = false;
+    }
   }, true);
   HH.at = location.hash;
   addEventListener('hashchange', () => {
