@@ -15767,6 +15767,246 @@
  },
  {
   "t": "section",
+  "slug": "blas",
+  "anchor": "the-ratio-done-honestly",
+  "title": "The ratio, done honestly",
+  "text": "The quantity is arithmetic intensity: floating point operations performed divided by bytes that must move. Count the traffic as favourably as possible, reading each operand once and writing each result once, since a real implementation can only do worse. Take a vector update of length n at eight bytes per number: multiply one vector by a scalar and add it to another. That is two operations per element. It reads both vectors and writes one, so twenty four bytes per element. The n cancels. It is a constant, and it does not improve at any size. Now a matrix times a vector. The work is two operations per matrix element, so twice the square of n. The traffic is the matrix itself, which dominates everything else. The n cancels again. And the structural reason is worth stating plainly: every element of the matrix is used exactly once. It takes part in one multiply and one add and is never wanted again. You can tile that computation however you please and there is nothing in the tile to reuse. It is a streaming operation wearing a matrix costume. Notice what moving from the first level to the second bought. The work went up by a factor of n, and the intensity went up by a factor of three, ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "blas",
+  "anchor": "the-table-worth-keeping",
+  "title": "The table worth keeping",
+  "text": "",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "blas",
+  "anchor": "what-the-machine-allows",
+  "title": "What the machine allows",
+  "text": "A machine has a peak rate and a memory bandwidth, and the achievable rate is the smaller of the peak and the intensity times the bandwidth. The intensity at which those two are equal is the point where an operation stops being limited by memory and starts being limited by arithmetic. For real machines that point sits somewhere around ten operations per byte for double precision on a server processor, about the same on a large accelerator doing double precision, and around three hundred for the reduced precision modes the same accelerator advertises. Put the two together and the conclusion is not a matter of degree. A vector operation at one twelfth, and a matrix vector operation at a quarter, are between forty and a thousand times below every one of those thresholds. They are not slightly memory bound. They are memory bound by orders of magnitude, on every machine built in the last thirty years, and no implementation effort moves them, because the ratio is a property of the operation. A matrix multiply at a thousand on a side sits at eighty three, which is past the threshold for the double precision cases and short of it for the reduced precision one. At ten thousand it is over eig",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "blas",
+  "anchor": "what-the-field-did-about-it",
+  "title": "What the field did about it",
+  "text": "Once that is understood, a great deal of the history of numerical software stops looking like taste. The first widely used benchmark and library was written in terms of the vector level. On the machines of the time that was reasonable. When caches arrived it stopped being reasonable, and the successor library was rewritten around blocked algorithms whose inner work is a matrix multiply. The pattern of that rewrite is worth knowing, because it recurs. A factorisation is split into a panel and the rest. The panel is narrow, is handled by the unblocked algorithm at the second level, and costs work in proportion to the square times the block width. The update to everything else is a matrix multiply and costs work in proportion to the cube. As the problem grows, the cubic term dominates, so almost all the arithmetic ends up inside the operation that can run at peak, and the part that cannot is asymptotically negligible. That is the move: not making the slow level faster, which is impossible, but arranging for almost none of the work to be in it. The same reasoning explains why accelerators grew units that do nothing but multiply small matrices, why a machine learning framework spends it",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "blas",
+  "anchor": "the-one-place-the-argument-is-subtler",
+  "title": "The one place the argument is subtler",
+  "text": "There is a caveat that stops this being a slogan, and it is the reason the third level is described as able to reach peak rather than as fast. Reaching it requires the reuse to be realised, and that means holding a block of each operand somewhere fast enough while it is used. How large that block can be is set by the cache, and the achievable intensity of a matrix multiply grows only as the square root of the fast memory available. So the operation permits unbounded reuse and the machine grants you a bounded amount of it, and the next unit is entirely about arranging the loops so that the amount you get is close to the amount on offer. Written badly, a matrix multiply reads its operands from main memory again for every element of the output, which puts its real intensity back down near the second level's. The cube of arithmetic is there in either case. Whether the traffic is the square or the cube is a property of how the loops are written, which is why the naive three loop version runs at a few percent of peak on hardware that could run it at ninety.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "blas",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Arithmetic intensity is operations divided by bytes moved, counted as favourably as possible. The vector level sits at about a twelfth, the matrix vector level at a quarter, and both are constants that no size and no implementation will change, because in both cases every input element is used exactly once. The matrix multiply level grows as the size over twelve, because every input element is reused as many times as the matrix is wide. It is the smallest operation of the three whose work per byte is unbounded, and the only one that can reach a machine's peak. Every machine's crossover sits between about ten and three hundred operations per byte, which puts the first two levels one to three orders of magnitude below it and the third above it for any serious size. So numerical algorithms are not written to make the memory bound parts fast. They are written so that almost all of the work is somewhere else. Next is that operation itself: five loops written against the memory hierarchy, and why the same shape appears again on every machine that has ever mattered.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "blas",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These are the intensities and the thresholds as arithmetic, in integers scaled so the fractions survive. names the case your model got wrong. Several exercises assert that an intensity does not change with the problem size, which is the n cancelling rather than a term dropped from the formula.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "blas",
+  "n": 1,
+  "title": "The ratio itself",
+  "text": "One division decides which side of a machine an operation lives on, and everything else in this unit is that division applied to three shapes. Write , returning an operation's arithmetic intensity in thousandths of an operation per byte, given its operation count and the bytes it must move. Truncate towards zero. An operation that moves no bytes has no intensity to report, so return 0.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "blas",
+  "n": 2,
+  "title": "What each level moves",
+  "text": "The traffic is what the operation requires rather than what an implementation happens to do, which is why this is a floor and not an estimate. Write , returning the smallest number of bytes an operation must move, given its level, the problem size and the bytes per number. The vector update reads two vectors and writes one, so three vectors of traffic. The matrix vector product reads the matrix, which dominates everything else, so count only the square. The matrix multiply reads two matrices and writes one, so three squares.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "blas",
+  "n": 3,
+  "title": "What each level computes",
+  "text": "The level number is the exponent of the work, and it is one more than the exponent of the data, which is the whole of the argument. Write , returning how many floating point operations a level performs, given its level and the problem size. Each level does two operations per element of its largest operand: twice the size, twice the square, twice the cube.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "blas",
+  "n": 4,
+  "title": "How often an element is reused",
+  "text": "This is the structural fact underneath the ratio, and it is a property of the operation rather than of any implementation. Write , returning how many times each element of the largest input takes part in an operation, given the level and the problem size. At the first two levels every element is used exactly once. At the third, each element of one matrix is used once per column of the other.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "blas",
+  "n": 5,
+  "title": "Where the machine changes its mind",
+  "text": "The ridge is a property of the machine and the intensity is a property of the operation, and the comparison between them is the whole prediction. Write , returning a machine's crossover intensity in thousandths of an operation per byte, given its peak rate in billions of operations per second and its bandwidth in gigabytes per second. Below that intensity an operation is limited by memory, and above it by arithmetic.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "blas",
+  "n": 6,
+  "title": "Which side of the ridge",
+  "text": "The word cannot is doing real work here. It is not a statement about this implementation but about every possible one. Write , deciding whether an operation can reach a machine's peak rate, given its intensity and the machine's ridge, both in thousandths. An operation at or above the ridge is limited by arithmetic and can reach peak. Below it, it is limited by memory and cannot, however well it is implemented.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "blas",
+  "n": 7,
+  "title": "How large the problem has to be",
+  "text": "The third level can reach peak, and this says from what size onwards, which is the honest form of the claim. Write , returning the smallest matrix multiply size that reaches a machine's peak, given the ridge in thousandths of an operation per byte and the bytes per number. The intensity of a matrix multiply is the size divided by three times the bytes per number, since it moves three matrices. Return the smallest whole size at or above the ridge.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "blas",
+  "n": 8,
+  "title": "Where the work ends up",
+  "text": "The move is not making the memory bound level faster, which is impossible, but arranging for almost none of the work to be in it. Write , returning what percentage of a blocked factorisation's work happens in the matrix multiply, given the matrix size and the block width. The narrow panel costs about the square times the block width, and the update to everything else costs about the cube. Truncate towards zero.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "blas",
+  "n": 1,
+  "title": "What does the level number of a linear algebra routine tell you?",
+  "text": " It is one more than the exponent of the data, and that gap is the entire argument of the unit. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "blas",
+  "n": 2,
+  "title": "What is arithmetic intensity?",
+  "text": " Count the traffic as favourably as possible, since a real implementation can only do worse, which makes the result a ceiling. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "blas",
+  "n": 3,
+  "title": "What is the intensity of a vector update, and how does it change with size?",
+  "text": " Two operations per element over twenty four bytes per element. The length cancels. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "blas",
+  "n": 4,
+  "title": "Why can a matrix vector product not be improved by tiling?",
+  "text": " It is a streaming operation wearing a matrix costume, and no arrangement changes that. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "blas",
+  "n": 5,
+  "title": "Going from the first level to the second multiplied the work by the size. What did it do to the intensity?",
+  "text": " A quarter against a twelfth. The extra work bought essentially nothing. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "blas",
+  "n": 6,
+  "title": "Why does a matrix multiply's intensity grow with the problem size?",
+  "text": " The reuse is a property of the operation rather than of the implementation, which is why no other level can be rescued into it. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "blas",
+  "n": 7,
+  "title": "What is a machine's ridge point?",
+  "text": " Peak divided by bandwidth. The comparison between it and an operation's intensity is the whole prediction. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "blas",
+  "n": 8,
+  "title": "Roughly where do real ridge points sit?",
+  "text": " That range is what puts the first two levels one to three orders of magnitude below every threshold there is. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "blas",
+  "n": 9,
+  "title": "Can a better implementation make a matrix vector product reach peak?",
+  "text": " It is not slightly memory bound. It is memory bound by orders of magnitude, on every machine built in the last thirty years. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "blas",
+  "n": 10,
+  "title": "What did the field do about the first two levels being permanently slow?",
+  "text": " Not making the slow level faster, which is impossible, but arranging for the arithmetic to be somewhere else. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "blas",
+  "n": 11,
+  "title": "In a blocked factorisation, what is the panel and what is the update?",
+  "text": " The panel costs the square times the block width and the update costs the cube, so the update dominates as the problem grows. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "blas",
+  "n": 12,
+  "title": "Why does that rewrite work asymptotically?",
+  "text": " The part that cannot reach peak becomes negligible rather than being made fast, which is a different and more achievable goal. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "blas",
+  "n": 13,
+  "title": "Why do accelerators contain units that do nothing but multiply small matrices?",
+  "text": " The same reasoning explains why a machine learning framework spends its life turning other operations into matrix multiplies. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "blas",
+  "n": 14,
+  "title": "A matrix multiply at a thousand a side has what intensity in double precision?",
+  "text": " The size over twelve. At ten thousand it is over eight hundred, which is past every ridge point in the table. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "blas",
+  "n": 15,
+  "title": "What is the single sentence to remember from this unit?",
+  "text": " The second is a decent rule of thumb that follows from it, and the first is the reason the rule of thumb is true. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
   "slug": "frame-budget",
   "anchor": "one-nanosecond-per-pixel",
   "title": "One nanosecond per pixel",

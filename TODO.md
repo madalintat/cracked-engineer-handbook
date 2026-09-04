@@ -178,6 +178,8 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] 055 `cost-model`, 056 `layout`, 057 `branches`. The three that establish
       the second cost model: what Big-O leaves out, what the arrangement of
       data is worth, and what a branch costs when the machine cannot guess it
-- [ ] 058 `scan` onwards, and Parts XI to XIX
+- [x] 058 `scan`, work and depth, and the primitive the GPU part reuses
+- [x] 059 `blas`, the three levels and the one ratio that shaped the field
+- [ ] 060 `gemm` onwards, and Parts XI to XIX
 
 More than half the track is written now: 61 of 122 units.

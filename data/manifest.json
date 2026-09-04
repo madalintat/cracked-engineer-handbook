@@ -1019,7 +1019,8 @@
     "integers"
    ],
    "neededBy": [
-    "stability"
+    "stability",
+    "blas"
    ],
    "minutes": 55
   },
@@ -1628,7 +1629,8 @@
    ],
    "neededBy": [
     "layout",
-    "scan"
+    "scan",
+    "blas"
    ],
    "minutes": 55
   },
@@ -1709,12 +1711,16 @@
    "phase": "scale",
    "accent": "azure",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1492,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "floats",
+    "cost-model"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "gemm",
@@ -2887,9 +2893,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 62,
-  "words": 94432,
-  "exercises": 496,
-  "drills": 930
+  "ready": 63,
+  "words": 95924,
+  "exercises": 504,
+  "drills": 945
  }
 }
