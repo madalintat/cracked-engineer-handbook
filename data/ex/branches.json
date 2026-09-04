@@ -1,0 +1,310 @@
+{
+ "slug": "branches",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "What a branch costs",
+   "brief": "<p>Write <code>branch_cycles</code>, returning how many cycles a loop spends on one branch, given the iteration count, the mispredict rate in percent and the penalty of a mispredict in cycles.</p>\n<p>A branch the machine guesses right costs nothing at all, because it continues past it speculatively and is proved correct. Only the wrong guesses cost anything.</p>",
+   "kind": "output",
+   "concept": "The predictor is part of the cost model, and the free case being genuinely free is what makes the unpredictable case expensive by comparison.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Only the mispredicted fraction of the iterations is charged for."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A perfectly predicted branch costs zero rather than one cycle per iteration, which is the whole reason removing it can make a loop slower.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The penalty differed by a factor of three between the two machines measured. It is a parameter of the microarchitecture rather than a constant of computing.</p>",
+   "starter": "unsigned long branch_cycles(unsigned long iters, unsigned rate_pct,\n                            unsigned penalty) {\n    return iters + iters * rate_pct / 100 * penalty;\n}",
+   "tests": "#include <assert.h>\nunsigned long branch_cycles(unsigned long, unsigned, unsigned);\nint main(void) {\n    assert(branch_cycles(1000, 0, 15) == 0);      /* always right: free */\n    assert(branch_cycles(1000, 100, 15) == 15000);\n    assert(branch_cycles(1000, 50, 15) == 7500);  /* a coin flip */\n    assert(branch_cycles(1000, 1, 15) == 150);\n    assert(branch_cycles(0, 50, 15) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "When to remove the branch",
+   "brief": "<p>Write <code>go_branchless</code>, deciding whether replacing a branch with a conditional move is worth it, given the mispredict rate in percent, the mispredict penalty in cycles, and the cost of the move in cycles.</p>\n<p>The branch costs its mispredict rate times its penalty per iteration. The move costs its own cycles every iteration, whether or not the condition was predictable. Choose the cheaper one, and keep the branch when they tie.</p>",
+   "kind": "output",
+   "concept": "A conditional move converts a control dependency into a data dependency, so it is never free and a correctly predicted branch is.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Work in hundredths of a cycle so the rate does not round away."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A branch that is right ninety nine times out of a hundred costs about a sixth of a cycle against a full cycle for the move, so the move loses. Rounding the branch's cost down to zero cycles makes it win everywhere, which is the folklore this exercise exists to correct.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is why a compiler sometimes emits a branch where you expected a move, and why profile guided optimisation exists: the compiler is guessing at the rate, and a profile stops it guessing.</p>",
+   "starter": "int go_branchless(unsigned rate_pct, unsigned penalty, unsigned move_cost) {\n    (void)penalty; (void)move_cost;\n    return rate_pct > 0;\n}",
+   "tests": "#include <assert.h>\nint go_branchless(unsigned, unsigned, unsigned);\nint main(void) {\n    /* A coin flip against a 15 cycle penalty: 7.5 cycles against 1. */\n    assert(go_branchless(50, 15, 1) == 1);\n    /* Predictable: 0.15 cycles against 1. */\n    assert(go_branchless(1, 15, 1) == 0);\n    /* Never wrong. */\n    assert(go_branchless(0, 15, 1) == 0);\n    /* The break even point: 10 percent of 15 is 1.5, which beats 1. */\n    assert(go_branchless(10, 15, 1) == 1);\n    /* Exactly equal keeps the branch. */\n    assert(go_branchless(10, 10, 1) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Selecting without a branch",
+   "brief": "<p>Write <code>select_masked</code>, returning one of two values according to a condition, using only arithmetic and bit operations.</p>\n<p>Turn the condition into a mask of all ones or all zeros, then combine. No comparison operator that produces control flow, and no conditional expression.</p>",
+   "kind": "output",
+   "concept": "The same selection a conditional move makes, built out of operations that exist in every language, with no cooperation from the compiler.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Negating a zero or one gives all zeros or all ones in two's complement, and that is the mask."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A mask of one selects a single bit rather than a whole value, so it has to be all ones. Negation is what turns one into all ones.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The compiler usually emits a conditional move for a ternary anyway. This form matters when it will not, and when the language has no way to ask.</p>",
+   "starter": "unsigned long select_masked(int cond, unsigned long a, unsigned long b) {\n    unsigned long mask = (unsigned long)(cond != 0);\n    return (a & mask) | (b & ~mask);\n}",
+   "tests": "#include <assert.h>\nunsigned long select_masked(int, unsigned long, unsigned long);\nint main(void) {\n    assert(select_masked(1, 111, 222) == 111);\n    assert(select_masked(0, 111, 222) == 222);\n    assert(select_masked(1, 0, 0xffffffffffffffffUL) == 0);\n    assert(select_masked(0, 0, 0xffffffffffffffffUL) == 0xffffffffffffffffUL);\n    /* Any non-zero condition is true. */\n    assert(select_masked(7, 111, 222) == 111);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Counting without branching",
+   "brief": "<p>Write <code>count_below</code>, returning how many elements of an array are below a threshold, without any conditional control flow in the loop body.</p>\n<p>A comparison produces zero or one, so adding it directly is the count.</p>",
+   "kind": "output",
+   "concept": "Predication by increment is the trick inside modern partitioning implementations, and it works because a comparison is already a number.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The comparison is the value to add. There is nothing to test."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Adding the element rather than the comparison sums the values that pass, which is a different question and gives a different number.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Partitioning this way turns the most unpredictable branch in a sort into arithmetic, and the compiler will vectorise it because there is no control flow left to convert.</p>",
+   "starter": "unsigned count_below(const int *v, unsigned n, int threshold) {\n    unsigned c = 0;\n    for (unsigned i = 0; i < n; i++) c += (unsigned)v[i] * (v[i] < threshold);\n    return c;\n}",
+   "tests": "#include <assert.h>\nunsigned count_below(const int *, unsigned, int);\nint main(void) {\n    { int v[] = {1, 5, 2, 9}; assert(count_below(v, 4, 5) == 2); }\n    { int v[] = {1, 1, 1};    assert(count_below(v, 3, 5) == 3); }\n    { int v[] = {9, 9, 9};    assert(count_below(v, 3, 5) == 0); }\n    { int v[] = {5};          assert(count_below(v, 1, 5) == 0); }\n    { int v[] = {0, 0};       assert(count_below(v, 2, 1) == 2); }\n    assert(count_below(0, 0, 5) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "How unpredictable a search is",
+   "brief": "<p>Write <code>search_mispredicts</code>, returning how many mispredicted branches a binary search performs per query on average, given the number of elements.</p>\n<p>Each comparison eliminates exactly half the remaining space, so each one is a coin flip and is wrong half the time. There are as many comparisons as times the count can be halved.</p>\n<p>Return the answer in hundredths of a branch.</p>",
+   "kind": "output",
+   "concept": "Every branch being maximally unpredictable is not bad luck. It is the definition of the algorithm.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Count the halvings, then take half of them."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A search over a thousand elements makes about ten comparisons, and half of those are wrong, so it is five mispredicts and not ten.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A predictor cannot do better than chance here, because the algorithm is designed so that each answer carries exactly one bit.</p>",
+   "starter": "unsigned search_mispredicts(unsigned long n) {\n    unsigned steps = 0;\n    while (n > 1) { n >>= 1; steps++; }\n    return steps * 100u;\n}",
+   "tests": "#include <assert.h>\nunsigned search_mispredicts(unsigned long);\nint main(void) {\n    assert(search_mispredicts(1024) == 500);      /* 10 steps, half wrong */\n    assert(search_mispredicts(1048576) == 1000);  /* 20 steps */\n    assert(search_mispredicts(2) == 50);\n    assert(search_mispredicts(1) == 0);\n    assert(search_mispredicts(0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Walking a breadth first tree",
+   "brief": "<p>Write <code>eytzinger_step</code>, returning the next index in a search over a tree stored breadth first in a one indexed array, given the current index and whether the value there is below the key.</p>\n<p>The children of index k are at twice k and twice k plus one. Going right means the stored value was below the key.</p>",
+   "kind": "output",
+   "concept": "The comparison is added to the index rather than steering a branch, which is what makes the loop branchless without any cleverness.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "One multiplication and one addition, where the addition is the comparison itself."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The left child is twice the index and the right is one more, so adding the comparison to twice the index reaches both. Adding it before doubling reaches neither.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The gain is locality rather than the branch. The root and its first few levels are packed into the first cache lines and stay resident, where a sorted array puts the middle element and its quarter points megabytes apart.</p>",
+   "starter": "unsigned long eytzinger_step(unsigned long k, int less) {\n    return 2 * (k + (unsigned long)(less != 0));\n}",
+   "tests": "#include <assert.h>\nunsigned long eytzinger_step(unsigned long, int);\nint main(void) {\n    assert(eytzinger_step(1, 0) == 2);\n    assert(eytzinger_step(1, 1) == 3);\n    assert(eytzinger_step(3, 0) == 6);\n    assert(eytzinger_step(3, 1) == 7);\n    assert(eytzinger_step(7, 1) == 15);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "How much of the tree stays resident",
+   "brief": "<p>Write <code>resident_levels</code>, returning how many levels of a breadth first tree fit in a cache, given the cache size in bytes and the size of one element.</p>\n<p>Level zero is the single root. Each level holds twice as many nodes as the one above it, so the first <code>L</code> levels hold two to the power of <code>L</code>, minus one, nodes. Count the levels that fit entirely.</p>",
+   "kind": "output",
+   "concept": "The top of the tree is what every query touches, and packing it into the first few lines is the whole reason the layout wins.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Add levels while the running total of nodes still fits, and stop at the first one that does not."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The levels are cumulative, so fitting the fourth level means fitting the fifteen nodes above and including it rather than its eight alone.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>In a sorted array there is no such structure. The first probe, the second and the third are spread across the whole range, so none of them share anything.</p>",
+   "starter": "unsigned resident_levels(unsigned long cache_bytes, unsigned elem) {\n    if (!elem) return 0;\n    unsigned long nodes = cache_bytes / elem;\n    unsigned levels = 0;\n    while ((1UL << levels) <= nodes) levels++;\n    return levels;\n}",
+   "tests": "#include <assert.h>\nunsigned resident_levels(unsigned long, unsigned);\nint main(void) {\n    /* 64 bytes, 4 byte elements: 16 nodes, so levels 0 to 3 (15 nodes). */\n    assert(resident_levels(64, 4) == 4);\n    /* 4 nodes: the root and one level, which is 3 nodes. */\n    assert(resident_levels(16, 4) == 2);\n    /* Exactly one node. */\n    assert(resident_levels(4, 4) == 1);\n    assert(resident_levels(0, 4) == 0);\n    /* 32 KB of 4 byte elements is 8192 nodes: 12 levels hold 4095. */\n    assert(resident_levels(32768, 4) == 13);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "When prefetching pays",
+   "brief": "<p>Write <code>prefetch_helps</code>, deciding whether prefetching ahead in a search is worth it, given the data size in bytes and the cache size in bytes.</p>\n<p>When the data fits in the cache there is nothing to fetch, so every prefetch is a wasted instruction and wasted bandwidth. When it does not fit, the prefetch turns a serial chain of dependent misses into several in flight at once.</p>",
+   "kind": "output",
+   "concept": "The same optimisation swung from a sevenfold loss to a twofold win on identical source, with only the input size changing.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "One comparison, and data that exactly fills the cache still fits in it."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Prefetching is a loss whenever the data is resident, so the answer for a small array is no rather than yes. Assuming it always helps is exactly the habit this measurement exists to break.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Seven times worse at a thousand elements, break even at four million, twice as good at sixteen million. A single optimisation swinging that far on the same code is the best inoculation there is against applying a technique because it is known to be fast.</p>",
+   "starter": "int prefetch_helps(unsigned long data_bytes, unsigned long cache_bytes) {\n    (void)data_bytes; (void)cache_bytes;\n    return 1;\n}",
+   "tests": "#include <assert.h>\nint prefetch_helps(unsigned long, unsigned long);\nint main(void) {\n    assert(prefetch_helps(4096, 32768) == 0);          /* fits */\n    assert(prefetch_helps(32768, 32768) == 0);         /* exactly fits */\n    assert(prefetch_helps(65536, 32768) == 1);\n    assert(prefetch_helps(67108864, 8388608) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

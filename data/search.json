@@ -14783,6 +14783,742 @@
  },
  {
   "t": "section",
+  "slug": "cost-model",
+  "anchor": "the-same-complexity-six-hundred-times-apart",
+  "title": "The same complexity, six hundred times apart",
+  "text": "Here is the cleanest demonstration available. Sum the same number of 64 bit integers three ways. Once from an array. Once by walking a linked list whose nodes sit in an array in order. Once by walking a linked list of exactly the same nodes in the same array, linked in a shuffled order. All three are linear. The second and third differ in one thing only: the order the pointers link the nodes in. Same allocation, same nodes, same number of loads. Three separate things are worth reading off that table. The ratio grows with the input, and it does not stop. Twelve times, then seventy nine, then three hundred and seventy seven, then six hundred and thirty seven. There is no crossing point at which the list catches up. This is the cleanest refutation there is of the idea that constants stop mattering once the input is large: here the constant is a function of the input, because it tracks which level of the hierarchy you have fallen out of. The middle column is the explanation. A list walked in memory order costs only a few times an array, and that ratio does not grow. Same structure, same pointers, same complexity, same allocations, and a hundred times away from the shuffled case. So the",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "cost-model",
+  "anchor": "prefetchable-or-a-chain",
+  "title": "Prefetchable, or a chain",
+  "text": "What the middle column separates is two properties that the model cannot see. A sequential walk is predictable. The hardware watches the addresses being asked for, notices that they advance by a fixed stride, and fetches the next line before it has been asked for. By the time the program wants it, it is there. A shuffled walk is unpredictable by construction. Worse, the address of the next load is the result of the current one, so the machine cannot even start the next one early. Every miss is exposed in full, one at a time. That is the difference between being limited by bandwidth and being limited by latency. In the first case a dozen misses are in flight at once and the cost is shared between them. In the second they happen strictly one after another, and you pay the full round trip every time.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "cost-model",
+  "anchor": "the-ladder-measured",
+  "title": "The ladder, measured",
+  "text": "Here is what an access actually costs, measured by chasing a random cycle of pointers, which is the standard way to defeat both the prefetcher and any overlap between misses. The knees land exactly on the sizes the machine reports for its own caches, which makes this the best small program in this part of the handbook: twenty lines, no privileges, no documentation, and you read your own memory hierarchy out of a table of timings. Normalised to a first level hit, and with the slower devices added: Memorise the shape rather than the digits. Every large gap in that line is a design boundary in real systems: the hundredfold cliff into main memory is why tiling exists, and the five hundredfold cliff into storage is why a tree with thousands of children per node exists. And one thing has not moved. Clock speeds stopped improving, and main memory latency has sat between seventy and a hundred nanoseconds for over fifteen years while its bandwidth went up twentyfold. Latency is the quantity that stopped improving, which is why almost every technique in this part is a way of trading it for bandwidth.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "cost-model",
+  "anchor": "where-the-arithmetic-goes",
+  "title": "Where the arithmetic goes",
+  "text": "Take the last row of the first table. Main memory is about 103 nanoseconds on that machine and the array scan runs at about a third of a nanosecond per element, so the ratio should be around three hundred. Measured, it was six hundred and thirty seven. The rest comes from two places. There is a second dependent load, because the value has to be read after the pointer arrives. And eight million nodes of sixteen bytes is a hundred and twenty eight megabytes, which is far more pages than the translation cache can hold, so most accesses pay for a page walk as well. That last detail is worth keeping, because it is the reason large pages exist as a tuning option at all.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "cost-model",
+  "anchor": "what-the-notation-is-still-for",
+  "title": "What the notation is still for",
+  "text": "None of this makes complexity notation wrong. It answers a question that measurement cannot: how the cost behaves as the input grows without bound, which is what decides whether an approach can work at all. No amount of constant factor tuning rescues a quadratic algorithm on a large input, and the notation tells you that before you write anything. What it does not tell you is which of two algorithms with the same growth to choose, or what a data structure costs on a machine with a memory hierarchy. For that you need a second model, and the second model has one rule: count the memory movement, not the operations. Two models, both useful, answering different questions. The first says whether the approach can scale at all. The second says which of two approaches that scale identically will actually be faster.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "cost-model",
+  "anchor": "the-rule-that-follows",
+  "title": "The rule that follows",
+  "text": "A linked list is the right structure when you need to splice a sublist in constant time, or to hold a reference that stays valid while the container changes. It is never the right structure because inserting into it is cheap. Insertion is constant time given the node. Finding the node is linear, and it is the worst kind of linear there is: a dependent chain of cache misses, each one paying the full trip to memory, with nothing else in flight. This is why the demonstration that a contiguous array beats a list at inserting into a sorted sequence keeps surprising people. The array moves half its elements on every insert and the list moves none, and the array still wins for essentially every size, because moving a block of memory runs at tens of gigabytes a second and the list's traversal does not.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "cost-model",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Complexity notation counts operations on a machine where every memory access costs the same. Real machines charge about a hundred times more for a main memory access than a first level hit, and about five hundred thousand times more for a network round trip. Two structures with identical complexity, identical allocation and identical operation counts measured twelve to six hundred and thirty seven times apart, and the gap grew with the input rather than shrinking. The variable was the order the addresses were visited in. Sequential is prefetchable and a pointer chase is a dependent chain, which is the difference between paying for many misses at once and paying for each one alone. Latency is what stopped improving. Every technique after this unit is a way of trading it for bandwidth. Next is the most direct consequence: two programs with the same operations and the same complexity, arranged differently in memory, and what the arrangement is worth.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "cost-model",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These are the two cost models, written out as arithmetic: operations counted one way, cache lines counted the other, and the times each one predicts. names the case your model got wrong. Several exercises assert that a sequential walk of many elements costs far fewer misses than there are elements, which is the cache line doing its job rather than a division in the wrong place.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "cost-model",
+  "n": 1,
+  "title": "Misses, not elements",
+  "text": "The second cost model counts memory movement, and a sequential walk moves far fewer lines than it touches elements. Write , returning how many cache lines a sequential walk over an array touches, given the element count, the element size in bytes and the line size in bytes. The elements are contiguous and the walk starts at the beginning of a line. Every line holding any of them is fetched exactly once.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "cost-model",
+  "n": 2,
+  "title": "Misses when the order is shuffled",
+  "text": "The order the addresses are visited in is the variable, and it decides whether the structure's size or its element count sets the cost. Write , returning how many lines a pointer chase touches, given the node count, the node size and the line size. The nodes are shuffled, so each visit lands on a line unrelated to the last one. When the whole structure fits in the cache the lines are only fetched once each; when it does not, every visit is a miss. Given the cache size in bytes, return the number of misses under each case.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "cost-model",
+  "n": 3,
+  "title": "What the misses cost when they overlap",
+  "text": "The difference between bandwidth bound and latency bound is one division, and it is the whole gap between the two linked list columns. Write , returning how long a set of misses takes in nanoseconds, given the miss count, the latency of one miss, and how many can be in flight at once. Independent misses overlap, so the total is the count divided by how many overlap, times the latency. A dependent chain has one in flight, so nothing overlaps and the total is the count times the latency. Round the division up: a partial group still costs a full latency.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "cost-model",
+  "n": 4,
+  "title": "Which of two identical complexities wins",
+  "text": "Both models at once, which is what actually predicts a measurement: the operations are real and the misses are usually what decides. Write , deciding which of two approaches with the same complexity is faster, given each one's operation count, its miss count, the cost of an operation in tenths of a nanosecond, and the cost of a miss in nanoseconds. Return 0 when the first is faster, 1 when the second is, and 2 when they are equal.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "cost-model",
+  "n": 5,
+  "title": "Reading the hierarchy out of a timing",
+  "text": "The knees in a timing curve land on the cache sizes, which is how a twenty line program reads a machine's hierarchy with no documentation. Write , returning which level of the hierarchy a measured access time belongs to, given the time in tenths of a nanosecond. Up to 2.0 nanoseconds is the first level, up to 12.0 the second, up to 60.0 the third, and anything above that is main memory. Return 1, 2, 3 or 4.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "cost-model",
+  "n": 6,
+  "title": "The ratio that grows",
+  "text": "The constant factor is a function of the input here, because it tracks which level of the hierarchy the structure has fallen out of. Write , returning how many times slower a chase is than a scan, given the time each takes in microseconds, truncated. Return 0 when the scan took no time at all, since there is no ratio to report.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "cost-model",
+  "n": 7,
+  "title": "Pages, and the walk behind them",
+  "text": "It is the second thing the model does not charge for, and it is why the measured ratio came out higher than the latency arithmetic predicted. Write , deciding whether a structure's pages all fit in the translation cache, given the structure's size in bytes, the page size and how many pages the translation cache holds. When they do not fit, most accesses pay for a page walk on top of the miss.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "cost-model",
+  "n": 8,
+  "title": "When the better complexity actually wins",
+  "text": "The notation is right about growth, and growth is what decides whether an approach can work at all. This is the arithmetic of when that starts to bite. Write , returning the smallest input size at which an algorithm costing operations per element beats one costing operations per element squared, or 0 if it wins at every size from 1 upwards. The first costs and the second costs , so the second wins once exceeds . Sizes are whole numbers and the search starts at 1.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "cost-model",
+  "n": 1,
+  "title": "What machine does asymptotic notation assume?",
+  "text": " It was close enough to true when the model was written down, and it has not been true for about thirty years. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "cost-model",
+  "n": 2,
+  "title": "Two structures with the same complexity, the same allocation and the same operation count measured how far apart?",
+  "text": " The gap is not a fixed constant. It grows with the input, because it tracks which level of the hierarchy the structure has fallen out of. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "cost-model",
+  "n": 3,
+  "title": "In that measurement, what was the only variable?",
+  "text": " Both lists used the same pool with identical allocation, which removes \"linked lists allocate badly\" as an explanation and leaves the visiting order. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "cost-model",
+  "n": 4,
+  "title": "A linked list walked in memory order costs how much more than an array?",
+  "text": " The middle column of the table is the explanation. The cost is not that linked lists are slow. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "cost-model",
+  "n": 5,
+  "title": "Why is a sequential walk cheap?",
+  "text": " A fixed stride is trivially predictable, which is the whole of what a prefetcher needs. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "cost-model",
+  "n": 6,
+  "title": "Why can a pointer chase not overlap its misses?",
+  "text": " It is a dependent chain by construction, which is the difference between paying for a dozen misses at once and paying for each one alone. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "cost-model",
+  "n": 7,
+  "title": "What is the difference between bandwidth bound and latency bound here?",
+  "text": " A dozen outstanding line fills is the machine's capacity, and a dependent chain cannot use any of them. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "cost-model",
+  "n": 8,
+  "title": "Roughly what does a main memory access cost, relative to a first level hit?",
+  "text": " The shape to memorise is one, five, twenty, a hundred, for the first level, the second, the third and main memory. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "cost-model",
+  "n": 9,
+  "title": "Roughly what does a same datacentre network round trip cost, relative to a first level hit?",
+  "text": " Each big gap in that ladder is a design boundary. The one before it, at about fifty thousand, is storage, and it is why trees with thousands of children per node exist. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "cost-model",
+  "n": 10,
+  "title": "How do you read a machine's cache sizes out of a timing curve?",
+  "text": " A random cycle defeats both the prefetcher and any overlap between misses, which exposes the true load to use latency. The knees land exactly on the reported sizes. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "cost-model",
+  "n": 11,
+  "title": "Which quantity stopped improving?",
+  "text": " That is why almost every technique in this part is a way of trading latency for bandwidth. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "cost-model",
+  "n": 12,
+  "title": "Why was the measured ratio higher than the latency arithmetic predicted?",
+  "text": " A hundred and twenty eight megabytes at sixteen kilobyte pages is eight thousand pages, so most accesses pay for a page walk too. It is the reason large pages exist as a tuning option. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "cost-model",
+  "n": 13,
+  "title": "What is asymptotic notation still the right tool for?",
+  "text": " No amount of constant factor tuning rescues a quadratic algorithm on a large input, and the notation tells you that before you write anything. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "cost-model",
+  "n": 14,
+  "title": "When is a linked list the right structure?",
+  "text": " It is never right because inserting is cheap. Insertion is constant time given the node, and finding the node is the worst kind of linear there is. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "cost-model",
+  "n": 15,
+  "title": "Why does an array beat a list at inserting into a sorted sequence, despite moving half its elements?",
+  "text": " The array does strictly more work by the operation count and still wins for essentially every size, which is the whole argument of the unit in one example. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "layout",
+  "anchor": "two-arrangements",
+  "title": "Two arrangements",
+  "text": "Records with several fields can be stored two ways. An array of records puts each record's fields together and the records one after another. A record of arrays puts each field in its own array, so all the first fields are contiguous, then all the second fields, and so on. For a loop that reads every field of one record at a time, the first is obviously right. For a loop that reads one field of every record, which is what most loops in a real program do, it is exactly wrong: every line fetched carries one useful value and the rest of a record you did not ask about.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "layout",
+  "anchor": "the-measurement-and-the-parameter-that-moves",
+  "title": "The measurement, and the parameter that moves",
+  "text": "Here is the same program, summing one four byte field over a few million records, with only the record size changed. It was run on two machines whose cache lines differ, which is what makes the table an experiment rather than an anecdote. Read it as three separate facts. Below the line size there is no penalty at all. Both arrangements deliver several records per line, so both are limited by bandwidth on data you were going to fetch anyway. At sixty four bytes the two machines disagree, and the disagreement is the proof. On the machine with sixty four byte lines the record is exactly one line, so each line yields one useful value out of sixteen, and the penalty is large. On the machine with a hundred and twenty eight byte line the same record still gives two useful values per line, and the penalty is small. At a hundred and twenty eight bytes the machines swap places. Now the larger line holds exactly one record, one useful value per line against thirty two the other way, and the ratio is twenty times. The other machine has been in the straddling regime since sixty four bytes and grows only gently. Nothing in the source distinguished those runs. Nothing in the complexity did either",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "layout",
+  "anchor": "the-bytes-you-did-not-ask-for",
+  "title": "The bytes you did not ask for",
+  "text": "Two more things move the same number, and both are free. The first is padding. A field has to sit at an address that is a multiple of its alignment, and the whole record has to be a multiple of its own alignment so that an array of them works. The compiler inserts the gaps, and the order the fields are declared in decides how many: A third of the memory, recovered by moving one line. The rule is to declare fields in decreasing order of size. C and C++ will never do it for you, because the layout is the interface that separately compiled code agrees on; some other languages do it for you unless you ask them not to, for exactly the same reason in reverse. Padding matters because it is transported. Every wasted byte occupies bandwidth, cache capacity and address translation reach, and in the table above the record size was the whole experiment. The second is the opposite case, and it is worth holding beside the first so neither is applied blindly. When two threads write to different variables that happen to share a line, that line moves between the cores on every write, at the cost of the coherence protocol, for no reason that exists in the program. The fix there is to pad the variabl",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "layout",
+  "anchor": "when-the-array-of-records-is-right",
+  "title": "When the array of records is right",
+  "text": "None of this makes one arrangement correct in general, and applying it as a doctrine is how people end up with a slower program and more code. The penalty is a property of the access pattern, not of the layout. A loop that reads every field of a record, transforms it and writes it back is using the whole line either way, and splitting the fields into separate arrays gives it several streams to track instead of one, several address calculations instead of one, and no benefit at all. The same is true of code that touches one record at a time in an unpredictable order, where the record is the unit of work and keeping its fields together is what you want. So the question is not which layout is better. It is which fields are read together, by the loop that runs most often, and the answer is a fact about the program rather than a preference.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "layout",
+  "anchor": "where-this-became-an-architecture",
+  "title": "Where this became an architecture",
+  "text": "Game engines arrived at the same conclusion and built their state around it. The approach stores the world as one array per component rather than one array of objects: positions together, velocities together, health together, with an entity being an index rather than a record. Three arguments, and only the first is the one above. A system touches few components. Physics reads position and velocity and writes position. Walking an array of whole objects drags the mesh handle, the artificial intelligence state and the inventory through the cache to get at twenty four useful bytes of a record that is easily two hundred and fifty six. That is the bottom row of the table, and worse. Dispatch through a table of function pointers disappears. A loop over objects calling a method on each is an indirect call per object, an unpredictable branch per object, and a pointer chase per object. A loop over one component array with one body is none of those, and it can be turned into vector instructions. And storing entities with the same set of components together makes iteration dense, so a system asking for everything with a position and a velocity walks contiguous memory with no test per entity. T",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "layout",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "The penalty for a bad arrangement is the fraction of each fetched line you use. It is zero while the record is smaller than a line, and it grows without limit once the record is larger. The same source measured 1.0 times, 3.66 times and 20.81 times on different machines and record sizes, with no change to the algorithm, the operations or the complexity. Declaring fields in decreasing size order removes padding, and padding is transported, so it costs bandwidth and cache capacity as well as memory. Pack for a single thread walking data, and pad apart for several threads writing nearby. Both follow from the line being the unit of transfer. Next is the same argument for control flow rather than data: what a branch costs when the machine cannot guess it, and why that changes which algorithm is fastest.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "layout",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These compute the arrangement's cost directly: useful bytes per line, the predicted ratio between two arrangements, the size of a record with its padding, and the boundary at which two threads stop interfering. names the case your model got wrong. Several exercises assert that a record smaller than a line has no penalty at all, which is the effect switching on at the line size rather than a formula that forgot a case.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 1,
+  "title": "Useful bytes per line",
+  "text": "The penalty is the ratio of what arrives to what you use, and this is the numerator. Write , returning how many bytes of a fetched cache line a loop actually uses, given the record size, the size of the one field being read, and the line size. Records are packed contiguously and the field appears once per record. When the record is larger than the line, a line carries at most one field, and sometimes none at all if the field is not on it; count the average by assuming one field per record's worth of lines.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 2,
+  "title": "The ratio the arrangement costs",
+  "text": "The penalty is a ratio of useful bytes, so it can be predicted from three numbers before anything is measured. Write , returning how many times slower reading one field from an array of records is than reading it from an array of that field alone, as a percentage, given the record size, the field size and the line size. A ratio of 100 means no penalty at all. Truncate towards zero.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 3,
+  "title": "Where the effect switches on",
+  "text": "The effect does not exist until the record reaches the line size, and knowing the boundary stops the technique being applied where it pays nothing. Write , deciding whether splitting the fields into separate arrays can help at all, given the record size and the line size. It can help only when a line holds fewer records than it has room for useful fields, which is to say when the record is at least as large as the line. Below that, both arrangements deliver several records per line.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 4,
+  "title": "What the padding costs",
+  "text": "The order fields are declared in changes the size of the record, and the size of the record was the entire independent variable in the measurement. Write , returning the size of a record, given its fields' sizes in declaration order. Each field starts at an address that is a multiple of its own size, which is its alignment here, so padding is inserted before a field that would otherwise straddle. The whole record is then rounded up to a multiple of the largest field's alignment, so that an array of them keeps every field aligned. Field sizes are powers of two, and there are at most sixteen of ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 5,
+  "title": "Declaring them the other way round",
+  "text": "Decreasing size order is not a heuristic here; it is the order that removes every internal gap. Write , returning the smallest size a record can have, given its fields, by choosing the best declaration order. The fields may be reordered freely. Sizes are powers of two.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 6,
+  "title": "The other direction",
+  "text": "The same fact about lines, pointing the other way: pack for one thread walking data, and pad apart for several threads writing. Write , deciding whether two variables share a cache line, given their addresses and the line size. Two variables on the same line, written by different threads, move that line between the cores on every write, for no reason that exists in the program.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 7,
+  "title": "Which loop the layout should serve",
+  "text": "The penalty is a property of the access pattern rather than of the layout, which is why this is a question about the program. Write , deciding whether to split the fields into separate arrays, given the record size, the line size, how many of the record's fields the hot loop reads, and how many fields the record has. Splitting helps when the record is at least a line and the loop reads fewer than all of the fields. A loop that reads every field uses the whole line either way.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 8,
+  "title": "What a loop over objects costs per element",
+  "text": "The layout argument and the control flow argument are the same argument, which is why replacing objects with arrays removes three costs at once. Write , returning how many extra memory dependent events a loop over an array of pointers to objects pays per element, compared with a loop over one contiguous array of values. Each element costs a pointer chase to reach the object, a load of the dispatch table pointer, and an indirect call whose target the machine cannot predict when the types differ. When every object has the same type the call is predictable and costs nothing extra.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 1,
+  "title": "What sets the penalty for a bad data arrangement?",
+  "text": " A line comes back whole whatever fraction you asked for, so a line holding one useful value instead of sixteen was paid for sixteen times over. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 2,
+  "title": "An array of records against an array per field: which suits a loop reading one field of every record?",
+  "text": " That loop is what most loops in a real program do, and with records interleaved every line carries one useful value and the rest of a record nobody asked about. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 3,
+  "title": "Below what size does the arrangement stop mattering?",
+  "text": " It is why a twelve byte record measured no penalty at all on either machine, and why the technique pays nothing when applied there. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 4,
+  "title": "The same source measured 3.66 times on one machine and 1.47 on another, for the same record size. What differed?",
+  "text": " A sixty four byte record is exactly one line on one machine and half a line on the other, which is what makes the table an experiment rather than an anecdote. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 5,
+  "title": "Why does a struct's field order change its size?",
+  "text": " A char, a long and a char is twenty four bytes; the long first is sixteen. A third of the memory recovered by moving one line. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 6,
+  "title": "What is the rule for ordering fields?",
+  "text": " With the largest first every later field is already aligned, so the only padding left is the rounding at the end. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 7,
+  "title": "Why does C never reorder your fields for you?",
+  "text": " Some other languages do reorder unless you ask them not to, for exactly the same reason stated in reverse. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 8,
+  "title": "Why does padding cost more than the memory it wastes?",
+  "text": " In the measurement, the record's size was the entire independent variable, and padding is part of it. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 9,
+  "title": "Two threads write to different variables on the same cache line. What happens?",
+  "text": " It is the same fact about lines as everything else in the unit, pointing the other way. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 10,
+  "title": "So what is the rule?",
+  "text": " Both follow from the line being the unit of transfer, and applying either one everywhere is how the technique starts costing more than it saves. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 11,
+  "title": "When is an array of records the right choice?",
+  "text": " A loop using the whole record uses the whole line either way, and splitting gives it several streams to track for nothing. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 12,
+  "title": "What decides which layout to use?",
+  "text": " It is a fact about the program rather than a preference, which is why the question is never which layout is better in general. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 13,
+  "title": "Why does an entity component layout store one array per component?",
+  "text": " Physics wants twenty four bytes of a record that is easily two hundred and fifty six, which is the bottom row of the table and worse. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 14,
+  "title": "What does a loop over an array of object pointers cost per element that a flat loop does not?",
+  "text": " A flat loop over one component array with one body pays none of the three, which is also why it can be turned into vector instructions. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 15,
+  "title": "What is the underlying design principle?",
+  "text": " The last one is a conclusion that happens to follow often, and stating it as the principle is what turns the technique into a doctrine that misfires. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "branches",
+  "anchor": "the-benchmark-that-stopped-working",
+  "title": "The benchmark that stopped working",
+  "text": "Same loop, same threshold, two runs on the same data sorted and unsorted: No effect at all. The assembly says why. The compiler turned the loop into vector instructions: a comparison that produces a per lane mask, and a masked select. Four elements per instruction and no control flow whatsoever. There is no branch left to predict. Turn the vectoriser off and it still does not reproduce. The compiler converts the scalar loop too, into a compare and a conditional select. The only branch remaining is the loop back edge, which is taken every iteration but the last. The compiler already applied the fix that the famous answer tells you to apply by hand.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "branches",
+  "anchor": "making-the-branch-real",
+  "title": "Making the branch real",
+  "text": "To see the effect you have to give the compiler a branch it cannot remove: a call it cannot see through, with a side effect it cannot prove absent. Now it is there, and close to the original result on one machine. Notice that the two machines disagree by a factor of three on the size of the penalty. A shorter pipeline and a better predictor make a mispredict cheaper, so the cost of a wrong guess is a parameter of the microarchitecture rather than a constant of computing. The order to learn this in is the order above. Run the classic benchmark and see nothing. Read the assembly and find the conditional select. Defeat the optimisation and watch the effect appear. Then conclude the useful thing: compilers do branchless conversion for you on simple loops, and the skill worth having is knowing when they cannot, which is when the branch body has side effects, calls something opaque, or is too large to be worth converting.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "branches",
+  "anchor": "the-ways-to-remove-a-branch",
+  "title": "The ways to remove a branch",
+  "text": "There are five, and they are worth knowing by shape rather than by name. A conditional move is a single instruction that picks one of two values. You do not usually write it; you nudge the compiler towards it with a conditional expression or a minimum. Arithmetic masking builds the same selection out of bit operations. Turn the condition into a mask of all ones or all zeros, and the selection is an and, an and with the complement, and an or. It needs no cooperation from the compiler and works in any language with integers. Predication by increment turns a counted branch into arithmetic: adding the condition itself, since a comparison produces zero or one. This is the trick inside modern sorting implementations for partitioning. A table lookup replaces a branch with an index. It trades a possible mispredict for a possible cache miss, which is usually a bad trade unless the table is small enough to stay resident. And per lane masking in vector instructions is the same idea in the register width: a mask register selects which lanes take effect. It is the reason a loop with a condition inside it can be vectorised at all.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "branches",
+  "anchor": "why-branchless-is-not-always-better",
+  "title": "Why branchless is not always better",
+  "text": "Here is the caveat that decides when to use any of the above. A conditional move converts a control dependency into a data dependency. A branch the predictor gets right costs nothing at all, because the machine continues past it speculatively and is proved correct. A conditional move always costs its instruction, and worse, it sits in the dependency chain: nothing after it can proceed until it has resolved. So the rule is a comparison of two costs. Branchless wins when the branch is unpredictable, roughly beyond one wrong guess in ten. Branchless loses when the branch is predictable, because you have replaced something free with something that lengthens the chain. This is why compilers sometimes emit a branch where you expected a move, why a higher optimisation level can occasionally make code slower, and why profile guided optimisation exists: the compiler is guessing at how often the branch is wrong, and a profile stops it guessing.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "branches",
+  "anchor": "the-perfect-storm",
+  "title": "The perfect storm",
+  "text": "Binary search is the worst case for all of this at once. Every comparison eliminates exactly half the remaining space, which is the definition of a coin flip, so every branch is maximally unpredictable and there are about log n of them per query. Every probe depends on the previous comparison, so the accesses form a dependent chain and none of them can overlap. And the probes are maximally spread: the first is the middle, then a quarter, then an eighth, each landing on a fresh cache line for the first several steps. Three fixes exist, and their measurements are the point of this unit. Removing the branch alone buys very little, between seven and twenty five percent. The mispredicts are real and they overlap with the cache misses, which dominate. Fixing the control flow without fixing the memory barely helps. Changing the layout buys more than twice. The Eytzinger arrangement stores the tree breadth first in an array, so the root is at index one and the children of any node are at twice its index and twice plus one. The search becomes a branchless loop that multiplies the index by two and adds the comparison. The gain is locality: the top of the tree, which every query touches, is p",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "branches",
+  "anchor": "the-result-worth-being-changed-by",
+  "title": "The result worth being changed by",
+  "text": "Look at the last column. Prefetching, on the same code, is a sevenfold loss at a thousand elements, break even at four million, and a twofold win at sixteen million. The reason is exactly the two regimes of the previous unit. When the data fits in cache there is nothing to prefetch, so every prefetch is a wasted instruction and wasted bandwidth on a line you already have. When it does not fit, the prefetch converts a serial chain of dependent misses into several misses in flight at once, which is the only lever available. Combined, the layout change and the prefetch are nearly five times faster than the textbook algorithm at sixteen million elements, and the textbook algorithm is faster than the optimised one at a thousand. An optimisation that swings from seven times worse to twice as good, on identical source, with only the input size changing, is the best inoculation available against applying a technique because it is known to be fast.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "branches",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "The branch predictor is part of your cost model. A branch that is guessed right is free and one that is guessed wrong costs the pipeline, and the size of that cost differs threefold between machines. The famous sorted array benchmark does not reproduce because the compiler already removed the branch. Reading the assembly is how you find that out, and knowing when the compiler cannot do it is the transferable skill. Branchless code wins when the branch is unpredictable and loses when it is predictable, because a conditional move is never free and a predicted branch is. Binary search is unpredictable branches, dependent misses and maximal spread all at once. Fixing only the branches barely helps; fixing the layout more than doubles it; and prefetching is a large loss or a large win depending entirely on whether the data fits in the cache. Next is what happens when the work can be spread across many cores: how to measure a parallel algorithm on two axes rather than one, and the primitive that turns irregular work into regular work.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "branches",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the decisions the unit describes: what a mispredict costs, when to go branchless, the arithmetic that selects without a branch, and the index walk of a breadth first tree. names the case your model got wrong. Several exercises assert that a perfectly predicted branch costs nothing, which is speculation working rather than a term missing from the sum.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 1,
+  "title": "What a branch costs",
+  "text": "The predictor is part of the cost model, and the free case being genuinely free is what makes the unpredictable case expensive by comparison. Write , returning how many cycles a loop spends on one branch, given the iteration count, the mispredict rate in percent and the penalty of a mispredict in cycles. A branch the machine guesses right costs nothing at all, because it continues past it speculatively and is proved correct. Only the wrong guesses cost anything.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 2,
+  "title": "When to remove the branch",
+  "text": "A conditional move converts a control dependency into a data dependency, so it is never free and a correctly predicted branch is. Write , deciding whether replacing a branch with a conditional move is worth it, given the mispredict rate in percent, the mispredict penalty in cycles, and the cost of the move in cycles. The branch costs its mispredict rate times its penalty per iteration. The move costs its own cycles every iteration, whether or not the condition was predictable. Choose the cheaper one, and keep the branch when they tie.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 3,
+  "title": "Selecting without a branch",
+  "text": "The same selection a conditional move makes, built out of operations that exist in every language, with no cooperation from the compiler. Write , returning one of two values according to a condition, using only arithmetic and bit operations. Turn the condition into a mask of all ones or all zeros, then combine. No comparison operator that produces control flow, and no conditional expression.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 4,
+  "title": "Counting without branching",
+  "text": "Predication by increment is the trick inside modern partitioning implementations, and it works because a comparison is already a number. Write , returning how many elements of an array are below a threshold, without any conditional control flow in the loop body. A comparison produces zero or one, so adding it directly is the count.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 5,
+  "title": "How unpredictable a search is",
+  "text": "Every branch being maximally unpredictable is not bad luck. It is the definition of the algorithm. Write , returning how many mispredicted branches a binary search performs per query on average, given the number of elements. Each comparison eliminates exactly half the remaining space, so each one is a coin flip and is wrong half the time. There are as many comparisons as times the count can be halved. Return the answer in hundredths of a branch.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 6,
+  "title": "Walking a breadth first tree",
+  "text": "The comparison is added to the index rather than steering a branch, which is what makes the loop branchless without any cleverness. Write , returning the next index in a search over a tree stored breadth first in a one indexed array, given the current index and whether the value there is below the key. The children of index k are at twice k and twice k plus one. Going right means the stored value was below the key.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 7,
+  "title": "How much of the tree stays resident",
+  "text": "The top of the tree is what every query touches, and packing it into the first few lines is the whole reason the layout wins. Write , returning how many levels of a breadth first tree fit in a cache, given the cache size in bytes and the size of one element. Level zero is the single root. Each level holds twice as many nodes as the one above it, so the first levels hold two to the power of , minus one, nodes. Count the levels that fit entirely.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 8,
+  "title": "When prefetching pays",
+  "text": "The same optimisation swung from a sevenfold loss to a twofold win on identical source, with only the input size changing. Write , deciding whether prefetching ahead in a search is worth it, given the data size in bytes and the cache size in bytes. When the data fits in the cache there is nothing to fetch, so every prefetch is a wasted instruction and wasted bandwidth. When it does not fit, the prefetch turns a serial chain of dependent misses into several in flight at once.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 1,
+  "title": "What does a correctly predicted branch cost?",
+  "text": " That is why replacing a predictable branch with a conditional move makes code slower: you replaced something free with something that is not. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 2,
+  "title": "Why does the famous sorted array benchmark no longer reproduce?",
+  "text": " Turn the vectoriser off and it still does not reproduce, because the scalar loop is if-converted too. The compiler already applied the fix that the famous answer tells you to apply by hand. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 3,
+  "title": "What do you have to do to see the effect?",
+  "text": " Then it appears at nearly seven times on one machine, which is close to the original result. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 4,
+  "title": "Two machines measured 6.86 times and 2.08 times on the same test. What does that say?",
+  "text": " A shorter pipeline and a better predictor make a wrong guess cheaper, so the cost of one is a property of the machine you are on. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 5,
+  "title": "What is the transferable skill from the sorted array story?",
+  "text": " It cannot when the body has side effects, calls something opaque, or is too large to be worth converting. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 6,
+  "title": "What does arithmetic masking do?",
+  "text": " It needs no cooperation from the compiler and works in any language with integers, which is why it is worth knowing by shape. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 7,
+  "title": "What is predication by increment?",
+  "text": " It is the trick inside modern partitioning implementations, and it works because a comparison is already a number. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 8,
+  "title": "What is the cost of a conditional move that a branch does not have?",
+  "text": " Nothing after it can proceed until it resolves, where a predicted branch lets the machine run ahead. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 9,
+  "title": "When does branchless code win?",
+  "text": " It loses when the branch is predictable, which is why a compiler sometimes emits a branch where you expected a move. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 10,
+  "title": "Why does profile guided optimisation exist, in this context?",
+  "text": " It also explains why a higher optimisation level occasionally makes code slower: the guess changed. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 11,
+  "title": "Why is binary search the worst case for a predictor?",
+  "text": " The algorithm is designed so each answer carries exactly one bit, so a predictor cannot do better than chance. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 12,
+  "title": "Binary search made branchless, with no other change, bought how much?",
+  "text": " The mispredicts are real and they overlap with the cache misses, which dominate. Fixing the control flow without fixing the memory barely helps. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 13,
+  "title": "What does the Eytzinger layout change?",
+  "text": " In a sorted array the middle element and its two quarter points are megabytes apart, and every query touches all three. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 14,
+  "title": "Prefetching in that search measured how?",
+  "text": " When the data is resident there is nothing to fetch, so every prefetch is a wasted instruction. When it is not, the prefetch converts a serial chain of dependent misses into several in flight. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 15,
+  "title": "What is the general lesson from that swing?",
+  "text": " The textbook algorithm is faster than the optimised one at a thousand elements and nearly five times slower at sixteen million, on identical source. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
   "slug": "frame-budget",
   "anchor": "one-nanosecond-per-pixel",
   "title": "One nanosecond per pixel",

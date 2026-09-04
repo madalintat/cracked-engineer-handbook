@@ -8,6 +8,7 @@
     "arithmetic",
     "clock-bus",
     "cmos-gate",
+    "complexity",
     "encoding",
     "pipeline",
     "universal"

@@ -1,0 +1,310 @@
+{
+ "slug": "layout",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Useful bytes per line",
+   "brief": "<p>Write <code>useful_per_line</code>, returning how many bytes of a fetched cache line a loop actually uses, given the record size, the size of the one field being read, and the line size.</p>\n<p>Records are packed contiguously and the field appears once per record. When the record is larger than the line, a line carries at most one field, and sometimes none at all if the field is not on it; count the average by assuming one field per record's worth of lines.</p>",
+   "kind": "output",
+   "concept": "The penalty is the ratio of what arrives to what you use, and this is the numerator.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "How many whole records fit in a line, times the field size, and a record larger than a line still yields one field per record."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Four records of sixteen bytes fit in a sixty four byte line, so four four byte fields arrive per line rather than one. A record larger than the line does not yield a fraction of a field; it yields one, spread over the lines that record occupies.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This number, over the line size, is the fraction of your memory bandwidth that did any work.</p>",
+   "starter": "unsigned useful_per_line(unsigned record, unsigned field, unsigned line) {\n    (void)record; (void)line;\n    return field;\n}",
+   "tests": "#include <assert.h>\nunsigned useful_per_line(unsigned, unsigned, unsigned);\nint main(void) {\n    /* Four 16 byte records per 64 byte line, one 4 byte field each. */\n    assert(useful_per_line(16, 4, 64) == 16);\n    /* One 64 byte record per line. */\n    assert(useful_per_line(64, 4, 64) == 4);\n    /* A 128 byte record spans two lines, so on average two bytes per line. */\n    assert(useful_per_line(128, 4, 64) == 2);\n    /* Fields packed contiguously: the whole line is useful. */\n    assert(useful_per_line(4, 4, 64) == 64);\n    assert(useful_per_line(0, 4, 64) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "The ratio the arrangement costs",
+   "brief": "<p>Write <code>layout_ratio_pct</code>, returning how many times slower reading one field from an array of records is than reading it from an array of that field alone, as a percentage, given the record size, the field size and the line size.</p>\n<p>A ratio of 100 means no penalty at all. Truncate towards zero.</p>",
+   "kind": "output",
+   "concept": "The penalty is a ratio of useful bytes, so it can be predicted from three numbers before anything is measured.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Bytes fetched per element against bytes used per element. A record smaller than a line shares it; a larger one only needs the line the field is on."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A record smaller than a line still delivers several fields per line, so the penalty is smaller than the record to field ratio suggests. The comparison is between useful bytes per line, not between sizes.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A record of sixteen bytes costs four times on paper and about nothing in practice, because the loop was bandwidth bound on data it would have fetched anyway. The effect switches on at the line size.</p>",
+   "starter": "unsigned layout_ratio_pct(unsigned record, unsigned field, unsigned line) {\n    (void)line;\n    if (!field) return 100;\n    return record * 100u / field;\n}",
+   "tests": "#include <assert.h>\nunsigned layout_ratio_pct(unsigned, unsigned, unsigned);\nint main(void) {\n    /* 16 byte record, 4 byte field, 64 byte line: 16 useful of 64. */\n    assert(layout_ratio_pct(16, 4, 64) == 400);\n    /* A 64 byte record on a 64 byte line: one field per line. */\n    assert(layout_ratio_pct(64, 4, 64) == 1600);\n    /* The same record on a 128 byte line: two records share it, so the\n       bytes fetched per element are the same and so is the ratio. */\n    assert(layout_ratio_pct(64, 4, 128) == 1600);\n    /* A 128 byte record: only the line holding the field is fetched. */\n    assert(layout_ratio_pct(128, 4, 64) == 1600);\n    /* The same record on a 128 byte line fetches all of it. */\n    assert(layout_ratio_pct(128, 4, 128) == 3200);\n    /* Field sized records: no penalty. */\n    assert(layout_ratio_pct(4, 4, 64) == 100);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Where the effect switches on",
+   "brief": "<p>Write <code>penalty_starts</code>, deciding whether splitting the fields into separate arrays can help at all, given the record size and the line size.</p>\n<p>It can help only when a line holds fewer records than it has room for useful fields, which is to say when the record is at least as large as the line. Below that, both arrangements deliver several records per line.</p>",
+   "kind": "output",
+   "concept": "The effect does not exist until the record reaches the line size, and knowing the boundary stops the technique being applied where it pays nothing.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "One comparison, and the record exactly equal to the line is the first case that hurts."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A record exactly the size of a line yields one useful field per line, which is the worst case rather than the boundary being safe. A record smaller than a line delivers several either way.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Two machines with different line sizes gave ratios four times apart in opposite directions on the same source, which is what makes the line size and not the record size the thing to reason from.</p>",
+   "starter": "int penalty_starts(unsigned record, unsigned line) {\n    return record > line;\n}",
+   "tests": "#include <assert.h>\nint penalty_starts(unsigned, unsigned);\nint main(void) {\n    assert(penalty_starts(12, 64) == 0);\n    assert(penalty_starts(32, 64) == 0);\n    assert(penalty_starts(64, 64) == 1);\n    assert(penalty_starts(128, 64) == 1);\n    assert(penalty_starts(64, 128) == 0);\n    assert(penalty_starts(128, 128) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "What the padding costs",
+   "brief": "<p>Write <code>struct_size</code>, returning the size of a record, given its fields' sizes in declaration order.</p>\n<p>Each field starts at an address that is a multiple of its own size, which is its alignment here, so padding is inserted before a field that would otherwise straddle. The whole record is then rounded up to a multiple of the largest field's alignment, so that an array of them keeps every field aligned.</p>\n<p>Field sizes are powers of two, and there are at most sixteen of them.</p>",
+   "kind": "output",
+   "concept": "The order fields are declared in changes the size of the record, and the size of the record was the entire independent variable in the measurement.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Advance the offset to a multiple of each field's size before placing it, then round the total up at the end."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Summing the field sizes gives ten for the badly ordered struct, and the answer is twenty four: seven bytes of padding before the eight byte field and seven more at the end so the next one starts aligned.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A third of the memory recovered by moving one line, and the rule is to declare fields in decreasing order of size.</p>",
+   "starter": "unsigned struct_size(const unsigned *sizes, unsigned n) {\n    unsigned total = 0;\n    for (unsigned i = 0; i < n; i++) total += sizes[i];\n    return total;\n}",
+   "tests": "#include <assert.h>\nunsigned struct_size(const unsigned *, unsigned);\nint main(void) {\n    /* char, long, char */\n    { unsigned f[] = {1, 8, 1}; assert(struct_size(f, 3) == 24); }\n    /* long, char, char */\n    { unsigned f[] = {8, 1, 1}; assert(struct_size(f, 3) == 16); }\n    /* all the same size: no padding anywhere */\n    { unsigned f[] = {4, 4, 4}; assert(struct_size(f, 3) == 12); }\n    /* one field */\n    { unsigned f[] = {8}; assert(struct_size(f, 1) == 8); }\n    /* short, int: two bytes of padding in the middle */\n    { unsigned f[] = {2, 4}; assert(struct_size(f, 2) == 8); }\n    assert(struct_size(0, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Declaring them the other way round",
+   "brief": "<p>Write <code>packed_size</code>, returning the smallest size a record can have, given its fields, by choosing the best declaration order.</p>\n<p>The fields may be reordered freely. Sizes are powers of two.</p>",
+   "kind": "output",
+   "concept": "Decreasing size order is not a heuristic here; it is the order that removes every internal gap.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "With the largest first, every later field is already aligned, so the only padding left is at the end."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. In decreasing order there is no internal padding at all, so the size is the sum of the fields rounded up to the largest alignment. Ten bytes of fields with an eight byte alignment is sixteen, not ten and not twenty four.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>C and C++ never do this for you, because the layout is the interface that separately compiled code agrees on. Some other languages do it unless you ask them not to, for the same reason in reverse.</p>",
+   "starter": "unsigned packed_size(const unsigned *sizes, unsigned n) {\n    unsigned total = 0;\n    for (unsigned i = 0; i < n; i++) total += sizes[i];\n    return total;\n}",
+   "tests": "#include <assert.h>\nunsigned packed_size(const unsigned *, unsigned);\nint main(void) {\n    { unsigned f[] = {1, 8, 1}; assert(packed_size(f, 3) == 16); }\n    { unsigned f[] = {8, 1, 1}; assert(packed_size(f, 3) == 16); }\n    { unsigned f[] = {4, 4, 4}; assert(packed_size(f, 3) == 12); }\n    { unsigned f[] = {2, 4};    assert(packed_size(f, 2) == 8); }\n    { unsigned f[] = {1, 1, 1}; assert(packed_size(f, 3) == 3); }\n    assert(packed_size(0, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "The other direction",
+   "brief": "<p>Write <code>shares_line</code>, deciding whether two variables share a cache line, given their addresses and the line size.</p>\n<p>Two variables on the same line, written by different threads, move that line between the cores on every write, for no reason that exists in the program.</p>",
+   "kind": "output",
+   "concept": "The same fact about lines, pointing the other way: pack for one thread walking data, and pad apart for several threads writing.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Two addresses are on the same line when they have the same line number, which is the address divided by the line size."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Addresses sixty bytes apart can still be on the same line or on two different ones depending on where they sit, so the distance between them does not answer the question. The line number does.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is why the fix for two threads writing nearby is to pad them apart, which is the exact opposite of everything else in this unit.</p>",
+   "starter": "int shares_line(unsigned long a, unsigned long b, unsigned line) {\n    unsigned long d = a > b ? a - b : b - a;\n    return d < line;\n}",
+   "tests": "#include <assert.h>\nint shares_line(unsigned long, unsigned long, unsigned);\nint main(void) {\n    assert(shares_line(0, 8, 64) == 1);\n    assert(shares_line(0, 63, 64) == 1);\n    assert(shares_line(0, 64, 64) == 0);\n    /* Sixty bytes apart, but on two different lines. */\n    assert(shares_line(60, 120, 64) == 0);\n    assert(shares_line(128, 190, 64) == 1);\n    assert(shares_line(0, 0, 64) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "Which loop the layout should serve",
+   "brief": "<p>Write <code>prefer_split</code>, deciding whether to split the fields into separate arrays, given the record size, the line size, how many of the record's fields the hot loop reads, and how many fields the record has.</p>\n<p>Splitting helps when the record is at least a line and the loop reads fewer than all of the fields. A loop that reads every field uses the whole line either way.</p>",
+   "kind": "output",
+   "concept": "The penalty is a property of the access pattern rather than of the layout, which is why this is a question about the program.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Two conditions, and both have to hold before there is anything to gain."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A loop that reads all the fields uses everything the line brought, so splitting gives it several streams to track and nothing back. And a record smaller than a line has no penalty to remove in the first place.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The question is never which layout is better. It is which fields are read together by the loop that runs most often, and that is a fact about the program rather than a preference.</p>",
+   "starter": "int prefer_split(unsigned record, unsigned line, unsigned fields_read,\n                 unsigned fields_total) {\n    (void)fields_read; (void)fields_total;\n    return record >= line;\n}",
+   "tests": "#include <assert.h>\nint prefer_split(unsigned, unsigned, unsigned, unsigned);\nint main(void) {\n    /* Big record, one field of eight read: split. */\n    assert(prefer_split(128, 64, 1, 8) == 1);\n    /* Big record, every field read: no gain. */\n    assert(prefer_split(128, 64, 8, 8) == 0);\n    /* Small record: no penalty to remove. */\n    assert(prefer_split(16, 64, 1, 4) == 0);\n    assert(prefer_split(64, 64, 2, 4) == 1);\n    assert(prefer_split(64, 128, 1, 4) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "What a loop over objects costs per element",
+   "brief": "<p>Write <code>dispatch_overhead</code>, returning how many extra memory dependent events a loop over an array of pointers to objects pays per element, compared with a loop over one contiguous array of values.</p>\n<p>Each element costs a pointer chase to reach the object, a load of the dispatch table pointer, and an indirect call whose target the machine cannot predict when the types differ. When every object has the same type the call is predictable and costs nothing extra.</p>",
+   "kind": "output",
+   "concept": "The layout argument and the control flow argument are the same argument, which is why replacing objects with arrays removes three costs at once.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Three costs, and only one of them goes away when the types all match."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A monomorphic loop still chases the pointer and still loads the dispatch table; what it stops paying for is the unpredictable target. Only the flat array of values pays none of the three.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A loop over one component array with one body is none of those, which is also why it can be turned into vector instructions.</p>",
+   "starter": "unsigned dispatch_overhead(int is_pointer_array, int types_differ) {\n    (void)types_differ;\n    return is_pointer_array ? 1 : 0;\n}",
+   "tests": "#include <assert.h>\nunsigned dispatch_overhead(int, int);\nint main(void) {\n    assert(dispatch_overhead(1, 1) == 3);\n    assert(dispatch_overhead(1, 0) == 2);\n    assert(dispatch_overhead(0, 1) == 0);\n    assert(dispatch_overhead(0, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}
