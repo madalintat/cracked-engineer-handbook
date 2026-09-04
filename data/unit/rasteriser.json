@@ -66,5 +66,7 @@
  "needs": [
   "frame-budget"
  ],
- "neededBy": []
+ "neededBy": [
+  "sm-shape"
+ ]
 }

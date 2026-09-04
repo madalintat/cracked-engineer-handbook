@@ -15263,6 +15263,270 @@
  },
  {
   "t": "section",
+  "slug": "sm-shape",
+  "anchor": "cross-lane-exchange-was-already-there",
+  "title": "Cross lane exchange was already there",
+  "text": "To compute a derivative, the lanes of a pixel block have to read each other's registers. That means a crossbar across the register file, and it was built for mipmap selection. Once it exists, it is available for anything. The warp shuffle that a kernel uses to do a reduction without touching memory is that same crossbar, exposed under a new name a decade later. The subgroup operations in the graphics interfaces are the same hardware again, and the block operations even came back to compute shaders so that a compute shader can take a derivative. So a fast reduction inside a warp is not a compute feature that happened to help graphics. It is a graphics feature that happened to help compute, and it was in the silicon long before anybody asked for it.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "sm-shape",
+  "anchor": "divergence-is-a-geometric-idea",
+  "title": "Divergence is a geometric idea",
+  "text": "A warp executes one instruction at a time across its lanes. When a branch sends some lanes one way and the rest another, the hardware runs both sides, with the inactive lanes switched off for each. Both paths are paid for. Ask where that penalty came from and the answer is the screen. Two fragments in a block diverge when a triangle edge runs between them, or when a branch depends on something that varies across a two by two neighbourhood. Divergence was originally a spatial property: coherent shading meant spatially coherent shading, because the lanes were neighbours in the picture. The advice inherited that shape. Sort your work so that neighbouring threads take the same path is the same sentence as sort your draws so that neighbouring pixels take the same path, moved to a domain where the neighbours are indices in an array rather than points on a screen.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "sm-shape",
+  "anchor": "the-masked-off-lane-is-the-helper-lane",
+  "title": "The masked off lane is the helper lane",
+  "text": "There is a question every person learning this asks. If half a warp is switched off in a branch, does it still cost the full time? Yes. And the reason the hardware is comfortable with that is that it has been doing exactly this at every triangle edge for decades. A helper lane runs the whole shader, issues its memory traffic, occupies its arithmetic slot and has its result discarded, because the covered pixel next to it needs its values. A predicated off lane in a divergent warp is that same lane, under a different name. The semantics were not invented for compute; they were already the cost of shading a partly covered block.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "sm-shape",
+  "anchor": "the-register-file-is-not-a-cache",
+  "title": "The register file is not a cache",
+  "text": "Here is the feature that looks most arbitrary, and the one with the cleanest explanation. A texture read takes hundreds of cycles. A fragment shader does several of them. On a machine built for latency that would be a disaster, but a renderer has millions of independent fragments and none of them talk to each other. So the design decision was not to make the memory faster. It was to keep so much work resident that there is always something else ready to run. That requires every resident thread's registers to exist simultaneously, because a switch between warps has to cost nothing. Nothing can be saved and restored, so nothing is: the registers of every resident thread are all physically present at once. It is a context store rather than a cache. Every resident thread&#x27;s registers exist at the same time, which is what makes a warp switch free, and it is why the register file is larger than the first level cache beside it. That is why a modern multiprocessor has a quarter of a megabyte of registers, which is larger than the cache next to it. The register file is a context store for hundreds of simultaneous threads, and it is that size because graphics needed hundreds of fragments",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "sm-shape",
+  "anchor": "why-occupancy-is-a-number-you-have-to-care-about",
+  "title": "Why occupancy is a number you have to care about",
+  "text": "Occupancy is how many warps are resident as a fraction of how many could be. It has no equivalent on a general purpose processor, and the reason is the section above. On this machine, hiding latency is the programmer's job. Use more registers per thread and fewer threads fit; use more scratchpad per block and fewer blocks fit. Either way there are fewer warps resident, and when one stalls there is less chance that another is ready. Occupancy is the latency hiding budget, made visible. It follows that the tuning knob here is not latency but arithmetic intensity. You cannot make a memory access faster. You can only make sure something else is running while it happens, or arrange to issue fewer of them, which is what tiling into the scratchpad is for and what every later mechanism for streaming data into the multiprocessor is for.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "sm-shape",
+  "anchor": "what-the-machine-does-not-have",
+  "title": "What the machine does not have",
+  "text": "The most informative part of the design is what was left out. There is no meaningful branch predictor. There is no speculation. There is no out of order execution. All three are ways of hiding latency inside a single instruction stream, and they are enormous in transistors: a large reorder buffer, a predictor, the machinery to undo work that should not have happened. With dozens of warps resident, all of that is redundant. The machine already has somewhere else to go when a warp stalls, so it deleted the most expensive apparatus a processor has and spent the budget on registers and arithmetic units instead. Graphics is what told it that trade was correct.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "sm-shape",
+  "anchor": "atomics-are-a-different-mechanism-here",
+  "title": "Atomics are a different mechanism here",
+  "text": "One more inheritance, because it changes how code should be written. An atomic operation on a general purpose processor works through the cache coherence protocol: the core takes exclusive ownership of a cache line, does the operation, and everyone else queues behind it. Two unrelated variables in one line contend, and the cost depends on how far the line has to travel. On this machine an atomic is executed by dedicated units out at the shared cache and memory partitions, and it bypasses the shader cores entirely. The read modify write happens in place on cached data, with competing accesses to the same address blocked by hashing the address. The value never comes back to the multiprocessor at all unless you asked for a return value. That comes from the output stage, which has always been a read modify write engine bolted to a memory partition, with the address space split across the partitions so that two of them never touch the same address and never have to agree about anything.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "sm-shape",
+  "anchor": "what-compute-actually-added",
+  "title": "What compute actually added",
+  "text": "Given all of the above, what was new when this machine became programmable in general? Scatter: the ability to write to an address you computed, rather than to the pixel you were assigned. That one change is most of the difference between a shader and a program. Pointers, and a flat address space to use them in, so that a data structure can be something other than a texture. A scratchpad: fast memory under the programmer's control, shared by a block of threads, rather than a cache that decides for itself. It exists because the tiling that a renderer got for free from texture locality has to be written by hand when the access pattern is not two dimensional and coherent. And permission to stop pretending. Before, every computation had to be dressed as a picture: your data was a texture, your program was a shader, your output was a frame. Removing that is why the machine's own history stops being visible in the interface, and it is exactly why the features in this unit look arbitrary to somebody who arrived after the change.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "sm-shape",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "The warp is the pixel block. Cross lane exchange is the derivative crossbar. Divergence is spatial coherence, and the masked off lane is the helper lane. The register file is a context store rather than a cache, sized so that a warp switch costs nothing, which is why occupancy is a metric and why the tuning knob is arithmetic intensity rather than latency. The machine has no predictor, no speculation and no reordering, because with enough resident work those are wasted transistors. Atomics are performed by dedicated units at the memory partitions rather than through coherence, which is the output stage's inheritance. Compute added scatter, pointers, a scratchpad and permission to stop pretending to be a picture. Everything else you are using was built for triangles. Next is that machine measured rather than described: what a throughput processor is actually good at, stated as numbers rather than as architecture.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "sm-shape",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These are the budgets the unit describes, in integers: how many warps a register file holds, what occupancy that gives, how much a divergent branch costs, and how many warps it takes to cover a latency. names the case your model got wrong. Several exercises assert that both sides of a divergent branch are paid for in full, which is the predication being modelled correctly rather than a sum written twice.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "sm-shape",
+  "n": 1,
+  "title": "How many threads the register file can hold",
+  "text": "The file is a context store rather than a cache, and this division is the entire reason it is larger than the cache beside it. Write , returning how many threads a register file can keep resident, given its size in bytes and how many registers each thread uses. A register is four bytes. Every resident thread's registers exist at the same time, because a warp switch has to cost nothing and so nothing is saved or restored.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "sm-shape",
+  "n": 2,
+  "title": "Warps resident, and the ceiling above them",
+  "text": "Occupancy is a minimum over several independent budgets, which is why raising one of them alone often changes nothing. Write , returning how many warps are actually resident, given how many threads the registers allow, the warp size, and the hardware's own maximum number of resident warps. Whichever limit binds first is the answer. A partial warp does not count.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "sm-shape",
+  "n": 3,
+  "title": "Occupancy, as a number",
+  "text": "It has no equivalent on a general purpose processor, because there latency hiding is the machine's job and here it is yours. Write , returning the occupancy as a whole percentage, given the resident warps and the maximum the hardware could hold. Truncate towards zero. A maximum of zero has no occupancy to report.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "sm-shape",
+  "n": 4,
+  "title": "Both sides of the branch",
+  "text": "The cost of divergence does not depend on the split. One lane going the other way costs exactly what sixteen do. Write , returning how many cycles a warp spends on a branch, given the cost of each side and how many lanes take the first side. When every lane goes the same way, only that side runs. When the lanes disagree, the hardware runs both sides in turn with the inactive lanes switched off, so both are paid for in full whatever the split is.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "sm-shape",
+  "n": 5,
+  "title": "Enough work to cover the wait",
+  "text": "You cannot make the access faster. The only lever is whether something else is running while it happens. Write , returning how many warps must be resident to hide a memory latency, given the latency in cycles and how many cycles of independent work each warp can issue before it too has to wait. The warp that issued the access is one of them. Round up, because a fraction of a warp does not exist.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "sm-shape",
+  "n": 6,
+  "title": "Reducing across a warp without memory",
+  "text": "The crossbar this uses was built so that a pixel could subtract its neighbour, and it became a general exchange a decade later. Write , returning how many cross lane exchanges a reduction over a warp takes, given the warp size. Each step halves the number of lanes still holding a partial result, so the count is the number of times the width can be halved before reaching one. A width of one needs no steps at all.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "sm-shape",
+  "n": 7,
+  "title": "What the scratchpad costs in residency",
+  "text": "The scratchpad is a second budget competing with the registers for the same thing, which is how many warps are resident. Write , returning how many blocks fit on a multiprocessor, given the shared memory available, the shared memory each block asks for, and the hardware's maximum number of blocks. A block that asks for no shared memory is limited only by the hardware maximum.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "sm-shape",
+  "n": 8,
+  "title": "The transistors that were not spent",
+  "text": "The most informative part of the design is what was left out, and why leaving it out was correct here. Write , returning which mechanism hides a memory latency on a given machine, given whether it has many resident threads. Return 1 when the latency is hidden by having other work resident, and 0 when it is hidden by reordering a single instruction stream. A machine with more than a handful of resident threads per core hides latency with residency, and does not need a reorder buffer, a branch predictor or speculation at all.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "sm-shape",
+  "n": 1,
+  "title": "What was the streaming multiprocessor designed for?",
+  "text": " Every feature that seems arbitrary is a graphics decision you are inheriting, and that is the shortest route to understanding the ones that look strangest. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "sm-shape",
+  "n": 2,
+  "title": "Where did the hardware for a warp shuffle come from?",
+  "text": " A fast reduction inside a warp is a graphics feature that happened to help compute, and it was in the silicon long before anybody asked for it. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "sm-shape",
+  "n": 3,
+  "title": "What does a warp do when its lanes take different sides of a branch?",
+  "text": " Both sides are paid for in full, which is why one lane going the other way costs exactly what sixteen do. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "sm-shape",
+  "n": 4,
+  "title": "Where does the idea that divergence is bad come from?",
+  "text": " Sort your work so neighbouring threads take the same path is the same sentence as sort your draws so neighbouring pixels take the same path, moved to a domain where the neighbours are array indices. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "sm-shape",
+  "n": 5,
+  "title": "A lane predicated off in a divergent warp is the same thing as what?",
+  "text": " The hardware is comfortable with running a lane whose result is thrown away because it has been doing exactly that at triangle edges for decades. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "sm-shape",
+  "n": 6,
+  "title": "Why is a multiprocessor's register file larger than its first level cache?",
+  "text": " It is a context store rather than a cache. Nothing is saved and restored, because saving and restoring would make a switch cost something. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "sm-shape",
+  "n": 7,
+  "title": "Why did the design choose to hide memory latency rather than reduce it?",
+  "text": " Independence is the property that makes it possible. With enough resident work the wait costs nothing, which is a different answer from making the wait shorter. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "sm-shape",
+  "n": 8,
+  "title": "What is occupancy?",
+  "text": " It has no equivalent on a general purpose processor, because there the machine hides latency for you and here it is your job. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "sm-shape",
+  "n": 9,
+  "title": "Using more registers per thread lowers occupancy. Why?",
+  "text": " It is why a kernel that spills a few more registers can lose a large fraction of its performance in one step rather than gradually. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "sm-shape",
+  "n": 10,
+  "title": "If latency cannot be reduced, what is the tuning knob?",
+  "text": " It is why tiling into the scratchpad exists and why every later mechanism for streaming data into the multiprocessor exists: keeping the machine fed rather than making one operation quick. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "sm-shape",
+  "n": 11,
+  "title": "Why does this machine have no branch predictor, speculation or out of order execution?",
+  "text": " It deleted the most expensive apparatus a processor has and spent the budget on registers and arithmetic units, and graphics is what told it that trade was correct. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "sm-shape",
+  "n": 12,
+  "title": "How does an atomic operation work on this machine?",
+  "text": " The value never comes back to the multiprocessor unless you asked for a return value, and competing accesses to the same address are blocked by hashing the address. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "sm-shape",
+  "n": 13,
+  "title": "Which part of the graphics pipeline are atomics inherited from?",
+  "text": " The address space is split across partitions so that two of them never touch the same address and never have to agree about anything. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "sm-shape",
+  "n": 14,
+  "title": "What did general purpose programmability actually add?",
+  "text": " Scatter, writing to an address you computed rather than to the pixel you were assigned, is most of the difference between a shader and a program. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "sm-shape",
+  "n": 15,
+  "title": "Why does a scratchpad exist rather than just a larger cache?",
+  "text": " It is fast memory under the programmer's control rather than memory that decides for itself, which is what an irregular access pattern needs. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

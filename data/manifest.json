@@ -2203,7 +2203,9 @@
    "needs": [
     "frame-budget"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "sm-shape"
+   ],
    "minutes": 55
   },
   {
@@ -2217,14 +2219,17 @@
    "phase": "parallel",
    "accent": "jade",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
+   "ready": true,
+   "words": 1604,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "rasteriser"
+   ],
    "neededBy": [
     "execution-model"
-   ]
+   ],
+   "minutes": 55
   },
   {
    "slug": "throughput",
@@ -2859,9 +2864,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 57,
-  "words": 86983,
-  "exercises": 456,
-  "drills": 855
+  "ready": 58,
+  "words": 88587,
+  "exercises": 464,
+  "drills": 870
  }
 }

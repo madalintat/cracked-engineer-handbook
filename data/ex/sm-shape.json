@@ -1,0 +1,310 @@
+{
+ "slug": "sm-shape",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "How many threads the register file can hold",
+   "brief": "<p>Write <code>resident_threads</code>, returning how many threads a register file can keep resident, given its size in bytes and how many registers each thread uses.</p>\n<p>A register is four bytes. Every resident thread's registers exist at the same time, because a warp switch has to cost nothing and so nothing is saved or restored.</p>",
+   "kind": "output",
+   "concept": "The file is a context store rather than a cache, and this division is the entire reason it is larger than the cache beside it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Each thread's registers are four bytes each, and they all have to fit at once."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Dividing the file size by the register count alone counts a register as one byte. Four bytes each is what makes 256 kilobytes hold two thousand threads rather than eight thousand.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A quarter of a megabyte of registers, larger than the cache next to it, because graphics needed hundreds of fragments in flight to cover texture latency.</p>",
+   "starter": "unsigned resident_threads(unsigned file_bytes, unsigned regs_per_thread) {\n    if (!regs_per_thread) return 0;\n    return file_bytes / regs_per_thread;\n}",
+   "tests": "#include <assert.h>\nunsigned resident_threads(unsigned, unsigned);\nint main(void) {\n    /* 256 KB, 32 registers per thread. */\n    assert(resident_threads(262144, 32) == 2048);\n    assert(resident_threads(262144, 64) == 1024);\n    assert(resident_threads(262144, 255) == 257);\n    assert(resident_threads(65536, 16) == 1024);\n    assert(resident_threads(262144, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "Warps resident, and the ceiling above them",
+   "brief": "<p>Write <code>resident_warps</code>, returning how many warps are actually resident, given how many threads the registers allow, the warp size, and the hardware's own maximum number of resident warps.</p>\n<p>Whichever limit binds first is the answer. A partial warp does not count.</p>",
+   "kind": "output",
+   "concept": "Occupancy is a minimum over several independent budgets, which is why raising one of them alone often changes nothing.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Convert threads to whole warps first, then take the smaller of that and the hardware ceiling."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A register file that would allow a hundred warps does not give you a hundred if the multiprocessor can only track forty eight, and a register budget below the ceiling is the case where using fewer registers helps.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is why a kernel that spills a few more registers can lose a large fraction of its performance in one step, rather than gradually.</p>",
+   "starter": "unsigned resident_warps(unsigned threads, unsigned warp_size, unsigned max_warps) {\n    (void)max_warps;\n    if (!warp_size) return 0;\n    return threads / warp_size;\n}",
+   "tests": "#include <assert.h>\nunsigned resident_warps(unsigned, unsigned, unsigned);\nint main(void) {\n    /* Registers allow 2048 threads, which is 64 warps, but only 48 fit. */\n    assert(resident_warps(2048, 32, 48) == 48);\n    /* Registers are the binding limit here. */\n    assert(resident_warps(1024, 32, 48) == 32);\n    assert(resident_warps(1000, 32, 48) == 31);   /* a partial warp does not count */\n    assert(resident_warps(2048, 64, 48) == 32);\n    assert(resident_warps(0, 32, 48) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Occupancy, as a number",
+   "brief": "<p>Write <code>occupancy_pct</code>, returning the occupancy as a whole percentage, given the resident warps and the maximum the hardware could hold.</p>\n<p>Truncate towards zero. A maximum of zero has no occupancy to report.</p>",
+   "kind": "output",
+   "concept": "It has no equivalent on a general purpose processor, because there latency hiding is the machine's job and here it is yours.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Multiply before dividing, or every answer below a full one rounds to nothing."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Dividing the warps by the maximum first gives zero for everything short of full occupancy, which is every interesting case.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Occupancy is the latency hiding budget made visible. It is not a target in itself: full occupancy with no arithmetic to do is still a slow kernel.</p>",
+   "starter": "unsigned occupancy_pct(unsigned resident, unsigned max_warps) {\n    if (!max_warps) return 0;\n    return (resident / max_warps) * 100u;\n}",
+   "tests": "#include <assert.h>\nunsigned occupancy_pct(unsigned, unsigned);\nint main(void) {\n    assert(occupancy_pct(48, 48) == 100);\n    assert(occupancy_pct(24, 48) == 50);\n    assert(occupancy_pct(32, 48) == 66);\n    assert(occupancy_pct(1, 48) == 2);\n    assert(occupancy_pct(0, 48) == 0);\n    assert(occupancy_pct(48, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Both sides of the branch",
+   "brief": "<p>Write <code>divergent_cycles</code>, returning how many cycles a warp spends on a branch, given the cost of each side and how many lanes take the first side.</p>\n<p>When every lane goes the same way, only that side runs. When the lanes disagree, the hardware runs both sides in turn with the inactive lanes switched off, so both are paid for in full whatever the split is.</p>",
+   "kind": "output",
+   "concept": "The cost of divergence does not depend on the split. One lane going the other way costs exactly what sixteen do.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The only question is whether the lanes agree, and there are two ways for them to agree."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A warp where all thirty two lanes take the second side is not divergent, so it pays for the second side alone. Weighting the two sides by how many lanes took each is a model of a machine that does not exist.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is why the advice is to make neighbouring threads agree rather than to balance the branch, and that advice came from sorting draws so that neighbouring pixels agree.</p>",
+   "starter": "unsigned divergent_cycles(unsigned cost_a, unsigned cost_b,\n                          unsigned lanes_a, unsigned warp_size) {\n    return (cost_a * lanes_a + cost_b * (warp_size - lanes_a)) / warp_size;\n}",
+   "tests": "#include <assert.h>\nunsigned divergent_cycles(unsigned, unsigned, unsigned, unsigned);\nint main(void) {\n    /* All lanes take the first side. */\n    assert(divergent_cycles(10, 20, 32, 32) == 10);\n    /* All lanes take the second. */\n    assert(divergent_cycles(10, 20, 0, 32) == 20);\n    /* One lane differs: both sides run in full. */\n    assert(divergent_cycles(10, 20, 31, 32) == 30);\n    assert(divergent_cycles(10, 20, 1, 32) == 30);\n    assert(divergent_cycles(10, 20, 16, 32) == 30);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Enough work to cover the wait",
+   "brief": "<p>Write <code>warps_to_cover</code>, returning how many warps must be resident to hide a memory latency, given the latency in cycles and how many cycles of independent work each warp can issue before it too has to wait.</p>\n<p>The warp that issued the access is one of them. Round up, because a fraction of a warp does not exist.</p>",
+   "kind": "output",
+   "concept": "You cannot make the access faster. The only lever is whether something else is running while it happens.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Divide and round up, and remember that the waiting warp counts towards the total."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Rounding down leaves part of the latency uncovered, which is the case where a kernel is a few warps short and stalls anyway. A latency that divides exactly still needs the warp that is waiting.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A four hundred cycle access and four cycles of independent work per warp needs a hundred warps, which is more than a multiprocessor can hold. That is why arithmetic intensity, and not occupancy alone, is the thing to raise.</p>",
+   "starter": "unsigned warps_to_cover(unsigned latency, unsigned work_per_warp) {\n    if (!work_per_warp) return 0;\n    return latency / work_per_warp;\n}",
+   "tests": "#include <assert.h>\nunsigned warps_to_cover(unsigned, unsigned);\nint main(void) {\n    assert(warps_to_cover(400, 4) == 100);\n    assert(warps_to_cover(400, 40) == 10);\n    assert(warps_to_cover(400, 30) == 14);   /* rounded up */\n    assert(warps_to_cover(0, 4) == 1);       /* the waiting warp still counts */\n    assert(warps_to_cover(400, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Reducing across a warp without memory",
+   "brief": "<p>Write <code>shuffle_steps</code>, returning how many cross lane exchanges a reduction over a warp takes, given the warp size.</p>\n<p>Each step halves the number of lanes still holding a partial result, so the count is the number of times the width can be halved before reaching one.</p>\n<p>A width of one needs no steps at all.</p>",
+   "kind": "output",
+   "concept": "The crossbar this uses was built so that a pixel could subtract its neighbour, and it became a general exchange a decade later.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Count the halvings, not the lanes."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A warp of thirty two reduces in five steps rather than thirty one, because each step halves the survivors rather than removing one.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The same hardware appears as subgroup operations in the graphics interfaces, and the block operations came back to compute shaders so a compute shader can take a derivative.</p>",
+   "starter": "unsigned shuffle_steps(unsigned width) {\n    return width ? width - 1 : 0;\n}",
+   "tests": "#include <assert.h>\nunsigned shuffle_steps(unsigned);\nint main(void) {\n    assert(shuffle_steps(1) == 0);\n    assert(shuffle_steps(2) == 1);\n    assert(shuffle_steps(4) == 2);\n    assert(shuffle_steps(8) == 3);\n    assert(shuffle_steps(32) == 5);\n    assert(shuffle_steps(64) == 6);\n    assert(shuffle_steps(0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "What the scratchpad costs in residency",
+   "brief": "<p>Write <code>blocks_resident</code>, returning how many blocks fit on a multiprocessor, given the shared memory available, the shared memory each block asks for, and the hardware's maximum number of blocks.</p>\n<p>A block that asks for no shared memory is limited only by the hardware maximum.</p>",
+   "kind": "output",
+   "concept": "The scratchpad is a second budget competing with the registers for the same thing, which is how many warps are resident.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Two limits again, and one of them does not apply when the request is zero."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A block asking for no shared memory is not limited by shared memory at all, and dividing by zero to find that out is not the way to say so.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Asking for a little more scratchpad can halve the resident blocks in one step, which is the same cliff the register budget has and for the same reason.</p>",
+   "starter": "unsigned blocks_resident(unsigned smem_total, unsigned smem_per_block,\n                         unsigned max_blocks) {\n    (void)max_blocks;\n    if (!smem_per_block) return 0;\n    return smem_total / smem_per_block;\n}",
+   "tests": "#include <assert.h>\nunsigned blocks_resident(unsigned, unsigned, unsigned);\nint main(void) {\n    /* 64 KB of shared memory, 16 KB per block, at most 32 blocks. */\n    assert(blocks_resident(65536, 16384, 32) == 4);\n    /* One byte more per block and only three fit. */\n    assert(blocks_resident(65536, 16385, 32) == 3);\n    /* The hardware maximum binds instead. */\n    assert(blocks_resident(65536, 1024, 32) == 32);\n    /* No shared memory requested. */\n    assert(blocks_resident(65536, 0, 32) == 32);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "The transistors that were not spent",
+   "brief": "<p>Write <code>hidden_by</code>, returning which mechanism hides a memory latency on a given machine, given whether it has many resident threads.</p>\n<p>Return 1 when the latency is hidden by having other work resident, and 0 when it is hidden by reordering a single instruction stream.</p>\n<p>A machine with more than a handful of resident threads per core hides latency with residency, and does not need a reorder buffer, a branch predictor or speculation at all.</p>",
+   "kind": "output",
+   "concept": "The most informative part of the design is what was left out, and why leaving it out was correct here.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "One machine has somewhere else to go when a warp stalls, and the other one has to invent somewhere."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A machine with one or two threads per core has nothing else to run and must reorder its own stream. A machine with dozens does not, which is why it deleted the most expensive apparatus a processor has.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>With dozens of warps resident, a predictor and a reorder buffer are wasted transistors, and the budget went to registers and arithmetic units instead.</p>",
+   "starter": "int hidden_by(unsigned resident_per_core) {\n    (void)resident_per_core;\n    return 0;\n}",
+   "tests": "#include <assert.h>\nint hidden_by(unsigned);\nint main(void) {\n    assert(hidden_by(48) == 1);\n    assert(hidden_by(8) == 1);\n    assert(hidden_by(2) == 0);\n    assert(hidden_by(1) == 0);\n    assert(hidden_by(0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}
