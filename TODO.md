@@ -144,4 +144,8 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] 049 `codegen`, the back end. Selection as pattern matching, allocation
       as graph colouring, and the two -O jumps that are permissions rather
       than passes: strict aliasing and undefined signed overflow
-- [ ] 050 `interpreters`, and the rest of Part IX
+- [x] 050 `interpreters`. Three designs, stack against registers, why the
+      dispatch loop is shaped for the branch predictor, specialisation as
+      observe-assume-guard-deoptimise, and why on stack replacement is not
+      optional
+- [ ] 051 `build`, and the rest of Part IX

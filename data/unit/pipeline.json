@@ -73,6 +73,7 @@
   "cache"
  ],
  "neededBy": [
-  "atomics"
+  "atomics",
+  "interpreters"
  ]
 }

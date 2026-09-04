@@ -934,7 +934,8 @@
     "cache"
    ],
    "neededBy": [
-    "atomics"
+    "atomics",
+    "interpreters"
    ],
    "minutes": 55
   },
@@ -1432,7 +1433,8 @@
     "compile-time"
    ],
    "neededBy": [
-    "ssa"
+    "ssa",
+    "interpreters"
    ],
    "minutes": 55
   },
@@ -1493,12 +1495,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1590,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "pipeline",
+    "parsing"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "build",
@@ -2819,9 +2825,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 50,
-  "words": 75936,
-  "exercises": 400,
-  "drills": 750
+  "ready": 51,
+  "words": 77526,
+  "exercises": 408,
+  "drills": 765
  }
 }

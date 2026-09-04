@@ -13535,6 +13535,254 @@
  },
  {
   "t": "section",
+  "slug": "interpreters",
+  "anchor": "three-designs-and-what-each-pays",
+  "title": "Three designs, and what each pays",
+  "text": "A tree walking interpreter evaluates the syntax tree directly, with a recursive function that switches on the node. It is the simplest thing that works and the right answer for a configuration file or an expression evaluator. It is also between ten and a hundred times slower than the next design, and the reason is not arithmetic. Every operation pays a dispatch, and every node visit chases a pointer into a tree whose parts were allocated at different times and sit in different cache lines. A bytecode virtual machine compiles the tree into a flat instruction stream for an abstract machine, then runs a loop that fetches and dispatches. The tree is walked once, at compile time, where constant folding and peephole work can happen. What runs afterwards is a dense array of small instructions with good locality, and the result can be cached to disk. A just in time compiler goes further and emits real machine code while the program runs, using facts it collected: which types actually appeared, which branches were actually taken, which method the call site actually reached. That last point is why a JIT can beat an ahead of time compiler on a dynamic language. Adding two values in Python is ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "interpreters",
+  "anchor": "stack-or-registers",
+  "title": "Stack or registers",
+  "text": "A bytecode machine has to say where operands come from, and there are two answers. A stack machine takes operands from an operand stack and pushes results back. Instructions are tiny, often one byte and one argument, because the operand locations are implicit. CPython, the Java virtual machine and WebAssembly all work this way. The cost is that more instructions execute: pushing and popping are instructions too. A register machine gives each frame an array of slots and instructions name their operands by index. Instructions are fewer and fatter, there are fewer dispatches, and the slots map more directly onto real registers if a compiler ever gets involved. Lua moved from a stack machine to a register machine in version 5, and it remains the clearest case study of the change. Adding two locals and storing the result is four instructions on a stack machine and one on a register machine. The register machine executes fewer dispatches for the same work, which matters because dispatch is where the time goes.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "interpreters",
+  "anchor": "dispatch-and-why-the-loop-is-shaped-the-way-it-is",
+  "title": "Dispatch, and why the loop is shaped the way it is",
+  "text": "The obvious loop reads an opcode and switches on it. That compiles to an indirect jump through a table, and the important consequence is that every opcode in the program shares one indirect branch instruction. The same work, arranged so the branch predictor has something to learn. One site cannot tell which opcode is coming next; one site per opcode can learn that a comparison is usually followed by a conditional jump. A branch predictor keyed on a single site cannot learn anything about which opcode follows which, because from that site's point of view the target is whatever the program is doing. So interpreters use a compiler extension that lets a label be taken as a value, and end each opcode's body with its own jump to the next one. Now there is a branch site per opcode, and the predictor can learn that a comparison is usually followed by a conditional jump. The reported gain when CPython adopted it was in the range of fifteen to twenty percent, for a change that computes exactly the same thing. CPython 3.14 added a further variant, where each opcode is a separate small function and dispatch is a tail call to the next one. The reason is not elegance. A single function of severa",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "interpreters",
+  "anchor": "what-the-interpreter-knows-and-writes-down",
+  "title": "What the interpreter knows and writes down",
+  "text": "Here is where the trade starts paying. An instruction like an attribute load or a binary operation is general: it must work for every type. But a given site in a real program is usually not general at all. It sees the same shapes over and over. So the interpreter watches. After a code object has run enough times, its instructions are replaced by adaptive versions carrying a small counter, and space for a cache is embedded in the instruction stream right after the instruction itself. When the counter fires, a family specific routine looks at the operands that actually turned up and rewrites the instruction into a specialised member of its family. A general binary operation becomes an integer add, or a float add, or a string concatenation, depending on what it saw. Every specialised instruction begins with a cheap check: is the type still what we assumed, is the class still the version we recorded. On a miss it decrements a counter and does the general thing; if the counter bottoms out the instruction reverts to the adaptive form and may specialise differently later. This is the mechanism to remember, because it is the same in every fast dynamic language runtime under different names",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "interpreters",
+  "anchor": "tiers-and-becoming-hot-while-running",
+  "title": "Tiers, and becoming hot while running",
+  "text": "A JIT does not compile everything. Compiling costs time, and most code runs once. So runtimes are tiered: a cheap tier runs immediately and counts, and when a function or a loop crosses a threshold, an expensive tier compiles it using what the cheap tier recorded. Two kinds of hot are worth distinguishing. A function called many times can be compiled before its next call, which is easy. A function entered once containing a loop that runs ten million times is hot while it is executing, and waiting for it to return means waiting forever. The answer is on stack replacement: compile a new version, then transfer the running frame into it mid flight, with the loop counter and every live value moved across. It is fiddly and it is not optional, because the long running loop is exactly the case that most needs compiling. There are two shapes of JIT. A method JIT compiles a function at a time, like an ordinary compiler with better information. A tracing JIT records the actual sequence of operations through one hot loop, following calls as it goes, and turns that recording into straight line code with a guard at every point where the recorded path could be left. Tracing gets aggressive inlini",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "interpreters",
+  "anchor": "what-a-cached-bytecode-file-is-not",
+  "title": "What a cached bytecode file is not",
+  "text": "One correction, because the belief is widespread. A compiled bytecode file next to a source file is a cache of the parse, not an optimisation of the program. It holds the same code object the compiler would have produced, so loading it skips tokenising and parsing and nothing else. It carries a magic number that changes whenever the bytecode format changes, which is why a file from another version is rejected rather than misread, and either a timestamp or a hash of the source so that a stale one is not used. The program does not run faster afterwards. It starts faster.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "interpreters",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "A tree walker is simple and slow because it pays a dispatch and a pointer chase per node. A bytecode machine walks the tree once and then runs a dense array of instructions. A JIT emits machine code using facts that only exist at run time. A stack machine has smaller instructions and executes more of them; a register machine has fewer and fatter ones. Dispatch is the cost either way, which is why the shape of the dispatch loop is worth fifteen percent and why the loop is built to give the branch predictor something it can learn. Specialisation is observe, assume, guard, deoptimise. A site that has seen two integers ten thousand times gets an integer add and a check, and the check is what makes the assumption safe. Tiering exists because compiling costs time, and on stack replacement exists because the loop that most needs compiling is the one already running. Next comes the thing that decides when any of this is rebuilt at all: the build graph, and why a build system's only real job is knowing what changed.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "interpreters",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model an interpreter's decisions, counters, caches, stack depth and dispatch counts, rather than running a real one. names the case your model got wrong. Several exercises assert that a specialised instruction does not immediately give up on its first miss, which is the saturating counter working rather than a check being wrong.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 1,
+  "title": "What a tree costs per operation",
+  "text": "The cost of a tree walker is one dispatch per node, which is why it is slow for reasons that have nothing to do with the arithmetic. Write , returning how many dispatches a tree walking interpreter performs for a fully parenthesised expression over values. Every node is visited once and every visit is a dispatch, leaves included. A bytecode machine walks the tree once at compile time and pays nothing per node afterwards.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 2,
+  "title": "How deep the operand stack goes",
+  "text": "The maximum depth is a property the compiler can work out statically, which is what lets a frame be allocated once rather than grown while running. Write , returning the greatest operand stack depth a stack machine reaches while running a sequence of instructions, or -1 if the sequence ever pops from an empty stack. Each instruction is given by how many operands it pops and how many results it pushes. The stack starts empty. The compiler computes this number once so the frame can be allocated in one go.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 3,
+  "title": "Two ways to say the same thing",
+  "text": "Fewer, fatter instructions mean fewer dispatches for the same work, which is the whole argument for a register machine. Write , returning how many instructions each kind of bytecode machine executes for a chain of binary operations over values already in locals. A stack machine must load each value and then apply each operator, so it runs one instruction per value plus one per operator. A register machine names its operands, so it runs one instruction per operator and no loads at all. Return the stack machine's count when is non-zero, and the register machine's otherwise.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 4,
+  "title": "One branch site, or many",
+  "text": "A predictor keyed on one site cannot learn which opcode follows which, because from that site the target is whatever the program happens to be doing. Write , returning how many indirect branch sites a dispatch loop has, given the number of distinct opcodes and which dispatch scheme is used. A switch compiles to one jump through a table, shared by every opcode. Ending each opcode's body with its own jump gives one site per opcode. Scheme 0 is the switch and scheme 1 is the jump per opcode. A loop with no opcodes has no sites at all.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 5,
+  "title": "When to specialise",
+  "text": "The assumption has to be worth making. Specialising a site that has already contradicted itself buys a guard and no speed. Write , deciding whether an adaptive instruction should rewrite itself, given how many times it has run and the threshold, and how many distinct operand shapes it has seen. Specialise once the counter reaches the threshold, but only when exactly one shape has been seen. A site that has already seen two different shapes is polymorphic, and a guard that fails half the time costs more than it saves.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 6,
+  "title": "The guard that can be taken back",
+  "text": "Deoptimisation is what makes the assumption safe. Without a way back, a wrong guess is a wrong program rather than a slow one. Write , returning a specialised instruction's remaining confidence after a guard fails, and -1 when it should revert to the adaptive form. Confidence starts at some value and a miss decrements it. It never goes below zero by decrementing; instead, a miss at zero means the instruction reverts.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 7,
+  "title": "Worth compiling, and worth compiling now",
+  "text": "On stack replacement is not an optimisation on top of tiering. It is what makes tiering work for the case that most needs it. Write , deciding what a tiered runtime should do with a code unit, given how many times it has been entered, how many iterations its loop has run, the threshold, and whether it is currently executing. Return 0 to keep interpreting, 1 to compile it for next time, and 2 to compile it and transfer the running frame into the new code. A unit crosses the threshold on entries or on loop iterations, whichever comes first. When it is not currently executing, compiling for next ",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "interpreters",
+  "n": 8,
+  "title": "A cache of the parse, and nothing else",
+  "text": "The file is a cache of the parse, not an optimisation of the program, so every check is about whether it is still the same source. Write , deciding whether a cached bytecode file may be loaded instead of parsing the source, given whether the format magic matches, whether the recorded source stamp matches, and whether the cache records a hash rather than a timestamp. The magic must match or the file is from another version and cannot be read at all. Then the stamp must match the source. A hash based cache is checked the same way; the difference is what the stamp is, not whether it is checked.",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 1,
+  "title": "Why is a tree walking interpreter slow?",
+  "text": " The arithmetic is the cheap part. The nodes were allocated separately and sit in different cache lines, which is why the measured gap to a bytecode machine is a factor of ten and not a factor of two. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 2,
+  "title": "What does compiling to bytecode buy over walking the tree?",
+  "text": " Dispatch is still paid per instruction. What goes away is the per-node pointer chase, and the compile step can fold constants and cache the result. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 3,
+  "title": "What is the difference between a stack machine and a register machine?",
+  "text": " It is about where an instruction says its operands are. Naming them makes instructions fatter and fewer. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 4,
+  "title": "Which executes more instructions for the same work?",
+  "text": " Adding two locals is four instructions on a stack machine and one on a register machine. Dispatch is where the time goes, so that matters. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 5,
+  "title": "Why does a <code>switch</code> based dispatch loop hurt branch prediction?",
+  "text": " From that one site the target is whatever the program happens to be doing next, so there is no correlation to learn. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 6,
+  "title": "What does ending each opcode body with its own jump achieve?",
+  "text": " The reported gain when CPython adopted it was fifteen to twenty percent, for code that computes the same thing in the same order. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 7,
+  "title": "Why did CPython 3.14 add an interpreter built from small functions and tail calls?",
+  "text": " The measured gain is three to five percent on the standard benchmark suite. It is a register allocation problem, not a control flow one. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 8,
+  "title": "What can a JIT know that an ahead of time compiler cannot?",
+  "text": " Knowing the target processor is possible ahead of time too. Knowing that this site has seen two integers ten thousand times running is not. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 9,
+  "title": "In a specialising interpreter, where does the inline cache live?",
+  "text": " Putting it next to the instruction means the interpreter has already loaded the cache line it needs by the time it wants the cache. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 10,
+  "title": "What are the four steps of specialisation?",
+  "text": " The same shape appears in every fast dynamic language runtime under different names. The last step is what makes the second one safe. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 11,
+  "title": "A specialised instruction's guard fails once. What happens?",
+  "text": " One unusual value should not undo a site that is right the rest of the time. The instruction reverts only when the counter has run out. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 12,
+  "title": "Why is a specialised instruction allowed to assume anything at all?",
+  "text": " Deoptimisation is what converts a guess into an optimisation. Without a way back it would be a bug. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 13,
+  "title": "Why do runtimes have tiers?",
+  "text": " The cheap tier also collects the information the expensive tier needs, so the counting is not wasted work. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 14,
+  "title": "What problem does on stack replacement solve?",
+  "text": " It compiles a new version and transfers the running frame into it, moving every live value and the loop counter across mid flight. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "interpreters",
+  "n": 15,
+  "title": "What does a cached bytecode file do for a program?",
+  "text": " It holds the same code object the compiler would have produced. Its magic number is rejected outright when the format changed, and a stamp or hash says whether the source is still the same. ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

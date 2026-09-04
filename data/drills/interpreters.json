@@ -1,0 +1,185 @@
+{
+ "slug": "interpreters",
+ "drills": [
+  {
+   "n": 1,
+   "q": "Why is a tree walking interpreter slow?",
+   "options": [
+    "It pays a dispatch and a pointer chase for every node, including the leaves",
+    "It reparses the source at every step",
+    "It cannot use the processor's arithmetic instructions",
+    "It allocates a new stack frame per operation"
+   ],
+   "correct": 0,
+   "why": "<p>The arithmetic is the cheap part. The nodes were allocated separately and sit in different cache lines, which is why the measured gap to a bytecode machine is a factor of ten and not a factor of two.</p>"
+  },
+  {
+   "n": 2,
+   "q": "What does compiling to bytecode buy over walking the tree?",
+   "options": [
+    "The tree is walked once, and what runs afterwards is a dense array with good locality",
+    "The program is compiled to machine code before it runs",
+    "Types are checked ahead of time rather than at each operation",
+    "Dispatch is eliminated entirely"
+   ],
+   "correct": 0,
+   "why": "<p>Dispatch is still paid per instruction. What goes away is the per-node pointer chase, and the compile step can fold constants and cache the result.</p>"
+  },
+  {
+   "n": 3,
+   "q": "What is the difference between a stack machine and a register machine?",
+   "options": [
+    "One takes operands from an operand stack; the other names them as slots in the frame",
+    "One runs on the hardware stack; the other uses hardware registers",
+    "One is interpreted and the other is compiled",
+    "One is for dynamic languages and the other for static ones"
+   ],
+   "correct": 0,
+   "why": "<p>It is about where an instruction says its operands are. Naming them makes instructions fatter and fewer.</p>"
+  },
+  {
+   "n": 4,
+   "q": "Which executes more instructions for the same work?",
+   "options": [
+    "The stack machine, because pushing and popping are instructions too",
+    "The register machine, because its instructions are larger",
+    "They execute the same number by definition",
+    "It depends only on the language being interpreted"
+   ],
+   "correct": 0,
+   "why": "<p>Adding two locals is four instructions on a stack machine and one on a register machine. Dispatch is where the time goes, so that matters.</p>"
+  },
+  {
+   "n": 5,
+   "q": "Why does a <code>switch</code> based dispatch loop hurt branch prediction?",
+   "options": [
+    "Every opcode shares one indirect branch site, so the predictor cannot learn which opcode follows which",
+    "The jump table is too large for the cache",
+    "A switch compiles to a chain of comparisons",
+    "Indirect branches are never predicted at all"
+   ],
+   "correct": 0,
+   "why": "<p>From that one site the target is whatever the program happens to be doing next, so there is no correlation to learn.</p>"
+  },
+  {
+   "n": 6,
+   "q": "What does ending each opcode body with its own jump achieve?",
+   "options": [
+    "One branch site per opcode, so the predictor can learn sequences like compare then jump",
+    "Fewer instructions executed per opcode",
+    "It removes the jump table",
+    "It lets opcodes run in parallel"
+   ],
+   "correct": 0,
+   "why": "<p>The reported gain when CPython adopted it was fifteen to twenty percent, for code that computes the same thing in the same order.</p>"
+  },
+  {
+   "n": 7,
+   "q": "Why did CPython 3.14 add an interpreter built from small functions and tail calls?",
+   "options": [
+    "A single function of thousands of lines defeats register allocation, and splitting it fixes that",
+    "Tail calls are faster than jumps on modern processors",
+    "It allows opcodes to be compiled separately at run time",
+    "It was required for free threading"
+   ],
+   "correct": 0,
+   "why": "<p>The measured gain is three to five percent on the standard benchmark suite. It is a register allocation problem, not a control flow one.</p>"
+  },
+  {
+   "n": 8,
+   "q": "What can a JIT know that an ahead of time compiler cannot?",
+   "options": [
+    "Which types, branches and call targets actually occurred in this run",
+    "The exact processor model it is running on",
+    "The contents of the source file",
+    "How much memory is available"
+   ],
+   "correct": 0,
+   "why": "<p>Knowing the target processor is possible ahead of time too. Knowing that this site has seen two integers ten thousand times running is not.</p>"
+  },
+  {
+   "n": 9,
+   "q": "In a specialising interpreter, where does the inline cache live?",
+   "options": [
+    "In the instruction stream, immediately after the instruction it belongs to",
+    "In a hash table keyed by instruction address",
+    "In the object header of the operands",
+    "In a side table written when the function returns"
+   ],
+   "correct": 0,
+   "why": "<p>Putting it next to the instruction means the interpreter has already loaded the cache line it needs by the time it wants the cache.</p>"
+  },
+  {
+   "n": 10,
+   "q": "What are the four steps of specialisation?",
+   "options": [
+    "Observe, assume, guard, and be able to take it back",
+    "Parse, compile, link, and load",
+    "Count, compile, inline, and unroll",
+    "Trace, optimise, verify, and commit"
+   ],
+   "correct": 0,
+   "why": "<p>The same shape appears in every fast dynamic language runtime under different names. The last step is what makes the second one safe.</p>"
+  },
+  {
+   "n": 11,
+   "q": "A specialised instruction's guard fails once. What happens?",
+   "options": [
+    "A counter is decremented and the general operation runs; it stays specialised",
+    "It immediately reverts to the general form",
+    "The whole function is recompiled",
+    "The guard is removed and the specialised path runs anyway"
+   ],
+   "correct": 0,
+   "why": "<p>One unusual value should not undo a site that is right the rest of the time. The instruction reverts only when the counter has run out.</p>"
+  },
+  {
+   "n": 12,
+   "q": "Why is a specialised instruction allowed to assume anything at all?",
+   "options": [
+    "Because the guard in front of it makes a wrong assumption slow rather than incorrect",
+    "Because the type system has already proved the assumption",
+    "Because the specialisation is only applied to code that cannot change",
+    "Because the interpreter re-checks the whole frame at each instruction"
+   ],
+   "correct": 0,
+   "why": "<p>Deoptimisation is what converts a guess into an optimisation. Without a way back it would be a bug.</p>"
+  },
+  {
+   "n": 13,
+   "q": "Why do runtimes have tiers?",
+   "options": [
+    "Compiling costs time and most code runs once, so cheap execution comes first and pays for the compile decision",
+    "Different tiers target different processors",
+    "The first tier checks types and the second one runs the program",
+    "Each tier handles a different language feature"
+   ],
+   "correct": 0,
+   "why": "<p>The cheap tier also collects the information the expensive tier needs, so the counting is not wasted work.</p>"
+  },
+  {
+   "n": 14,
+   "q": "What problem does on stack replacement solve?",
+   "options": [
+    "A function entered once whose loop is already running is hot, and waiting for it to return means waiting forever",
+    "Two threads entering the same compiled function at once",
+    "Restoring the stack after an exception unwinds through compiled code",
+    "Moving a frame from the heap to the stack when it stops escaping"
+   ],
+   "correct": 0,
+   "why": "<p>It compiles a new version and transfers the running frame into it, moving every live value and the loop counter across mid flight.</p>"
+  },
+  {
+   "n": 15,
+   "q": "What does a cached bytecode file do for a program?",
+   "options": [
+    "Skips tokenising and parsing, so the program starts faster and runs the same",
+    "Stores an optimised version of the program, so it runs faster",
+    "Stores machine code produced by the JIT on a previous run",
+    "Records profiling information for the next run to specialise from"
+   ],
+   "correct": 0,
+   "why": "<p>It holds the same code object the compiler would have produced. Its magic number is rejected outright when the format changed, and a stamp or hash says whether the source is still the same.</p>"
+  }
+ ]
+}

@@ -74,6 +74,7 @@
   "compile-time"
  ],
  "neededBy": [
-  "ssa"
+  "ssa",
+  "interpreters"
  ]
 }
