@@ -915,7 +915,8 @@
     "pipeline",
     "object-model",
     "virtual-memory",
-    "measurement"
+    "measurement",
+    "frame-budget"
    ],
    "minutes": 55
   },
@@ -940,7 +941,8 @@
    "neededBy": [
     "atomics",
     "interpreters",
-    "measurement"
+    "measurement",
+    "frame-budget"
    ],
    "minutes": 55
   },
@@ -2170,12 +2172,16 @@
    "phase": "parallel",
    "accent": "jade",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1445,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "cache",
+    "pipeline"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "rasteriser",
@@ -2848,9 +2854,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 55,
-  "words": 83988,
-  "exercises": 440,
-  "drills": 825
+  "ready": 56,
+  "words": 85433,
+  "exercises": 448,
+  "drills": 840
  }
 }

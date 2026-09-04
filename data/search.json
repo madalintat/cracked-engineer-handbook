@@ -14783,6 +14783,238 @@
  },
  {
   "t": "section",
+  "slug": "frame-budget",
+  "anchor": "one-nanosecond-per-pixel",
+  "title": "One nanosecond per pixel",
+  "text": "Take a display of 3840 by 2160 at 120 frames a second. That is 8,294,400 pixels per frame, and just under a billion pixels a second. The frame budget is one hundred and twentieth of a second, which is 8.333 milliseconds. Divide one by the other: One nanosecond, per pixel, for everything: transforming the geometry, working out which pixels a triangle covers, running the shader, fetching the textures, testing the depth, blending the result. On a five gigahertz core a nanosecond is five clock cycles. That number is the whole unit. Every design decision downstream is an answer to it.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "frame-budget",
+  "anchor": "except-each-pixel-is-not-drawn-once",
+  "title": "Except each pixel is not drawn once",
+  "text": "Geometry is submitted before anything knows what will end up visible, so a pixel is written, then covered by something nearer, then covered again. The ratio of fragments produced to pixels finally shown is overdraw, and for opaque geometry a factor of two to four is normal. Transparency is worse: particles, foliage and interface layers can push a local region to ten or more. Take three as a working figure and the arithmetic moves: Now attach a shader to each one. A cheap textured fragment is tens of arithmetic operations. A modest one with a few lights, a normal map and a reflectance model is a few hundred. At two hundred operations per fragment: That is fragment shading alone, at a shader nobody would call expensive. A serious deferred lighting pass at a thousand operations per fragment puts it at three trillion. Then add vertex work, shadow maps, which redo the geometry once per light, and every post-processing pass.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "frame-budget",
+  "anchor": "where-the-rest-of-the-silicon-goes",
+  "title": "Where the rest of the silicon goes",
+  "text": "Two more budgets are worth doing, because each one explains a piece of hardware that would otherwise look arbitrary. Texturing first. Say eight samples per fragment, which is unremarkable: colour, normal, roughness, metalness, ambient occlusion, a couple of shadow taps and an environment probe. Each of those, filtered smoothly, reads eight texels. Every one of those needs an address computed with wrapping, a format decoded and a weighted blend across the neighbours. Nobody writes that as shader code at 190 billion a second, which is why filtering is fixed function silicon and has been since the beginning. Then the framebuffer. Per fragment the output stage reads the depth, usually writes it, and writes a colour, and for anything blended reads the colour too. Call it twelve bytes: That is the framebuffer alone, with no textures in it at all. Add texture traffic and you are into hundreds of gigabytes per second, which is what the memory on a discrete card is built to deliver. A phone has a small fraction of that and shares it with the processor, which is the entire reason mobile graphics hardware is built differently.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "frame-budget",
+  "anchor": "the-honest-comparison-with-a-processor",
+  "title": "The honest comparison with a processor",
+  "text": "The unfair version of this argument compares a graphics part with one processor core and declares a thousandfold gap. Do it properly instead. A sixteen core processor at five gigahertz with two wide fused multiply add units per core peaks at roughly five trillion operations a second. A large graphics card is about eighty. The gap is around sixteen times, not a thousand. A processor is not hopeless at raw arithmetic. It is hopeless at this job, for four reasons that have nothing to do with peak arithmetic. The first is the per pixel budget. That same processor has sixteen times five billion times 8.333 milliseconds, which is 666 million core cycles in a frame. Spread over the pixels: Twenty seven cycles. One smoothly filtered texture read is four dependent loads, each likely to miss a cache and cost tens to hundreds of cycles, plus the blends between them. A single texture sample spends the entire per fragment budget, and a real shader wants eight of them, before any of the triangle setup, coverage, interpolation, depth test or blend has happened. The budget is not tight, it is already spent. One filtered texture read costs more than the whole per fragment allowance, and a real shad",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "frame-budget",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Rendering is huge, deadlined and independent, and the last of those is what makes a different machine possible. At four thousand pixels wide and 120 frames a second there is about one nanosecond per pixel for everything, which is five cycles of a fast core. Overdraw multiplies the work by three or more before a shader has run once. Texture filtering is fixed function because nobody executes 190 billion filtered reads a second as instructions. Framebuffer traffic alone is tens of gigabytes per second, which is why compression of depth and colour is mandatory rather than clever, and why a phone with shared memory needs a different architecture. A processor is about sixteen times slower at peak arithmetic and infinitely worse at this job, because eighty cycles per pixel does not buy one texture sample, and because it hides latency with a mechanism that assumes parallelism is scarce. Next is where those fragments come from: how three edges and a grid turn a triangle into pixels, and why the answer arrives in blocks of four.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
+  "slug": "frame-budget",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These are the arithmetic of the unit, done in integers. Rates are large, so the tests use 64 bit types throughout and the intermediate values matter. names the case your model got wrong. Several exercises assert results that overflow a 32 bit integer, which is the point rather than an accident: a billion pixels a second does not fit in the type most people reach for first.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "frame-budget",
+  "n": 1,
+  "title": "Pixels, and pixels per second",
+  "text": "The first thing to notice about this workload is its size, and the first thing to get wrong is the type you count it in. Write , returning how many pixels a display produces per second, given its width, height and refresh rate. The numbers are large. A 4K display at 120 hertz is just under a billion pixels a second, which does not fit in a 32 bit signed integer.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "frame-budget",
+  "n": 2,
+  "title": "How long one pixel gets",
+  "text": "The budget per output is the number the whole architecture answers, and it is around a nanosecond. Write , returning how much time there is per pixel, in picoseconds, given the width, height and refresh rate. A second is 1,000,000,000,000 picoseconds. Truncate towards zero.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "frame-budget",
+  "n": 3,
+  "title": "What overdraw does to the work",
+  "text": "Geometry is submitted before anything knows what will be visible, so the work is a multiple of the pixel count rather than equal to it. Write , returning how many fragment shader runs a frame needs per second, given the width, height, refresh rate and the overdraw factor as a percentage. An overdraw of 100 means each pixel is shaded once; 300 means three times. Truncate towards zero.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "frame-budget",
+  "n": 4,
+  "title": "The arithmetic a shader asks for",
+  "text": "Fragment shading alone, at a shader nobody would call expensive, already asks for hundreds of billions of operations a second. Write , returning how many arithmetic operations per second fragment shading needs, given the fragments per second and the operations per fragment. Return the answer in millions, truncated, because the raw number is unwieldy and the comparison people make is against a rate quoted in the same units.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "frame-budget",
+  "n": 5,
+  "title": "What the output stage moves",
+  "text": "This is the framebuffer alone, with no textures in it, and it is already tens of gigabytes a second. Write , returning how much framebuffer traffic a frame rate produces, given the fragments per second and the bytes each fragment reads and writes. A fragment reads the depth, may write it, and writes a colour, so the figure is around twelve bytes even before any blending.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "frame-budget",
+  "n": 6,
+  "title": "Cycles per pixel, on a processor",
+  "text": "The comparison that matters is not peak arithmetic. It is how much of the machine's time each output gets. Write , returning how many core cycles a processor has per pixel, given the core count, the clock in megahertz, the display size and the refresh rate. Every core's cycles count, since the work is independent and can be spread across all of them. Truncate towards zero.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "frame-budget",
+  "n": 7,
+  "title": "Does one texture sample fit",
+  "text": "Dependent loads do not overlap, which is why four of them cost four latencies rather than one. Write , deciding whether a filtered texture read fits inside the per fragment cycle budget, given the budget and the cost of the read. A filtered read is four dependent memory loads plus the blending between them. Each load costs the given latency because it depends on the one before it, so they do not overlap, and the blends cost their own cycles on top.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "exercise",
+  "slug": "frame-budget",
+  "n": 8,
+  "title": "Whether the frame lands on time",
+  "text": "Deadlined is the second property of this workload. A frame that arrives late is not slower output; it is a stutter that somebody sees. Write , returning how many microseconds late a frame is, given the work it needs in millions of operations and the machine's rate in millions of operations per second, and the refresh rate. Return 0 when the frame fits in its budget. Truncate towards zero throughout.",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "frame-budget",
+  "n": 1,
+  "title": "Which three properties make rendering the workload it is?",
+  "text": " The third one is the rare property. Almost nothing else in this handbook has it, and everything about the machine is built on it. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "frame-budget",
+  "n": 2,
+  "title": "How many pixels does a 3840 by 2160 display produce at 120 frames a second?",
+  "text": " Eight million per frame, and a hundred and twenty of those a second. The per frame figure is the one people quote and the per second figure is the one that matters. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "frame-budget",
+  "n": 3,
+  "title": "Roughly how long is there per pixel at 4K and 120 hertz?",
+  "text": " The frame budget is 8.333 milliseconds spread over eight million pixels. On a five gigahertz core, a nanosecond is five clock cycles. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "frame-budget",
+  "n": 4,
+  "title": "What is overdraw?",
+  "text": " Geometry is submitted before anything knows what will be visible, so a pixel is written, covered, and covered again. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "frame-budget",
+  "n": 5,
+  "title": "What is a typical opaque overdraw factor?",
+  "text": " A depth prepass and hierarchical depth testing cut it, and they do not remove it. Take three as a working figure and the work triples before a shader has run once. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "frame-budget",
+  "n": 6,
+  "title": "Why is texture filtering fixed function silicon rather than shader code?",
+  "text": " Nobody executes that as instructions. It is a pipelined array producing a result per clock, and it has been separate silicon since the beginning. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "frame-budget",
+  "n": 7,
+  "title": "Framebuffer traffic alone, at 4K and 120 hertz with three times overdraw, is roughly what?",
+  "text": " Around twelve bytes per fragment for the depth read, depth write and colour write. It is why lossless depth and colour compression is mandatory hardware rather than a refinement. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "frame-budget",
+  "n": 8,
+  "title": "Why are mobile graphics architectures different?",
+  "text": " Hundreds of gigabytes a second is what makes the immediate mode approach work. Without it the architecture has to change, which is where tile based rendering comes from. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "frame-budget",
+  "n": 9,
+  "title": "How far apart are a large processor and a large graphics card in peak arithmetic?",
+  "text": " The unfair comparison against a single core loses the argument. A sixteen core machine is about five trillion operations a second against about eighty, and the processor is still hopeless at this job for reasons that are not about arithmetic. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "frame-budget",
+  "n": 10,
+  "title": "A sixteen core five gigahertz processor rendering 4K at 120 hertz has how many cycles per pixel?",
+  "text": " 666 million core cycles in a frame, over eight million pixels. With three times overdraw that is twenty seven cycles per fragment. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "frame-budget",
+  "n": 11,
+  "title": "Why does one filtered texture read not fit in twenty seven cycles?",
+  "text": " Dependent loads do not overlap. One sample spends the whole per fragment budget, and a real shader wants eight of them. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "frame-budget",
+  "n": 12,
+  "title": "Why is a processor's cache hierarchy the wrong shape for rendering?",
+  "text": " No two fragments share data, so the coherence protocol is pure cost here. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "frame-budget",
+  "n": 13,
+  "title": "How does a processor hide memory latency, and why is that the wrong mechanism here?",
+  "text": " An enormous transistor investment to find a handful of independent instructions inside a sequence written to be sequential. The right answer here is to keep hundreds of streams resident and switch between them for nothing. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "frame-budget",
+  "n": 14,
+  "title": "What does deadlined mean for this workload?",
+  "text": " Missing by a little is the whole problem. At 120 hertz a frame that takes nine milliseconds instead of eight is not eleven percent worse; it is a dropped frame. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "drill",
+  "slug": "frame-budget",
+  "n": 15,
+  "title": "Why can a processor not simply be given more cores for this?",
+  "text": " More cores raise the cycle budget linearly and do nothing about the other three reasons, which is why the answer was a different machine rather than a bigger one. ",
+  "part": "Graphics and the GPU"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",
