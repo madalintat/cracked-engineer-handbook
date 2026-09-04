@@ -15519,6 +15519,254 @@
  },
  {
   "t": "section",
+  "slug": "scan",
+  "anchor": "two-numbers-and-what-they-buy",
+  "title": "Two numbers, and what they buy",
+  "text": "The two are tied together. With a given number of processors the time is bounded by the work divided by them, plus the depth. That says the obvious thing precisely: you can spread the work out, and you cannot spread out the chain. Two quantities fall out of it. Work divided by depth is the most processors that can be usefully applied, since beyond that they sit idle. And an algorithm is called work efficient when its work matches the best sequential algorithm, up to constants. The classic mistake is now easy to state. It is optimising depth while quietly multiplying work, which produces an algorithm that looks excellent on the axis being reported and burns several times the energy to finish no sooner on any real machine. The next section is that mistake, with numbers. There is a pessimistic corollary worth knowing by name. If some fraction of the work is inherently serial, the speedup is capped at one over that fraction however many processors you add. The rebuttal is that in practice the problem grows with the machine, so that fraction shrinks. Both are true, and which one applies depends on whether you have a fixed problem or a fixed time budget.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "scan",
+  "anchor": "the-operation-that-looks-sequential",
+  "title": "The operation that looks sequential",
+  "text": "Given an associative operator and a list, a scan produces the running result: each output is the operator applied to everything up to that point. An inclusive scan includes the current element and an exclusive one does not. Written sequentially it is three lines, and every output depends on the one before it. It looks like the most stubbornly serial thing in the subject. It is not, and the reason is the only property required of the operator. Being associative means the brackets can be moved, and moving the brackets is enough to compute the whole thing in a logarithmic number of rounds. That single move is behind every parallel reduction, every parallel sort, and every operation on segments of a list.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "scan",
+  "anchor": "why-it-matters-more-than-it-looks",
+  "title": "Why it matters more than it looks",
+  "text": "Here is the sentence worth keeping. Any time parallel workers each produce a variable number of outputs, and the results have to end up packed together, the answer is a scan. The scan of the counts tells each worker where its own output starts. That is one idea, and it is all of the following: Turning data dependent, variable sized output into writes at computed addresses is what a scan is for, and it is why it appears everywhere in parallel code rather than as a curiosity.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "scan",
+  "anchor": "the-depth-optimal-version",
+  "title": "The depth optimal version",
+  "text": "The first published parallel scan is four lines. For a distance that doubles each round, every element adds the element that far behind it: After each round every element holds the sum of a window twice as wide as before, so after a logarithmic number of rounds it holds everything before it. The depth is logarithmic, which is optimal. The work is not: every round touches every element, so the total is the count times the number of rounds. And it needs two buffers, because an element is reading a value that another element is in the middle of writing.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "scan",
+  "anchor": "the-work-efficient-version",
+  "title": "The work efficient version",
+  "text": "The second version builds a balanced tree in the array and sweeps it twice. Going up, it combines pairs at doubling distances, so that after the last round the final element holds the total. Going down, it sets the root to the identity and pushes partial results back down: at each node the left child receives the node's value, and the right child receives the node's value combined with what the left child held. The work is now linear, which is optimal, and the depth is still logarithmic though it takes twice as many rounds. It needs no second buffer. Counting the operations of both, on a real implementation with a counter attached: Those numbers are not approximate. The first column is exactly three times one less than the count, and the second is exactly the count times its logarithm. The theory is not roughly right here, it is precisely right, and watching a counter confirm it is worth doing once.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "scan",
+  "anchor": "what-actually-runs-and-why-the-ending-matters",
+  "title": "What actually runs, and why the ending matters",
+  "text": "Most courses stop at the work efficient version, and stopping there leaves you believing something that the real libraries abandoned a decade ago. The problem is that work is the wrong objective at the top level. A scan does almost no arithmetic per element, so it is limited entirely by memory. The tree version reads and writes the array twice, once going up and once coming down, plus a pass over the block totals, which is about four times the array in traffic. At best that reaches half of the available bandwidth. What the production libraries do instead is a single pass. Each block computes its own total, publishes it with a flag saying what kind of value it is, and then looks backwards at the totals its predecessors published, taking a finished prefix if one is available and otherwise accumulating further back, all while its own local scan proceeds. The input is read once and the output written once. Two times the array instead of four, and about twice the speed. The three levels use three different algorithms, each chosen for what is free at that level. Extra work inside a warp costs nothing because the lanes exist anyway; extra traffic across the device costs everything. Notice",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "scan",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "A parallel algorithm has two costs. Work is the total operations and depth is the longest dependent chain, time is bounded by work over processors plus depth, and work over depth is the most processors worth having. Optimising depth while multiplying work is the standard mistake, and the two scans are the standard example: a logarithmic depth version that does the count times its logarithm in work, against a linear work version that takes twice as many rounds. A scan turns variable sized output into writes at computed addresses, which is why filtering, sorting, sparse formats and graph traversal are all scans underneath. And the version that runs in production is neither textbook algorithm, because the real objective function at that level is bytes moved rather than operations performed. Next is where that objective becomes the whole subject: three levels of linear algebra routines, only one of which can ever reach the machine's peak, and why that single ratio has shaped every numerical library for forty years.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "scan",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These are the two axes as arithmetic: the bound on parallel time, the number of processors worth using, the exact operation counts of both scans, and the traffic that decides which one is actually faster. names the case your model got wrong. Several exercises assert that the work efficient version is not the fastest one, which is the memory traffic deciding rather than a comparison written backwards.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "scan",
+  "n": 1,
+  "title": "The bound on parallel time",
+  "text": "One inequality ties the two axes together, and it says the obvious thing precisely: you can spread the work out and you cannot spread the chain. Write , returning the upper bound on how long a parallel algorithm takes, given its work, its depth and the processor count. The bound is the work spread across the processors, plus the depth, since the chain cannot be spread. Round the division up, because a partial round still takes a step.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "scan",
+  "n": 2,
+  "title": "How many processors are worth having",
+  "text": "It is the parallelism of the algorithm, and it is a property of the algorithm rather than of the machine it runs on. Write , returning the largest processor count that still helps, given the work and the depth. Beyond work divided by depth the extra processors have nothing to do, because the chain is what remains. Truncate towards zero, and a depth of zero means there is no chain, so report the work.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "scan",
+  "n": 3,
+  "title": "What the depth optimal scan costs",
+  "text": "Its depth is optimal and its work is not, which is the trade the two axes exist to make visible. Write , returning how many operations the doubling distance scan performs, given the element count. Every round touches every element, and there are as many rounds as times the count can be doubled to reach it. A count of one needs no rounds at all.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "scan",
+  "n": 4,
+  "title": "What the work efficient scan costs",
+  "text": "Linear work, and the constant is three rather than one, which is why the comparison between the two algorithms depends on the size. Write , returning how many operations the two sweep scan performs, given the element count. Going up costs one less than the count in combinations. Coming down costs the same again, plus one exchange per combination. A count of one or zero costs nothing.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "scan",
+  "n": 5,
+  "title": "The scan itself",
+  "text": "The sequential version is three lines, and its apparent dependence on the previous output is exactly what associativity lets you break. Write , filling an output array with the exclusive prefix sums of an input array. The first output is zero, and each later one is the sum of every input before it. The arrays do not overlap.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "scan",
+  "n": 6,
+  "title": "Where each worker writes",
+  "text": "Any time parallel workers produce a variable number of outputs and the results have to end up packed, the answer is a scan of the counts. Write , returning where a worker's output begins, given each worker's output count and which worker is asking. Every worker's outputs land contiguously, in worker order, with no gaps. This is the scan of the counts, which is the reason the primitive matters.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "scan",
+  "n": 7,
+  "title": "What limits a scan in practice",
+  "text": "At the top level the objective function is bytes moved, which is why the work efficient algorithm is not the fastest one. Write , returning how long a scan takes in microseconds, given the element count, the bytes per element, how many times the algorithm reads or writes the whole array, and the bandwidth in megabytes per second. A scan does almost no arithmetic per element, so the time is entirely the traffic divided by the bandwidth. Truncate towards zero.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "scan",
+  "n": 8,
+  "title": "Which scan to use where",
+  "text": "The same problem gets different answers at different levels of the machine, which is the actual lesson rather than either algorithm. Write , choosing a scan algorithm, given how many elements there are and whether the workers exist regardless of whether they are given work. Return 0 for the depth optimal version and 1 for the work efficient one. When the workers exist anyway, the extra work costs nothing and the shallower algorithm wins. Otherwise the work efficient one wins once there is enough data for the difference to matter, which here means more than one round's worth.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "scan",
+  "n": 1,
+  "title": "Why does parallel complexity need two numbers?",
+  "text": " Using one where two are needed is the most common mistake in the subject, because an algorithm can look excellent on either axis alone. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "scan",
+  "n": 2,
+  "title": "What is depth?",
+  "text": " No amount of hardware makes it smaller, which is why it is the term that survives when everything else is divided. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "scan",
+  "n": 3,
+  "title": "What bounds the time on a given number of processors?",
+  "text": " With enough processors the time approaches the depth rather than approaching zero, which is what makes it a term in a sum. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "scan",
+  "n": 4,
+  "title": "How many processors are worth applying?",
+  "text": " It is a property of the algorithm rather than of the machine, and beyond it you are adding idle cores. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "scan",
+  "n": 5,
+  "title": "What does work efficient mean?",
+  "text": " It is the axis people forget while reporting the other one, which is how an algorithm ends up burning several times the energy to finish no sooner. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "scan",
+  "n": 6,
+  "title": "What is the classic mistake in parallel algorithm design?",
+  "text": " The two scans are the standard example of it, and the numbers are exact. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "scan",
+  "n": 7,
+  "title": "If a fraction of the work is inherently serial, what caps the speedup?",
+  "text": " The rebuttal is that in practice the problem grows with the machine, so the fraction shrinks. Which applies depends on whether you have a fixed problem or a fixed time budget. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "scan",
+  "n": 8,
+  "title": "What property must an operator have for a scan to be parallelisable?",
+  "text": " Moving the brackets is enough to compute the whole thing in a logarithmic number of rounds, and it is the move behind every parallel reduction and sort. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "scan",
+  "n": 9,
+  "title": "What is an exclusive scan's first output?",
+  "text": " The inclusive version includes the current element and the exclusive one does not, which is the whole difference between them. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "scan",
+  "n": 10,
+  "title": "When is the answer to a parallel problem a scan?",
+  "text": " The scan of the counts tells each worker where its own output starts, and that one idea is filtering, sparse formats, radix sort and graph traversal. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "scan",
+  "n": 11,
+  "title": "What are the costs of the doubling distance scan?",
+  "text": " Every round touches every element, and it needs two buffers because an element reads a value another element is in the middle of writing. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "scan",
+  "n": 12,
+  "title": "What are the costs of the two sweep scan?",
+  "text": " It builds a balanced tree in the array, combines upward, then pushes partial results back down, and it needs no second buffer. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "scan",
+  "n": 13,
+  "title": "Counted on a real implementation at a million elements, the two scans differed by how much?",
+  "text": " One column came to exactly three times one less than the count and the other to exactly the count times its logarithm. The theory is precisely right here, not roughly. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "scan",
+  "n": 14,
+  "title": "Why is the work efficient scan not what production libraries use?",
+  "text": " At the top level the objective function is bytes moved rather than operations performed, which is the lesson that stopping at the textbook algorithm hides. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "scan",
+  "n": 15,
+  "title": "Inside a warp, which scan is used and why?",
+  "text": " The same problem gets different answers at different levels of the machine, which is more useful than either algorithm on its own. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
   "slug": "frame-budget",
   "anchor": "one-nanosecond-per-pixel",
   "title": "One nanosecond per pixel",

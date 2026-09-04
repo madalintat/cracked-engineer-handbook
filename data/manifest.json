@@ -1627,7 +1627,8 @@
     "cache"
    ],
    "neededBy": [
-    "layout"
+    "layout",
+    "scan"
    ],
    "minutes": 55
   },
@@ -1687,12 +1688,15 @@
    "phase": "scale",
    "accent": "azure",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1454,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "cost-model"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "blas",
@@ -2883,9 +2887,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 61,
-  "words": 92978,
-  "exercises": 488,
-  "drills": 915
+  "ready": 62,
+  "words": 94432,
+  "exercises": 496,
+  "drills": 930
  }
 }
