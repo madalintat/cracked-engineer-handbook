@@ -15031,6 +15031,246 @@
  },
  {
   "t": "section",
+  "slug": "layout",
+  "anchor": "two-arrangements",
+  "title": "Two arrangements",
+  "text": "Records with several fields can be stored two ways. An array of records puts each record's fields together and the records one after another. A record of arrays puts each field in its own array, so all the first fields are contiguous, then all the second fields, and so on. For a loop that reads every field of one record at a time, the first is obviously right. For a loop that reads one field of every record, which is what most loops in a real program do, it is exactly wrong: every line fetched carries one useful value and the rest of a record you did not ask about.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "layout",
+  "anchor": "the-measurement-and-the-parameter-that-moves",
+  "title": "The measurement, and the parameter that moves",
+  "text": "Here is the same program, summing one four byte field over a few million records, with only the record size changed. It was run on two machines whose cache lines differ, which is what makes the table an experiment rather than an anecdote. Read it as three separate facts. Below the line size there is no penalty at all. Both arrangements deliver several records per line, so both are limited by bandwidth on data you were going to fetch anyway. At sixty four bytes the two machines disagree, and the disagreement is the proof. On the machine with sixty four byte lines the record is exactly one line, so each line yields one useful value out of sixteen, and the penalty is large. On the machine with a hundred and twenty eight byte line the same record still gives two useful values per line, and the penalty is small. At a hundred and twenty eight bytes the machines swap places. Now the larger line holds exactly one record, one useful value per line against thirty two the other way, and the ratio is twenty times. The other machine has been in the straddling regime since sixty four bytes and grows only gently. Nothing in the source distinguished those runs. Nothing in the complexity did either",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "layout",
+  "anchor": "the-bytes-you-did-not-ask-for",
+  "title": "The bytes you did not ask for",
+  "text": "Two more things move the same number, and both are free. The first is padding. A field has to sit at an address that is a multiple of its alignment, and the whole record has to be a multiple of its own alignment so that an array of them works. The compiler inserts the gaps, and the order the fields are declared in decides how many: A third of the memory, recovered by moving one line. The rule is to declare fields in decreasing order of size. C and C++ will never do it for you, because the layout is the interface that separately compiled code agrees on; some other languages do it for you unless you ask them not to, for exactly the same reason in reverse. Padding matters because it is transported. Every wasted byte occupies bandwidth, cache capacity and address translation reach, and in the table above the record size was the whole experiment. The second is the opposite case, and it is worth holding beside the first so neither is applied blindly. When two threads write to different variables that happen to share a line, that line moves between the cores on every write, at the cost of the coherence protocol, for no reason that exists in the program. The fix there is to pad the variabl",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "layout",
+  "anchor": "when-the-array-of-records-is-right",
+  "title": "When the array of records is right",
+  "text": "None of this makes one arrangement correct in general, and applying it as a doctrine is how people end up with a slower program and more code. The penalty is a property of the access pattern, not of the layout. A loop that reads every field of a record, transforms it and writes it back is using the whole line either way, and splitting the fields into separate arrays gives it several streams to track instead of one, several address calculations instead of one, and no benefit at all. The same is true of code that touches one record at a time in an unpredictable order, where the record is the unit of work and keeping its fields together is what you want. So the question is not which layout is better. It is which fields are read together, by the loop that runs most often, and the answer is a fact about the program rather than a preference.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "layout",
+  "anchor": "where-this-became-an-architecture",
+  "title": "Where this became an architecture",
+  "text": "Game engines arrived at the same conclusion and built their state around it. The approach stores the world as one array per component rather than one array of objects: positions together, velocities together, health together, with an entity being an index rather than a record. Three arguments, and only the first is the one above. A system touches few components. Physics reads position and velocity and writes position. Walking an array of whole objects drags the mesh handle, the artificial intelligence state and the inventory through the cache to get at twenty four useful bytes of a record that is easily two hundred and fifty six. That is the bottom row of the table, and worse. Dispatch through a table of function pointers disappears. A loop over objects calling a method on each is an indirect call per object, an unpredictable branch per object, and a pointer chase per object. A loop over one component array with one body is none of those, and it can be turned into vector instructions. And storing entities with the same set of components together makes iteration dense, so a system asking for everything with a position and a velocity walks contiguous memory with no test per entity. T",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "layout",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "The penalty for a bad arrangement is the fraction of each fetched line you use. It is zero while the record is smaller than a line, and it grows without limit once the record is larger. The same source measured 1.0 times, 3.66 times and 20.81 times on different machines and record sizes, with no change to the algorithm, the operations or the complexity. Declaring fields in decreasing size order removes padding, and padding is transported, so it costs bandwidth and cache capacity as well as memory. Pack for a single thread walking data, and pad apart for several threads writing nearby. Both follow from the line being the unit of transfer. Next is the same argument for control flow rather than data: what a branch costs when the machine cannot guess it, and why that changes which algorithm is fastest.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "layout",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These compute the arrangement's cost directly: useful bytes per line, the predicted ratio between two arrangements, the size of a record with its padding, and the boundary at which two threads stop interfering. names the case your model got wrong. Several exercises assert that a record smaller than a line has no penalty at all, which is the effect switching on at the line size rather than a formula that forgot a case.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 1,
+  "title": "Useful bytes per line",
+  "text": "The penalty is the ratio of what arrives to what you use, and this is the numerator. Write , returning how many bytes of a fetched cache line a loop actually uses, given the record size, the size of the one field being read, and the line size. Records are packed contiguously and the field appears once per record. When the record is larger than the line, a line carries at most one field, and sometimes none at all if the field is not on it; count the average by assuming one field per record's worth of lines.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 2,
+  "title": "The ratio the arrangement costs",
+  "text": "The penalty is a ratio of useful bytes, so it can be predicted from three numbers before anything is measured. Write , returning how many times slower reading one field from an array of records is than reading it from an array of that field alone, as a percentage, given the record size, the field size and the line size. A ratio of 100 means no penalty at all. Truncate towards zero.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 3,
+  "title": "Where the effect switches on",
+  "text": "The effect does not exist until the record reaches the line size, and knowing the boundary stops the technique being applied where it pays nothing. Write , deciding whether splitting the fields into separate arrays can help at all, given the record size and the line size. It can help only when a line holds fewer records than it has room for useful fields, which is to say when the record is at least as large as the line. Below that, both arrangements deliver several records per line.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 4,
+  "title": "What the padding costs",
+  "text": "The order fields are declared in changes the size of the record, and the size of the record was the entire independent variable in the measurement. Write , returning the size of a record, given its fields' sizes in declaration order. Each field starts at an address that is a multiple of its own size, which is its alignment here, so padding is inserted before a field that would otherwise straddle. The whole record is then rounded up to a multiple of the largest field's alignment, so that an array of them keeps every field aligned. Field sizes are powers of two, and there are at most sixteen of ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 5,
+  "title": "Declaring them the other way round",
+  "text": "Decreasing size order is not a heuristic here; it is the order that removes every internal gap. Write , returning the smallest size a record can have, given its fields, by choosing the best declaration order. The fields may be reordered freely. Sizes are powers of two.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 6,
+  "title": "The other direction",
+  "text": "The same fact about lines, pointing the other way: pack for one thread walking data, and pad apart for several threads writing. Write , deciding whether two variables share a cache line, given their addresses and the line size. Two variables on the same line, written by different threads, move that line between the cores on every write, for no reason that exists in the program.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 7,
+  "title": "Which loop the layout should serve",
+  "text": "The penalty is a property of the access pattern rather than of the layout, which is why this is a question about the program. Write , deciding whether to split the fields into separate arrays, given the record size, the line size, how many of the record's fields the hot loop reads, and how many fields the record has. Splitting helps when the record is at least a line and the loop reads fewer than all of the fields. A loop that reads every field uses the whole line either way.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "layout",
+  "n": 8,
+  "title": "What a loop over objects costs per element",
+  "text": "The layout argument and the control flow argument are the same argument, which is why replacing objects with arrays removes three costs at once. Write , returning how many extra memory dependent events a loop over an array of pointers to objects pays per element, compared with a loop over one contiguous array of values. Each element costs a pointer chase to reach the object, a load of the dispatch table pointer, and an indirect call whose target the machine cannot predict when the types differ. When every object has the same type the call is predictable and costs nothing extra.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 1,
+  "title": "What sets the penalty for a bad data arrangement?",
+  "text": " A line comes back whole whatever fraction you asked for, so a line holding one useful value instead of sixteen was paid for sixteen times over. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 2,
+  "title": "An array of records against an array per field: which suits a loop reading one field of every record?",
+  "text": " That loop is what most loops in a real program do, and with records interleaved every line carries one useful value and the rest of a record nobody asked about. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 3,
+  "title": "Below what size does the arrangement stop mattering?",
+  "text": " It is why a twelve byte record measured no penalty at all on either machine, and why the technique pays nothing when applied there. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 4,
+  "title": "The same source measured 3.66 times on one machine and 1.47 on another, for the same record size. What differed?",
+  "text": " A sixty four byte record is exactly one line on one machine and half a line on the other, which is what makes the table an experiment rather than an anecdote. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 5,
+  "title": "Why does a struct's field order change its size?",
+  "text": " A char, a long and a char is twenty four bytes; the long first is sixteen. A third of the memory recovered by moving one line. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 6,
+  "title": "What is the rule for ordering fields?",
+  "text": " With the largest first every later field is already aligned, so the only padding left is the rounding at the end. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 7,
+  "title": "Why does C never reorder your fields for you?",
+  "text": " Some other languages do reorder unless you ask them not to, for exactly the same reason stated in reverse. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 8,
+  "title": "Why does padding cost more than the memory it wastes?",
+  "text": " In the measurement, the record's size was the entire independent variable, and padding is part of it. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 9,
+  "title": "Two threads write to different variables on the same cache line. What happens?",
+  "text": " It is the same fact about lines as everything else in the unit, pointing the other way. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 10,
+  "title": "So what is the rule?",
+  "text": " Both follow from the line being the unit of transfer, and applying either one everywhere is how the technique starts costing more than it saves. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 11,
+  "title": "When is an array of records the right choice?",
+  "text": " A loop using the whole record uses the whole line either way, and splitting gives it several streams to track for nothing. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 12,
+  "title": "What decides which layout to use?",
+  "text": " It is a fact about the program rather than a preference, which is why the question is never which layout is better in general. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 13,
+  "title": "Why does an entity component layout store one array per component?",
+  "text": " Physics wants twenty four bytes of a record that is easily two hundred and fifty six, which is the bottom row of the table and worse. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 14,
+  "title": "What does a loop over an array of object pointers cost per element that a flat loop does not?",
+  "text": " A flat loop over one component array with one body pays none of the three, which is also why it can be turned into vector instructions. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "layout",
+  "n": 15,
+  "title": "What is the underlying design principle?",
+  "text": " The last one is a conclusion that happens to follow often, and stating it as the principle is what turns the technique into a doctrine that misfires. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
   "slug": "frame-budget",
   "anchor": "one-nanosecond-per-pixel",
   "title": "One nanosecond per pixel",
