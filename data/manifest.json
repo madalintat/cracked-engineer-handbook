@@ -810,7 +810,8 @@
     "universal"
    ],
    "neededBy": [
-    "addressing"
+    "addressing",
+    "codegen"
    ],
    "minutes": 50
   },
@@ -1454,7 +1455,9 @@
     "integers",
     "parsing"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "codegen"
+   ],
    "minutes": 55
   },
   {
@@ -1468,12 +1471,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1566,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "registers",
+    "ssa"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "interpreters",
@@ -2812,9 +2819,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 49,
-  "words": 74370,
-  "exercises": 392,
-  "drills": 735
+  "ready": 50,
+  "words": 75936,
+  "exercises": 400,
+  "drills": 750
  }
 }

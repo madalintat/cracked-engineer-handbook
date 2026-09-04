@@ -141,4 +141,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] 048 `ssa`, the middle end. Note, 8 exercises validated, 15 drills.
       Needs `integers`, because the note reads a widened induction variable
       and the reason it is legal is that signed overflow is undefined
-- [ ] 049 `codegen`, and the rest of Part IX
+- [x] 049 `codegen`, the back end. Selection as pattern matching, allocation
+      as graph colouring, and the two -O jumps that are permissions rather
+      than passes: strict aliasing and undefined signed overflow
+- [ ] 050 `interpreters`, and the rest of Part IX

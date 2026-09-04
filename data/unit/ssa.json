@@ -68,5 +68,7 @@
   "integers",
   "parsing"
  ],
- "neededBy": []
+ "neededBy": [
+  "codegen"
+ ]
 }

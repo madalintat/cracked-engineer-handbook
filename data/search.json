@@ -13295,6 +13295,246 @@
  },
  {
   "t": "section",
+  "slug": "codegen",
+  "anchor": "selection-is-pattern-matching-not-translation",
+  "title": "Selection is pattern matching, not translation",
+  "text": "An IR multiply is not a instruction, and on x86-64 it usually is not any multiply at all. Ask a compiler for and you get one instruction: The address calculation unit can compute for a scale of 1, 2, 4 or 8, and it can do it without touching the flags. So a multiply by five becomes an address that nobody dereferences. That is not a special case someone wrote down for the number five. The back end holds a set of patterns over IR shapes, each with a cost, and covers the IR with the cheapest set of patterns that fits. The classic formulation is tree pattern matching with dynamic programming over a grammar of instructions. LLVM does it per block with a directed acyclic graph and a matcher generated from declarative pattern files, and gcc does the same job with its own machine description. The consequence worth carrying is that the instruction you see is a consequence of a cost model, not a translation of what you wrote. Change the constant to 7 and the answer changes shape, because there is no scale of 6 and the cheapest cover becomes a shift and a subtract.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "codegen",
+  "anchor": "registers-are-a-colouring-problem",
+  "title": "Registers are a colouring problem",
+  "text": "The IR has as many values as it likes. The machine has sixteen general purpose registers, some of which are already spoken for. Deciding which value lives in which register is register allocation, and the classic formulation is exact. Build an interference graph: one node per live range, and an edge between two nodes whose live ranges overlap, which is to say they are both live at some point and therefore cannot share a register. Assigning registers to that graph is colouring it. That is NP complete in general, so what real allocators run is a heuristic in four steps. Simplify and select are the colouring. Coalesce is why most register to register moves disappear before you ever see the assembly, and spill is the admission that the graph did not fit. Simplify repeatedly removes any node with fewer than neighbours and pushes it on a stack. Such a node can always be coloured later, whatever its neighbours get, because it has fewer neighbours than there are colours. Coalesce merges two nodes joined by a copy, when merging cannot make the graph harder to colour. This is where register to register moves go. A you never see in the output was usually removed here rather than by a peephole",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "codegen",
+  "anchor": "scheduling-and-where-it-stopped-mattering",
+  "title": "Scheduling, and where it stopped mattering",
+  "text": "Instruction scheduling reorders instructions to keep the pipeline fed, guided by a model of how long each instruction takes and which ports it can issue on. It runs twice: once before allocation, to expose independent work, and once after, to clean up the code that spilling introduced. On an in-order machine this is most of the performance. On an out-of-order machine it matters much less, because the hardware reorders anyway across a window of a few hundred instructions. What the pre-allocation schedule still decides is how many values are live at once, which decides what the allocator sees, which decides how much spilling happens. It shapes the problem rather than solving it.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "codegen",
+  "anchor": "what-an-optimisation-level-actually-changes",
+  "title": "What an optimisation level actually changes",
+  "text": "Here is the part that is worth more than the rest of the unit. At almost nothing runs. Every variable lives in memory and is reloaded at every use, which is exactly what a debugger needs and is why the output is mostly stack traffic. At the cheap local passes run, and this is the level worth reading first: enough has happened to be interesting, and not so much that you cannot follow it. is what every distribution ships and adds the expensive interprocedural work, including inlining and, in modern gcc, vectorisation. adds transformations that trade code size for speed. is without the parts that grow the binary. is minus the passes that most confuse a debugger. None of that changes what your program means. Two of the jumps do, and they are not passes at all. They are permissions. The first is strict aliasing, on from . It says that two pointers of incompatible types do not refer to the same object, so the compiler may keep a value in a register across a store through an unrelated pointer type. Write through an pointer, then read through a pointer aliasing the same memory, and ask what comes back. The middle line is not a bug. It is the compiler reusing the value it had just stored, b",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "codegen",
+  "anchor": "the-last-pass-and-one-that-runs-at-link-time",
+  "title": "The last pass, and one that runs at link time",
+  "text": "Peephole optimisation is the final sweep over the instruction stream, rewriting short local patterns. A move from a register to itself disappears. An add of one may become an increment, or may not, depending on how the target models the flags. It is a small pass and it is the last chance to remove something the earlier passes could not see. Then the assembler emits object code with relocations where addresses are not known yet, and the linker resolves them. Two things there are worth knowing now. Link time optimisation is the middle end running again with every translation unit visible at once, which is what makes inlining across file boundaries possible, and that is usually where its win comes from. And the linker is where the story of this part continues: which definition wins, and what that costs at every call, is the next unit.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "codegen",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Instruction selection covers the IR with the cheapest set of patterns it has, so the instruction you read is the output of a cost model rather than a translation of your source. Register allocation is graph colouring with some nodes pre-coloured by the calling convention. Simplify, coalesce, spill and select, and the moves you never see were removed by coalescing. Scheduling shapes how many values are live at once, which matters more on an out-of-order machine than the ordering itself does. An optimisation level is mostly which passes run, but the two changes that alter what your program can do are permissions: strict aliasing at , and undefined signed overflow. adds more of them, in exchange for the standard.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "codegen",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These exercises model the allocator's decisions and the cost questions behind them, on small graphs given as adjacency and degree arrays, rather than calling into a real back end. names the case your model got wrong. Several exercises assert that a node with exactly neighbours cannot be simplified, which is the condition being strict rather than an off by one in the check.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "codegen",
+  "n": 1,
+  "title": "The node that can always be coloured",
+  "text": "The condition is strictly fewer, not fewer or equal, because a node with exactly as many neighbours as there are colours can have every colour taken. Write , returning how many nodes of an interference graph can be removed by the simplify step, given each node's degree and the number of available registers. A node with fewer neighbours than there are colours can always be coloured later, whatever its neighbours get. This counts only the first round, before any removal changes another node's degree.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "codegen",
+  "n": 2,
+  "title": "Simplify, until nothing moves",
+  "text": "The heuristic is cheap because removal is monotone: taking a node out never makes another node harder to colour. Write , returning how many nodes the simplify step removes in total, given the graph as an adjacency matrix. Removing a node lowers the degree of each of its neighbours, which can make them removable in turn. Repeat until no node of degree below is left. Return how many were removed; anything left over is a candidate for spilling. is by , row major, with non-zero when and interfere. It is symmetric and has no self edges.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "codegen",
+  "n": 3,
+  "title": "Which value goes to memory",
+  "text": "A use inside a loop is paid every iteration, so weighting by depth is what stops the allocator spilling the one value the hot loop needs. Write , returning the index of the value a colouring allocator should spill, given how many times each value is used and the loop depth of each use site. The cost of spilling a value is its use count weighted by loop depth, ten to the power of the depth, divided by its degree in the interference graph. Spill the lowest cost. On a tie, spill the lower index. Every value here has a degree of at least one.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "codegen",
+  "n": 4,
+  "title": "The move that disappears",
+  "text": "Coalescing is where register to register moves go, and the test has to be conservative because a merge that makes the graph uncolourable costs a spill. Write , deciding whether two nodes joined by a copy may be merged, using the conservative test: the merged node is safe when it has fewer than neighbours of significant degree, where significant means degree at least . You are given how many neighbours of significant degree each node has, and how many of those they share.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "codegen",
+  "n": 5,
+  "title": "Live ranges that cannot share",
+  "text": "An edge in the interference graph is exactly this question, asked for every pair, and the half open convention is what makes the common case free. Write , deciding whether two live ranges overlap, given each as a half open interval of instruction numbers. A range covers . Two ranges interfere when they share at least one instruction. A range that ends exactly where another begins does not interfere, which is what lets a value die into the register the next one is about to use.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "codegen",
+  "n": 6,
+  "title": "Selecting the cheapest cover",
+  "text": "The instruction you read is the output of a cost model over patterns, not a translation of the operator you wrote. Write , returning how many instructions a back end needs to multiply by a small constant, using only the address unit and shifts. One instruction covers a multiply by 1, 2, 3, 4, 5, 8 or 9, because the address unit computes a base plus an index scaled by 1, 2, 4 or 8. A power of two is one shift. Anything else needs two. A multiply by 0 needs one instruction to produce zero.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "codegen",
+  "n": 7,
+  "title": "What the level lets the compiler believe",
+  "text": "An optimisation level does not change what the program means. It changes how much of what you already promised the compiler is allowed to use. Write , deciding whether a compiler must reload a value from memory after a store through a pointer of a different type, given the optimisation level and whether strict aliasing was turned off. Strict aliasing is on from level 2 upwards, unless it was explicitly disabled. When it is on, the two pointers are assumed not to refer to the same object, so the value already in a register may be reused and no reload is needed.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "codegen",
+  "n": 8,
+  "title": "The last sweep",
+  "text": "It is the last chance to remove something the earlier passes could not see, and it is local by construction. Write , returning how many instructions are left after a peephole pass removes moves whose source and destination are the same register. Each instruction is given as an opcode and two registers. Opcode 0 is a move, from to . Any other opcode is left alone whatever its registers are.",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "codegen",
+  "n": 1,
+  "title": "Why does <code>x * 5</code> often compile to an address calculation?",
+  "text": " It is one instruction, and it does not touch the flags. It falls out of a cost model over patterns rather than being a rule written down for the number five. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "codegen",
+  "n": 2,
+  "title": "What kind of problem is instruction selection?",
+  "text": " If it were a translation there would be nothing to decide. The classic formulation is pattern matching over a grammar of instructions with costs. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "codegen",
+  "n": 3,
+  "title": "What is an edge in an interference graph?",
+  "text": " Overlapping means both are live at some point. A copy between two values is the opposite: it is the reason to try to give them the same register. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "codegen",
+  "n": 4,
+  "title": "Assigning <code>k</code> registers to an interference graph is which problem?",
+  "text": " That is why real allocators run a heuristic rather than an exact algorithm. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "codegen",
+  "n": 5,
+  "title": "With <code>k</code> colours, which node can the simplify step always remove?",
+  "text": " A node with exactly  k  neighbours can have every colour taken. Strictly fewer means a colour is guaranteed to be free whatever the neighbours get. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "codegen",
+  "n": 6,
+  "title": "What does coalescing do?",
+  "text": " It is where register to register moves go. A move you never see in the output was usually removed here rather than by a peephole pass. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "codegen",
+  "n": 7,
+  "title": "Why is the coalescing test conservative?",
+  "text": " Removing one instruction is a small win, and adding memory traffic to a loop is a large loss, so the test errs towards refusing. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "codegen",
+  "n": 8,
+  "title": "When an allocator has to spill, how does it choose the victim?",
+  "text": " A use inside a loop is paid every iteration. Ignoring depth spills the one value the hot loop needs, which is the decision that makes the function slower. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "codegen",
+  "n": 9,
+  "title": "Which registers does the allocator not get to choose?",
+  "text": " It is colouring a graph in which some nodes already have their colour, which is most of what the textbook version leaves out. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "codegen",
+  "n": 10,
+  "title": "An x86-64 core renames its sixteen architectural registers onto a much larger physical file. So why does register allocation still matter?",
+  "text": " The machine can keep far more than sixteen values in flight. What it cannot do is make a spill and reload disappear. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "codegen",
+  "n": 11,
+  "title": "Where does instruction scheduling still matter on an out-of-order machine?",
+  "text": " It shapes the problem rather than solving it. The hardware reorders across a window of a few hundred instructions; it cannot undo a spill. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "codegen",
+  "n": 12,
+  "title": "Why is <code>-O1</code> the level to start reading assembly at?",
+  "text": "  -O0  output is mostly stack traffic, because every variable lives in memory.  -O2  output is dominated by transformations that need explaining first. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "codegen",
+  "n": 13,
+  "title": "What does strict aliasing, on from <code>-O2</code>, permit?",
+  "text": " It is what lets a value stay in a register across a store through an unrelated pointer type, which is why the same program prints a different number at  -O0  and  -O2 . ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "codegen",
+  "n": 14,
+  "title": "A program prints 0 at <code>-O0</code>, 1 at <code>-O2</code>, and 0 at <code>-O2 -fno-strict-aliasing</code>. What happened?",
+  "text": " The middle line is a promise being kept. The third line is the same program with the promise withdrawn, and it costs a reload. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "codegen",
+  "n": 15,
+  "title": "What does <code>-Ofast</code> add on top of <code>-O3</code>?",
+  "text": " Floating point addition is not associative, so reassociating it changes results. It can be a large win and it is not something to ship without knowing which promise was given away. ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",
