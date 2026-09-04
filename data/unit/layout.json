@@ -61,5 +61,7 @@
  "needs": [
   "cost-model"
  ],
- "neededBy": []
+ "neededBy": [
+  "branches"
+ ]
 }

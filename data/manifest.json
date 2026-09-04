@@ -945,6 +945,7 @@
     "atomics",
     "interpreters",
     "measurement",
+    "branches",
     "frame-budget"
    ],
    "minutes": 55
@@ -1648,7 +1649,9 @@
    "needs": [
     "cost-model"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "branches"
+   ],
    "minutes": 55
   },
   {
@@ -1662,12 +1665,16 @@
    "phase": "scale",
    "accent": "azure",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1484,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "pipeline",
+    "layout"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "scan",
@@ -2876,9 +2883,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 60,
-  "words": 91494,
-  "exercises": 480,
-  "drills": 900
+  "ready": 61,
+  "words": 92978,
+  "exercises": 488,
+  "drills": 915
  }
 }

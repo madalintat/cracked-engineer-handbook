@@ -76,6 +76,7 @@
   "atomics",
   "interpreters",
   "measurement",
+  "branches",
   "frame-budget"
  ]
 }

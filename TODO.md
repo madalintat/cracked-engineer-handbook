@@ -173,4 +173,11 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
       exercises need a deployed GPU runner before they can be shipped. Writing
       them without one would put eight unchecked exercises per unit into the
       book, which is the failure this pipeline exists to prevent
-- [ ] Parts XI to XIX, 56 units still stubs
+## 10. Part X, algorithms on real hardware
+
+- [x] 055 `cost-model`, 056 `layout`, 057 `branches`. The three that establish
+      the second cost model: what Big-O leaves out, what the arrangement of
+      data is worth, and what a branch costs when the machine cannot guess it
+- [ ] 058 `scan` onwards, and Parts XI to XIX
+
+More than half the track is written now: 61 of 122 units.

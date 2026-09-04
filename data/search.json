@@ -15271,6 +15271,254 @@
  },
  {
   "t": "section",
+  "slug": "branches",
+  "anchor": "the-benchmark-that-stopped-working",
+  "title": "The benchmark that stopped working",
+  "text": "Same loop, same threshold, two runs on the same data sorted and unsorted: No effect at all. The assembly says why. The compiler turned the loop into vector instructions: a comparison that produces a per lane mask, and a masked select. Four elements per instruction and no control flow whatsoever. There is no branch left to predict. Turn the vectoriser off and it still does not reproduce. The compiler converts the scalar loop too, into a compare and a conditional select. The only branch remaining is the loop back edge, which is taken every iteration but the last. The compiler already applied the fix that the famous answer tells you to apply by hand.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "branches",
+  "anchor": "making-the-branch-real",
+  "title": "Making the branch real",
+  "text": "To see the effect you have to give the compiler a branch it cannot remove: a call it cannot see through, with a side effect it cannot prove absent. Now it is there, and close to the original result on one machine. Notice that the two machines disagree by a factor of three on the size of the penalty. A shorter pipeline and a better predictor make a mispredict cheaper, so the cost of a wrong guess is a parameter of the microarchitecture rather than a constant of computing. The order to learn this in is the order above. Run the classic benchmark and see nothing. Read the assembly and find the conditional select. Defeat the optimisation and watch the effect appear. Then conclude the useful thing: compilers do branchless conversion for you on simple loops, and the skill worth having is knowing when they cannot, which is when the branch body has side effects, calls something opaque, or is too large to be worth converting.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "branches",
+  "anchor": "the-ways-to-remove-a-branch",
+  "title": "The ways to remove a branch",
+  "text": "There are five, and they are worth knowing by shape rather than by name. A conditional move is a single instruction that picks one of two values. You do not usually write it; you nudge the compiler towards it with a conditional expression or a minimum. Arithmetic masking builds the same selection out of bit operations. Turn the condition into a mask of all ones or all zeros, and the selection is an and, an and with the complement, and an or. It needs no cooperation from the compiler and works in any language with integers. Predication by increment turns a counted branch into arithmetic: adding the condition itself, since a comparison produces zero or one. This is the trick inside modern sorting implementations for partitioning. A table lookup replaces a branch with an index. It trades a possible mispredict for a possible cache miss, which is usually a bad trade unless the table is small enough to stay resident. And per lane masking in vector instructions is the same idea in the register width: a mask register selects which lanes take effect. It is the reason a loop with a condition inside it can be vectorised at all.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "branches",
+  "anchor": "why-branchless-is-not-always-better",
+  "title": "Why branchless is not always better",
+  "text": "Here is the caveat that decides when to use any of the above. A conditional move converts a control dependency into a data dependency. A branch the predictor gets right costs nothing at all, because the machine continues past it speculatively and is proved correct. A conditional move always costs its instruction, and worse, it sits in the dependency chain: nothing after it can proceed until it has resolved. So the rule is a comparison of two costs. Branchless wins when the branch is unpredictable, roughly beyond one wrong guess in ten. Branchless loses when the branch is predictable, because you have replaced something free with something that lengthens the chain. This is why compilers sometimes emit a branch where you expected a move, why a higher optimisation level can occasionally make code slower, and why profile guided optimisation exists: the compiler is guessing at how often the branch is wrong, and a profile stops it guessing.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "branches",
+  "anchor": "the-perfect-storm",
+  "title": "The perfect storm",
+  "text": "Binary search is the worst case for all of this at once. Every comparison eliminates exactly half the remaining space, which is the definition of a coin flip, so every branch is maximally unpredictable and there are about log n of them per query. Every probe depends on the previous comparison, so the accesses form a dependent chain and none of them can overlap. And the probes are maximally spread: the first is the middle, then a quarter, then an eighth, each landing on a fresh cache line for the first several steps. Three fixes exist, and their measurements are the point of this unit. Removing the branch alone buys very little, between seven and twenty five percent. The mispredicts are real and they overlap with the cache misses, which dominate. Fixing the control flow without fixing the memory barely helps. Changing the layout buys more than twice. The Eytzinger arrangement stores the tree breadth first in an array, so the root is at index one and the children of any node are at twice its index and twice plus one. The search becomes a branchless loop that multiplies the index by two and adds the comparison. The gain is locality: the top of the tree, which every query touches, is p",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "branches",
+  "anchor": "the-result-worth-being-changed-by",
+  "title": "The result worth being changed by",
+  "text": "Look at the last column. Prefetching, on the same code, is a sevenfold loss at a thousand elements, break even at four million, and a twofold win at sixteen million. The reason is exactly the two regimes of the previous unit. When the data fits in cache there is nothing to prefetch, so every prefetch is a wasted instruction and wasted bandwidth on a line you already have. When it does not fit, the prefetch converts a serial chain of dependent misses into several misses in flight at once, which is the only lever available. Combined, the layout change and the prefetch are nearly five times faster than the textbook algorithm at sixteen million elements, and the textbook algorithm is faster than the optimised one at a thousand. An optimisation that swings from seven times worse to twice as good, on identical source, with only the input size changing, is the best inoculation available against applying a technique because it is known to be fast.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "branches",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "The branch predictor is part of your cost model. A branch that is guessed right is free and one that is guessed wrong costs the pipeline, and the size of that cost differs threefold between machines. The famous sorted array benchmark does not reproduce because the compiler already removed the branch. Reading the assembly is how you find that out, and knowing when the compiler cannot do it is the transferable skill. Branchless code wins when the branch is unpredictable and loses when it is predictable, because a conditional move is never free and a predicted branch is. Binary search is unpredictable branches, dependent misses and maximal spread all at once. Fixing only the branches barely helps; fixing the layout more than doubles it; and prefetching is a large loss or a large win depending entirely on whether the data fits in the cache. Next is what happens when the work can be spread across many cores: how to measure a parallel algorithm on two axes rather than one, and the primitive that turns irregular work into regular work.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
+  "slug": "branches",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the decisions the unit describes: what a mispredict costs, when to go branchless, the arithmetic that selects without a branch, and the index walk of a breadth first tree. names the case your model got wrong. Several exercises assert that a perfectly predicted branch costs nothing, which is speculation working rather than a term missing from the sum.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 1,
+  "title": "What a branch costs",
+  "text": "The predictor is part of the cost model, and the free case being genuinely free is what makes the unpredictable case expensive by comparison. Write , returning how many cycles a loop spends on one branch, given the iteration count, the mispredict rate in percent and the penalty of a mispredict in cycles. A branch the machine guesses right costs nothing at all, because it continues past it speculatively and is proved correct. Only the wrong guesses cost anything.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 2,
+  "title": "When to remove the branch",
+  "text": "A conditional move converts a control dependency into a data dependency, so it is never free and a correctly predicted branch is. Write , deciding whether replacing a branch with a conditional move is worth it, given the mispredict rate in percent, the mispredict penalty in cycles, and the cost of the move in cycles. The branch costs its mispredict rate times its penalty per iteration. The move costs its own cycles every iteration, whether or not the condition was predictable. Choose the cheaper one, and keep the branch when they tie.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 3,
+  "title": "Selecting without a branch",
+  "text": "The same selection a conditional move makes, built out of operations that exist in every language, with no cooperation from the compiler. Write , returning one of two values according to a condition, using only arithmetic and bit operations. Turn the condition into a mask of all ones or all zeros, then combine. No comparison operator that produces control flow, and no conditional expression.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 4,
+  "title": "Counting without branching",
+  "text": "Predication by increment is the trick inside modern partitioning implementations, and it works because a comparison is already a number. Write , returning how many elements of an array are below a threshold, without any conditional control flow in the loop body. A comparison produces zero or one, so adding it directly is the count.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 5,
+  "title": "How unpredictable a search is",
+  "text": "Every branch being maximally unpredictable is not bad luck. It is the definition of the algorithm. Write , returning how many mispredicted branches a binary search performs per query on average, given the number of elements. Each comparison eliminates exactly half the remaining space, so each one is a coin flip and is wrong half the time. There are as many comparisons as times the count can be halved. Return the answer in hundredths of a branch.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 6,
+  "title": "Walking a breadth first tree",
+  "text": "The comparison is added to the index rather than steering a branch, which is what makes the loop branchless without any cleverness. Write , returning the next index in a search over a tree stored breadth first in a one indexed array, given the current index and whether the value there is below the key. The children of index k are at twice k and twice k plus one. Going right means the stored value was below the key.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 7,
+  "title": "How much of the tree stays resident",
+  "text": "The top of the tree is what every query touches, and packing it into the first few lines is the whole reason the layout wins. Write , returning how many levels of a breadth first tree fit in a cache, given the cache size in bytes and the size of one element. Level zero is the single root. Each level holds twice as many nodes as the one above it, so the first levels hold two to the power of , minus one, nodes. Count the levels that fit entirely.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "exercise",
+  "slug": "branches",
+  "n": 8,
+  "title": "When prefetching pays",
+  "text": "The same optimisation swung from a sevenfold loss to a twofold win on identical source, with only the input size changing. Write , deciding whether prefetching ahead in a search is worth it, given the data size in bytes and the cache size in bytes. When the data fits in the cache there is nothing to fetch, so every prefetch is a wasted instruction and wasted bandwidth. When it does not fit, the prefetch turns a serial chain of dependent misses into several in flight at once.",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 1,
+  "title": "What does a correctly predicted branch cost?",
+  "text": " That is why replacing a predictable branch with a conditional move makes code slower: you replaced something free with something that is not. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 2,
+  "title": "Why does the famous sorted array benchmark no longer reproduce?",
+  "text": " Turn the vectoriser off and it still does not reproduce, because the scalar loop is if-converted too. The compiler already applied the fix that the famous answer tells you to apply by hand. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 3,
+  "title": "What do you have to do to see the effect?",
+  "text": " Then it appears at nearly seven times on one machine, which is close to the original result. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 4,
+  "title": "Two machines measured 6.86 times and 2.08 times on the same test. What does that say?",
+  "text": " A shorter pipeline and a better predictor make a wrong guess cheaper, so the cost of one is a property of the machine you are on. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 5,
+  "title": "What is the transferable skill from the sorted array story?",
+  "text": " It cannot when the body has side effects, calls something opaque, or is too large to be worth converting. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 6,
+  "title": "What does arithmetic masking do?",
+  "text": " It needs no cooperation from the compiler and works in any language with integers, which is why it is worth knowing by shape. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 7,
+  "title": "What is predication by increment?",
+  "text": " It is the trick inside modern partitioning implementations, and it works because a comparison is already a number. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 8,
+  "title": "What is the cost of a conditional move that a branch does not have?",
+  "text": " Nothing after it can proceed until it resolves, where a predicted branch lets the machine run ahead. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 9,
+  "title": "When does branchless code win?",
+  "text": " It loses when the branch is predictable, which is why a compiler sometimes emits a branch where you expected a move. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 10,
+  "title": "Why does profile guided optimisation exist, in this context?",
+  "text": " It also explains why a higher optimisation level occasionally makes code slower: the guess changed. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 11,
+  "title": "Why is binary search the worst case for a predictor?",
+  "text": " The algorithm is designed so each answer carries exactly one bit, so a predictor cannot do better than chance. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 12,
+  "title": "Binary search made branchless, with no other change, bought how much?",
+  "text": " The mispredicts are real and they overlap with the cache misses, which dominate. Fixing the control flow without fixing the memory barely helps. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 13,
+  "title": "What does the Eytzinger layout change?",
+  "text": " In a sorted array the middle element and its two quarter points are megabytes apart, and every query touches all three. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 14,
+  "title": "Prefetching in that search measured how?",
+  "text": " When the data is resident there is nothing to fetch, so every prefetch is a wasted instruction. When it is not, the prefetch converts a serial chain of dependent misses into several in flight. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "drill",
+  "slug": "branches",
+  "n": 15,
+  "title": "What is the general lesson from that swing?",
+  "text": " The textbook algorithm is faster than the optimised one at a thousand elements and nearly five times slower at sixteen million, on identical source. ",
+  "part": "Algorithms"
+ },
+ {
+  "t": "section",
   "slug": "frame-budget",
   "anchor": "one-nanosecond-per-pixel",
   "title": "One nanosecond per pixel",
