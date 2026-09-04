@@ -367,7 +367,7 @@ async function viewUnit(slug) {
   const meta = HH.manifest.units.find(u => u.slug === slug);
   if (!meta) return viewNotFound(`#/unit/${slug}`);
   if (!meta.ready) {
-    return `<div class="wrap" style="padding:80px 0" data-accent="${esc(meta.accent)}">
+    return `<div class="wrap pad-lg" data-accent="${esc(meta.accent)}">
       <div class="kicker" style="font:600 var(--t-micro)/1 var(--mono);color:var(--ink-4)">
         <span style="color:var(--accent-ink)">${unitNo(meta)}</span>
         ${esc(meta.partRoman)} &middot; ${esc(meta.partTitle)}</div>
@@ -1030,7 +1030,7 @@ async function viewGlossary() {
   const data = await getJSON('data/glossary.json');
   const terms = data.terms || [];
   if (!terms.length) {
-    return `<div class="wrap" style="padding:80px 0"><h1>Glossary</h1>
+    return `<div class="wrap pad-lg"><h1>Glossary</h1>
       <p class="prose">No terms yet.</p></div>`;
   }
 
@@ -1051,7 +1051,7 @@ async function viewGlossary() {
     </section>`).join('');
 
   return `
-  <div class="wrap" style="padding:48px 0" data-accent="slate">
+  <div class="wrap pad" data-accent="slate">
     <h1>Glossary</h1>
     <p class="prose" style="max-width:var(--measure)">${terms.length} terms.
       Each says where it is used, so a definition is never a dead end.</p>
@@ -1137,7 +1137,7 @@ async function viewPaths(id) {
   const data = await getJSON('data/paths.json');
   const paths = data.paths || [];
   if (!paths.length) {
-    return `<div class="wrap" style="padding:80px 0"><h1>Paths</h1>
+    return `<div class="wrap pad-lg"><h1>Paths</h1>
       <p class="prose">No paths yet.</p></div>`;
   }
   if (!id) return pathsIndex(paths);
@@ -1157,12 +1157,13 @@ function pathsIndex(paths) {
       <h2>${esc(p.title)}</h2>
       <p class="pathblurb">${esc(p.blurb)}</p>
       <p class="pathwho"><span class="lbl">Who this is for</span>${esc(p.who)}</p>
-      <p class="note">${p.unitCount} units. ${p.readyCount} written so
-        far, ${hours(p.minutes)} of reading.</p>
+      <p class="note">${p.unitCount} units. ${p.readyCount
+        ? `${p.readyCount} written so far, ${hours(p.minutes)} of reading.`
+        : 'None of them written yet.'}</p>
     </a>`).join('');
 
   return `
-  <div class="wrap" style="padding:48px 0" data-accent="slate">
+  <div class="wrap pad" data-accent="slate">
     <p class="eyebrow">Paths</p>
     <h1>Routes through the track</h1>
     <p class="lede" style="max-width:var(--measure)">The track is one line
@@ -1215,16 +1216,19 @@ function onePath(p, all) {
     `<a href="#/paths/${esc(x.id)}">${esc(x.title)}</a>`).join('');
 
   return `
-  <div class="wrap" style="padding:48px 0" data-accent="slate">
+  <div class="wrap pad" data-accent="slate">
     <p class="eyebrow"><a href="#/paths">Paths</a></p>
     <h1>${esc(p.title)}</h1>
     <p class="lede" style="max-width:var(--measure)">${esc(p.blurb)}</p>
     <p class="prose" style="max-width:var(--measure)"><span class="lbl">Who
       this is for</span>${esc(p.who)}</p>
     <p class="note" style="margin-top:14px">${p.unitCount} units across
-      ${p.stages.length} stages. ${p.readyCount} are written, which is
-      ${hours(p.minutes)} of reading; the rest are listed here in their place
-      and are not written yet.</p>
+      ${p.stages.length} stages. ${p.readyCount
+        ? `${p.readyCount} are written, which is ${hours(p.minutes)} of
+           reading; the rest are listed here in their place and are not
+           written yet.`
+        : 'None are written yet, so this route is a plan rather than a path '
+          + 'you can walk today. They are listed here in their order.'}</p>
 
     ${assumed.length ? `
       <div class="passumes">
@@ -1253,7 +1257,7 @@ async function viewAtlas(id) {
   if (!HH.gpus) HH.gpus = await getJSON('data/modal-gpus.json').catch(() => null);
   const tables = data.tables || [];
   if (!tables.length) {
-    return `<div class="wrap" style="padding:80px 0"><h1>Atlas</h1>
+    return `<div class="wrap pad-lg"><h1>Atlas</h1>
       <p class="prose">No tables yet.</p></div>`;
   }
   const t = tables.find(x => x.id === id) || tables[0];
@@ -1288,7 +1292,7 @@ async function viewAtlas(id) {
    * it on a narrow one. An earlier version put all three ahead of the table
    * and pushed the data itself off the bottom of the screen. */
   return `
-  <div class="wrap" style="padding:48px 0" data-accent="slate">
+  <div class="wrap pad" data-accent="slate">
     <p class="eyebrow">Atlas</p>
     <h1>${esc(t.title)}</h1>
     <p class="lede" style="max-width:var(--measure)">${esc(t.blurb)}</p>
@@ -1451,7 +1455,7 @@ async function viewDrills(slug) {
 
   const best = Store.get(`drill.${slug}.best`, null);
   return `
-  <div class="wrap" data-accent="${esc(meta.accent)}" style="padding:40px 0;max-width:var(--measure)">
+  <div class="wrap reading pad" data-accent="${esc(meta.accent)}">
     <div class="kicker" style="font:600 var(--t-micro)/1 var(--mono);color:var(--ink-4);
          text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">
       <a href="#/unit/${esc(slug)}">${esc(meta.title)}</a> &middot; drills
@@ -1577,13 +1581,14 @@ function viewProgress() {
           <td><a href="#/unit/${esc(r.u.slug)}">${esc(r.u.title)}</a></td>
           <td>${r.read ? r.read + ' sections' : 'not yet'}</td>
           <td>${r.solved} / ${r.total}</td>
-          <td>${r.hints || ''}</td>
-          <td>${r.best === null ? '' : r.best + ' / 15'}</td>
+          <td>${r.hints || '<span class="none">none</span>'}</td>
+          <td>${r.best === null
+            ? '<span class="none">not yet</span>' : r.best + ' / 15'}</td>
         </tr>`).join('')}</tbody>
     </table></div>` : '';
 
   return `
-  <div class="wrap" style="padding:48px 0">
+  <div class="wrap pad">
     <h1>Progress</h1>
     ${untouched ? `
     <div class="empty">
@@ -1691,7 +1696,7 @@ async function viewSearch(q) {
   HH.lastQuery = query;
   const hits = query ? rank(idx, query) : [];
   return `
-  <div class="wrap" style="padding:48px 0;max-width:var(--measure)">
+  <div class="wrap reading pad">
     <h1>Search</h1>
     <form id="searchform" style="margin-top:18px">
       <label class="fld"><span>Across notes, sections and exercises</span>
@@ -1805,7 +1810,7 @@ function wireSearch() {
 function viewSettings() {
   const m = Store.get('modal', {}) || {};
   return `
-  <div class="wrap" style="padding:48px 0;max-width:var(--measure)">
+  <div class="wrap reading pad">
     <h1>Your GPU runner</h1>
     <p class="prose">Most of this handbook checks your work with tools that
       cost nothing: a simulator in this page, a public compiler service, and a
@@ -1974,7 +1979,7 @@ async function viewErrors() {
   }).join('');
 
   return `
-  <div class="wrap errors" style="padding:48px 0" data-accent="slate">
+  <div class="wrap errors pad" data-accent="slate">
     <h1>Errors</h1>
     <p class="prose" style="max-width:var(--measure)">Every verdict the four
       backends can report, and what each one usually means. A result row in the
@@ -2035,7 +2040,7 @@ function viewNotFound(hash) {
       if (d > 0 && d < bestD) { bestD = d; near = u; }
     }
   }
-  return `<div class="wrap notfound" style="padding:80px 0">
+  return `<div class="wrap notfound pad-lg">
     <img class="lost" src="assets/img/mascot-512.png" width="150" height="150"
          alt="The handbook mascot, an eagle in a hard hat, looking at a laptop">
     <h1>No such page</h1>
@@ -2055,7 +2060,7 @@ function viewNotFound(hash) {
 }
 
 function viewError(err) {
-  return `<div class="wrap" style="padding:80px 0">
+  return `<div class="wrap pad-lg">
     <h1>That did not load</h1>
     <p class="prose">${esc(err.message || String(err))}</p>
     <p><button class="btn" id="retry">Try again</button></p>
