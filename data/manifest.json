@@ -915,7 +915,8 @@
     "pipeline",
     "object-model",
     "virtual-memory",
-    "measurement"
+    "measurement",
+    "frame-budget"
    ],
    "minutes": 55
   },
@@ -940,7 +941,8 @@
    "neededBy": [
     "atomics",
     "interpreters",
-    "measurement"
+    "measurement",
+    "frame-budget"
    ],
    "minutes": 55
   },
@@ -2170,12 +2172,18 @@
    "phase": "parallel",
    "accent": "jade",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1445,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "cache",
+    "pipeline"
+   ],
+   "neededBy": [
+    "rasteriser"
+   ],
+   "minutes": 55
   },
   {
    "slug": "rasteriser",
@@ -2188,12 +2196,17 @@
    "phase": "parallel",
    "accent": "jade",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1550,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "frame-budget"
+   ],
+   "neededBy": [
+    "sm-shape"
+   ],
+   "minutes": 55
   },
   {
    "slug": "sm-shape",
@@ -2206,14 +2219,17 @@
    "phase": "parallel",
    "accent": "jade",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
+   "ready": true,
+   "words": 1604,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "rasteriser"
+   ],
    "neededBy": [
     "execution-model"
-   ]
+   ],
+   "minutes": 55
   },
   {
    "slug": "throughput",
@@ -2848,9 +2864,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 55,
-  "words": 83988,
-  "exercises": 440,
-  "drills": 825
+  "ready": 58,
+  "words": 88587,
+  "exercises": 464,
+  "drills": 870
  }
 }

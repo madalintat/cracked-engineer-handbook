@@ -163,4 +163,14 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
       the three generations of fuzzing with the edge hash and the bucketing,
       and coverage as a diagnostic that is blind to the missing check
 - [x] Part IX is complete: all 8 units of the tools part written and validated
-- [ ] Part X onwards, 67 units still stubs
+## 9. Part X, graphics and the GPU
+
+- [x] 086 `frame-budget`, 087 `rasteriser`, 088 `sm-shape`. The three units of
+      this part that are checked by a compiler rather than by a GPU, so all
+      three are fully validated here. The kernels path now opens its machine
+      stage with the two that explain where the shape came from
+- [ ] 089 and the other seven units of this part run on `modal`, so their
+      exercises need a deployed GPU runner before they can be shipped. Writing
+      them without one would put eight unchecked exercises per unit into the
+      book, which is the failure this pipeline exists to prevent
+- [ ] Parts XI to XIX, 56 units still stubs

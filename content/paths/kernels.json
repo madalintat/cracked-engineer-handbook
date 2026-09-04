@@ -9,6 +9,7 @@
     "clock-bus",
     "cmos-gate",
     "encoding",
+    "pipeline",
     "universal"
   ],
   "stages": [
@@ -42,8 +43,10 @@
     },
     {
       "title": "The machine itself",
-      "why": "Now the part that is actually a GPU: what an SM is, what a warp does when threads disagree, and where the memory hierarchy differs from the one you know.",
+      "why": "Now the part that is actually a GPU. It starts with the two units that explain where its shape came from, because the warp is a pixel block and knowing that makes the rest stop looking arbitrary: what an SM is, what a warp does when threads disagree, and where the memory hierarchy differs from the one you know.",
       "units": [
+        "frame-budget",
+        "rasteriser",
         "sm-shape",
         "throughput",
         "execution-model",

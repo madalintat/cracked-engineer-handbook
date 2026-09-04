@@ -75,6 +75,7 @@
  "neededBy": [
   "atomics",
   "interpreters",
-  "measurement"
+  "measurement",
+  "frame-budget"
  ]
 }

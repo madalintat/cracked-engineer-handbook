@@ -86,6 +86,7 @@
   "pipeline",
   "object-model",
   "virtual-memory",
-  "measurement"
+  "measurement",
+  "frame-budget"
  ]
 }

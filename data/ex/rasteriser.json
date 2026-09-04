@@ -1,0 +1,310 @@
+{
+ "slug": "rasteriser",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "The edge function",
+   "brief": "<p>Write <code>edge</code>, returning the value of an edge function at a point, given the two endpoints of the edge and the point.</p>\n<p>The value is <code>(x - x0) <em> (y1 - y0) - (y - y0) </em> (x1 - x0)</code>, which is the signed area of the triangle formed by the edge and the point. Its sign says which side of the line the point is on.</p>",
+   "kind": "output",
+   "concept": "Coverage is a sign test on three of these, and everything else in the rasteriser is a consequence of their form.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Two products and a subtraction. The order of the subtraction decides which side comes out positive, and the tests fix it."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Swapping the two products flips the sign of every result, so every point lands on the wrong side of every edge. A point exactly on the line gives zero either way, which is why that case cannot tell you the sign is wrong.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Each of these is a constant times x plus a constant times y plus a constant, with the constants fixed for the whole triangle. Everything else follows from that.</p>",
+   "starter": "long edge(long x0, long y0, long x1, long y1, long x, long y) {\n    return (y - y0) * (x1 - x0) - (x - x0) * (y1 - y0);\n}",
+   "tests": "#include <assert.h>\nlong edge(long, long, long, long, long, long);\nint main(void) {\n    /* Edge from (0,0) to (4,0). Points below have a positive value here. */\n    assert(edge(0, 0, 4, 0, 2, -1) == 4);\n    assert(edge(0, 0, 4, 0, 2, 1) == -4);\n    /* Exactly on the line. */\n    assert(edge(0, 0, 4, 0, 2, 0) == 0);\n    assert(edge(0, 0, 4, 0, 9, 0) == 0);\n    /* A vertical edge from (0,0) to (0,4). */\n    assert(edge(0, 0, 0, 4, 1, 2) == 4);\n    assert(edge(0, 0, 0, 4, -1, 2) == -4);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "One addition per pixel",
+   "brief": "<p>Write <code>step_x</code>, returning how much an edge function changes when the point moves one pixel to the right, given the edge's endpoints.</p>\n<p>The function is linear, so the change is a constant that does not depend on where you are.</p>",
+   "kind": "output",
+   "concept": "Being incremental is half of why this algorithm won: a step across a row is an addition rather than two multiplications.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Work out the difference between the function at x plus one and at x, and watch everything except one term cancel."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Moving in x changes the term containing x, and the constant it picks up is the edge's change in y. The other endpoint's x does not appear in the answer at all.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>One add per pixel per edge, three edges, and that is the whole inner loop. The vertical step is the same argument with the other sign.</p>",
+   "starter": "long step_x(long x0, long y0, long x1, long y1) {\n    (void)y0; (void)y1;\n    return x1 - x0;\n}",
+   "tests": "#include <assert.h>\nlong edge(long, long, long, long, long, long);\nlong step_x(long, long, long, long);\nlong edge(long x0, long y0, long x1, long y1, long x, long y) {\n    return (x - x0) * (y1 - y0) - (y - y0) * (x1 - x0);\n}\nint main(void) {\n    /* The step must be exactly what one pixel of movement adds. */\n    assert(step_x(0, 0, 4, 0) == edge(0, 0, 4, 0, 3, 5) - edge(0, 0, 4, 0, 2, 5));\n    assert(step_x(1, 2, 7, 9) == edge(1, 2, 7, 9, 4, 4) - edge(1, 2, 7, 9, 3, 4));\n    assert(step_x(0, 0, 0, 4) == 4);\n    assert(step_x(0, 0, 4, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Inside, by sign",
+   "brief": "<p>Write <code>inside</code>, deciding whether a point is inside a triangle, given the three edge function values at that point.</p>\n<p>A point is inside when all three have the same sign. A value of zero is on an edge and counts as inside here, so that the two triangles sharing an edge do not leave a hole between them.</p>",
+   "kind": "output",
+   "concept": "The whole coverage test is a comparison of signs, which is why it can be done for many pixels at once with no dependency between them.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Zero belongs to both sides, so it must not disqualify a point on its own."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Requiring all three to be strictly positive rejects every triangle wound the other way, and rejecting zero puts a hole along every shared edge.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Which sign means inside depends on the winding, which is why the test is about agreement rather than about being positive.</p>",
+   "starter": "int inside(long e0, long e1, long e2) {\n    return e0 > 0 && e1 > 0 && e2 > 0;\n}",
+   "tests": "#include <assert.h>\nint inside(long, long, long);\nint main(void) {\n    assert(inside(3, 5, 1) == 1);\n    assert(inside(-3, -5, -1) == 1);   /* the other winding */\n    assert(inside(3, -5, 1) == 0);\n    assert(inside(0, 5, 1) == 1);      /* on an edge */\n    assert(inside(0, -5, -1) == 1);\n    assert(inside(0, 0, 0) == 1);      /* degenerate, but not outside */\n    assert(inside(-1, 0, 1) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "The rule that stops the seam",
+   "brief": "<p>Write <code>fill_bias</code>, returning the bias to apply to an edge's initial value under the top left rule, given the edge's change in x and change in y.</p>\n<p>An edge is a top edge when it is exactly horizontal and its interior is below, which for this winding means the change in y is zero and the change in x is negative. An edge is a left edge when its change in y is positive.</p>\n<p>A top or left edge gets a bias of 0. Every other edge gets a bias of -1, so that a pixel exactly on it is excluded.</p>",
+   "kind": "output",
+   "concept": "Without this, a pixel on a shared edge is either shaded twice, which shows as a seam under blending, or not at all, which shows as a hole.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Two conditions, and either one is enough to keep the bias at zero."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A left edge and a top edge are two separate cases, and an edge that is neither is the one that has to give up its boundary pixels to its neighbour.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is exact only because the coordinates are fixed point integers. In floating point, exactly on the line is not a decision a comparison can make, and watertight rasterisation becomes impossible.</p>",
+   "starter": "int fill_bias(long dx, long dy) {\n    (void)dx;\n    return dy > 0 ? 0 : -1;\n}",
+   "tests": "#include <assert.h>\nint fill_bias(long, long);\nint main(void) {\n    assert(fill_bias(0, 5) == 0);     /* left edge */\n    assert(fill_bias(-4, 0) == 0);    /* top edge */\n    assert(fill_bias(4, 0) == -1);    /* horizontal, but the bottom */\n    assert(fill_bias(0, -5) == -1);   /* right edge */\n    assert(fill_bias(3, 2) == 0);     /* also a left edge */\n    assert(fill_bias(3, -2) == -1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Reaching your neighbour",
+   "brief": "<p>Write <code>neighbour</code>, returning the lane index a shader reads to compute a derivative, given its own lane index inside a two by two block and which direction it wants.</p>\n<p>Direction 0 is horizontal and direction 1 is vertical. Lanes are numbered 0 to 3 with 0 and 1 the top row and 2 and 3 the bottom.</p>",
+   "kind": "output",
+   "concept": "The whole addressing scheme is an exclusive or, which is why a derivative costs a subtraction rather than a differentiated shader.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "One bit crosses the block sideways and the next one crosses it downwards."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Adding one moves along the row and falls out of the block at the end of it. Flipping a bit stays inside the block from every lane, which is the property the hardware needs.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Every ordinary texture read does this for you, and the variants that take an explicit derivative exist for when the implicit one would difference against a lane that took a different branch.</p>",
+   "starter": "unsigned neighbour(unsigned lane, int vertical) {\n    return vertical ? lane + 2 : lane + 1;\n}",
+   "tests": "#include <assert.h>\nunsigned neighbour(unsigned, int);\nint main(void) {\n    assert(neighbour(0, 0) == 1);\n    assert(neighbour(1, 0) == 0);   /* and back again */\n    assert(neighbour(2, 0) == 3);\n    assert(neighbour(3, 0) == 2);\n    assert(neighbour(0, 1) == 2);\n    assert(neighbour(2, 1) == 0);\n    assert(neighbour(1, 1) == 3);\n    assert(neighbour(3, 1) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "The lanes that run for nothing",
+   "brief": "<p>Write <code>helper_lanes</code>, returning how many lanes of a two by two block execute the shader and have their results discarded, given the coverage as a four bit mask.</p>\n<p>A block with no coverage at all is not shaded, so it has no helper lanes. Otherwise every uncovered lane in the block runs anyway, because the covered ones need its values to compute a derivative.</p>",
+   "kind": "output",
+   "concept": "The waste is not an oversight. The uncovered lanes have to run, or the covered one cannot difference against them.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Count the zero bits, except in the one case where the block never runs."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A block with nothing covered is never dispatched, so it costs nothing. Counting its four uncovered lanes as helpers charges the shader for work that never happened.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The published figure for blocks along a triangle's edge is that between a quarter and three quarters of the shading is wasted, and the floor is one covered pixel in four.</p>",
+   "starter": "unsigned helper_lanes(unsigned mask) {\n    unsigned n = 0;\n    for (unsigned i = 0; i < 4; i++)\n        if (!((mask >> i) & 1u)) n++;\n    return n;\n}",
+   "tests": "#include <assert.h>\nunsigned helper_lanes(unsigned);\nint main(void) {\n    assert(helper_lanes(0xF) == 0);   /* fully covered */\n    assert(helper_lanes(0x1) == 3);   /* one pixel, three helpers */\n    assert(helper_lanes(0x3) == 2);\n    assert(helper_lanes(0x7) == 1);\n    assert(helper_lanes(0x0) == 0);   /* never dispatched */\n    assert(helper_lanes(0x9) == 2);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "How much of a small triangle is wasted",
+   "brief": "<p>Write <code>quad_efficiency</code>, returning the shading efficiency of a triangle as a percentage, given its area and perimeter in pixels.</p>\n<p>A triangle touches roughly its area over four, plus half its perimeter, blocks of four pixels. The efficiency is the area over four times the blocks touched, which simplifies to the area over the area plus twice the perimeter.</p>\n<p>Return the percentage, truncated. An area of zero has no efficiency to report, so return 0.</p>",
+   "kind": "output",
+   "concept": "Efficiency runs with the ratio of area to perimeter, so it collapses as triangles get small, whatever the shader does.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The blocks touched along the edges are what the perimeter contributes, and they are the term that stops mattering as the triangle grows."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Ignoring the perimeter says every triangle is fully efficient, which is the belief this exercise exists to correct. The edge blocks are the entire cost being measured.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A triangle eight pixels on a side wastes about two thirds of its shading. That is why very small triangles are the current crisis in rendering, and why at least one modern engine rasterises them in software instead.</p>",
+   "starter": "unsigned quad_efficiency(unsigned area, unsigned perimeter) {\n    (void)perimeter;\n    return area ? 100 : 0;\n}",
+   "tests": "#include <assert.h>\nunsigned quad_efficiency(unsigned, unsigned);\nint main(void) {\n    assert(quad_efficiency(0, 10) == 0);\n    /* A large triangle: area dominates. */\n    assert(quad_efficiency(10000, 400) == 92);\n    /* A small one: the perimeter dominates. */\n    assert(quad_efficiency(28, 24) == 36);\n    /* A long thin sliver: tiny area, large perimeter. */\n    assert(quad_efficiency(50, 400) == 5);\n    assert(quad_efficiency(100, 0) == 100);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Where thirty two comes from",
+   "brief": "<p>Write <code>warp_size</code>, returning how many lanes a warp holds, given how many blocks of pixels the hardware groups into one instruction issue slot.</p>\n<p>A block is two by two, so it is four pixels, and a warp is that many blocks.</p>",
+   "kind": "output",
+   "concept": "The number was not chosen for tidiness. It is the pixel block, replicated enough times to fill an issue slot.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The block is a square of side two, not a pair."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A two by two block is four pixels, so eight of them are thirty two lanes rather than sixteen. That factor is the whole point of the exercise.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Every person who has memorised that a warp is thirty two has memorised a fact about mipmap selection, arrived at through the derivative that a two by two block exists to provide.</p>",
+   "starter": "unsigned warp_size(unsigned quads) {\n    return quads * 2;\n}",
+   "tests": "#include <assert.h>\nunsigned warp_size(unsigned);\nint main(void) {\n    assert(warp_size(8) == 32);\n    assert(warp_size(1) == 4);\n    assert(warp_size(16) == 64);   /* the other vendor's width */\n    assert(warp_size(0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}
