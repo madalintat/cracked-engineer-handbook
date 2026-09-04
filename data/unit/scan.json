@@ -1,0 +1,70 @@
+{
+ "slug": "scan",
+ "num": 57,
+ "title": "Work, depth and the scan",
+ "blurb": "Parallel algorithms rank on two axes, and scan converts irregular work into regular work. The GPU part reuses this directly.",
+ "part": "algorithms",
+ "partRoman": "X",
+ "partTitle": "Algorithms",
+ "phase": "scale",
+ "accent": "azure",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "cost-model"
+  ],
+  "minutes": 55,
+  "one_idea": "A parallel algorithm has two costs rather than one, and the operation that looks most stubbornly sequential turns out to be the primitive that makes variable sized parallel output possible at all.",
+  "sources": [
+   "algorithms-on-real-hardware"
+  ]
+ },
+ "html": "<p>Sequential complexity is one number. Parallel complexity is two, and using one where two are needed is the most common mistake in the subject.</p>\n<p>The first is work: the total number of operations across every processor. It is what you pay for in energy and in total machine time, and it is the number that sequential complexity was already measuring.</p>\n<p>The second is depth, sometimes called span: the longest chain of operations that must happen in order. It is what you would take with infinitely many processors, and no amount of hardware makes it smaller.</p>\n<h2 id=\"two-numbers-and-what-they-buy\">Two numbers, and what they buy</h2>\n<p>The two are tied together. With a given number of processors the time is bounded by the work divided by them, plus the depth. That says the obvious thing precisely: you can spread the work out, and you cannot spread out the chain.</p>\n<p>Two quantities fall out of it. Work divided by depth is the most processors that can be usefully applied, since beyond that they sit idle. And an algorithm is called work efficient when its work matches the best sequential algorithm, up to constants.</p>\n<p>The classic mistake is now easy to state. It is optimising depth while quietly multiplying work, which produces an algorithm that looks excellent on the axis being reported and burns several times the energy to finish no sooner on any real machine. The next section is that mistake, with numbers.</p>\n<p>There is a pessimistic corollary worth knowing by name. If some fraction of the work is inherently serial, the speedup is capped at one over that fraction however many processors you add. The rebuttal is that in practice the problem grows with the machine, so that fraction shrinks. Both are true, and which one applies depends on whether you have a fixed problem or a fixed time budget.</p>\n<h2 id=\"the-operation-that-looks-sequential\">The operation that looks sequential</h2>\n<p>Given an associative operator and a list, a scan produces the running result: each output is the operator applied to everything up to that point. An inclusive scan includes the current element and an exclusive one does not.</p>\n<p>Written sequentially it is three lines, and every output depends on the one before it. It looks like the most stubbornly serial thing in the subject.</p>\n<p>It is not, and the reason is the only property required of the operator. Being associative means the brackets can be moved, and moving the brackets is enough to compute the whole thing in a logarithmic number of rounds. That single move is behind every parallel reduction, every parallel sort, and every operation on segments of a list.</p>\n<h2 id=\"why-it-matters-more-than-it-looks\">Why it matters more than it looks</h2>\n<p>Here is the sentence worth keeping.</p>\n<p>Any time parallel workers each produce a variable number of outputs, and the results have to end up packed together, the answer is a scan.</p>\n<p>The scan of the counts tells each worker where its own output starts. That is one idea, and it is all of the following:</p>\n<pre class=\"cb\" data-lang=\"text\"><code>   filtering a stream         scan the keep-or-drop flags for output indices\n   building a sparse matrix   scan the row lengths for the row offsets\n   a pass of a radix sort     scan the digit counts for each bucket&#x27;s base\n   expanding a graph frontier scan the neighbour counts for write positions\n   partitioning for a sort    scan the below-the-pivot flags</code></pre>\n<p>Turning data dependent, variable sized output into writes at computed addresses is what a scan is for, and it is why it appears everywhere in parallel code rather than as a curiosity.</p>\n<h2 id=\"the-depth-optimal-version\">The depth optimal version</h2>\n<p>The first published parallel scan is four lines. For a distance that doubles each round, every element adds the element that far behind it:</p>\n<pre class=\"cb\" data-lang=\"text\"><code>   for d = 1, 2, 4, 8, ... &lt; n:\n       for all i in parallel:\n           b[i] = (i &gt;= d) ? a[i] + a[i-d] : a[i]\n       swap(a, b)</code></pre>\n<p>After each round every element holds the sum of a window twice as wide as before, so after a logarithmic number of rounds it holds everything before it.</p>\n<p>The depth is logarithmic, which is optimal. The work is not: every round touches every element, so the total is the count times the number of rounds. And it needs two buffers, because an element is reading a value that another element is in the middle of writing.</p>\n<h2 id=\"the-work-efficient-version\">The work efficient version</h2>\n<p>The second version builds a balanced tree in the array and sweeps it twice.</p>\n<p>Going up, it combines pairs at doubling distances, so that after the last round the final element holds the total. Going down, it sets the root to the identity and pushes partial results back down: at each node the left child receives the node's value, and the right child receives the node's value combined with what the left child held.</p>\n<p>The work is now linear, which is optimal, and the depth is still logarithmic though it takes twice as many rounds. It needs no second buffer.</p>\n<p>Counting the operations of both, on a real implementation with a counter attached:</p>\n<pre class=\"cb\" data-lang=\"text\"><code>   n            work efficient    depth optimal      ratio\n   8                     21               24         1.14x\n   1,024              3,069           10,240         3.34x\n   1,048,576      3,145,725       20,971,520         6.67x</code></pre>\n<p>Those numbers are not approximate. The first column is exactly three times one less than the count, and the second is exactly the count times its logarithm. The theory is not roughly right here, it is precisely right, and watching a counter confirm it is worth doing once.</p>\n<h2 id=\"what-actually-runs-and-why-the-ending-matters\">What actually runs, and why the ending matters</h2>\n<p>Most courses stop at the work efficient version, and stopping there leaves you believing something that the real libraries abandoned a decade ago.</p>\n<p>The problem is that work is the wrong objective at the top level. A scan does almost no arithmetic per element, so it is limited entirely by memory. The tree version reads and writes the array twice, once going up and once coming down, plus a pass over the block totals, which is about four times the array in traffic. At best that reaches half of the available bandwidth.</p>\n<p>What the production libraries do instead is a single pass. Each block computes its own total, publishes it with a flag saying what kind of value it is, and then looks backwards at the totals its predecessors published, taking a finished prefix if one is available and otherwise accumulating further back, all while its own local scan proceeds. The input is read once and the output written once. Two times the array instead of four, and about twice the speed.</p>\n<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 662 82\" class=\"fig-svg\" style=\"max-width:960px\" role=\"img\" aria-label=\"Three levels of a real scan: a scan within a warp using register exchange, a scan of the per warp totals within a block, and a single pass across blocks that looks back at published totals.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><line x1=\"176\" y1=\"24\" x2=\"220\" y2=\"24\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"396\" y1=\"24\" x2=\"440\" y2=\"24\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><rect x=\"0.0\" y=\"0.0\" width=\"176.0\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--azure-ink, var(--accent));stroke:var(--azure-ink, var(--accent))\"/><text x=\"88.0\" y=\"28.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">warp: depth optimal</text><rect x=\"220.0\" y=\"0.0\" width=\"176.0\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"308.0\" y=\"28.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">block: totals</text><rect x=\"440.0\" y=\"0.0\" width=\"193.6\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--gold-ink, var(--accent));stroke:var(--gold-ink, var(--accent))\"/><text x=\"536.8\" y=\"28.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">device: look back</text></svg><figcaption>The three levels use three different algorithms, each chosen for what is free at that level. Extra work inside a warp costs nothing because the lanes exist anyway; extra traffic across the device costs everything.</figcaption></figure>\n<p>Notice what that hierarchy says. Inside a warp the depth optimal version is used, and its extra work is free, because those lanes exist whether or not you give them anything to do. Across the device the objective is not operations at all; it is bytes moved.</p>\n<p>So the arc is: the first version teaches the idea, the second teaches work efficiency, and the third teaches that at the top level the thing being minimised is memory traffic. All three are true at different scales, which is the more useful lesson than any one of them.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>A parallel algorithm has two costs. Work is the total operations and depth is the longest dependent chain, time is bounded by work over processors plus depth, and work over depth is the most processors worth having.</p>\n<p>Optimising depth while multiplying work is the standard mistake, and the two scans are the standard example: a logarithmic depth version that does the count times its logarithm in work, against a linear work version that takes twice as many rounds.</p>\n<p>A scan turns variable sized output into writes at computed addresses, which is why filtering, sorting, sparse formats and graph traversal are all scans underneath.</p>\n<p>And the version that runs in production is neither textbook algorithm, because the real objective function at that level is bytes moved rather than operations performed.</p>\n<p>Next is where that objective becomes the whole subject: three levels of linear algebra routines, only one of which can ever reach the machine's peak, and why that single ratio has shaped every numerical library for forty years.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These are the two axes as arithmetic: the bound on parallel time, the number of processors worth using, the exact operation counts of both scans, and the traffic that decides which one is actually faster.</p>\n<p><code>assert-failed</code> names the case your model got wrong. Several exercises assert that the work efficient version is not the fastest one, which is the memory traffic deciding rather than a comparison written backwards.</p>",
+ "headings": [
+  {
+   "id": "two-numbers-and-what-they-buy",
+   "text": "Two numbers, and what they buy",
+   "level": 2
+  },
+  {
+   "id": "the-operation-that-looks-sequential",
+   "text": "The operation that looks sequential",
+   "level": 2
+  },
+  {
+   "id": "why-it-matters-more-than-it-looks",
+   "text": "Why it matters more than it looks",
+   "level": 2
+  },
+  {
+   "id": "the-depth-optimal-version",
+   "text": "The depth optimal version",
+   "level": 2
+  },
+  {
+   "id": "the-work-efficient-version",
+   "text": "The work efficient version",
+   "level": 2
+  },
+  {
+   "id": "what-actually-runs-and-why-the-ending-matters",
+   "text": "What actually runs, and why the ending matters",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1454,
+ "needs": [
+  "cost-model"
+ ],
+ "neededBy": []
+}

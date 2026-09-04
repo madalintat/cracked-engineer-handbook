@@ -1,0 +1,310 @@
+{
+ "slug": "blas",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "The ratio itself",
+   "brief": "<p>Write <code>intensity_milli</code>, returning an operation's arithmetic intensity in thousandths of an operation per byte, given its operation count and the bytes it must move.</p>\n<p>Truncate towards zero. An operation that moves no bytes has no intensity to report, so return 0.</p>",
+   "kind": "output",
+   "concept": "One division decides which side of a machine an operation lives on, and everything else in this unit is that division applied to three shapes.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Scale before dividing, or every intensity below one operation per byte rounds to nothing."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A twelfth of an operation per byte is 83 thousandths, and dividing before scaling gives zero for it, which is every interesting case in this unit.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Count the traffic as favourably as possible, reading each operand once and writing each result once, because a real implementation can only do worse.</p>",
+   "starter": "unsigned long intensity_milli(unsigned long flops, unsigned long bytes) {\n    if (!bytes) return 0;\n    return flops / bytes * 1000UL;\n}",
+   "tests": "#include <assert.h>\nunsigned long intensity_milli(unsigned long, unsigned long);\nint main(void) {\n    /* A vector update of length 1000: 2000 flops over 24000 bytes. */\n    assert(intensity_milli(2000, 24000) == 83);\n    /* A matrix vector product at n = 1000. */\n    assert(intensity_milli(2000000, 8000000) == 250);\n    /* A matrix multiply at n = 1000. */\n    assert(intensity_milli(2000000000UL, 24000000UL) == 83333);\n    assert(intensity_milli(1000, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "What each level moves",
+   "brief": "<p>Write <code>compulsory_bytes</code>, returning the smallest number of bytes an operation must move, given its level, the problem size and the bytes per number.</p>\n<p>The vector update reads two vectors and writes one, so three vectors of traffic. The matrix vector product reads the matrix, which dominates everything else, so count only the square. The matrix multiply reads two matrices and writes one, so three squares.</p>",
+   "kind": "output",
+   "concept": "The traffic is what the operation requires rather than what an implementation happens to do, which is why this is a floor and not an estimate.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The second level moves the square and the third moves three of them, because only the third has anything to write back that is the same shape."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A matrix vector product touches one matrix, not three, since its vectors are smaller than the matrix by a factor of the size. A matrix multiply touches three.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Counting the vectors in the second level as well would be more precise and change nothing: they are smaller than the matrix by a factor of n, which is exactly why the ratio comes out independent of n.</p>",
+   "starter": "unsigned long compulsory_bytes(unsigned level, unsigned long n, unsigned wide) {\n    if (level == 1) return 3UL * n * wide;\n    return 3UL * n * n * wide;\n}",
+   "tests": "#include <assert.h>\nunsigned long compulsory_bytes(unsigned, unsigned long, unsigned);\nint main(void) {\n    assert(compulsory_bytes(1, 1000, 8) == 24000UL);\n    assert(compulsory_bytes(2, 1000, 8) == 8000000UL);\n    assert(compulsory_bytes(3, 1000, 8) == 24000000UL);\n    assert(compulsory_bytes(1, 0, 8) == 0UL);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "What each level computes",
+   "brief": "<p>Write <code>flops</code>, returning how many floating point operations a level performs, given its level and the problem size.</p>\n<p>Each level does two operations per element of its largest operand: twice the size, twice the square, twice the cube.</p>",
+   "kind": "output",
+   "concept": "The level number is the exponent of the work, and it is one more than the exponent of the data, which is the whole of the argument.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The exponent is the level, and the cube of a thousand needs a type wide enough to hold two billion."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A matrix multiply at a thousand a side is two billion operations, which overflows a 32 bit type, so the multiplication has to happen in the wide one.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The work went up by a factor of n from the first level to the second, and the intensity by a factor of three, because the extra data arrived alongside the extra work.</p>",
+   "starter": "unsigned long flops(unsigned level, unsigned long n) {\n    unsigned r = 2;\n    for (unsigned i = 0; i < level; i++) r *= (unsigned)n;\n    return r;\n}",
+   "tests": "#include <assert.h>\nunsigned long flops(unsigned, unsigned long);\nint main(void) {\n    assert(flops(1, 1000) == 2000UL);\n    assert(flops(2, 1000) == 2000000UL);\n    assert(flops(3, 1000) == 2000000000UL);\n    assert(flops(3, 10000) == 2000000000000UL);\n    assert(flops(1, 0) == 0UL);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "How often an element is reused",
+   "brief": "<p>Write <code>reuse</code>, returning how many times each element of the largest input takes part in an operation, given the level and the problem size.</p>\n<p>At the first two levels every element is used exactly once. At the third, each element of one matrix is used once per column of the other.</p>",
+   "kind": "output",
+   "concept": "This is the structural fact underneath the ratio, and it is a property of the operation rather than of any implementation.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Two of the three levels give the same answer whatever the size."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Every element of a matrix in a matrix vector product takes part in exactly one multiply and one add and is then never wanted again, so its reuse is one however large the matrix is. There is nothing in a tile of it to reuse.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>You can tile the second level however you please and gain nothing. It is a streaming operation wearing a matrix costume.</p>",
+   "starter": "unsigned long reuse(unsigned level, unsigned long n) {\n    (void)level;\n    return n;\n}",
+   "tests": "#include <assert.h>\nunsigned long reuse(unsigned, unsigned long);\nint main(void) {\n    assert(reuse(1, 1000) == 1);\n    assert(reuse(2, 1000) == 1);\n    assert(reuse(3, 1000) == 1000);\n    assert(reuse(2, 10) == 1);\n    assert(reuse(3, 10) == 10);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Where the machine changes its mind",
+   "brief": "<p>Write <code>ridge_milli</code>, returning a machine's crossover intensity in thousandths of an operation per byte, given its peak rate in billions of operations per second and its bandwidth in gigabytes per second.</p>\n<p>Below that intensity an operation is limited by memory, and above it by arithmetic.</p>",
+   "kind": "output",
+   "concept": "The ridge is a property of the machine and the intensity is a property of the operation, and the comparison between them is the whole prediction.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Peak over bandwidth, in the same units, scaled so a fractional answer survives."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Bandwidth divided by peak is the reciprocal of the answer, and for a machine with far more arithmetic than bandwidth it rounds to zero rather than to the number you wanted.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Around ten for double precision on a server processor, about the same for double precision on a large accelerator, and around three hundred for the reduced precision modes the same accelerator advertises.</p>",
+   "starter": "unsigned long ridge_milli(unsigned long gflops, unsigned long gb_per_sec) {\n    if (!gflops) return 0;\n    return gb_per_sec * 1000UL / gflops;\n}",
+   "tests": "#include <assert.h>\nunsigned long ridge_milli(unsigned long, unsigned long);\nint main(void) {\n    /* 100 GFLOP/s against 10 GB/s. */\n    assert(ridge_milli(100, 10) == 10000);\n    /* 19500 against 2040. */\n    assert(ridge_milli(19500, 2040) == 9558);\n    /* 989500 against 3350. */\n    assert(ridge_milli(989500, 3350) == 295373);\n    assert(ridge_milli(100, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Which side of the ridge",
+   "brief": "<p>Write <code>can_reach_peak</code>, deciding whether an operation can reach a machine's peak rate, given its intensity and the machine's ridge, both in thousandths.</p>\n<p>An operation at or above the ridge is limited by arithmetic and can reach peak. Below it, it is limited by memory and cannot, however well it is implemented.</p>",
+   "kind": "output",
+   "concept": "The word cannot is doing real work here. It is not a statement about this implementation but about every possible one.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Exactly at the ridge the two limits are equal, so peak is reachable there."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. An operation sitting exactly on the ridge is limited equally by both and reaches peak, and an operation a thousand times below it does not get there by being written more carefully.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The first two levels are between forty and a thousand times below every machine's ridge. They are not slightly memory bound; they are memory bound by orders of magnitude, on every machine built in the last thirty years.</p>",
+   "starter": "int can_reach_peak(unsigned long intensity_milli, unsigned long ridge_milli) {\n    return intensity_milli > ridge_milli;\n}",
+   "tests": "#include <assert.h>\nint can_reach_peak(unsigned long, unsigned long);\nint main(void) {\n    /* A vector update against a server processor. */\n    assert(can_reach_peak(83, 10000) == 0);\n    /* A matrix vector product. */\n    assert(can_reach_peak(250, 10000) == 0);\n    /* A matrix multiply at n = 1000. */\n    assert(can_reach_peak(83333, 10000) == 1);\n    /* The same multiply against a reduced precision accelerator. */\n    assert(can_reach_peak(83333, 295373) == 0);\n    /* Exactly on the ridge. */\n    assert(can_reach_peak(10000, 10000) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "How large the problem has to be",
+   "brief": "<p>Write <code>min_size</code>, returning the smallest matrix multiply size that reaches a machine's peak, given the ridge in thousandths of an operation per byte and the bytes per number.</p>\n<p>The intensity of a matrix multiply is the size divided by three times the bytes per number, since it moves three matrices. Return the smallest whole size at or above the ridge.</p>",
+   "kind": "output",
+   "concept": "The third level can reach peak, and this says from what size onwards, which is the honest form of the claim.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Set the intensity equal to the ridge and solve for the size, then round upwards so the result is at or above it rather than below."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Rounding down gives a size whose intensity is just under the ridge, which is the one size the question was asking you to exclude.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>In double precision on a server processor that is a few hundred on a side. On an accelerator's reduced precision units it is several thousand, which is why those machines want problems that size.</p>",
+   "starter": "unsigned long min_size(unsigned long ridge_milli, unsigned wide) {\n    return ridge_milli * 3UL * wide / 1000UL;\n}",
+   "tests": "#include <assert.h>\nunsigned long min_size(unsigned long, unsigned);\nint main(void) {\n    /* A ridge of 10 operations per byte, 8 byte numbers: n/24 >= 10. */\n    assert(min_size(10000, 8) == 240);\n    /* A ridge of 295.373, 2 byte numbers. */\n    assert(min_size(295373, 2) == 1773);\n    /* A ridge that divides exactly. */\n    assert(min_size(1000, 8) == 24);\n    assert(min_size(0, 8) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Where the work ends up",
+   "brief": "<p>Write <code>level3_share_pct</code>, returning what percentage of a blocked factorisation's work happens in the matrix multiply, given the matrix size and the block width.</p>\n<p>The narrow panel costs about the square times the block width, and the update to everything else costs about the cube. Truncate towards zero.</p>",
+   "kind": "output",
+   "concept": "The move is not making the memory bound level faster, which is impossible, but arranging for almost none of the work to be in it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The two terms are the cube and the square times the width, and the answer is the first as a fraction of both together."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The panel's cost grows as the square and the update's as the cube, so the share moves towards a hundred percent as the matrix grows rather than staying fixed. That is the entire reason the rewrite worked.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>As the problem grows the cubic term dominates, so almost all the arithmetic ends up inside the operation that can run at peak and the part that cannot becomes negligible.</p>",
+   "starter": "unsigned level3_share_pct(unsigned long n, unsigned block) {\n    (void)block;\n    return n ? 100 : 0;\n}",
+   "tests": "#include <assert.h>\nunsigned level3_share_pct(unsigned long, unsigned);\nint main(void) {\n    /* n = 100, block 10: 1000000 against 100000. */\n    assert(level3_share_pct(100, 10) == 90);\n    /* Ten times larger. */\n    assert(level3_share_pct(1000, 10) == 99);\n    /* A wide block at a small size. */\n    assert(level3_share_pct(100, 100) == 50);\n    assert(level3_share_pct(0, 10) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

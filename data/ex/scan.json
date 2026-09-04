@@ -1,0 +1,310 @@
+{
+ "slug": "scan",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "The bound on parallel time",
+   "brief": "<p>Write <code>parallel_time</code>, returning the upper bound on how long a parallel algorithm takes, given its work, its depth and the processor count.</p>\n<p>The bound is the work spread across the processors, plus the depth, since the chain cannot be spread. Round the division up, because a partial round still takes a step.</p>",
+   "kind": "output",
+   "concept": "One inequality ties the two axes together, and it says the obvious thing precisely: you can spread the work out and you cannot spread the chain.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The depth is added rather than compared against, because it is the part that remains after everything else has been divided."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. With enough processors the time approaches the depth rather than approaching zero, so the depth is a term in the sum and not a floor applied afterwards.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>With one processor this gives the work plus the depth, which is the sequential time and a little more, and that is the correct behaviour for a bound rather than an exact cost.</p>",
+   "starter": "unsigned long parallel_time(unsigned long work, unsigned long depth,\n                            unsigned procs) {\n    if (!procs) return 0;\n    unsigned long t = (work + procs - 1) / procs;\n    return t > depth ? t : depth;\n}",
+   "tests": "#include <assert.h>\nunsigned long parallel_time(unsigned long, unsigned long, unsigned);\nint main(void) {\n    /* 1000 work, depth 10, 10 processors. */\n    assert(parallel_time(1000, 10, 10) == 110);\n    /* Enough processors that the depth dominates. */\n    assert(parallel_time(1000, 10, 1000) == 11);\n    /* One processor. */\n    assert(parallel_time(1000, 10, 1) == 1010);\n    /* A partial round still costs a step. */\n    assert(parallel_time(1001, 10, 10) == 111);\n    assert(parallel_time(0, 10, 8) == 10);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "How many processors are worth having",
+   "brief": "<p>Write <code>useful_procs</code>, returning the largest processor count that still helps, given the work and the depth.</p>\n<p>Beyond work divided by depth the extra processors have nothing to do, because the chain is what remains. Truncate towards zero, and a depth of zero means there is no chain, so report the work.</p>",
+   "kind": "output",
+   "concept": "It is the parallelism of the algorithm, and it is a property of the algorithm rather than of the machine it runs on.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "One division, and a guard for the case with no chain at all."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. An algorithm with a thousand units of work and a depth of ten can use a hundred processors, not ten and not a thousand. The ratio is the answer rather than either of its parts.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Adding processors past this number is adding idle cores, which is a useful thing to be able to compute before buying a machine.</p>",
+   "starter": "unsigned long useful_procs(unsigned long work, unsigned long depth) {\n    return depth;\n}",
+   "tests": "#include <assert.h>\nunsigned long useful_procs(unsigned long, unsigned long);\nint main(void) {\n    assert(useful_procs(1000, 10) == 100);\n    assert(useful_procs(1000, 1000) == 1);\n    assert(useful_procs(1048576, 20) == 52428);\n    assert(useful_procs(1000, 0) == 1000);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "What the depth optimal scan costs",
+   "brief": "<p>Write <code>hillis_steele_ops</code>, returning how many operations the doubling distance scan performs, given the element count.</p>\n<p>Every round touches every element, and there are as many rounds as times the count can be doubled to reach it. A count of one needs no rounds at all.</p>",
+   "kind": "output",
+   "concept": "Its depth is optimal and its work is not, which is the trade the two axes exist to make visible.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Count the rounds first, then multiply by the elements."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A million elements take twenty rounds of a million operations, which is twenty million rather than a million or twenty. The count and the rounds multiply.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Counted on a real implementation at a million elements, this came to exactly the count times its logarithm. The theory is not roughly right here; it is precisely right.</p>",
+   "starter": "unsigned long hillis_steele_ops(unsigned long n) {\n    unsigned long rounds = 0, d = 1;\n    while (d < n) { d <<= 1; rounds++; }\n    return rounds;\n}",
+   "tests": "#include <assert.h>\nunsigned long hillis_steele_ops(unsigned long);\nint main(void) {\n    assert(hillis_steele_ops(8) == 24);\n    assert(hillis_steele_ops(1024) == 10240);\n    assert(hillis_steele_ops(1048576) == 20971520);\n    assert(hillis_steele_ops(1) == 0);\n    assert(hillis_steele_ops(0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "What the work efficient scan costs",
+   "brief": "<p>Write <code>blelloch_ops</code>, returning how many operations the two sweep scan performs, given the element count.</p>\n<p>Going up costs one less than the count in combinations. Coming down costs the same again, plus one exchange per combination. A count of one or zero costs nothing.</p>",
+   "kind": "output",
+   "concept": "Linear work, and the constant is three rather than one, which is why the comparison between the two algorithms depends on the size.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Three operations for every combination in the tree, and a tree over n leaves has one fewer internal combination than it has leaves."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Eight elements cost twenty one operations rather than seven or eight: seven going up, and seven adds and seven exchanges coming down.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Counted on a real implementation at a million elements this came to exactly three times one less than the count, which is the other half of the table in the note.</p>",
+   "starter": "unsigned long blelloch_ops(unsigned long n) {\n    return n ? n - 1 : 0;\n}",
+   "tests": "#include <assert.h>\nunsigned long blelloch_ops(unsigned long);\nint main(void) {\n    assert(blelloch_ops(8) == 21);\n    assert(blelloch_ops(1024) == 3069);\n    assert(blelloch_ops(1048576) == 3145725);\n    assert(blelloch_ops(1) == 0);\n    assert(blelloch_ops(0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "The scan itself",
+   "brief": "<p>Write <code>exclusive_scan</code>, filling an output array with the exclusive prefix sums of an input array.</p>\n<p>The first output is zero, and each later one is the sum of every input before it. The arrays do not overlap.</p>",
+   "kind": "output",
+   "concept": "The sequential version is three lines, and its apparent dependence on the previous output is exactly what associativity lets you break.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The running total is added to after it is written out, not before."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. An exclusive scan writes the total so far and then adds the current element, so the first output is zero and the last input never appears in the output at all. Adding first gives the inclusive scan, shifted.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The worked example in every reference is this one: three, one, seven, zero, four, one, six, three becomes zero, three, four, eleven, eleven, fifteen, sixteen, twenty two.</p>",
+   "starter": "void exclusive_scan(const unsigned *in, unsigned *out, unsigned n) {\n    unsigned total = 0;\n    for (unsigned i = 0; i < n; i++) {\n        total += in[i];\n        out[i] = total;\n    }\n}",
+   "tests": "#include <assert.h>\nvoid exclusive_scan(const unsigned *, unsigned *, unsigned);\nint main(void) {\n    { unsigned in[] = {3, 1, 7, 0, 4, 1, 6, 3};\n      unsigned want[] = {0, 3, 4, 11, 11, 15, 16, 22};\n      unsigned out[8];\n      exclusive_scan(in, out, 8);\n      for (unsigned i = 0; i < 8; i++) assert(out[i] == want[i]); }\n    { unsigned in[] = {5}; unsigned out[1];\n      exclusive_scan(in, out, 1);\n      assert(out[0] == 0); }\n    { unsigned in[] = {1, 1, 1}; unsigned want[] = {0, 1, 2}; unsigned out[3];\n      exclusive_scan(in, out, 3);\n      for (unsigned i = 0; i < 3; i++) assert(out[i] == want[i]); }\n    exclusive_scan(0, 0, 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "Where each worker writes",
+   "brief": "<p>Write <code>output_slot</code>, returning where a worker's output begins, given each worker's output count and which worker is asking.</p>\n<p>Every worker's outputs land contiguously, in worker order, with no gaps. This is the scan of the counts, which is the reason the primitive matters.</p>",
+   "kind": "output",
+   "concept": "Any time parallel workers produce a variable number of outputs and the results have to end up packed, the answer is a scan of the counts.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The slot is the sum of everything the earlier workers produce, and the worker's own count is not part of it."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The first worker starts at zero however much it produces, and including a worker's own count in its own offset leaves a gap the size of its output before it and overlaps the next one.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Filtering a stream, building a sparse matrix, a pass of a radix sort and expanding a graph frontier are all this function, with a different meaning attached to the counts.</p>",
+   "starter": "unsigned output_slot(const unsigned *counts, unsigned worker) {\n    unsigned total = 0;\n    for (unsigned i = 0; i <= worker; i++) total += counts[i];\n    return total;\n}",
+   "tests": "#include <assert.h>\nunsigned output_slot(const unsigned *, unsigned);\nint main(void) {\n    unsigned c[] = {3, 0, 5, 2};\n    assert(output_slot(c, 0) == 0);\n    assert(output_slot(c, 1) == 3);\n    assert(output_slot(c, 2) == 3);   /* worker 1 produced nothing */\n    assert(output_slot(c, 3) == 8);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "What limits a scan in practice",
+   "brief": "<p>Write <code>scan_time_us</code>, returning how long a scan takes in microseconds, given the element count, the bytes per element, how many times the algorithm reads or writes the whole array, and the bandwidth in megabytes per second.</p>\n<p>A scan does almost no arithmetic per element, so the time is entirely the traffic divided by the bandwidth. Truncate towards zero.</p>",
+   "kind": "output",
+   "concept": "At the top level the objective function is bytes moved, which is why the work efficient algorithm is not the fastest one.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Total bytes is the array size times the number of passes over it, and a megabyte per second is a byte per microsecond."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Four passes over the array cost twice what two passes cost, so the pass count multiplies the traffic rather than being ignored. That factor is the whole difference between the textbook algorithm and the one libraries ship.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The tree version touches the array about four times and the single pass version twice, which is about twice the speed on a memory bound operation, and no change at all in the operation count.</p>",
+   "starter": "unsigned long scan_time_us(unsigned long n, unsigned elem, unsigned passes,\n                           unsigned long mb_per_sec) {\n    (void)passes;\n    if (!mb_per_sec) return 0;\n    return n * elem / mb_per_sec;\n}",
+   "tests": "#include <assert.h>\nunsigned long scan_time_us(unsigned long, unsigned, unsigned, unsigned long);\nint main(void) {\n    /* A million 4 byte elements, four passes, 1000 MB/s: 16 MB at 1 B/us. */\n    assert(scan_time_us(1000000, 4, 4, 1000) == 16000);\n    /* Two passes over the same data. */\n    assert(scan_time_us(1000000, 4, 2, 1000) == 8000);\n    assert(scan_time_us(1000, 4, 2, 1000) == 8);\n    assert(scan_time_us(1000000, 4, 4, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "Which scan to use where",
+   "brief": "<p>Write <code>pick_scan</code>, choosing a scan algorithm, given how many elements there are and whether the workers exist regardless of whether they are given work.</p>\n<p>Return 0 for the depth optimal version and 1 for the work efficient one. When the workers exist anyway, the extra work costs nothing and the shallower algorithm wins. Otherwise the work efficient one wins once there is enough data for the difference to matter, which here means more than one round's worth.</p>",
+   "kind": "output",
+   "concept": "The same problem gets different answers at different levels of the machine, which is the actual lesson rather than either algorithm.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The first question is whether the extra work is free, and only then does the size matter."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Inside a warp the lanes exist whether or not you use them, so the work inefficient version is the right one however small the input. Choosing by size alone gets that case backwards.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Real implementations use the depth optimal version inside a warp, a scan of the per warp totals inside a block, and neither of them across the device.</p>",
+   "starter": "int pick_scan(unsigned long n, int workers_free) {\n    (void)workers_free;\n    return n > 32;\n}",
+   "tests": "#include <assert.h>\nint pick_scan(unsigned long, int);\nint main(void) {\n    /* Inside a warp: the lanes are there anyway. */\n    assert(pick_scan(32, 1) == 0);\n    assert(pick_scan(1048576, 1) == 0);\n    /* Workers cost something: size decides. */\n    assert(pick_scan(1048576, 0) == 1);\n    assert(pick_scan(32, 0) == 1);\n    assert(pick_scan(1, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}
