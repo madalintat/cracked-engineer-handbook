@@ -327,6 +327,12 @@ h1[tabindex="-1"]:focus-visible { outline: none; }
   margin: 0 auto;
   padding: 0 20px;
 }
+/* Vertical padding as a class, because every view that wrote it inline as
+ * `padding: 48px 0` also set the horizontal padding to zero. On a desk that
+ * put those pages 20px left of the ones that did not; on a phone it put the
+ * first word of the paragraph against the edge of the glass. */
+.wrap.pad    { padding-block: 48px; }
+.wrap.pad-lg { padding-block: 80px; }
 
 header.top {
   position: sticky;
@@ -1017,6 +1023,58 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
   padding: 0 1px;
 }
 
+/* A reading column that starts where every other page starts. Three views
+ * capped the wrap itself at the measure, which centred them inside the shell
+ * while the header above them did not move, so the site read as two sites
+ * depending on which link you followed. The wrap keeps the shell; its
+ * children get the measure. */
+.wrap.reading > * { max-width: var(--measure); }
+
+/* A cell with nothing in it reads as a column that failed to load. */
+td .none { color: var(--ink-4); font-size: var(--t-micro); }
+
+/* ---------------------------------------------------------------- print */
+/* A note is 1400 to 2200 words and people print those, or save them as PDF.
+ * Printed as it stands, a unit carries the sticky header, the tab bar, the
+ * contents button and the footer's nine links, and the phosphor ground eats
+ * a cartridge. This is the note, its figures and its captions, on paper.
+ *
+ * Light tokens are forced rather than inherited: a reader in dark mode who
+ * prints otherwise gets white text on a ground the printer will not print. */
+@media print {
+  :root, :root[data-theme="dark"] {
+    --bg: #fff;
+    --surface: #fff;
+    --raised: #fff;
+    --sunken: #fff;
+    --border: #999;
+    --border-soft: #ccc;
+    --ink: #000;
+    --ink-2: #1a1a1a;
+    --ink-3: #333;
+    --ink-4: #555;
+    --code-bg: #f2f2f2;
+    --code-ink: #000;
+    --accent: #666;
+    --accent-ink: #000;
+  }
+  header.top, nav.tabs, footer.bot, .rail, #sheetBtn, .sheet, .scrim,
+  .companion, .pop, .skip, .unitnav, .edges, .hero-art, .tfilter,
+  .wbbar, .exnav, #theme { display: none !important; }
+  body { font-size: 11pt; }
+  .wrap, .wrap.pad, .wrap.pad-lg { padding: 0; max-width: none; }
+  .unit { display: block; }
+  .prose, .body, .idea, .fig { max-width: none; }
+  /* A figure or a code block broken across a page break is unreadable. */
+  .fig, pre.cb, .idea, .drill, .vrow, table { break-inside: avoid; }
+  h1, h2, h3 { break-after: avoid; }
+  a { color: inherit; text-decoration: underline; }
+  /* On paper a link's destination is not clickable, so print it. Internal
+   * routes are not printed: "#/unit/nand" tells a reader on paper nothing. */
+  .body a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 9pt; }
+  .fig-svg { border: 1px solid var(--border-soft); }
+}
+
 /* -------------------------------------------------------------- footer */
 
 footer.bot {
@@ -1151,12 +1209,24 @@ nav.tabs { display: none; }
   margin: 0 0 12px;
   transition: border-color var(--fast) var(--ease);
 }
+/* A legend is painted ON the fieldset's top border by every browser, which
+ * cuts the question in half where it wraps, and at 390px every question of
+ * more than one line crossed the line it sat on. Floating it takes it out of
+ * that special case and puts it in normal flow inside the box, and the border
+ * draws unbroken behind nothing. `width:100%` is what makes the float a
+ * block; without it the options wrap around the question. */
 .drill legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 0;
   font-weight: 700;
   color: var(--ink);
-  padding: 0 6px;
   font-size: var(--t-body);
+  line-height: 1.4;
 }
+/* The float leaves the fieldset with no height of its own to clear. */
+.drill::after { content: ""; display: table; clear: both; }
 .drill[data-verdict="ok"]  { border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
 .drill[data-verdict="bad"] { border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
 
@@ -1171,7 +1241,14 @@ nav.tabs { display: none; }
   color: var(--ink-2);
 }
 .opt:hover { background: var(--raised); }
-.opt input { margin-top: 3px; accent-color: var(--accent); }
+.opt input {
+  margin-top: 2px;
+  width: 17px;
+  height: 17px;
+  flex: none;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
 .opt[data-mark="right"]  { color: var(--ok-ink); font-weight: 600; }
 .opt[data-mark="chosen"] { color: var(--bad-ink); text-decoration: line-through; }
 
@@ -1240,7 +1317,7 @@ nav.tabs { display: none; }
   top: 78px;
 }
 .atlasside section + section { margin-top: 22px; }
-.atlasside h3 {
+.atlasside h2 {
   font: 700 var(--t-micro)/1 var(--mono);
   color: var(--ink-4);
   text-transform: uppercase;
@@ -1252,7 +1329,7 @@ nav.tabs { display: none; }
 .atlasside li { margin-bottom: 6px; line-height: 1.55; }
 .atlasside .note { margin-top: 8px; color: var(--ink-4); font-size: var(--t-micro); }
 .atlasside-warn { border-left: 2px solid var(--warn); padding-left: 13px; }
-.atlasside-warn h3 { color: var(--warn-ink); }
+.atlasside-warn h2 { color: var(--warn-ink); }
 
 @media (max-width: 1000px) {
   .atlasgrid { grid-template-columns: 1fr; gap: 30px; }
@@ -1321,25 +1398,35 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
   gap: 8px;
   margin: 24px 0 4px;
 }
+ /* Seven pills with a coloured dot said "chip component" and nothing about
+  * this book. Each one is now a miniature of the phase header it jumps to:
+  * the same 2px accent rule over the same mono index over the title, so the
+  * colour is carried by the rule that means "phase" everywhere else on the
+  * page rather than by a decoration that means nothing. */
+.track .chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+  gap: 0 20px;
+  margin: 26px 0 4px;
+}
 .track .chip {
-  font: 600 var(--t-tiny)/1 var(--sans);
-  padding: 7px 11px;
-  border-radius: 100px;
-  border: 1px solid var(--border-soft);
+  display: block;
+  padding: 9px 0 10px;
+  border-top: 2px solid var(--accent);
   color: var(--ink-2);
   text-decoration: none;
-  background: var(--surface);
+  font: 600 var(--t-sm)/1.3 var(--sans);
+  transition: color var(--fast) var(--ease);
 }
-.track .chip::before {
-  content: "";
-  display: inline-block;
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  margin-right: 7px;
-  vertical-align: 1px;
+.track .chip .n {
+  display: block;
+  font: 700 var(--t-micro)/1 var(--mono);
+  letter-spacing: .1em;
+  color: var(--accent-ink);
+  margin-bottom: 6px;
 }
-.track .chip:hover { border-color: var(--accent); color: var(--ink); }
+.track .chip:hover { color: var(--ink); text-decoration: none; }
+.track .chip:hover .n { text-decoration: underline; text-underline-offset: 3px; }
 
 .track .tfilter {
   display: flex;
@@ -1389,6 +1476,32 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
   text-transform: uppercase;
   letter-spacing: .09em;
   margin: 0;
+}
+/* The same index the chip above shows, so the two are visibly the same list. */
+.track .ph-head .ph-n {
+  color: var(--ink-4);
+  margin-right: 8px;
+}
+
+/* The hint under the editor. It is the only place the page explains a key,
+ * and it changes when Escape has released Tab, so it is a status and not
+ * decoration. */
+.tabhint {
+  font: 500 var(--t-micro)/1.4 var(--sans);
+  color: var(--ink-4);
+  align-self: center;
+  max-width: 30ch;
+}
+.afternext { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+
+/* What the button leads to, said before it is pressed. A reader deciding
+ * whether to start should not have to click to find out how much is there,
+ * or which tool will be marking it. */
+.unit .cta { align-items: center; }
+.unit .cta-note {
+  font: 500 var(--t-sm)/1.4 var(--sans);
+  color: var(--ink-4);
+  flex: 1 1 16ch;
 }
 
 .track .part { margin-top: 40px; }
@@ -1575,8 +1688,17 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
   padding-top: 12px;
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  font-family: var(--mono);
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font: 700 var(--t-h3)/1.2 var(--mono);
+}
+/* What the backend is, beside its name. It was inheriting the heading's size
+ * and face, so "The simulator, in this page" was set as a second title. */
+.errors .ebackend > h2 .note {
+  font: 500 var(--t-sm)/1.4 var(--sans);
+  color: var(--ink-3);
+  text-transform: none;
+  letter-spacing: 0;
 }
 .errors .eentry { margin-top: 22px; max-width: var(--measure); }
 .errors .eentry h3 { margin: 0; font-size: var(--t-body); }
@@ -2077,7 +2199,7 @@ a.gl:hover { text-decoration-style: solid; color: var(--accent-ink); }
   font-size: var(--t-sm);
   color: var(--ink-3);
 }
-.passumes h3 {
+.passumes h2 {
   font: 700 var(--t-micro)/1 var(--mono);
   color: var(--ink-4);
   text-transform: uppercase;

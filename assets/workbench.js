@@ -150,7 +150,7 @@ const WB = (() => {
 
   /* ---------------------------------------------------------------- editor */
 
-  function mountEditor(host, { value, lang, onChange }) {
+  function mountEditor(host, { value, lang, onChange, onTabMode }) {
     host.innerHTML =
       `<div class="stack"><pre class="hl" aria-hidden="true"></pre>` +
       `<textarea spellcheck="false" autocapitalize="off" autocomplete="off"
@@ -171,13 +171,34 @@ const WB = (() => {
     // vertical is free: the textarea cannot scroll. horizontal is not.
     ta.addEventListener('scroll', () => { stack.scrollLeft = ta.scrollLeft; });
 
+    /* Tab indents, which makes the editor a keyboard trap: WCAG 2.1.2, and
+     * not a theoretical one, since Tab is how a keyboard user leaves any
+     * other field on the page. Escape releases it for the next Tab, which is
+     * the convention every code editor on the web uses, and typing arms it
+     * again so the release cannot silently outlive the moment it was asked
+     * for. The interface says so rather than expecting the reader to guess. */
+    let tabIndents = true;
+    const setTab = on => {
+      if (tabIndents === on) return;
+      tabIndents = on;
+      onTabMode && onTabMode(on);
+    };
+
+    ta.addEventListener('blur', () => setTab(true));
+
     ta.addEventListener('keydown', ev => {
+      if (ev.key === 'Escape') { setTab(false); return; }
       if (ev.key === 'Tab') {
+        if (!tabIndents) { setTab(true); return; }   // let it move focus
         ev.preventDefault();
         const s = ta.selectionStart, e = ta.selectionEnd;
         ta.value = ta.value.slice(0, s) + '  ' + ta.value.slice(e);
         ta.selectionStart = ta.selectionEnd = s + 2;
         sync(); onChange && onChange(ta.value);
+      }
+      // Any real edit re-arms Tab: the release is for leaving, not for typing.
+      if (ev.key.length === 1 || ev.key === 'Enter' || ev.key === 'Backspace') {
+        setTab(true);
       }
       if (ev.key === 'Enter') {
         // keep the current indent, and add one level after an opening brace
