@@ -1151,12 +1151,24 @@ nav.tabs { display: none; }
   margin: 0 0 12px;
   transition: border-color var(--fast) var(--ease);
 }
+/* A legend is painted ON the fieldset's top border by every browser, which
+ * cuts the question in half where it wraps, and at 390px every question of
+ * more than one line crossed the line it sat on. Floating it takes it out of
+ * that special case and puts it in normal flow inside the box, and the border
+ * draws unbroken behind nothing. `width:100%` is what makes the float a
+ * block; without it the options wrap around the question. */
 .drill legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 0;
   font-weight: 700;
   color: var(--ink);
-  padding: 0 6px;
   font-size: var(--t-body);
+  line-height: 1.4;
 }
+/* The float leaves the fieldset with no height of its own to clear. */
+.drill::after { content: ""; display: table; clear: both; }
 .drill[data-verdict="ok"]  { border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
 .drill[data-verdict="bad"] { border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
 
@@ -1321,25 +1333,35 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
   gap: 8px;
   margin: 24px 0 4px;
 }
+ /* Seven pills with a coloured dot said "chip component" and nothing about
+  * this book. Each one is now a miniature of the phase header it jumps to:
+  * the same 2px accent rule over the same mono index over the title, so the
+  * colour is carried by the rule that means "phase" everywhere else on the
+  * page rather than by a decoration that means nothing. */
+.track .chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+  gap: 0 20px;
+  margin: 26px 0 4px;
+}
 .track .chip {
-  font: 600 var(--t-tiny)/1 var(--sans);
-  padding: 7px 11px;
-  border-radius: 100px;
-  border: 1px solid var(--border-soft);
+  display: block;
+  padding: 9px 0 10px;
+  border-top: 2px solid var(--accent);
   color: var(--ink-2);
   text-decoration: none;
-  background: var(--surface);
+  font: 600 var(--t-sm)/1.3 var(--sans);
+  transition: color var(--fast) var(--ease);
 }
-.track .chip::before {
-  content: "";
-  display: inline-block;
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  margin-right: 7px;
-  vertical-align: 1px;
+.track .chip .n {
+  display: block;
+  font: 700 var(--t-micro)/1 var(--mono);
+  letter-spacing: .1em;
+  color: var(--accent-ink);
+  margin-bottom: 6px;
 }
-.track .chip:hover { border-color: var(--accent); color: var(--ink); }
+.track .chip:hover { color: var(--ink); text-decoration: none; }
+.track .chip:hover .n { text-decoration: underline; text-underline-offset: 3px; }
 
 .track .tfilter {
   display: flex;
@@ -1390,6 +1412,22 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
   letter-spacing: .09em;
   margin: 0;
 }
+/* The same index the chip above shows, so the two are visibly the same list. */
+.track .ph-head .ph-n {
+  color: var(--ink-4);
+  margin-right: 8px;
+}
+
+/* The hint under the editor. It is the only place the page explains a key,
+ * and it changes when Escape has released Tab, so it is a status and not
+ * decoration. */
+.tabhint {
+  font: 500 var(--t-micro)/1.4 var(--sans);
+  color: var(--ink-4);
+  align-self: center;
+  max-width: 30ch;
+}
+.afternext { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
 
 .track .part { margin-top: 40px; }
 .track .part-eyebrow {

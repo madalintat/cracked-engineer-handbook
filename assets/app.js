@@ -248,8 +248,9 @@ function viewTrack() {
     <section class="phase" id="phase-${esc(ph.id)}" data-accent="${esc(ph.accent)}"
              data-phase="${esc(ph.id)}">
       <header class="ph-head">
-        <p class="ph-count">${units.length} units${
-          written ? `, ${written} written` : ''}</p>
+        <p class="ph-count"><span class="ph-n">${
+          String(HH.manifest.phases.indexOf(ph) + 1).padStart(2, '0')}</span>
+          ${units.length} units${written ? `, ${written} written` : ''}</p>
         <h2>${esc(ph.title)}</h2>
         <p>${esc(ph.blurb)}</p>
       </header>
@@ -257,9 +258,10 @@ function viewTrack() {
     </section>`;
   }).join('');
 
-  const chips = HH.manifest.phases.map(ph =>
+  const chips = HH.manifest.phases.map((ph, i) =>
     `<a class="chip" data-accent="${esc(ph.accent)}" href="#/track#phase-${esc(ph.id)}"
-     >${esc(ph.title)}</a>`).join('');
+     ><span class="n">${String(i + 1).padStart(2, '0')}</span>${esc(ph.title)}</a>`
+  ).join('');
 
   const c = HH.manifest.counts;
   return `<div class="wrap track">
@@ -657,6 +659,11 @@ async function viewWork(slug, nRaw) {
   if (!meta || !meta.ready) return viewNotFound(`#/work/${slug}`);
 
   const data = await getJSON(`data/ex/${slug}.json`);
+  // The GPU catalogue is 5 of the 122 units' business. It was fetched on boot
+  // for every reader, including the ones who never reach a GPU exercise.
+  if (data.exercises.some(e => e.backend === 'modal') && !HH.gpus) {
+    HH.gpus = await getJSON('data/modal-gpus.json');
+  }
   const n = Math.min(Math.max(parseInt(nRaw || '1', 10) || 1, 1),
                      data.exercises.length);
   const ex = data.exercises[n - 1];
@@ -690,7 +697,8 @@ async function viewWork(slug, nRaw) {
 
       <div class="prose" style="font-size:var(--t-body)">${ex.brief}</div>
 
-      <div class="editor" id="ed" data-wrap="off"></div>
+      <div class="editor" id="ed" data-wrap="off"
+           aria-describedby="tabhint"></div>
 
       ${ex.backend === 'modal' ? gpuPicker(ex) : ''}
 
@@ -698,6 +706,8 @@ async function viewWork(slug, nRaw) {
         <button class="btn" id="run">Run</button>
         <button class="btn ghost" id="reset">Reset to starter</button>
         <span id="vimbadge" class="vimbadge" hidden aria-live="polite"></span>
+        <span id="tabhint" class="tabhint">Tab indents. Escape, then Tab,
+          leaves the editor.</span>
         <span id="vimmsg" class="vimmsg" hidden></span>
         <span class="spacer"></span>
         <button class="tog" id="wrap" aria-pressed="false">wrap</button>
@@ -708,6 +718,11 @@ async function viewWork(slug, nRaw) {
       <div id="afterword" hidden>
         <div class="diagnosis" style="border-color:var(--ok)">
           <span class="lbl" style="color:var(--ok)">Passed</span>${ex.after}
+          <p class="afternext">${n < data.exercises.length
+            ? `<a class="btn" href="#/work/${esc(slug)}/${n + 1}">Next exercise</a>`
+            : `<a class="btn" href="#/drills/${esc(slug)}">On to the drills</a>`}
+            <a class="btn ghost" href="#/unit/${esc(slug)}">Back to the note</a>
+          </p>
         </div>
       </div>
     </div>
@@ -749,12 +764,20 @@ function wireWork() {
                          : ex.backend === 'modal' ? 'cuda' : 'cpp');
 
   const draftKey = `draft.${slug}.${n}`;
+  const tabHint = el('#tabhint');
   const editor = WB.mountEditor(host, {
     value: Store.get(draftKey, null) ?? ex.starter,
     lang,
     onChange: v => {
       clearTimeout(HH._saveT);
       HH._saveT = setTimeout(() => Store.set(draftKey, v), 400);
+    },
+    onTabMode: indents => {
+      if (!tabHint) return;
+      tabHint.textContent = indents
+        ? 'Tab indents. Escape, then Tab, leaves the editor.'
+        : 'Tab now leaves the editor. Type anything to indent with it again.';
+      if (!indents) announce('Tab will now move to the next control');
     },
   });
   /* Vim mode: a setting, and desk only. A modal editor on a phone keyboard is
@@ -1225,6 +1248,9 @@ function onePath(p, all) {
 
 async function viewAtlas(id) {
   const data = await getJSON('data/atlas.json');
+  // The atlas joins the Modal catalogue into its hover cards at build time,
+  // but the price note on a card is read from it live.
+  if (!HH.gpus) HH.gpus = await getJSON('data/modal-gpus.json').catch(() => null);
   const tables = data.tables || [];
   if (!tables.length) {
     return `<div class="wrap" style="padding:80px 0"><h1>Atlas</h1>
@@ -1284,13 +1310,13 @@ async function viewAtlas(id) {
       </div>
 
       <aside class="atlasside">
-        ${t.note ? `<section><h3>Worth knowing</h3>
+        ${t.note ? `<section><h2>Worth knowing</h2>
           <p>${esc(t.note)}</p></section>` : ''}
         ${t.unverified && t.unverified.length ? `
-          <section class="atlasside-warn"><h3>Not verified</h3>
+          <section class="atlasside-warn"><h2>Not verified</h2>
             <ul>${t.unverified.map(u => `<li>${esc(u)}</li>`).join('')}</ul>
           </section>` : ''}
-        <section><h3>Sources</h3>
+        <section><h2>Sources</h2>
           <ul>${t.sources.map(x => `<li>${x.url
             ? `<a href="${esc(x.url)}" rel="noopener">${esc(x.title)}</a>`
             : esc(x.title)}</li>`).join('')}</ul>
@@ -1308,7 +1334,9 @@ async function viewAtlas(id) {
 function wirePopover({ openers, cardFor, cls }) {
   const pop = document.createElement('div');
   pop.className = cls;
-  pop.setAttribute('role', 'dialog');
+  /* No role="dialog". It manages no focus and traps nothing, so announcing a
+   * dialog promises a screen reader something that is not there. The content
+   * is a shortcut to the page the term already links to. */
   pop.hidden = true;
   document.body.appendChild(pop);
   let current = null;
@@ -1756,7 +1784,7 @@ function resultRow(r) {
   return `
     <a class="card" href="${esc(href)}" style="margin-top:10px">
       <div class="meta"><span>${esc(r.t)}</span><span>${esc(r.part)}</span></div>
-      <h3 style="font-size:var(--t-lede)">${mark(r.title, HH.lastQuery)}</h3>
+      <h2 style="font-size:var(--t-lede)">${mark(r.title, HH.lastQuery)}</h2>
       ${r.text ? `<p>${mark(snippet(r.text, HH.lastQuery), HH.lastQuery)}</p>` : ''}
     </a>`;
 }
@@ -2175,7 +2203,6 @@ async function boot() {
     // The backend configuration comes from the build, not from this file, so
     // the page cannot call a toolchain --validate has never checked.
     HH.judges = await getJSON('data/judges.json');
-    HH.gpus = await getJSON('data/modal-gpus.json');
     const c = HH.manifest.counts;
     el('#footcount').textContent =
       `${c.parts} parts, ${c.units} units, ${c.ready} written. ` +
