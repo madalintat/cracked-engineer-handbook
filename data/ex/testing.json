@@ -1,0 +1,310 @@
+{
+ "slug": "testing",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "The edge, not the block",
+   "brief": "<p>Write <code>edge_id</code>, returning the index a coverage map is updated at, given the previous block's identifier and the current one, and the size of the map as a mask.</p>\n<p>The index is the exclusive or of the two identifiers, kept inside the map by the mask.</p>",
+   "kind": "output",
+   "concept": "An edge is a pair of blocks, and hashing the pair rather than the block is what makes the feedback signal about control flow rather than about which code ran.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Combine the two identifiers, then keep only the bits the map has room for."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Recording the current block alone loses the edge entirely: arriving at a block from two different places would look identical, and the whole feedback signal is about which paths were taken.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The map is a fixed size table, so this is a hash. A large program silently loses some edges to collisions, which is why assigning collision free identifiers at link time is a real improvement rather than a detail.</p>",
+   "starter": "unsigned edge_id(unsigned prev, unsigned cur, unsigned mask) {\n    (void)prev;\n    return cur & mask;\n}",
+   "tests": "#include <assert.h>\nunsigned edge_id(unsigned, unsigned, unsigned);\nint main(void) {\n    assert(edge_id(0, 0, 0xffff) == 0);\n    assert(edge_id(0x1234, 0x00ff, 0xffff) == (0x1234u ^ 0x00ffu));\n    assert(edge_id(0xabcd, 0xabcd, 0xffff) == 0);\n    /* the mask keeps it inside the map */\n    assert(edge_id(0x10000, 0, 0xffff) == 0);\n    assert(edge_id(0x12345, 0, 0xffff) == 0x2345);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "Why the identifier is shifted",
+   "brief": "<p>Write <code>next_prev</code>, returning what the fuzzer stores as the previous block after executing a block with the given identifier.</p>\n<p>The stored value is the identifier shifted right by one. That shift is what makes the edge from A to B different from the edge from B to A, and what stops a block that jumps to itself hashing to zero.</p>",
+   "kind": "output",
+   "concept": "One shift carries two properties, and both of them are about the map index being an edge rather than an unordered pair.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "It is a single shift, and it happens on the way out rather than on the way in."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Storing the identifier unchanged makes A to B and B to A the same exclusive or, so the fuzzer cannot tell a loop's two directions apart, and a self loop indexes zero for every block in the program.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Three lines of the original instrumentation carry the whole idea: an identifier per block, an exclusive or into the map, and this shift.</p>",
+   "starter": "unsigned next_prev(unsigned cur) {\n    return cur;\n}",
+   "tests": "#include <assert.h>\nunsigned next_prev(unsigned);\n/* The map index, spelled out here so this exercise stands alone. */\nstatic unsigned idx(unsigned prev, unsigned cur) {\n    return (prev ^ cur) & 0xffffu;\n}\nint main(void) {\n    assert(next_prev(0) == 0);\n    assert(next_prev(2) == 1);\n    assert(next_prev(0xabcd) == 0x55e6);\n    /* A to B and B to A must land in different places. */\n    unsigned a = 0x1234, b = 0x5678;\n    assert(idx(next_prev(a), b) != idx(next_prev(b), a));\n    /* A self loop must not index zero. */\n    assert(idx(next_prev(a), a) != 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "Quantising a hit count",
+   "brief": "<p>Write <code>bucket</code>, returning which class a hit count falls into, using the classes 1, 2, 3, 4 to 7, 8 to 15, 16 to 31, 32 to 127, and 128 upwards, numbered from 1.</p>\n<p>A count of zero is class 0, meaning the edge was not executed at all.</p>",
+   "kind": "output",
+   "concept": "Treating every count as distinct makes every input look novel, and treating an edge as merely hit or not loses the fact that a loop ran twice instead of once.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The first three classes are single counts, and the rest are ranges that roughly double."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. One, two and three are three separate classes, and four through seven share one. A pure doubling from the start merges two and three, which loses the difference between a loop that ran once and one that ran twice.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Eight classes fit in a byte, a new class counts as new coverage, and a new count inside a class does not. That compromise is what keeps the corpus bounded.</p>",
+   "starter": "unsigned bucket(unsigned count) {\n    if (count == 0) return 0;\n    unsigned b = 1;\n    while (count > 1) { count >>= 1; b++; }\n    return b;\n}",
+   "tests": "#include <assert.h>\nunsigned bucket(unsigned);\nint main(void) {\n    assert(bucket(0) == 0);\n    assert(bucket(1) == 1);\n    assert(bucket(2) == 2);\n    assert(bucket(3) == 3);\n    assert(bucket(4) == 4);\n    assert(bucket(7) == 4);\n    assert(bucket(8) == 5);\n    assert(bucket(15) == 5);\n    assert(bucket(16) == 6);\n    assert(bucket(31) == 6);\n    assert(bucket(32) == 7);\n    assert(bucket(127) == 7);\n    assert(bucket(128) == 8);\n    assert(bucket(100000) == 8);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Is this input worth keeping",
+   "brief": "<p>Write <code>new_coverage</code>, returning how many edges of a run are new, given this run's bucket for each edge and the highest bucket ever seen for it.</p>\n<p>An edge is new when this run put it in a class above anything recorded before. An edge that was not executed contributes nothing.</p>",
+   "kind": "output",
+   "concept": "This one comparison is the entire feedback mechanism, and it is what turns a blind random walk into a hill climb over the program's own structure.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "New means a higher class than has ever been seen for that edge, not merely a different one."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. An edge that ran fewer times than before is not a discovery, so a difference in either direction is the wrong test. And an edge that did not run at all this time cannot be new.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>An input with anything new joins the corpus and becomes breeding stock. That is how a corpus containing only the word hello grew into syntactically valid image files with nobody explaining the format.</p>",
+   "starter": "unsigned new_coverage(const unsigned char *run, const unsigned char *seen,\n                      unsigned n) {\n    unsigned c = 0;\n    for (unsigned i = 0; i < n; i++)\n        if (run[i] != seen[i]) c++;\n    return c;\n}",
+   "tests": "#include <assert.h>\nunsigned new_coverage(const unsigned char *, const unsigned char *, unsigned);\nint main(void) {\n    { unsigned char r[] = {1, 0, 3}, s[] = {1, 0, 3};\n      assert(new_coverage(r, s, 3) == 0); }\n    { unsigned char r[] = {2, 0, 3}, s[] = {1, 0, 3};\n      assert(new_coverage(r, s, 3) == 1); }\n    /* Fewer executions than before is not a discovery. */\n    { unsigned char r[] = {1, 0, 1}, s[] = {1, 0, 3};\n      assert(new_coverage(r, s, 3) == 0); }\n    /* An edge reached for the first time. */\n    { unsigned char r[] = {1, 1, 3}, s[] = {1, 0, 3};\n      assert(new_coverage(r, s, 3) == 1); }\n    /* An edge not executed this run. */\n    { unsigned char r[] = {0, 0, 0}, s[] = {1, 2, 3};\n      assert(new_coverage(r, s, 3) == 0); }\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Saying the whole law",
+   "brief": "<p>Write <code>is_permutation</code>, deciding whether two arrays of small non-negative integers contain the same values with the same multiplicities.</p>\n<p>Values are all below 256. Order does not matter and counts do.</p>\n<p>Sorting is ordered and a permutation. This is the half everybody leaves out.</p>",
+   "kind": "output",
+   "concept": "A property that states half the specification accepts an implementation that satisfies half of it, and an empty list is sorted.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Counting each value is enough, and two arrays of different lengths cannot be permutations of one another."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Two arrays containing the same distinct values are not permutations unless each value appears the same number of times, so a set is not enough.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Without this clause, a sort that empties the list passes its test suite. That is not contrived; it is what a suite of hand-picked expected outputs quietly permits.</p>",
+   "starter": "int is_permutation(const unsigned char *a, unsigned na,\n                   const unsigned char *b, unsigned nb) {\n    if (na != nb) return 0;\n    for (unsigned i = 0; i < na; i++) {\n        int found = 0;\n        for (unsigned j = 0; j < nb; j++) if (a[i] == b[j]) found = 1;\n        if (!found) return 0;\n    }\n    return 1;\n}",
+   "tests": "#include <assert.h>\nint is_permutation(const unsigned char *, unsigned,\n                   const unsigned char *, unsigned);\nint main(void) {\n    { unsigned char a[] = {3, 1, 2}, b[] = {1, 2, 3};\n      assert(is_permutation(a, 3, b, 3) == 1); }\n    { unsigned char a[] = {1, 1, 2}, b[] = {1, 2, 2};\n      assert(is_permutation(a, 3, b, 3) == 0); }   /* same values, wrong counts */\n    { unsigned char a[] = {1, 2}, b[] = {1, 2, 3};\n      assert(is_permutation(a, 2, b, 3) == 0); }\n    { unsigned char a[] = {5}, b[] = {5};\n      assert(is_permutation(a, 1, b, 1) == 1); }\n    { unsigned char a[] = {0}, b[] = {0};\n      assert(is_permutation(a, 0, b, 0) == 1); }\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "The counterexample a person can read",
+   "brief": "<p>Write <code>minimal_example</code>, returning the smallest value in an array that exceeds a limit, which is what shrinking leaves behind after reducing both the length of the failing input and the size of the offending value.</p>\n<p>Return -1 when nothing in the array exceeds the limit, which means there was no failure to shrink.</p>",
+   "kind": "output",
+   "concept": "A failure found in the middle of a random space is technically a bug report and practically useless. Shrinking is what makes it a bug report a person acts on.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Among the values that fail, the useful one is the smallest, not the first one the generator happened to produce."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. The first failing value is where the search stopped, and the smallest failing value is the one that tells you where the boundary is. Those are usually not the same number.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>A two hundred element list becomes a list of one, and the offending value becomes the smallest one that still breaks it. That is the difference between a technique people use and one they abandon.</p>",
+   "starter": "int minimal_example(const int *v, unsigned n, int limit) {\n    for (unsigned i = 0; i < n; i++)\n        if (v[i] > limit) return v[i];\n    return -1;\n}",
+   "tests": "#include <assert.h>\nint minimal_example(const int *, unsigned, int);\nint main(void) {\n    { int v[] = {900, 101, 5, 400}; assert(minimal_example(v, 4, 100) == 101); }\n    { int v[] = {1, 2, 3};          assert(minimal_example(v, 3, 100) == -1); }\n    { int v[] = {101};              assert(minimal_example(v, 1, 100) == 101); }\n    { int v[] = {5, 5, 5};          assert(minimal_example(v, 3, 4) == 5); }\n    assert(minimal_example(0, 0, 100) == -1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "Two implementations, one specification",
+   "brief": "<p>Write <code>first_disagreement</code>, returning the index of the first input on which two implementations produce different answers, or -1 when they agree everywhere.</p>\n<p>Neither implementation is trusted. A disagreement is a bug in one of them and you do not have to know which.</p>",
+   "kind": "output",
+   "concept": "This is an oracle you can have without a specification, which is why a startling share of real cryptography and compiler bugs were found with it.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The first index where they differ, scanning from the start."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Counting disagreements answers a different question. What makes a bug report is the earliest input on which they diverge, because that is the case to look at.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Every remaining disagreement after the first is often the same bug seen again, which is why the first one is the one worth reporting.</p>",
+   "starter": "int first_disagreement(const int *a, const int *b, unsigned n) {\n    int count = 0;\n    for (unsigned i = 0; i < n; i++) if (a[i] != b[i]) count++;\n    return count;\n}",
+   "tests": "#include <assert.h>\nint first_disagreement(const int *, const int *, unsigned);\nint main(void) {\n    { int a[] = {1, 2, 3}, b[] = {1, 2, 3};\n      assert(first_disagreement(a, b, 3) == -1); }\n    { int a[] = {1, 9, 3}, b[] = {1, 2, 3};\n      assert(first_disagreement(a, b, 3) == 1); }\n    { int a[] = {9, 9, 9}, b[] = {1, 2, 3};\n      assert(first_disagreement(a, b, 3) == 0); }\n    { int a[] = {1, 2, 9}, b[] = {1, 2, 3};\n      assert(first_disagreement(a, b, 3) == 2); }\n    assert(first_disagreement(0, 0, 0) == -1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "What random bytes cannot reach",
+   "brief": "<p>Write <code>random_can_pass</code>, deciding whether random input can plausibly get past a magic number check within a budget of attempts, given the length of the magic in bytes and the budget expressed as a power of two.</p>\n<p>Each byte that has to match exactly costs eight bits, so the chance of hitting the magic is one in two to the power of eight times the length. It is plausible when the budget is at least that many powers of two.</p>",
+   "kind": "output",
+   "concept": "This arithmetic is the whole reason the first generation of fuzzing stopped at input validation, and the whole reason the second generation started from real files.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Each byte is eight bits, and the comparison is against the budget in the same units."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A four byte magic is thirty two bits, which is about four billion attempts, so a budget of a million never gets there. Comparing bytes against a budget in powers of two is comparing different units.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Purely random bytes get past a four byte header with a probability of one in four billion, so random input tests input validation and nothing whatsoever behind it.</p>",
+   "starter": "int random_can_pass(unsigned magic_bytes, unsigned budget_log2) {\n    return magic_bytes <= budget_log2;\n}",
+   "tests": "#include <assert.h>\nint random_can_pass(unsigned, unsigned);\nint main(void) {\n    assert(random_can_pass(4, 20) == 0);   /* 32 bits, a million tries */\n    assert(random_can_pass(4, 32) == 1);\n    assert(random_can_pass(4, 40) == 1);\n    assert(random_can_pass(1, 8) == 1);\n    assert(random_can_pass(2, 15) == 0);\n    assert(random_can_pass(0, 0) == 1);    /* nothing to match */\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

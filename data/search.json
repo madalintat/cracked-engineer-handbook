@@ -14519,6 +14519,270 @@
  },
  {
   "t": "section",
+  "slug": "testing",
+  "anchor": "the-split-that-organises-everything",
+  "title": "The split that organises everything",
+  "text": "Every technique above is two independent pieces. There is input generation: how do you reach an interesting state. And there is the oracle: once you are there, how do you know it is wrong. Almost all the confusion in this area comes from mixing the two up. A unit test picks the input by hand and writes the oracle by hand. A property test generates the input and states the oracle as a law. A fuzzer generates inputs aggressively and borrows its oracle from somewhere else. A model checker enumerates inputs over a small model and takes the oracle from a formula. So when a fuzzing run finds nothing, there are exactly two possibilities. It could not reach the code, or it could not tell that the code was wrong. Keeping those apart makes the rest of this bookkeeping.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "testing",
+  "anchor": "from-an-example-to-a-law",
+  "title": "From an example to a law",
+  "text": "An example test names an input and an expected output. A property test says something that should hold for every input, and hands the search to a machine. Take sorting. The example checks that one list comes out in order. The property says the result is ordered and is a permutation of the input, and that second clause is the one people leave out. Without it, an implementation that empties the list passes, because an empty list is sorted. That is not a contrived failure; it is what a test suite full of hand-picked expected outputs quietly permits. The reframe is that you are not writing more tests. You are writing fewer and stronger statements and delegating the enumeration, because the generator replaces the part of your test suite with the worst coverage of adversarial inputs, which is your imagination. Your imagination does not produce the empty string, a string with an embedded zero byte, the most negative integer, or four thousand identical elements. A generator produces all of them before lunch.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "testing",
+  "anchor": "generators-and-the-two-ways-they-go-wrong",
+  "title": "Generators, and the two ways they go wrong",
+  "text": "A generator turns randomness and a size into a value. Two things decide whether one is any good. The first is distribution. A uniform draw over every 32 bit integer will essentially never produce zero, one, minus one, or either extreme, which are the only values that ever have bugs in them. A good generator biases hard towards small magnitudes and known boundaries. When you write your own, put the bias in on purpose. The second is validity, and it hides a trap. If your property needs its input to satisfy a precondition, you can generate values and throw away the ones that fail. That works while most are accepted, and it collapses when few are: try to get a valid twenty node balanced tree by discarding random trees and the acceptance rate is about zero. Worse is the middle case, where enough are accepted to keep going and the survivors are a narrow, skewed corner of the space you believed you were testing. The way out is to generate the operations rather than the state. Build the tree by generating a sequence of insertions and applying them. Now everything generated is valid by construction, the distribution is over states the program can actually reach, and nothing is discarded. It",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "testing",
+  "anchor": "why-shrinking-is-the-whole-technique",
+  "title": "Why shrinking is the whole technique",
+  "text": "A property test that fails hands you a counterexample from the middle of the random space: a list of two hundred numbers, or a string of unprintable bytes. That is technically a bug report and practically useless. Shrinking is the search for a smaller input that still fails. Cut the list in half and see if it still fails. Reduce a number towards zero. Simplify a character towards a printable one. Repeat until nothing smaller fails. The two hundred element list becomes a list of two, and the offending value becomes the smallest one that still breaks it. That is the difference between a technique people use and one they abandon, and it is the part most descriptions wave at.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "testing",
+  "anchor": "three-generations-of-fuzzing",
+  "title": "Three generations of fuzzing",
+  "text": "In 1990 a researcher on a dial up line during a thunderstorm noticed that line noise was corrupting his keystrokes and that the utilities were crashing. He turned it into a study: feed random characters to about ninety standard system utilities. Between a quarter and a third of them crashed or hung. That is the first generation, and its limit is arithmetic. Purely random bytes get past a four byte magic number check with a probability of one in four billion, so random input tests input validation and nothing whatsoever behind it. The second generation mutates real inputs instead. Start with a corpus of valid files and corrupt them, and you begin past the magic number. It found a great deal and it is blind: it has no way to tell whether a mutation made progress, so the millionth mutation of a seed gets the same effort as the first. The third generation added one signal, and it changed everything: did this input execute an edge of the control flow graph that no previous input executed? If so, keep it in the corpus. That converts a blind random walk into a hill climb over the program's own structure. The advertisement for it is still the best one available: starting from a corpus cont",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "testing",
+  "anchor": "the-loop-and-two-pieces-of-engineering-inside-it",
+  "title": "The loop, and two pieces of engineering inside it",
+  "text": "The instrumentation is deliberately cheap. The compiler inserts a counter update at every edge, into a flat array indexed by a number it assigned, with no idea of source lines. The original formulation is three lines and it explains what an edge is: The identity of an edge is the exclusive or of two block identifiers, which is what makes it an edge and not a block. The shift is there so that going from A to B is distinguishable from going from B to A, and so a self loop does not hash to zero. And because it is a hash into a fixed size table, a large program silently loses some edges to collisions. The second piece is bucketing. Treating forty one executions of an edge as different from forty two would make every input novel and drown the signal; treating an edge as merely hit or not hit loses the fact that a loop ran twice instead of once, which is often exactly the discovery you want. So counts are quantised into about eight classes, roughly powers of two, and a new class counts as new coverage while a new count inside a class does not. It is a compromise and it is why the corpus stays bounded.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "testing",
+  "anchor": "the-oracle-problem-again",
+  "title": "The oracle problem, again",
+  "text": "A fuzzer has no idea what correct means. It notices a crash. In languages where a buffer overflow does not crash but quietly corrupts the next object, that means the search runs for days and finds nothing, while the bugs are there. This is why fuzzing without a sanitizer is close to pointless in C and C++. The sanitizer is the thing that turns a silent memory error into an immediate, loud, reported failure, and it is what the fuzzer's crash detector is actually detecting. The coverage guided loop is the generator; the sanitizer is the oracle; neither is much use without the other. There is a second oracle worth knowing. Run two independent implementations of the same specification on the same input and compare. Any disagreement is a bug in one of them, and you do not have to know which. A startling share of real cryptography and compiler bugs have been found exactly that way.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "testing",
+  "anchor": "coverage-is-a-diagnostic-and-a-bad-target",
+  "title": "Coverage is a diagnostic and a bad target",
+  "text": "Coverage tells you what your tests never touched, which is genuinely useful: uncovered code is untested code and often surprising. Turn it into a target and it stops meaning anything, because it is easy to execute a line without checking anything about it. A suite with no assertions at all can reach full coverage. The deeper limit is the one to remember. Coverage cannot see code that is not there. The most expensive defects in systems software are omissions: the missing bounds check, the error return nobody looked at, the overflow check never written. There is no line to leave uncovered, so the measurement is blind to the entire category, and it is the category that produces the security advisories.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "testing",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "Every technique is generation plus an oracle. When a search finds nothing, it either could not reach the code or could not tell it was wrong. A property states a law and delegates the search. Say the whole law, because ordered without permuted accepts an implementation that throws your data away. Generate the operations rather than the state, and never rely on discarding. Shrinking is what makes a counterexample readable, and it is most of why the technique survives contact with people. Coverage guided fuzzing is a hill climb over the control flow graph, using an edge as the exclusive or of two block identifiers and bucketed counts to keep the corpus finite. In C and C++ the sanitizer is the oracle, and without it the loop mostly finds nothing. Coverage is a superb diagnostic and a catastrophic target, and it is structurally blind to the missing check. That closes this part. The next one starts from the other end: not how to find out whether code is right, but what it costs to run, and where that cost comes from on a real machine.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "testing",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the machinery: the edge hash, the bucketing table, a permutation check, a shrink, and the arithmetic behind why random bytes never reach past a magic number. names the case your model got wrong. Several exercises assert that going from one block to another is a different edge from going back, which is the shift in the hash doing its job rather than a stray operation.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "testing",
+  "n": 1,
+  "title": "The edge, not the block",
+  "text": "An edge is a pair of blocks, and hashing the pair rather than the block is what makes the feedback signal about control flow rather than about which code ran. Write , returning the index a coverage map is updated at, given the previous block's identifier and the current one, and the size of the map as a mask. The index is the exclusive or of the two identifiers, kept inside the map by the mask.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "testing",
+  "n": 2,
+  "title": "Why the identifier is shifted",
+  "text": "One shift carries two properties, and both of them are about the map index being an edge rather than an unordered pair. Write , returning what the fuzzer stores as the previous block after executing a block with the given identifier. The stored value is the identifier shifted right by one. That shift is what makes the edge from A to B different from the edge from B to A, and what stops a block that jumps to itself hashing to zero.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "testing",
+  "n": 3,
+  "title": "Quantising a hit count",
+  "text": "Treating every count as distinct makes every input look novel, and treating an edge as merely hit or not loses the fact that a loop ran twice instead of once. Write , returning which class a hit count falls into, using the classes 1, 2, 3, 4 to 7, 8 to 15, 16 to 31, 32 to 127, and 128 upwards, numbered from 1. A count of zero is class 0, meaning the edge was not executed at all.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "testing",
+  "n": 4,
+  "title": "Is this input worth keeping",
+  "text": "This one comparison is the entire feedback mechanism, and it is what turns a blind random walk into a hill climb over the program's own structure. Write , returning how many edges of a run are new, given this run's bucket for each edge and the highest bucket ever seen for it. An edge is new when this run put it in a class above anything recorded before. An edge that was not executed contributes nothing.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "testing",
+  "n": 5,
+  "title": "Saying the whole law",
+  "text": "A property that states half the specification accepts an implementation that satisfies half of it, and an empty list is sorted. Write , deciding whether two arrays of small non-negative integers contain the same values with the same multiplicities. Values are all below 256. Order does not matter and counts do. Sorting is ordered and a permutation. This is the half everybody leaves out.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "testing",
+  "n": 6,
+  "title": "The counterexample a person can read",
+  "text": "A failure found in the middle of a random space is technically a bug report and practically useless. Shrinking is what makes it a bug report a person acts on. Write , returning the smallest value in an array that exceeds a limit, which is what shrinking leaves behind after reducing both the length of the failing input and the size of the offending value. Return -1 when nothing in the array exceeds the limit, which means there was no failure to shrink.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "testing",
+  "n": 7,
+  "title": "Two implementations, one specification",
+  "text": "This is an oracle you can have without a specification, which is why a startling share of real cryptography and compiler bugs were found with it. Write , returning the index of the first input on which two implementations produce different answers, or -1 when they agree everywhere. Neither implementation is trusted. A disagreement is a bug in one of them and you do not have to know which.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "testing",
+  "n": 8,
+  "title": "What random bytes cannot reach",
+  "text": "This arithmetic is the whole reason the first generation of fuzzing stopped at input validation, and the whole reason the second generation started from real files. Write , deciding whether random input can plausibly get past a magic number check within a budget of attempts, given the length of the magic in bytes and the budget expressed as a power of two. Each byte that has to match exactly costs eight bits, so the chance of hitting the magic is one in two to the power of eight times the length. It is plausible when the budget is at least that many powers of two.",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "testing",
+  "n": 1,
+  "title": "Every technique for believing code is correct splits into which two halves?",
+  "text": " Keeping them apart is what makes the rest of the subject bookkeeping. Most confusion here comes from mixing them up. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "testing",
+  "n": 2,
+  "title": "A fuzzing run finds nothing. What are the only two possibilities?",
+  "text": " Generation or oracle. Everything else is a special case of one of them. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "testing",
+  "n": 3,
+  "title": "What does an example test check that a property test does not?",
+  "text": " The difference in what you write is small. The difference in what you get is that the property forces you to write down the specification. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "testing",
+  "n": 4,
+  "title": "Which property fully specifies a sort?",
+  "text": " Ordered alone is passed by an implementation that empties the list, and that is what a suite of hand-picked expected outputs quietly permits. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "testing",
+  "n": 5,
+  "title": "Why is a uniform generator over all 32 bit integers a poor one?",
+  "text": " A good generator biases hard towards small magnitudes and known boundaries. When you write your own, put the bias in on purpose. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "testing",
+  "n": 6,
+  "title": "Your property needs valid inputs. What is wrong with generating randomly and discarding the invalid ones?",
+  "text": " The middle case is the dangerous one: enough get through to keep going, and you test a narrow corner while believing you tested broadly. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "testing",
+  "n": 7,
+  "title": "What is the better way to generate a valid structure with invariants?",
+  "text": " The distribution is then over states the program can actually reach, and it tests the interface as well as the structure. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "testing",
+  "n": 8,
+  "title": "What is shrinking for?",
+  "text": " A counterexample from the middle of a random space is technically a bug report and practically useless. Shrinking is most of why the technique survives contact with people. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "testing",
+  "n": 9,
+  "title": "What did the 1990 random input study find?",
+  "text": " It also invented the field, and the origin was line noise on a dial up connection during a thunderstorm. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "testing",
+  "n": 10,
+  "title": "Why does purely random input stop at input validation?",
+  "text": " That arithmetic is exactly why the second generation started from real files and corrupted them instead. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "testing",
+  "n": 11,
+  "title": "What did coverage guided fuzzing add?",
+  "text": " That single change converts a blind random walk into a hill climb over the control flow graph, which is the entire reason modern fuzzing works. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "testing",
+  "n": 12,
+  "title": "Why is the previous block's identifier shifted right by one before being stored?",
+  "text": " Exclusive or is symmetric, so without the shift both directions of a loop collide, and a block that jumps to itself gives zero for every block. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "testing",
+  "n": 13,
+  "title": "Why are hit counts quantised into about eight classes?",
+  "text": " It is a compromise, and it is what keeps the corpus bounded while preserving loop depth sensitivity. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "testing",
+  "n": 14,
+  "title": "Why is fuzzing C code without a sanitizer close to pointless?",
+  "text": " The coverage guided loop is the generator and the sanitizer is the oracle. Neither is much use without the other. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "testing",
+  "n": 15,
+  "title": "What can code coverage never tell you about?",
+  "text": " There is no line to leave uncovered, so the measurement is structurally blind to omissions, and omissions are the category that produces security advisories. ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

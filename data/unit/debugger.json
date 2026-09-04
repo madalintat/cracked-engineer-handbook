@@ -68,5 +68,7 @@
   "syscalls",
   "elf"
  ],
- "neededBy": []
+ "neededBy": [
+  "testing"
+ ]
 }
