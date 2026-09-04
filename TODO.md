@@ -148,4 +148,7 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
       dispatch loop is shaped for the branch predictor, specialisation as
       observe-assume-guard-deoptimise, and why on stack replacement is not
       optional
-- [ ] 051 `build`, and the rest of Part IX
+- [x] 051 `build`, the build graph. Under-build against over-build, the five
+      ways a timestamp is a wrong cache key, hashing and early cutoff, the
+      header edge nobody declared, and the critical path
+- [ ] 052 `debugger`, 053 `measurement`, 054 `testing`, which finish Part IX

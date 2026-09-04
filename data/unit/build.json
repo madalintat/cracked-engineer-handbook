@@ -1,0 +1,67 @@
+{
+ "slug": "build",
+ "num": 50,
+ "title": "The build graph",
+ "blurb": "Never under-build, never over-build. Timestamps cannot tell you which.",
+ "part": "tools",
+ "partRoman": "IX",
+ "partTitle": "Tools",
+ "phase": "system",
+ "accent": "clay",
+ "backend": "godbolt",
+ "meta": {
+  "needs": [
+   "compile-time",
+   "elf"
+  ],
+  "minutes": 55,
+  "one_idea": "A build system is a cache, so every build bug is a cache bug, and a timestamp is a cache key that is wrong in at least five ways you will meet.",
+  "sources": [
+   "build-systems-toolchains"
+  ]
+ },
+ "html": "<p>A build is a graph. Object files depend on sources and on the headers they include, a library depends on its objects, a program depends on its libraries. Nothing may run before what it depends on, and anything whose inputs have not changed does not need to run at all.</p>\n<p>That is the whole model, and the useful surprise is how little the system knows. A build system does not know what a compiler is. It knows nodes, edges, and a command to run for each node. Everything it does well or badly follows from how it decides that a node is out of date.</p>\n<p>The failures below were measured, on a real tree, with a correct dependency file and a real edit.</p>\n<h2 id=\"two-ways-to-be-wrong-and-only-one-of-them-hurts\">Two ways to be wrong, and only one of them hurts</h2>\n<p>Over-building means running work that was not needed. It costs time and nothing else.</p>\n<p>Under-building means not running work that was needed. The binary no longer matches the source, the tests pass here and fail elsewhere, and the symptom is the sentence everyone has said: it works after a clean build.</p>\n<figure class=\"fig\" data-kind=\"blocks\"><svg viewBox=\"-14 -20 459 188\" class=\"fig-svg\" style=\"max-width:666px\" role=\"img\" aria-label=\"Two outcomes from a stale decision: over-building wastes time and stays correct, while under-building produces a binary that does not match the source and says nothing.\" preserveAspectRatio=\"xMidYMid meet\"><defs><marker id=\"fig-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0 L10 5 L0 10 z\" class=\"fig-head\"/></marker></defs><line x1=\"79\" y1=\"53\" x2=\"334\" y2=\"48\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><line x1=\"79\" y1=\"101\" x2=\"334\" y2=\"106\" class=\"fig-arrow\" marker-end=\"url(#fig-arrow)\"/><rect x=\"0.0\" y=\"52.8\" width=\"158.4\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--gold-ink, var(--accent));stroke:var(--gold-ink, var(--accent))\"/><text x=\"79.2\" y=\"81.0\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">is it stale?</text><rect x=\"237.6\" y=\"0.0\" width=\"193.6\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--jade-ink, var(--accent));stroke:var(--jade-ink, var(--accent))\"/><text x=\"334.4\" y=\"28.2\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">over-build: slow</text><rect x=\"237.6\" y=\"105.6\" width=\"193.6\" height=\"48.4\" rx=\"4\" class=\"fig-box fig-box-tint\" style=\"fill:var(--clay-ink, var(--accent));stroke:var(--clay-ink, var(--accent))\"/><text x=\"334.4\" y=\"133.8\" font-size=\"12\" text-anchor=\"middle\" class=\"fig-fg\" font-weight=\"600\">under-build: wrong</text></svg><figcaption>The two errors are not symmetric. One is a slow build and the other is a wrong program that no tool reports, which is why a build system may over-build and may never under-build.</figcaption></figure>\n<p>So a clean build is not a fix. It is a diagnosis. If building from scratch gives a different answer from building incrementally, the graph is missing an edge, and the useful response is to find the edge rather than to delete everything and start again.</p>\n<p>That gives a definition worth holding onto. A build system is correct when, for every possible edit to the source tree, the incremental build produces the same bytes as a build from nothing. Most build systems are not correct in that sense, and knowing which failures you have is the difference between losing an afternoon and losing a week.</p>\n<h2 id=\"what-a-timestamp-cannot-tell-you\">What a timestamp cannot tell you</h2>\n<p>The classic rule is one line: rebuild the output if any input is newer than it. It costs one system call per file and no reading of contents, which is why a tree of fifty thousand files can decide it has nothing to do in under a second.</p>\n<p>It is also wrong in at least five ways.</p>\n<p>The first is granularity. An older make compares whole seconds. Edit a header, rebuild, and if the object file was written earlier in the same second, the two truncate to the same number, and equal is not newer. Measured on ten rapid edit and rebuild cycles, eight produced a binary that did not match the source, in silence. A build tool with nanosecond timestamps scored zero misses on the same test.</p>\n<p>The second is that time does not only move forwards. Timestamps assume it does. Extracting an archive, copying with attributes preserved, restoring a backup and several version control operations all write old times onto new content. Give a header new content and a timestamp from 2020 and every timestamp based system on earth says there is nothing to do. This is not a bug in one tool. It is a property of the model.</p>\n<p>The third is that a shared filesystem has more than one clock. When the file server and the build machine disagree by a couple of hundred milliseconds, the tool notices a file from the future, warns, and then guesses.</p>\n<p>The fourth is the one almost nobody mentions. The command line is not a file. Change the optimisation level or add a definition on the command line, and a plain make sees no file newer than any other file and does nothing at all. The tree is now half built one way and half the other. Tools that record the command string alongside the output treat a changed command as a changed input, and rebuild correctly; that is the second good reason to prefer them and it is rarely the one given.</p>\n<p>The fifth is the harmless one. A timestamp says changed, not different. Save a file without editing it and everything downstream rebuilds.</p>\n<h2 id=\"hashing-the-inputs-instead\">Hashing the inputs instead</h2>\n<p>The other family asks a different question: is the hash of every input, plus the command, plus the parts of the environment that matter, a key already in the cache?</p>\n<p>That is a cache key rather than a comparison, and it removes all five failures. Content that did not change hashes the same however its timestamp moved. A different command is a different key. An identical file restored from a backup is a hit.</p>\n<p>It also buys something a timestamp cannot express. If you edit a comment and recompile, the object file may come out byte for byte identical. A hashing system notices that the output did not change and stops there, so nothing downstream runs. A timestamp system relinks the entire program because a file got newer. That is early cutoff, and on a large tree it is the difference between a rebuild you wait for and one you do not notice.</p>\n<p>The cost is real. Hashing means reading every input rather than looking at its size and date, and the cache has to live somewhere. What you are buying is a build whose answer does not depend on the order things happened to be written in.</p>\n<h2 id=\"the-edge-that-is-not-in-the-makefile\">The edge that is not in the makefile</h2>\n<p>There is one more way to under-build, and it is the most common of all: the edge simply is not there.</p>\n<p>A source file includes a header. Nothing in the source file's build rule says so, because the rule was written by a person and the include was added later. So the object never rebuilds when the header changes.</p>\n<p>Compilers solve this by generating the dependency list as a side effect of compiling. The compiler already found every header it read, so it writes them out in a form the build system can include, and the graph gains the edges nobody maintained. If a project's rules do not do this, it has this bug, and the bug shows up as a header edit that changes nothing until someone builds from clean.</p>\n<p>There is a structural version of the same mistake. A build split into one invocation per directory, each with its own view of the world, gives every invocation an incomplete graph. Nothing can be scheduled across the boundaries, because no single process ever holds the whole thing, and a dependency that crosses a directory is a dependency nobody checks. The fix is the same in either case: one graph, complete, in one place.</p>\n<h2 id=\"where-the-time-actually-goes\">Where the time actually goes</h2>\n<p>Two numbers describe a build graph. The total work is the sum of every node's cost, and it is what a single core takes. The critical path is the longest chain of nodes that must run in order, and it is what infinitely many cores take.</p>\n<p>The gap between them is what parallelism can buy, and it explains why adding cores stops helping. A tree with one enormous header included everywhere has a long critical path no matter how wide the machine is, because everything waits for the same node. Splitting that header does more for build time than any number of cores.</p>\n<p>It also explains why linking is so often the last thing you wait for. Every object is on the critical path to it, and there is exactly one of it.</p>\n<h2 id=\"what-to-carry-forward\">What to carry forward</h2>\n<p>A build is a graph, and a build system knows only nodes, edges and commands. Over-building costs time; under-building costs correctness, silently, which is why a system may do the first and must never do the second.</p>\n<p>A timestamp is a cheap and wrong cache key: it fails on granularity, on time moving backwards, on two clocks, on a changed command line, and it confuses changed with different. Hashing the inputs, the command and the environment fixes all five and adds early cutoff.</p>\n<p>The most common missing edge is a header nobody declared, and the fix is to let the compiler write the dependency list, because it is the only party that knows.</p>\n<p>The critical path, not the total work, is what a parallel build takes.</p>\n<p>Next is what happens when the program that came out of all this does the wrong thing: the debugger, and the sanitizers that answer questions a debugger cannot.</p>\n<h2 id=\"reading-the-errors-you-are-about-to-see\">Reading the errors you are about to see</h2>\n<p>These model the decisions a build system makes, staleness, cache keys, early cutoff and critical paths, on small graphs given as arrays.</p>\n<p><code>assert-failed</code> names the case your model got wrong. Several exercises assert that an input with an equal timestamp counts as stale, which is the granularity failure being avoided rather than a comparison written the wrong way round.</p>",
+ "headings": [
+  {
+   "id": "two-ways-to-be-wrong-and-only-one-of-them-hurts",
+   "text": "Two ways to be wrong, and only one of them hurts",
+   "level": 2
+  },
+  {
+   "id": "what-a-timestamp-cannot-tell-you",
+   "text": "What a timestamp cannot tell you",
+   "level": 2
+  },
+  {
+   "id": "hashing-the-inputs-instead",
+   "text": "Hashing the inputs instead",
+   "level": 2
+  },
+  {
+   "id": "the-edge-that-is-not-in-the-makefile",
+   "text": "The edge that is not in the makefile",
+   "level": 2
+  },
+  {
+   "id": "where-the-time-actually-goes",
+   "text": "Where the time actually goes",
+   "level": 2
+  },
+  {
+   "id": "what-to-carry-forward",
+   "text": "What to carry forward",
+   "level": 2
+  },
+  {
+   "id": "reading-the-errors-you-are-about-to-see",
+   "text": "Reading the errors you are about to see",
+   "level": 2
+  }
+ ],
+ "words": 1462,
+ "needs": [
+  "elf",
+  "compile-time"
+ ],
+ "neededBy": []
+}

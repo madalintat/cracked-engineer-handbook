@@ -13783,6 +13783,246 @@
  },
  {
   "t": "section",
+  "slug": "build",
+  "anchor": "two-ways-to-be-wrong-and-only-one-of-them-hurts",
+  "title": "Two ways to be wrong, and only one of them hurts",
+  "text": "Over-building means running work that was not needed. It costs time and nothing else. Under-building means not running work that was needed. The binary no longer matches the source, the tests pass here and fail elsewhere, and the symptom is the sentence everyone has said: it works after a clean build. The two errors are not symmetric. One is a slow build and the other is a wrong program that no tool reports, which is why a build system may over-build and may never under-build. So a clean build is not a fix. It is a diagnosis. If building from scratch gives a different answer from building incrementally, the graph is missing an edge, and the useful response is to find the edge rather than to delete everything and start again. That gives a definition worth holding onto. A build system is correct when, for every possible edit to the source tree, the incremental build produces the same bytes as a build from nothing. Most build systems are not correct in that sense, and knowing which failures you have is the difference between losing an afternoon and losing a week.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "build",
+  "anchor": "what-a-timestamp-cannot-tell-you",
+  "title": "What a timestamp cannot tell you",
+  "text": "The classic rule is one line: rebuild the output if any input is newer than it. It costs one system call per file and no reading of contents, which is why a tree of fifty thousand files can decide it has nothing to do in under a second. It is also wrong in at least five ways. The first is granularity. An older make compares whole seconds. Edit a header, rebuild, and if the object file was written earlier in the same second, the two truncate to the same number, and equal is not newer. Measured on ten rapid edit and rebuild cycles, eight produced a binary that did not match the source, in silence. A build tool with nanosecond timestamps scored zero misses on the same test. The second is that time does not only move forwards. Timestamps assume it does. Extracting an archive, copying with attributes preserved, restoring a backup and several version control operations all write old times onto new content. Give a header new content and a timestamp from 2020 and every timestamp based system on earth says there is nothing to do. This is not a bug in one tool. It is a property of the model. The third is that a shared filesystem has more than one clock. When the file server and the build mac",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "build",
+  "anchor": "hashing-the-inputs-instead",
+  "title": "Hashing the inputs instead",
+  "text": "The other family asks a different question: is the hash of every input, plus the command, plus the parts of the environment that matter, a key already in the cache? That is a cache key rather than a comparison, and it removes all five failures. Content that did not change hashes the same however its timestamp moved. A different command is a different key. An identical file restored from a backup is a hit. It also buys something a timestamp cannot express. If you edit a comment and recompile, the object file may come out byte for byte identical. A hashing system notices that the output did not change and stops there, so nothing downstream runs. A timestamp system relinks the entire program because a file got newer. That is early cutoff, and on a large tree it is the difference between a rebuild you wait for and one you do not notice. The cost is real. Hashing means reading every input rather than looking at its size and date, and the cache has to live somewhere. What you are buying is a build whose answer does not depend on the order things happened to be written in.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "build",
+  "anchor": "the-edge-that-is-not-in-the-makefile",
+  "title": "The edge that is not in the makefile",
+  "text": "There is one more way to under-build, and it is the most common of all: the edge simply is not there. A source file includes a header. Nothing in the source file's build rule says so, because the rule was written by a person and the include was added later. So the object never rebuilds when the header changes. Compilers solve this by generating the dependency list as a side effect of compiling. The compiler already found every header it read, so it writes them out in a form the build system can include, and the graph gains the edges nobody maintained. If a project's rules do not do this, it has this bug, and the bug shows up as a header edit that changes nothing until someone builds from clean. There is a structural version of the same mistake. A build split into one invocation per directory, each with its own view of the world, gives every invocation an incomplete graph. Nothing can be scheduled across the boundaries, because no single process ever holds the whole thing, and a dependency that crosses a directory is a dependency nobody checks. The fix is the same in either case: one graph, complete, in one place.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "build",
+  "anchor": "where-the-time-actually-goes",
+  "title": "Where the time actually goes",
+  "text": "Two numbers describe a build graph. The total work is the sum of every node's cost, and it is what a single core takes. The critical path is the longest chain of nodes that must run in order, and it is what infinitely many cores take. The gap between them is what parallelism can buy, and it explains why adding cores stops helping. A tree with one enormous header included everywhere has a long critical path no matter how wide the machine is, because everything waits for the same node. Splitting that header does more for build time than any number of cores. It also explains why linking is so often the last thing you wait for. Every object is on the critical path to it, and there is exactly one of it.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "build",
+  "anchor": "what-to-carry-forward",
+  "title": "What to carry forward",
+  "text": "A build is a graph, and a build system knows only nodes, edges and commands. Over-building costs time; under-building costs correctness, silently, which is why a system may do the first and must never do the second. A timestamp is a cheap and wrong cache key: it fails on granularity, on time moving backwards, on two clocks, on a changed command line, and it confuses changed with different. Hashing the inputs, the command and the environment fixes all five and adds early cutoff. The most common missing edge is a header nobody declared, and the fix is to let the compiler write the dependency list, because it is the only party that knows. The critical path, not the total work, is what a parallel build takes. Next is what happens when the program that came out of all this does the wrong thing: the debugger, and the sanitizers that answer questions a debugger cannot.",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
+  "slug": "build",
+  "anchor": "reading-the-errors-you-are-about-to-see",
+  "title": "Reading the errors you are about to see",
+  "text": "These model the decisions a build system makes, staleness, cache keys, early cutoff and critical paths, on small graphs given as arrays. names the case your model got wrong. Several exercises assert that an input with an equal timestamp counts as stale, which is the granularity failure being avoided rather than a comparison written the wrong way round.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 1,
+  "title": "Equal is not older",
+  "text": "The two errors are not symmetric, so a tie is resolved towards over-building, which costs time, rather than towards under-building, which costs correctness. Write , deciding whether an output must be rebuilt, given the output's timestamp and the timestamps of its inputs. Rebuild when any input is at least as new as the output. Equal counts, because two files written in the same tick are indistinguishable and the safe reading of a tie is that the input may have come second. An output with no inputs is never stale. An output that does not exist yet has a timestamp of 0 and must be built.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 2,
+  "title": "Time that moves backwards",
+  "text": "This is not a bug in one tool. Any system whose cache key is a timestamp has it, because the key is not a function of the content. Write , deciding whether a timestamp based build system will under-build, given the previous and current content hashes of an input and its previous and current timestamps. The system rebuilds when the timestamp moved forwards. It under-builds when the content changed and the timestamp did not move forwards, which is what extracting an archive or restoring a backup does. Return 1 for an under-build and 0 otherwise.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 3,
+  "title": "A key, not a comparison",
+  "text": "The command line is not a file, so a timestamp cannot see it change. A key made from the command can. Write , deciding whether a content addressed build system can skip a node, given the hash of its inputs, the hash of its command, the hash of the environment it depends on, and the same three values recorded when the output was made. All three have to match. Any difference is a different key, and a different key is a miss.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 4,
+  "title": "Stopping when nothing changed",
+  "text": "Early cutoff is what a timestamp cannot express, because a timestamp records that work happened rather than whether the result differs. Write , returning how many downstream nodes must run in a chain of nodes, given whether each node's output came out byte identical to what was there before. A node runs when the node before it produced something different. If a node's output is unchanged, nothing after it needs to run, and the propagation stops there. The first node always runs, because its input is what you edited. is non-zero when node produced an identical output. Count the nodes that run, ",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 5,
+  "title": "The header nobody declared",
+  "text": "The compiler is the only party that knows which headers were actually read, which is why the dependency list is a side effect of compiling rather than something a person maintains. Write , deciding whether a build will under-build after a header edit, given whether the rule declares the header and whether the compiler generated a dependency file that does. The graph has the edge if either the rule names it or a generated dependency file names it. Without the edge, the object does not rebuild and the binary stops matching the source.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 6,
+  "title": "What infinitely many cores cannot buy",
+  "text": "The total work is what one core takes. The critical path is what infinitely many take, and the gap is all that parallelism can buy. Write , returning the length of the longest chain of work in a build graph, given each node's cost and the index of the node it depends on. Node depends on , or on nothing when is -1. A node cannot start until what it depends on has finished. Every node's dependency has a lower index than the node itself.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 7,
+  "title": "Which nodes may run now",
+  "text": "A build system walks a graph. Everything else it does is a consequence of which nodes are ready and which are not. Write , returning how many nodes of a build graph can start immediately, given for each node how many of its dependencies have not finished yet, and whether it has already been built. A node is ready when it has not been built and nothing it depends on is outstanding. This is the width of the graph at this moment, and it is what limits how many cores are worth having right now.",
+  "part": "Tools"
+ },
+ {
+  "t": "exercise",
+  "slug": "build",
+  "n": 8,
+  "title": "Naming the failure",
+  "text": "The words are worth having, because one of these is a slow build and the other is a wrong program that no tool reports. Write , returning which kind of build failure occurred, given whether the node was rebuilt and whether its inputs had actually changed. Return 1 for an under-build, which is a rebuild that should have happened and did not; 2 for an over-build, which is work that was not needed; and 0 when the decision was right.",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 1,
+  "title": "What does a build system actually know about compilers?",
+  "text": " That is why the whole subject reduces to one question: how does it decide a node is out of date. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 2,
+  "title": "Which build error is the dangerous one?",
+  "text": " Over-building costs time. Under-building produces a wrong program, and the symptom is that it works after a clean build. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 3,
+  "title": "What does it mean when a clean build behaves differently from an incremental one?",
+  "text": " A clean build is a diagnosis rather than a fix. The useful response is to find the edge. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 4,
+  "title": "When is a build system correct?",
+  "text": " It is a strong definition and most build systems do not meet it. Knowing which failures you have is what makes it useful. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 5,
+  "title": "Why is a timestamp comparison cheap?",
+  "text": " That is how a tree of fifty thousand files decides it has nothing to do in under a second, and it is the reason the model survives its failures. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 6,
+  "title": "An older make compares timestamps at one second granularity. What goes wrong?",
+  "text": " Measured over ten rapid edit and rebuild cycles: eight produced a binary that did not match the source, silently. A tool with nanosecond timestamps missed none. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 7,
+  "title": "Extracting an archive writes old timestamps onto new content. What does a timestamp based build system do?",
+  "text": " Timestamps assume time only moves forwards. Restoring a backup, copying with attributes preserved and several version control operations all break that assumption, and it is a property of the model rather than a bug in one tool. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 8,
+  "title": "You change the optimisation level and run make again. What happens?",
+  "text": " The command line is not a file. Tools that record the command string beside the output treat a changed command as a changed input, and that is the argument for them almost nobody makes. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 9,
+  "title": "What is the difference between a timestamp saying changed and a hash saying different?",
+  "text": " Saving a file without editing it moves the timestamp and changes no content, which is over-building. The reverse case, new content with an old timestamp, is the dangerous one. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 10,
+  "title": "What goes into a content addressed build system's cache key?",
+  "text": " Leaving the command out is what lets an object built with different flags be reused, which is the failure the timestamp model also has. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 11,
+  "title": "What is early cutoff?",
+  "text": " Edit a comment, recompile, and the object may be byte identical. A hashing system notices and does not relink; a timestamp system relinks the program because a file got newer. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 12,
+  "title": "What does content hashing cost?",
+  "text": " What it buys is a build whose answer does not depend on the order things happened to be written in. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 13,
+  "title": "Why does the compiler generate the dependency list rather than a person writing it?",
+  "text": " A rule written by a person goes stale the moment somebody adds an include, and the symptom is a header edit that changes nothing until a clean build. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 14,
+  "title": "What limits how much a parallel build can be sped up?",
+  "text": " The total work is what one core takes. The gap between that and the critical path is all that parallelism can buy. ",
+  "part": "Tools"
+ },
+ {
+  "t": "drill",
+  "slug": "build",
+  "n": 15,
+  "title": "Why does one header included everywhere make a build slow on any machine?",
+  "text": " Both effects are real, and only the first one is immune to buying a wider machine. Splitting that header does more for build time than more cores. ",
+  "part": "Tools"
+ },
+ {
+  "t": "section",
   "slug": "execution-model",
   "anchor": "where-32-comes-from",
   "title": "Where 32 comes from",

@@ -79,6 +79,7 @@
  ],
  "neededBy": [
   "processes",
-  "linking"
+  "linking",
+  "build"
  ]
 }

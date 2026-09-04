@@ -886,7 +886,8 @@
    ],
    "neededBy": [
     "processes",
-    "linking"
+    "linking",
+    "build"
    ],
    "minutes": 55
   },
@@ -1124,7 +1125,8 @@
     "raii"
    ],
    "neededBy": [
-    "parsing"
+    "parsing",
+    "build"
    ],
    "minutes": 55
   },
@@ -1517,12 +1519,16 @@
    "phase": "system",
    "accent": "clay",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1462,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "elf",
+    "compile-time"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "debugger",
@@ -2825,9 +2831,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 51,
-  "words": 77526,
-  "exercises": 408,
-  "drills": 765
+  "ready": 52,
+  "words": 78988,
+  "exercises": 416,
+  "drills": 780
  }
 }
