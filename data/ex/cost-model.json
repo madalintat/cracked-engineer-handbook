@@ -1,0 +1,310 @@
+{
+ "slug": "cost-model",
+ "backend": "godbolt",
+ "exercises": [
+  {
+   "n": 1,
+   "title": "Misses, not elements",
+   "brief": "<p>Write <code>sequential_misses</code>, returning how many cache lines a sequential walk over an array touches, given the element count, the element size in bytes and the line size in bytes.</p>\n<p>The elements are contiguous and the walk starts at the beginning of a line. Every line holding any of them is fetched exactly once.</p>",
+   "kind": "output",
+   "concept": "The second cost model counts memory movement, and a sequential walk moves far fewer lines than it touches elements.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Total bytes over line size, rounded up, because a partly used line was still fetched whole."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Eight bytes of element in a sixty four byte line means eight elements share a fetch, so a million elements are a hundred and twenty five thousand misses rather than a million. Rounding down loses the final partial line.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is the whole reason a contiguous walk is cheap. The operation count did not change; the number of trips to memory divided by eight.</p>",
+   "starter": "unsigned long sequential_misses(unsigned long n, unsigned elem, unsigned line) {\n    (void)elem; (void)line;\n    return n;\n}",
+   "tests": "#include <assert.h>\nunsigned long sequential_misses(unsigned long, unsigned, unsigned);\nint main(void) {\n    assert(sequential_misses(8, 8, 64) == 1);\n    assert(sequential_misses(9, 8, 64) == 2);\n    assert(sequential_misses(1048576, 8, 64) == 131072);\n    assert(sequential_misses(1000, 4, 64) == 63);   /* 4000 bytes over 64 */\n    assert(sequential_misses(0, 8, 64) == 0);\n    assert(sequential_misses(10, 64, 64) == 10);    /* one element per line */\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 2,
+   "title": "Misses when the order is shuffled",
+   "brief": "<p>Write <code>chase_misses</code>, returning how many lines a pointer chase touches, given the node count, the node size and the line size.</p>\n<p>The nodes are shuffled, so each visit lands on a line unrelated to the last one. When the whole structure fits in the cache the lines are only fetched once each; when it does not, every visit is a miss.</p>\n<p>Given the cache size in bytes, return the number of misses under each case.</p>",
+   "kind": "output",
+   "concept": "The order the addresses are visited in is the variable, and it decides whether the structure's size or its element count sets the cost.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Two regimes. Compare the total footprint against the cache before deciding which one applies."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A shuffled walk over a structure that fits in the cache is not a hundred times slower than a sequential one, because after the first pass everything is resident. The penalty appears when the footprint stops fitting.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is why the measured ratio grows with the input rather than being a fixed constant: it tracks which level of the hierarchy the structure has fallen out of.</p>",
+   "starter": "unsigned long chase_misses(unsigned long n, unsigned node, unsigned line,\n                           unsigned long cache) {\n    (void)line; (void)cache; (void)node;\n    return n;\n}",
+   "tests": "#include <assert.h>\nunsigned long chase_misses(unsigned long, unsigned, unsigned, unsigned long);\nint main(void) {\n    /* 1000 nodes of 16 bytes is 16 KB, which fits in a 32 KB cache:\n       every line is fetched once, and there are 250 of them. */\n    assert(chase_misses(1000, 16, 64, 32768) == 250);\n    /* The same nodes with a tiny cache: every visit misses. */\n    assert(chase_misses(1000, 16, 64, 4096) == 1000);\n    /* Exactly filling the cache still fits. */\n    assert(chase_misses(256, 16, 64, 4096) == 64);\n    assert(chase_misses(0, 16, 64, 4096) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 3,
+   "title": "What the misses cost when they overlap",
+   "brief": "<p>Write <code>access_time_ns</code>, returning how long a set of misses takes in nanoseconds, given the miss count, the latency of one miss, and how many can be in flight at once.</p>\n<p>Independent misses overlap, so the total is the count divided by how many overlap, times the latency. A dependent chain has one in flight, so nothing overlaps and the total is the count times the latency.</p>\n<p>Round the division up: a partial group still costs a full latency.</p>",
+   "kind": "output",
+   "concept": "The difference between bandwidth bound and latency bound is one division, and it is the whole gap between the two linked list columns.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "A chain is the case where the number in flight is one, and it should fall out of the same formula rather than needing its own branch."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Twelve misses in flight makes a thousand misses cost eighty four latencies, not a thousand. And rounding down charges nothing for the last partial group.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The hardware can keep about a dozen line fills outstanding. A dependent chain cannot use any of them, because the address of the next load is the result of the current one.</p>",
+   "starter": "unsigned long access_time_ns(unsigned long misses, unsigned latency_ns,\n                             unsigned in_flight) {\n    (void)in_flight;\n    return misses * latency_ns;\n}",
+   "tests": "#include <assert.h>\nunsigned long access_time_ns(unsigned long, unsigned, unsigned);\nint main(void) {\n    /* A dependent chain: nothing overlaps. */\n    assert(access_time_ns(1000, 100, 1) == 100000);\n    /* Twelve in flight. */\n    assert(access_time_ns(1200, 100, 12) == 10000);\n    assert(access_time_ns(1000, 100, 12) == 8400);   /* 84 groups, rounded up */\n    assert(access_time_ns(0, 100, 12) == 0);\n    assert(access_time_ns(5, 100, 12) == 100);       /* one partial group */\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 4,
+   "title": "Which of two identical complexities wins",
+   "brief": "<p>Write <code>faster</code>, deciding which of two approaches with the same complexity is faster, given each one's operation count, its miss count, the cost of an operation in tenths of a nanosecond, and the cost of a miss in nanoseconds.</p>\n<p>Return 0 when the first is faster, 1 when the second is, and 2 when they are equal.</p>",
+   "kind": "output",
+   "concept": "Both models at once, which is what actually predicts a measurement: the operations are real and the misses are usually what decides.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Put both terms in the same units before adding them, and the smaller number is the faster one."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Comparing operation counts alone picks the approach that does less arithmetic and more waiting, which is exactly the mistake the unit is about. A hundred nanosecond miss is worth a thousand tenths of a nanosecond.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Two structures with identical complexity, identical allocation and identical operation counts measured six hundred times apart, and this is the arithmetic that saw it coming.</p>",
+   "starter": "int faster(unsigned long ops_a, unsigned long miss_a,\n           unsigned long ops_b, unsigned long miss_b,\n           unsigned op_tenths, unsigned miss_ns) {\n    (void)miss_a; (void)miss_b; (void)op_tenths; (void)miss_ns;\n    if (ops_a < ops_b) return 0;\n    if (ops_b < ops_a) return 1;\n    return 2;\n}",
+   "tests": "#include <assert.h>\nint faster(unsigned long, unsigned long, unsigned long, unsigned long,\n           unsigned, unsigned);\nint main(void) {\n    /* A does twice the operations and a tenth of the misses: A wins. */\n    assert(faster(2000, 100, 1000, 1000, 3, 100) == 0);\n    /* Same operations, B misses less: B wins. */\n    assert(faster(1000, 500, 1000, 50, 3, 100) == 1);\n    /* Identical. */\n    assert(faster(1000, 100, 1000, 100, 3, 100) == 2);\n    /* No misses at all: the operations decide. */\n    assert(faster(2000, 0, 1000, 0, 3, 100) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 5,
+   "title": "Reading the hierarchy out of a timing",
+   "brief": "<p>Write <code>level_of</code>, returning which level of the hierarchy a measured access time belongs to, given the time in tenths of a nanosecond.</p>\n<p>Up to 2.0 nanoseconds is the first level, up to 12.0 the second, up to 60.0 the third, and anything above that is main memory. Return 1, 2, 3 or 4.</p>",
+   "kind": "output",
+   "concept": "The knees in a timing curve land on the cache sizes, which is how a twenty line program reads a machine's hierarchy with no documentation.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "The boundaries are inclusive at the top of each level, and the units are tenths."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. Exactly at a boundary belongs to the faster level, and 103 nanoseconds is main memory rather than the third level. Working in whole nanoseconds throws away the resolution that separates the first two.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>The knees fall exactly on the sizes the machine reports for its own caches, which converts the memory hierarchy from something you were told into something you measured.</p>",
+   "starter": "int level_of(unsigned tenths_ns) {\n    if (tenths_ns < 20) return 1;\n    if (tenths_ns < 120) return 2;\n    if (tenths_ns < 600) return 3;\n    return 4;\n}",
+   "tests": "#include <assert.h>\nint level_of(unsigned);\nint main(void) {\n    assert(level_of(11) == 1);      /* 1.1 ns */\n    assert(level_of(20) == 1);      /* exactly 2.0 ns */\n    assert(level_of(21) == 2);\n    assert(level_of(48) == 2);      /* 4.8 ns */\n    assert(level_of(120) == 2);\n    assert(level_of(121) == 3);\n    assert(level_of(346) == 3);     /* 34.6 ns */\n    assert(level_of(600) == 3);\n    assert(level_of(1033) == 4);    /* 103.3 ns */\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 6,
+   "title": "The ratio that grows",
+   "brief": "<p>Write <code>ratio</code>, returning how many times slower a chase is than a scan, given the time each takes in microseconds, truncated.</p>\n<p>Return 0 when the scan took no time at all, since there is no ratio to report.</p>",
+   "kind": "output",
+   "concept": "The constant factor is a function of the input here, because it tracks which level of the hierarchy the structure has fallen out of.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "One division, guarded, in a type wide enough that a large chase time does not wrap."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A ratio is a division rather than a difference, and the difference between 1800 and 2.83 milliseconds is not six hundred.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>Twelve times, then seventy nine, then three hundred and seventy seven, then over six hundred. There is no crossing point where the list catches up; the gap widens.</p>",
+   "starter": "unsigned long ratio(unsigned long chase_us, unsigned long scan_us) {\n    return chase_us - scan_us;\n}",
+   "tests": "#include <assert.h>\nunsigned long ratio(unsigned long, unsigned long);\nint main(void) {\n    assert(ratio(19600, 1600) == 12);\n    assert(ratio(100500, 1270) == 79);\n    assert(ratio(714000, 1890) == 377);\n    assert(ratio(1800300, 2830) == 636);\n    assert(ratio(1000, 0) == 0);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 7,
+   "title": "Pages, and the walk behind them",
+   "brief": "<p>Write <code>tlb_covered</code>, deciding whether a structure's pages all fit in the translation cache, given the structure's size in bytes, the page size and how many pages the translation cache holds.</p>\n<p>When they do not fit, most accesses pay for a page walk on top of the miss.</p>",
+   "kind": "output",
+   "concept": "It is the second thing the model does not charge for, and it is why the measured ratio came out higher than the latency arithmetic predicted.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Pages needed is the size over the page size, rounded up, and the question is whether that number fits."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. A hundred and twenty eight megabytes at sixteen kilobyte pages is eight thousand pages, which no translation cache holds, and rounding the page count down hides the case that only just overflows.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>This is the reason large pages exist as a tuning option: they do not make memory faster, they make the translation of an address stop missing.</p>",
+   "starter": "int tlb_covered(unsigned long bytes, unsigned page, unsigned entries) {\n    if (!page) return 0;\n    return bytes / page <= entries;\n}",
+   "tests": "#include <assert.h>\nint tlb_covered(unsigned long, unsigned, unsigned);\nint main(void) {\n    /* 128 MB at 16 KB pages is 8192 pages, against 2048 entries. */\n    assert(tlb_covered(134217728UL, 16384, 2048) == 0);\n    /* 16 MB is 1024 pages, which fits. */\n    assert(tlb_covered(16777216UL, 16384, 2048) == 1);\n    /* Exactly filling it. */\n    assert(tlb_covered(33554432UL, 16384, 2048) == 1);\n    /* One byte more needs one page more. */\n    assert(tlb_covered(33554433UL, 16384, 2048) == 0);\n    /* Large pages fix the first case. */\n    assert(tlb_covered(134217728UL, 2097152, 2048) == 1);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  },
+  {
+   "n": 8,
+   "title": "When the better complexity actually wins",
+   "brief": "<p>Write <code>crossover</code>, returning the smallest input size at which an algorithm costing <code>b</code> operations per element beats one costing <code>a</code> operations per element squared, or 0 if it wins at every size from 1 upwards.</p>\n<p>The first costs <code>a <em> n </em> n</code> and the second costs <code>b <em> n</code>, so the second wins once <code>a </em> n</code> exceeds <code>b</code>.</p>\n<p>Sizes are whole numbers and the search starts at 1.</p>",
+   "kind": "output",
+   "concept": "The notation is right about growth, and growth is what decides whether an approach can work at all. This is the arithmetic of when that starts to bite.",
+   "backend": "godbolt",
+   "gpu": null,
+   "flags": "-O2 -Wall -Wextra",
+   "expect": [
+    {
+     "judge": "verdict",
+     "key": "assert-failed"
+    }
+   ],
+   "hints": [
+    "Solve the comparison rather than searching, and be careful about the size where the two are exactly equal."
+   ],
+   "diagnose": [
+    {
+     "id": "assert",
+     "judge": "verdict",
+     "key": "assert-failed",
+     "prose": "<p>A check disagrees. At the size where the costs are equal, neither wins, so the crossover is the next one up. And when the linear algorithm already wins at a size of one, the answer is that there is no crossover to report.</p>"
+    },
+    {
+     "id": "compile",
+     "judge": "verdict",
+     "key": "compile-error",
+     "prose": "<p>Read the line the compiler names.</p>"
+    }
+   ],
+   "after": "<p>No amount of constant factor tuning rescues a quadratic algorithm on a large input, and the notation tells you that before you write anything. What it does not tell you is which of two linear algorithms to pick.</p>",
+   "starter": "unsigned crossover(unsigned a, unsigned b) {\n    if (!a) return 0;\n    return b / a;\n}",
+   "tests": "#include <assert.h>\nunsigned crossover(unsigned, unsigned);\nint main(void) {\n    /* n*n beats 100n until n exceeds 100. */\n    assert(crossover(1, 100) == 101);\n    /* Equal at n = 100, so the crossover is 101. */\n    assert(crossover(2, 200) == 101);\n    /* The linear one wins immediately. */\n    assert(crossover(5, 3) == 0);\n    assert(crossover(1, 1) == 2);   /* equal at 1, so it wins from 2 */\n    assert(crossover(1, 2) == 3);\n    return 0;\n}",
+   "spec": null,
+   "lang": "c"
+  }
+ ]
+}

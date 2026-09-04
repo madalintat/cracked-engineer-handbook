@@ -87,6 +87,7 @@
   "object-model",
   "virtual-memory",
   "measurement",
+  "cost-model",
   "frame-budget"
  ]
 }

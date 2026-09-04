@@ -787,7 +787,9 @@
     "languages",
     "computability"
    ],
-   "neededBy": [],
+   "neededBy": [
+    "cost-model"
+   ],
    "minutes": 55
   },
   {
@@ -916,6 +918,7 @@
     "object-model",
     "virtual-memory",
     "measurement",
+    "cost-model",
     "frame-budget"
    ],
    "minutes": 55
@@ -1614,12 +1617,16 @@
    "phase": "scale",
    "accent": "azure",
    "backend": "godbolt",
-   "ready": false,
-   "words": 0,
-   "exercises": 0,
-   "drills": 0,
-   "needs": [],
-   "neededBy": []
+   "ready": true,
+   "words": 1456,
+   "exercises": 8,
+   "drills": 15,
+   "needs": [
+    "complexity",
+    "cache"
+   ],
+   "neededBy": [],
+   "minutes": 55
   },
   {
    "slug": "layout",
@@ -2864,9 +2871,9 @@
   "phases": 7,
   "parts": 19,
   "units": 122,
-  "ready": 58,
-  "words": 88587,
-  "exercises": 464,
-  "drills": 870
+  "ready": 59,
+  "words": 90043,
+  "exercises": 472,
+  "drills": 885
  }
 }
