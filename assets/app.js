@@ -1237,7 +1237,7 @@ function onePath(p, all) {
 
     ${assumed.length ? `
       <div class="passumes">
-        <h3>What this path skips</h3>
+        <h2>What this path skips</h2>
         <p>It does not start at the beginning, so it takes these as read. If a
           unit here refers to something you have not met, one of them is
           probably where it was introduced.</p>

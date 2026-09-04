@@ -2199,7 +2199,7 @@ a.gl:hover { text-decoration-style: solid; color: var(--accent-ink); }
   font-size: var(--t-sm);
   color: var(--ink-3);
 }
-.passumes h3 {
+.passumes h2 {
   font: 700 var(--t-micro)/1 var(--mono);
   color: var(--ink-4);
   text-transform: uppercase;
