@@ -139,6 +139,15 @@ function viewHome() {
   </div>`;
 }
 
+/* What checks the work, in words, said the same way on the track and on a
+ * unit. It was a local in viewTrack, so the unit page could not say it. */
+const TOOL_PROSE = {
+  sim: 'the simulator in this page',
+  godbolt: 'a real compiler, through Compiler Explorer',
+  yosys: 'Yosys, synthesising in this page',
+  modal: 'a GPU you rent by the second',
+};
+
 /* The track at 122 units.
  *
  * This was a list, and a list of 122 rows is 122 near-identical lines carrying
@@ -163,12 +172,6 @@ function viewTrack() {
   });
   const partById = new Map(HH.manifest.parts.map(p => [p.id, p]));
 
-  const TOOL = {
-    sim: 'the simulator in this page',
-    godbolt: 'a real compiler, through Compiler Explorer',
-    yosys: 'Yosys, synthesising in this page',
-    modal: 'a GPU you rent by the second',
-  };
 
   /* One unit. The number is set large and ghosted rather than small and dim:
    * at 122 units the number is how you keep your place, so it should be the
@@ -236,7 +239,7 @@ function viewTrack() {
               written === us.length ? `All ${us.length} written`
               : written ? `${written} of ${us.length} written`
               : `${us.length} units, none written yet`
-            } &middot; checked by ${esc(TOOL[main] || main)}</span>
+            } &middot; checked by ${esc(TOOL_PROSE[main] || main)}</span>
           </div>
         </div>
         <ul class="ugrid">${
@@ -430,6 +433,8 @@ async function viewUnit(slug) {
     <p class="cta">
       <a class="btn" href="#/work/${esc(slug)}/1">Start the exercises</a>
       <a class="btn ghost" href="#/drills/${esc(slug)}">Drills</a>
+      <span class="cta-note">${meta.exercises} exercises, checked by
+        ${esc(TOOL_PROSE[u.backend] || u.backend)}. ${meta.drills} drills.</span>
     </p>
     <nav class="unitnav" aria-label="Adjacent units">
       ${navLink(prev, 'prev')}${navLink(next, 'next')}

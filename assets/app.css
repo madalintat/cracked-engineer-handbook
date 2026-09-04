@@ -1033,6 +1033,48 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
 /* A cell with nothing in it reads as a column that failed to load. */
 td .none { color: var(--ink-4); font-size: var(--t-micro); }
 
+/* ---------------------------------------------------------------- print */
+/* A note is 1400 to 2200 words and people print those, or save them as PDF.
+ * Printed as it stands, a unit carries the sticky header, the tab bar, the
+ * contents button and the footer's nine links, and the phosphor ground eats
+ * a cartridge. This is the note, its figures and its captions, on paper.
+ *
+ * Light tokens are forced rather than inherited: a reader in dark mode who
+ * prints otherwise gets white text on a ground the printer will not print. */
+@media print {
+  :root, :root[data-theme="dark"] {
+    --bg: #fff;
+    --surface: #fff;
+    --raised: #fff;
+    --sunken: #fff;
+    --border: #999;
+    --border-soft: #ccc;
+    --ink: #000;
+    --ink-2: #1a1a1a;
+    --ink-3: #333;
+    --ink-4: #555;
+    --code-bg: #f2f2f2;
+    --code-ink: #000;
+    --accent: #666;
+    --accent-ink: #000;
+  }
+  header.top, nav.tabs, footer.bot, .rail, #sheetBtn, .sheet, .scrim,
+  .companion, .pop, .skip, .unitnav, .edges, .hero-art, .tfilter,
+  .wbbar, .exnav, #theme { display: none !important; }
+  body { font-size: 11pt; }
+  .wrap, .wrap.pad, .wrap.pad-lg { padding: 0; max-width: none; }
+  .unit { display: block; }
+  .prose, .body, .idea, .fig { max-width: none; }
+  /* A figure or a code block broken across a page break is unreadable. */
+  .fig, pre.cb, .idea, .drill, .vrow, table { break-inside: avoid; }
+  h1, h2, h3 { break-after: avoid; }
+  a { color: inherit; text-decoration: underline; }
+  /* On paper a link's destination is not clickable, so print it. Internal
+   * routes are not printed: "#/unit/nand" tells a reader on paper nothing. */
+  .body a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 9pt; }
+  .fig-svg { border: 1px solid var(--border-soft); }
+}
+
 /* -------------------------------------------------------------- footer */
 
 footer.bot {
@@ -1451,6 +1493,16 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
   max-width: 30ch;
 }
 .afternext { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+
+/* What the button leads to, said before it is pressed. A reader deciding
+ * whether to start should not have to click to find out how much is there,
+ * or which tool will be marking it. */
+.unit .cta { align-items: center; }
+.unit .cta-note {
+  font: 500 var(--t-sm)/1.4 var(--sans);
+  color: var(--ink-4);
+  flex: 1 1 16ch;
+}
 
 .track .part { margin-top: 40px; }
 .track .part-eyebrow {
