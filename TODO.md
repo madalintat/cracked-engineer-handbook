@@ -123,3 +123,12 @@ Legend: `[x]` done and tested, `[~]` in progress, `[ ]` not started.
 - [x] Mascot wired: header mark, favicon, apple touch icon, social preview and
       the 404. Background keyed out by `tools/keyout.py`, since there is no
       ImageMagick here and the source is a JPEG on solid black
+
+## 7. UI audit, 2026-09-02
+
+- [x] Branch `fix/ui-audit-2026-09`. The list, the measurements and what
+      each fix was for are in `docs/superpowers/plans/2026-09-02-ui-audit.md`.
+      Phone layout on the unit, workbench and track pages; the skip link;
+      hover cards; the render race; the theme flash; scroll memory on Back;
+      and `tools/check-css.mjs`, which fails the release on a `var()` that
+      nothing defines

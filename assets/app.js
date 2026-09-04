@@ -18,6 +18,10 @@ const HH = {
   cache: new Map(),
   KEY: 'hh-v1',
   teardown: [],      // listeners the current view owns; run on navigate away
+  scrollMem: new Map(),   // hash -> scrollY, for back and forward
+  at: '',                 // the hash the reader is on now
+  pushed: false,          // the pending hashchange came from a click here
+  restore: undefined,     // where render() should put the page, if not the top
 };
 
 /* ------------------------------------------------------------------ store */
@@ -93,7 +97,12 @@ function viewHome() {
   }).join('');
 
   const ready = HH.manifest.units.filter(u => u.ready).length;
-  const started = HH.manifest.units.find(u => Store.get(`read.${u.slug}`, -1) >= 0);
+  /* The unit opened most recently. Before `last` was recorded this found the
+   * first unit with any read state, which after fourteen units still said
+   * "Continue: The switch". The fallback is for a store from before then. */
+  const last = Store.get('last');
+  const started = HH.manifest.units.find(u => u.slug === last && u.ready)
+    || HH.manifest.units.find(u => Store.get(`read.${u.slug}`, -1) >= 0);
 
   return `
   <div class="wrap">
@@ -178,7 +187,7 @@ function viewTrack() {
       </span>`;
     return `
     <li class="${cls}"
-        data-hay="${esc([u.title, u.blurb, u.backend].join(' ').toLowerCase())}">
+        data-hay="${esc([unitNo(u), u.title, u.blurb, u.backend].join(' ').toLowerCase())}">
       ${u.ready
         ? `<a href="#/unit/${esc(u.slug)}">${inner}</a>`
         : `<div class="u-card">${inner}</div>`}
@@ -210,6 +219,9 @@ function viewTrack() {
         return `<span class="tick${on ? ' on' : ''}${
           u.ready ? '' : ' stub'}"></span>`;
       }).join('');
+      /* `.ticks`, not `.rail`: the contents rail on a unit page owns that
+       * name, and sharing it hid these below 1060px and laid the rail's
+       * heading beside its list above it. */
 
       return `
       <section class="part" id="${esc(p.id)}" data-part="${esc(p.id)}">
@@ -218,7 +230,7 @@ function viewTrack() {
           <h3>${esc(p.title)}</h3>
           <p class="pb">${esc(p.blurb)}</p>
           <div class="part-meta">
-            <span class="rail" role="img"
+            <span class="ticks" role="img"
                   aria-label="${read} of ${us.length} started">${rail}</span>
             <span class="part-tool">${
               written === us.length ? `All ${us.length} written`
@@ -413,10 +425,9 @@ async function viewUnit(slug) {
       ${edges}
     </header>
     <article class="body prose">${u.html}</article>
-    <p class="head" style="grid-column:2;margin-top:28px">
+    <p class="cta">
       <a class="btn" href="#/work/${esc(slug)}/1">Start the exercises</a>
-      <a class="btn ghost" href="#/drills/${esc(slug)}"
-         style="margin-left:8px">Drills</a>
+      <a class="btn ghost" href="#/drills/${esc(slug)}">Drills</a>
     </p>
     <nav class="unitnav" aria-label="Adjacent units">
       ${navLink(prev, 'prev')}${navLink(next, 'next')}
@@ -427,7 +438,11 @@ async function viewUnit(slug) {
   </button>
   <div class="scrim" id="scrim"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Contents"
-       data-open="false"></div>`;
+       data-open="false">
+    <div class="sheet-bar">
+      <button class="btn ghost sheet-close" type="button">Close</button>
+    </div>
+  </div>`;
 }
 
 /* Scroll to a heading and mark it, so the reader can see what moved. The
@@ -521,6 +536,7 @@ function wireUnit(slug) {
   wireGlossHover();
   const unit = el('.unit');
   if (!unit) return;
+  Store.set('last', slug);
   const rail = el('.rail');
   const items = [...document.querySelectorAll('.rail li')];
   const heads = [...document.querySelectorAll('.body h2, .body h3')];
@@ -588,7 +604,7 @@ function openSheet() {
   scrim.dataset.open = 'true';
   btn.setAttribute('aria-expanded', 'true');
   document.body.style.overflow = 'hidden';
-  const first = sheet.querySelector('a, button');
+  const first = sheet.querySelector('.rail a') || sheet.querySelector('a, button');
   if (first) first.focus();
   announce('Contents opened');
 }
@@ -617,6 +633,7 @@ function wireSheet(rail) {
     openSheet();
   };
   scrim.onclick = closeSheet;
+  sheet.querySelector('.sheet-close').onclick = closeSheet;
 
   const onKey = ev => {
     if (sheet.dataset.open !== 'true') return;
@@ -696,7 +713,7 @@ async function viewWork(slug, nRaw) {
     </div>
 
     <aside class="pane">
-      <div class="card" style="position:sticky;top:76px">
+      <div class="card about">
         <div class="meta"><span>What this is about</span></div>
         <p style="color:var(--ink-2);font-size:var(--t-sm)">${ex.concept}</p>
         <div class="hintbox" id="hints">
@@ -721,6 +738,7 @@ function wireWork() {
   const { slug, n, ex } = w;
   const host = el('#ed');
   if (!host) return;
+  Store.set('last', slug);
 
   /* The exercise declares its language and the build validates it against the
    * backend, so use it. Deriving it from the backend instead meant every
@@ -764,10 +782,19 @@ function wireWork() {
 
   HH.teardown.push(() => clearTimeout(HH._saveT));
 
-  el('#wrap').onclick = ev => {
-    const on = ev.currentTarget.getAttribute('aria-pressed') !== 'true';
-    ev.currentTarget.setAttribute('aria-pressed', String(on));
+  /* Wrap is a preference, and its default depends on the screen: a line of
+   * C that scrolls sideways on a phone is a line the reader cannot see whole,
+   * so narrow screens start wrapped and the choice is kept either way. */
+  const wrapBtn = el('#wrap');
+  const setWrap = on => {
+    wrapBtn.setAttribute('aria-pressed', String(on));
     editor.setWrap(on);
+  };
+  setWrap(Store.get('wrap', matchMedia('(max-width: 760px)').matches));
+  wrapBtn.onclick = () => {
+    const on = wrapBtn.getAttribute('aria-pressed') !== 'true';
+    Store.set('wrap', on);
+    setWrap(on);
   };
 
   el('#reset').onclick = () => {
@@ -821,6 +848,18 @@ function wireWork() {
   const runBtn = el('#run');
   const be = WB.BACKENDS[ex.backend];
 
+  // Run without leaving the editor. Vim mode leaves modified keys alone, so
+  // this works in both. The button says so for anyone who hovers it.
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+  runBtn.title = `Run (${mac ? '\u2318' : 'Ctrl'}+Enter)`;
+  runBtn.setAttribute('aria-keyshortcuts', 'Control+Enter Meta+Enter');
+  editor.el.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter' && (ev.metaKey || ev.ctrlKey)) {
+      ev.preventDefault();
+      if (!runBtn.disabled) runBtn.click();
+    }
+  });
+
   // A large runtime is stated before it is fetched, never during. The learner
   // decides whether to spend the bandwidth; the page does not decide for them.
   const needsConsent = () =>
@@ -873,13 +912,17 @@ function wireWork() {
           }]);
         },
       });
+      const wasNew = res.pass && !Store.get(`pass.${slug}.${n}`, false);
+      if (res.pass) Store.set(`pass.${slug}.${n}`, true);
+      // The reader may have moved on while the tool was thinking. The solve
+      // is recorded either way; the verdict is drawn only on the page that
+      // asked for it, not on whatever page is there now.
+      if (!host.isConnected) return;
       renderVerdicts(res.verdicts, undefined, ex.backend,
                      (res.signals.find(s => s.judge === 'verdict') || {}).key,
                      res.pass);
       renderDiagnosis(ex, res);
       if (res.pass) {
-        const wasNew = !Store.get(`pass.${slug}.${n}`, false);
-        Store.set(`pass.${slug}.${n}`, true);
         el('#afterword').hidden = false;
         document.querySelector(`.exnav a[href$="/${n}"]`)?.classList.add('done');
         announce('Correct. ' + (res.verdicts[0]?.title || ''));
@@ -897,6 +940,7 @@ function wireWork() {
         announce('Not yet. ' + (res.verdicts[0]?.title || ''));
       }
     } catch (err) {
+      if (!host.isConnected) return;
       renderVerdicts([{ who: ex.backend, state: 'unavailable',
                         title: 'The checker could not run: ' + err.message }]);
     } finally {
@@ -1302,9 +1346,17 @@ function wirePopover({ openers, cardFor, cls }) {
     pop.style.left = `${left}px`;
   };
 
+  /* Leaving the term does not close the card at once: the pointer has to
+   * cross an 8px gap to reach the link inside it, and a card that closes on
+   * the gap is a card no mouse can use. Re-entering either cancels the close.
+   * (`cls` can be two class names, so it is not a selector; `contains` is.) */
+  let leaving = null;
   const onOver = e => {
+    clearTimeout(leaving);
     const el = e.target.closest(openers);
-    if (el) open(el); else if (!e.target.closest('.' + cls)) close();
+    if (el) return open(el);
+    if (pop.contains(e.target)) return;
+    leaving = setTimeout(close, 220);
   };
   const onFocus = e => {
     const el = e.target.closest(openers);
@@ -1314,7 +1366,7 @@ function wirePopover({ openers, cardFor, cls }) {
   const onClick = e => {
     const el = e.target.closest(openers);
     if (el) { e.preventDefault(); current === el ? close() : open(el); }
-    else if (!e.target.closest('.' + cls)) close();
+    else if (!pop.contains(e.target)) close();
   };
 
   addEventListener('pointerover', onOver);
@@ -1323,6 +1375,7 @@ function wirePopover({ openers, cardFor, cls }) {
   addEventListener('click', onClick);
   addEventListener('scroll', close, { passive: true });
   HH.teardown.push(() => {
+    clearTimeout(leaving);
     removeEventListener('pointerover', onOver);
     removeEventListener('focusin', onFocus);
     removeEventListener('keydown', onKey);
@@ -1683,6 +1736,18 @@ function snippet(text, query) {
   return (from ? '…' : '') + cut + (from + 200 < t.length ? '…' : '');
 }
 
+/* Escaped, with every query term wrapped in <mark>. Split on the terms first
+ * and escape the pieces, so the markup is added to text that is already safe
+ * rather than searched for in text that has been escaped. */
+function mark(text, query) {
+  const terms = String(query || '').toLowerCase().split(/\s+/).filter(Boolean)
+    .map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (!terms.length) return esc(text);
+  const re = new RegExp(`(${terms.join('|')})`, 'gi');
+  return String(text).split(re)
+    .map((p, i) => i % 2 ? `<mark>${esc(p)}</mark>` : esc(p)).join('');
+}
+
 function resultRow(r) {
   const href = r.t === 'section' ? `#/unit/${r.slug}/${r.anchor}`
              : r.t === 'exercise' ? `#/work/${r.slug}/${r.n}`
@@ -1691,8 +1756,8 @@ function resultRow(r) {
   return `
     <a class="card" href="${esc(href)}" style="margin-top:10px">
       <div class="meta"><span>${esc(r.t)}</span><span>${esc(r.part)}</span></div>
-      <h3 style="font-size:var(--t-lede)">${esc(r.title)}</h3>
-      ${r.text ? `<p>${esc(snippet(r.text, HH.lastQuery))}</p>` : ''}
+      <h3 style="font-size:var(--t-lede)">${mark(r.title, HH.lastQuery)}</h3>
+      ${r.text ? `<p>${mark(snippet(r.text, HH.lastQuery), HH.lastQuery)}</p>` : ''}
     </a>`;
 }
 
@@ -1702,6 +1767,7 @@ function wireSearch() {
   f.onsubmit = (ev) => {
     ev.preventDefault();
     const v = f.elements.q.value.trim();
+    HH.pushed = true;   // a new search is a forward step, not a return
     location.hash = v ? `#/search/${encodeURIComponent(v)}` : '#/search';
   };
 }
@@ -1968,13 +2034,6 @@ function viewError(err) {
   </div>`;
 }
 
-function viewSoon(title) {
-  return `<div class="wrap" style="padding:80px 0">
-    <h1>${esc(title)}</h1>
-    <p class="prose">Not built yet.</p>
-  </div>`;
-}
-
 /* ---------------------------------------------------------------- routing */
 
 const ROUTES = {
@@ -1992,7 +2051,13 @@ const ROUTES = {
   'search': viewSearch,
 };
 
+let renderSeq = 0;
+
 async function render() {
+  // Views fetch, so two navigations can be in flight at once, and without
+  // this they paint in the order they finish: a slow unit overwrites the
+  // fast one the reader clicked to afterwards, wired to the wrong DOM.
+  const seq = ++renderSeq;
   // A second '#' is a fragment within the view, as in #/glossary#nand or
   // #/track#physics. It must be split off before the route is parsed, or the
   // route becomes literally "glossary#nand" and matches nothing.
@@ -2012,7 +2077,10 @@ async function render() {
 
   try {
     const fn = ROUTES[route];
-    main.innerHTML = fn ? await fn(a, b) : viewNotFound(location.hash || '#/');
+    main.setAttribute('aria-busy', 'true');
+    const html = fn ? await fn(a, b) : viewNotFound(location.hash || '#/');
+    if (seq !== renderSeq) return;
+    main.innerHTML = html;
     if (route === 'unit' && a) wireUnit(a);
     if (route === 'work') wireWork();
     if (route === 'settings') wireSettings();
@@ -2025,15 +2093,25 @@ async function render() {
     if (route === 'errors') wireErrors();
   } catch (err) {
     console.error(err);
+    if (seq !== renderSeq) return;
     main.innerHTML = viewError(err);
     const r = el('#retry');
     if (r) r.onclick = () => { HH.cache.clear(); render(); };
+  } finally {
+    if (seq === renderSeq) main.removeAttribute('aria-busy');
   }
 
   // Focus the heading so a keyboard or screen-reader user lands in the content
-  // rather than back at the top of the document.
+  // rather than back at the top of the document. A view that names a field
+  // with `autofocus` gets that instead: the attribute does nothing on its own
+  // in markup that arrived through innerHTML.
   const h = main.querySelector('h1');
-  if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
+  const field = main.querySelector('[autofocus]');
+  if (h) h.setAttribute('tabindex', '-1');
+  const target = field || h;
+  if (target) target.focus({ preventScroll: true });
+  const restore = HH.restore;
+  HH.restore = undefined;
   // Position the page exactly once, here, and never leave it where the last
   // view left it. A fragment is handled generically so any view gets it for
   // free: #/track#gpu works because the section carries that id, without the
@@ -2046,23 +2124,39 @@ async function render() {
     if (target) target.scrollIntoView({ block: 'start', behavior: 'instant' });
     else window.scrollTo({ top: 0, behavior: 'instant' });
   } else {
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    // Back or forward returns to where the reader was on that page. The
+    // track is 122 units long, and a Back that lands at the top of it loses
+    // the place the reader had just left.
+    window.scrollTo({ top: restore || 0, behavior: 'instant' });
   }
   announce(h ? h.textContent.trim() : 'Page changed');
 }
 
 /* ----------------------------------------------------------------- theme */
 
+/* The theme itself is chosen by the inline script in index.html, before the
+ * stylesheet loads, so a light-preference reader never sees a dark frame.
+ * This wires the button, names the theme it would switch to, and keeps the
+ * browser chrome the colour of the page. */
 function initTheme() {
-  const saved = Store.get('theme');
-  const sys = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-  document.documentElement.dataset.theme = saved || sys;
-  el('#theme').onclick = () => {
+  const btn = el('#theme');
+  const meta = document.querySelector('meta[name="theme-color"]');
+  const paint = () => {
+    const cur = document.documentElement.dataset.theme;
+    const label = `Switch to ${cur === 'dark' ? 'light' : 'dark'} theme`;
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+    if (meta) meta.content =
+      getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  };
+  btn.onclick = () => {
     const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
     Store.set('theme', next);
+    paint();
     announce(`${next} theme`);
   };
+  paint();
 }
 
 /* ------------------------------------------------------------------ boot */
@@ -2074,6 +2168,8 @@ async function boot() {
   // scroll-margin-top too far down. Take the wheel.
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   initTheme();
+  // "#main" would otherwise reach the router as a route and render the 404.
+  el('.skip').onclick = ev => { ev.preventDefault(); el('#main').focus(); };
   try {
     HH.manifest = await getJSON('data/manifest.json');
     // The backend configuration comes from the build, not from this file, so
@@ -2088,7 +2184,29 @@ async function boot() {
     el('#main').innerHTML = viewError(err);
     return;
   }
-  addEventListener('hashchange', render);
+  // A click on a link in this document is a step forward; anything else that
+  // changes the hash is the browser's Back or Forward, and gets its position
+  // back. This is the one distinction hashchange does not make itself.
+  addEventListener('click', ev => {
+    const a = ev.target.closest('a[href^="#"]');
+    if (!a) return;
+    HH.pushed = true;
+    // The link for the page already open changes nothing, so the browser
+    // fires nothing. Treat it as "take me to the top of this page".
+    if (a.getAttribute('href') === (location.hash || '#/')) {
+      ev.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      HH.pushed = false;
+    }
+  }, true);
+  HH.at = location.hash;
+  addEventListener('hashchange', () => {
+    HH.scrollMem.set(HH.at, scrollY);
+    HH.at = location.hash;
+    HH.restore = HH.pushed ? undefined : HH.scrollMem.get(location.hash);
+    HH.pushed = false;
+    render();
+  });
   render();
 }
 

@@ -5,6 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The Hardware Handbook</title>
 <meta name="description" content="How computers work, from a transistor to a distributed training run. 19 parts, 122 units, every exercise checked by a real tool.">
+<meta name="theme-color" content="#0f1215">
+<!-- Before the stylesheet, so the first frame is already the right theme.
+     Deciding this in app.js, after every script had loaded, gave a reader
+     who prefers light a dark flash on every visit. -->
+<script>
+  (function () {
+    var saved = null;
+    try { saved = (JSON.parse(localStorage.getItem('hh-v1')) || {}).theme; } catch (e) {}
+    document.documentElement.dataset.theme = saved ||
+      (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">

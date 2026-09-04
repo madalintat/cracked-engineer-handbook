@@ -130,7 +130,10 @@
    * it is the single number for both sticky tops and scroll-margin. It was
    * four copies of 76px, one of which meant the tab bar instead. */
   --header-h: 57px;
-  --tabbar-h: 76px;   /* the bottom bar, not the header */
+  /* The bottom tab bar. 0 wherever the bar is not shown, so anything that
+   * sits above it (the Contents button, the companion) sits on the bottom
+   * edge instead of 76px above nothing between 900 and 1060px. */
+  --tabbar-h: 0px;
   --stick: calc(var(--header-h) + 12px);
 
   --r-1: 4px;
@@ -529,6 +532,10 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
 
 .unit .head { grid-column: 2; }
 .unit .body { grid-column: 2; }
+/* The exercises button. A class rather than an inline grid-column, because an
+ * inline style beats the one-column rule below 1060px and the grid grew an
+ * implicit second column, which left the note 121px wide on a phone. */
+.unit .cta { grid-column: 2; margin-top: 28px; display: flex; gap: 8px; flex-wrap: wrap; }
 
 .unit .kicker {
   display: flex;
@@ -717,6 +724,7 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
   border-radius: var(--r-4) var(--r-4) 0 0;
   padding: 18px 20px calc(24px + env(safe-area-inset-bottom, 0));
   max-height: 72vh;
+  max-height: 72dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
   transform: translateY(101%);
@@ -744,6 +752,14 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
   padding-top: 32px;
 }
 .wb .pane { min-width: 0; }
+.wb .about { position: sticky; top: var(--stick); }
+/* One column, and the concept card follows the editor rather than floating
+ * over it. Without this the two-column grid kept its 320px minimum for the
+ * aside and gave the editor the 0px that were left. */
+@media (max-width: 900px) {
+  .wb { grid-template-columns: minmax(0, 1fr); gap: 18px; padding-top: 24px; }
+  .wb .about { position: static; }
+}
 
 .exhead { margin-bottom: 16px; }
 .exhead .kicker {
@@ -970,6 +986,37 @@ th { color: var(--ink); font-weight: 700; white-space: nowrap; }
   }
 }
 
+/* A page is on its way. Nothing is shown for the first 180ms, so a cached
+ * view never flickers a bar; past that, a slow fetch is visibly in progress
+ * rather than a page that seems not to have heard the click. */
+#main[aria-busy="true"]::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0;
+  height: 2px;
+  width: 30vw;
+  background: var(--accent);
+  z-index: 60;
+  animation: hh-loading .9s linear 180ms infinite both;
+}
+@keyframes hh-loading {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100vw); }
+}
+
+/* The sheet's own close control. Escape and the scrim also close it, but a
+ * reader who does not know that, or who is in a screen reader inside the
+ * trap, needs a button that says so. */
+.sheet-bar { display: flex; justify-content: flex-end; margin: -6px 0 6px; }
+
+/* The term the reader searched for, where it is in the result. */
+.results mark {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
 /* -------------------------------------------------------------- footer */
 
 footer.bot {
@@ -987,13 +1034,13 @@ footer.bot a { color: var(--ink-3); }
 
 @media (max-width: 1060px) {
   .unit { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  .unit .head, .unit .body, .unitnav { grid-column: 1; }
+  .unit .head, .unit .body, .unit .cta, .unitnav { grid-column: 1; }
   .rail:not(.in-sheet) { display: none; }
   #sheetBtn {
     display: inline-flex;
     position: fixed;
     right: 16px;
-    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0));
+    bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom, 0));
     z-index: 50;
   }
   .rail.in-sheet {
@@ -1013,6 +1060,7 @@ footer.bot a { color: var(--ink-3); }
 nav.tabs { display: none; }
 
 @media (max-width: 900px) {
+  :root { --tabbar-h: 76px; }
   nav.main { display: none; }
   .wrap { padding: 0 16px; }
   footer.bot { padding-bottom: 84px; }   /* clear the tab bar */
@@ -1373,15 +1421,15 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
  * replaces a ring that rendered the number 0 at 34px: this says how long the
  * part is and how far in you are in the same glance, and says nothing loudly
  * when the answer is nothing. */
-.rail { display: flex; gap: 3px; align-items: center; }
-.rail .tick {
+.ticks { display: flex; gap: 3px; align-items: center; }
+.ticks .tick {
   width: 15px;
   height: 4px;
   border-radius: 2px;
   background: var(--border);
 }
-.rail .tick.stub { background: var(--border-soft); }
-.rail .tick.on { background: var(--accent); }
+.ticks .tick.stub { background: var(--border-soft); }
+.ticks .tick.on { background: var(--accent); }
 .track .part-tool {
   font: 500 var(--t-micro)/1 var(--sans);
   color: var(--ink-3);
@@ -1420,7 +1468,7 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
  * size you can find without reading, and dimmed so it never competes with the
  * title for the first look. */
 .track .u-n {
-  font: 700 var(--t-md)/1 var(--mono);
+  font: 700 var(--t-h3)/1 var(--mono);
   color: var(--ink-4);
   letter-spacing: -.01em;
 }
@@ -1490,8 +1538,6 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
 .empty a:hover { text-decoration-color: var(--accent); }
 
 @media (max-width: 640px) {
-  .track li.u > a { grid-template-columns: 2.8rem 1fr; }
-  .track li.u .tags { grid-column: 2; justify-content: flex-start; margin-top: 6px; }
   .track .tfilter { position: static; }
 }
 
@@ -1747,6 +1793,15 @@ a.gl:hover { color: var(--accent-ink); text-decoration: none; }
   .kicker a, .exhead .kicker a { padding: 12px 0; margin: -12px 0; }
 }
 
+/* The one font size in a media query, and the reason is not the scale: iOS
+ * zooms the whole page when a field under 16px takes focus, and a zoomed page
+ * with a code editor in it does not come back on its own. Touch only. */
+@media (pointer: coarse) {
+  #main :is(input, select, textarea), #main .editor pre.hl {
+    font-size: max(16px, 1em);
+  }
+}
+
 /* Inline code in prose can be long enough to overflow a phone. It may wrap
  * anywhere rather than push the column sideways: a broken identifier is
  * legible, a horizontally scrolled paragraph is not. */
@@ -1990,7 +2045,7 @@ a.gl:hover { text-decoration-style: solid; color: var(--accent-ink); }
   color: inherit;
 }
 .pathcard:hover { border-color: var(--accent); text-decoration: none; }
-.pathcard h2 { font-size: var(--t-lg); margin: 0 0 8px; line-height: 1.25; }
+.pathcard h2 { font-size: var(--t-h3); margin: 0 0 8px; line-height: 1.25; }
 .pathcard:hover h2 { color: var(--accent-ink); }
 .pathblurb { margin: 0; color: var(--ink-2); line-height: 1.55; }
 .pathwho {
@@ -2057,7 +2112,7 @@ a.gl:hover { text-decoration-style: solid; color: var(--accent-ink); }
   font: 700 var(--t-sm)/1 var(--mono);
   color: var(--accent-ink);
 }
-.pstage-head h2 { font-size: var(--t-md); margin: 4px 0 0; }
+.pstage-head h2 { font-size: var(--t-lede); margin: 4px 0 0; }
 .pstage-why {
   margin: 8px 0 0;
   max-width: var(--measure);

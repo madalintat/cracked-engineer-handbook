@@ -59,6 +59,7 @@ run "prose.py selfcheck" python3 prose.py
 run "track.py validate"  python3 -c "import track; track.validate()"
 run "contrast.py"        python3 contrast.py
 run "check-routes.mjs"   node tools/check-routes.mjs
+run "check-css.mjs"      node tools/check-css.mjs
 
 step "Syntax"
 for f in assets/*.js tools/*.js *.mjs; do
